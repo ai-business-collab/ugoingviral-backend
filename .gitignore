@@ -1,0 +1,14 @@
+.env
+sessions/
+user_data/
+users.json
+uploads/
+__pycache__/
+*.pyc
+data.json
+admin_users.json
+customer_assignments.json
+*.png
+ig_*.png
+fix*.py
+reset*.py
