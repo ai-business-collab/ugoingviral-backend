@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — UgoingViral</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c18;--bg2:#0d1526;
+  --glass:rgba(255,255,255,.03);--glass-b:rgba(255,255,255,.06);
+  --border:rgba(255,255,255,.07);--border-b:rgba(255,255,255,.12);
+  --ac:#00e5ff;--ac2:#7c3aed;--red:#ef4444;--or:#f59e0b;--green:#10b981;
+  --tx:#f0f4f8;--tx2:#7d8fa3;--tx3:#3d4f61;
+  --shadow:0 8px 32px rgba(0,0,0,.5);
+}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(0,229,255,.04) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(124,58,237,.05) 0%,transparent 60%);pointer-events:none}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+#login-screen.hide{display:none}
+.login-box{background:var(--glass-b);border:1px solid var(--border-b);border-radius:20px;padding:48px 40px;width:100%;max-width:400px;text-align:center}
+.login-logo{font-size:24px;font-weight:800;margin-bottom:6px}
+.login-logo span{color:var(--ac)}
+.login-sub{font-size:13px;color:var(--tx2);margin-bottom:28px}
+.role-tabs{display:flex;gap:0;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:28px}
+.role-tab{flex:1;padding:8px;border-radius:7px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;border:none;cursor:pointer;background:none;color:var(--tx2);transition:all .2s}
+.role-tab.active{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff}
+.login-fields{text-align:left}
+.login-fields label{display:block;font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;margin-top:16px}
+.login-fields label:first-child{margin-top:0}
+.login-fields input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border-b);border-radius:10px;padding:12px 14px;color:var(--tx);font-size:14px;font-family:'Outfit',sans-serif;outline:none;transition:border-color .2s}
+.login-fields input:focus{border-color:rgba(0,229,255,.4)}
+.pw-wrap{position:relative;margin-bottom:0}
+.pw-wrap input{padding-right:44px}
+.eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx2);font-size:17px;padding:0;line-height:1}
+.login-btn{width:100%;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:15px;font-weight:700;font-family:'Outfit',sans-serif;padding:14px;border-radius:10px;border:none;cursor:pointer;transition:opacity .2s;margin-top:24px}
+.login-btn:hover{opacity:.85}
+.login-err{font-size:13px;color:var(--red);margin-top:12px;min-height:18px}
+
+/* APP */
+#app{display:none;position:relative;z-index:1}
+#app.show{display:block}
+
+/* TOPBAR */
+.topbar{background:var(--glass);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar-logo{font-size:16px;font-weight:800}
+.topbar-logo span{color:var(--ac)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.badge{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase}
+.badge-owner{background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);color:var(--ac)}
+.badge-support{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--or)}
+.badge-employee{background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:#a78bfa}
+.topbar-name{font-size:13px;color:var(--tx2)}
+.topbar-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--ac2),var(--ac));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;overflow:hidden;flex-shrink:0}
+.topbar-avatar img{width:100%;height:100%;object-fit:cover}
+.settings-btn{background:none;border:1px solid var(--border-b);color:var(--tx2);font-size:12px;font-family:'Outfit',sans-serif;padding:6px 12px;border-radius:8px;cursor:pointer;transition:all .2s}
+.settings-btn:hover{border-color:rgba(0,229,255,.4);color:var(--ac)}
+.logout-btn{background:none;border:1px solid var(--border-b);color:var(--tx2);font-size:13px;font-family:'Outfit',sans-serif;padding:7px 16px;border-radius:8px;cursor:pointer;transition:all .2s}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* EMPLOYEE PROFILE HEADER */
+.emp-profile-header{background:var(--glass-b);border:1px solid var(--border);border-radius:16px;padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:20px}
+.emp-profile-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--ac2),var(--ac));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0;overflow:hidden}
+.emp-profile-avatar img{width:100%;height:100%;object-fit:cover}
+.emp-profile-info{flex:1}
+.emp-profile-name{font-size:18px;font-weight:700}
+.emp-profile-title{font-size:13px;color:var(--tx2);margin-top:3px}
+.emp-profile-email{font-size:12px;color:var(--tx3);margin-top:2px}
+.emp-profile-actions{display:flex;gap:8px}
+
+/* CONTENT */
+.wrap{padding:32px;max-width:1500px;margin:0 auto}
+
+/* TABS (owner sections) */
+.section-tabs{display:flex;gap:8px;margin-bottom:24px}
+.sec-tab{background:var(--glass-b);border:1px solid var(--border);border-radius:10px;padding:9px 20px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;color:var(--tx2);transition:all .2s}
+.sec-tab.active{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.3);color:var(--ac)}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.stat-card{background:var(--glass-b);border:1px solid var(--border);border-radius:14px;padding:20px 24px}
+.stat-label{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.stat-val{font-size:28px;font-weight:800}
+.stat-sub{font-size:12px;color:var(--tx2);margin-top:2px}
+
+/* TABLE CARD */
+.table-card{background:var(--glass);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:24px}
+.table-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.table-title{font-size:15px;font-weight:700}
+.search-input{background:var(--glass-b);border:1px solid var(--border-b);border-radius:8px;padding:8px 14px;color:var(--tx);font-size:13px;font-family:'Outfit',sans-serif;outline:none;width:240px;transition:border-color .2s}
+.search-input:focus{border-color:rgba(0,229,255,.4)}
+.search-input::placeholder{color:var(--tx3)}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:1px solid var(--border)}
+th{padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px}
+td{padding:13px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.user-name{font-weight:600;color:var(--tx)}
+.user-email{font-size:11px;color:var(--tx2);margin-top:2px}
+.user-company{font-size:11px;color:var(--tx3)}
+.plan-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.plan-free{background:rgba(125,143,163,.08);color:var(--tx3);border:1px solid var(--border)}
+.plan-starter{background:rgba(125,143,163,.12);color:var(--tx2)}
+.plan-basic{background:rgba(0,229,255,.1);color:var(--ac)}
+.plan-pro{background:rgba(124,58,237,.15);color:#a78bfa}
+.plan-elite{background:rgba(245,158,11,.1);color:var(--or)}
+.plan-personal{background:rgba(16,185,129,.1);color:var(--green)}
+.credits-bar-wrap{display:flex;align-items:center;gap:8px}
+.credits-bar{flex:1;height:4px;background:var(--glass-b);border-radius:4px;overflow:hidden;min-width:60px}
+.credits-bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.credits-num{font-size:12px;color:var(--tx);font-weight:600;white-space:nowrap}
+.platform-dots{display:flex;gap:4px;flex-wrap:wrap}
+.pdot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.pdot-off{background:var(--tx3)}
+.platform-label{font-size:10px;color:var(--tx3);margin-top:2px}
+.action-btn{background:var(--glass-b);border:1px solid var(--border-b);color:var(--tx2);font-size:12px;font-family:'Outfit',sans-serif;padding:5px 11px;border-radius:6px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.action-btn:hover{border-color:var(--ac);color:var(--ac)}
+.action-btn.red:hover{border-color:var(--red);color:var(--red)}
+.note-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:#fff;font-size:10px;font-weight:700;width:18px;height:18px;border-radius:50%;margin-left:4px}
+
+/* ASSIGN SELECT */
+.assign-select{background:rgba(255,255,255,.04);border:1px solid var(--border-b);border-radius:7px;padding:5px 10px;color:var(--tx);font-size:12px;font-family:'Outfit',sans-serif;outline:none;cursor:pointer;max-width:150px}
+.assign-select:focus{border-color:rgba(0,229,255,.4)}
+
+/* EMPLOYEES PANEL */
+.emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:24px}
+.emp-card{background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:20px}
+.emp-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.emp-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--ac2),var(--ac));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;overflow:hidden}
+.emp-avatar img{width:100%;height:100%;object-fit:cover}
+.emp-info{flex:1;margin-left:12px}
+.emp-name{font-weight:700;font-size:14px}
+.emp-title{font-size:12px;color:var(--tx2);margin-top:2px}
+.emp-email{font-size:11px;color:var(--tx3);margin-top:8px}
+.emp-role-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:6px;text-transform:uppercase;letter-spacing:.4px}
+.emp-role-support{background:rgba(245,158,11,.12);color:var(--or);border:1px solid rgba(245,158,11,.2)}
+.emp-role-employee{background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.2)}
+.emp-del{background:none;border:1px solid var(--border);color:var(--tx3);font-size:12px;font-family:'Outfit',sans-serif;padding:4px 10px;border-radius:6px;cursor:pointer;transition:all .2s}
+.emp-del:hover{border-color:var(--red);color:var(--red)}
+.add-emp-card{background:var(--glass);border:2px dashed var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;min-height:120px;gap:8px}
+.add-emp-card:hover{border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.03)}
+.add-emp-card span{font-size:24px}
+.add-emp-card p{font-size:13px;color:var(--tx2);font-weight:600}
+
+/* GUIDELINES PANEL */
+.guidelines-wrap{padding:24px}
+.guideline-section{background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:12px}
+.guideline-heading{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--ac)}
+.guideline-text{font-size:13px;color:var(--tx2);line-height:1.7;white-space:pre-line}
+.guideline-updated{font-size:11px;color:var(--tx3);margin-top:4px}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border-b);border-radius:16px;padding:32px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--tx2);margin-bottom:24px}
+.modal label{display:block;font-size:11px;font-weight:600;color:var(--tx2);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;margin-top:16px}
+.modal label:first-of-type{margin-top:0}
+.modal input,.modal select,.modal textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border-b);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:14px;font-family:'Outfit',sans-serif;outline:none;transition:border-color .2s;margin-bottom:0}
+.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:rgba(0,229,255,.4)}
+.modal select option{background:var(--bg2)}
+.plan-options{display:grid;gap:10px;margin-bottom:24px}
+.plan-option{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:space-between}
+.plan-option:hover{border-color:var(--ac);background:rgba(0,229,255,.04)}
+.plan-option.selected{border-color:var(--ac);background:rgba(0,229,255,.08)}
+.plan-option-name{font-weight:700;font-size:14px}
+.plan-option-price{font-size:12px;color:var(--tx2)}
+.modal-actions{display:flex;gap:10px;margin-top:24px}
+.btn-save{flex:1;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;padding:12px;border-radius:8px;border:none;cursor:pointer;transition:opacity .2s}
+.btn-save:hover{opacity:.85}
+.btn-cancel{background:var(--glass-b);border:1px solid var(--border-b);color:var(--tx2);font-size:14px;font-family:'Outfit',sans-serif;padding:12px 20px;border-radius:8px;cursor:pointer;transition:all .2s}
+.btn-cancel:hover{color:var(--tx)}
+.credits-input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border-b);border-radius:10px;padding:12px 14px;color:var(--tx);font-size:20px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;transition:border-color .2s;margin-bottom:0;text-align:center}
+.credits-input:focus{border-color:rgba(0,229,255,.4)}
+
+/* SETTINGS MODAL TABS */
+.settings-tabs{display:flex;gap:0;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:3px;margin-bottom:24px}
+.settings-tab{flex:1;padding:7px;border-radius:7px;font-size:12px;font-weight:600;font-family:'Outfit',sans-serif;border:none;cursor:pointer;background:none;color:var(--tx2);transition:all .2s}
+.settings-tab.active{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff}
+
+/* AVATAR UPLOAD */
+.avatar-upload-wrap{display:flex;align-items:center;gap:16px;margin-bottom:0}
+.avatar-preview{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--ac2),var(--ac));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;overflow:hidden;flex-shrink:0}
+.avatar-preview img{width:100%;height:100%;object-fit:cover}
+.avatar-upload-btn{background:var(--glass-b);border:1px solid var(--border-b);color:var(--tx2);font-size:12px;font-family:'Outfit',sans-serif;padding:7px 14px;border-radius:7px;cursor:pointer;transition:all .2s}
+.avatar-upload-btn:hover{border-color:rgba(0,229,255,.4);color:var(--ac)}
+
+/* NOTES MODAL */
+.notes-list{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;max-height:300px;overflow-y:auto}
+.note-item{background:var(--glass-b);border:1px solid var(--border);border-radius:10px;padding:14px}
+.note-item.resolved{opacity:.5}
+.note-item.system-note{border-color:rgba(0,229,255,.15);background:rgba(0,229,255,.04)}
+.note-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.note-author{font-size:11px;font-weight:600;color:var(--ac)}
+.note-author.system{color:var(--or)}
+.note-date{font-size:11px;color:var(--tx3)}
+.note-text{font-size:13px;color:var(--tx);line-height:1.5}
+.note-resolve{background:none;border:1px solid var(--border);color:var(--tx3);font-size:11px;font-family:'Outfit',sans-serif;padding:3px 8px;border-radius:5px;cursor:pointer;margin-top:8px;transition:all .2s}
+.note-resolve:hover{border-color:var(--green);color:var(--green)}
+.note-resolved-tag{font-size:11px;color:var(--green);margin-top:8px}
+.note-input-wrap{display:flex;gap:8px;margin-top:4px}
+.note-input-wrap textarea{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border-b);border-radius:8px;padding:10px 12px;color:var(--tx);font-size:13px;font-family:'Outfit',sans-serif;outline:none;resize:none;height:72px;transition:border-color .2s}
+.note-input-wrap textarea:focus{border-color:rgba(0,229,255,.4)}
+.note-send{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border:none;border-radius:8px;padding:0 16px;font-size:13px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;transition:opacity .2s}
+.note-send:hover{opacity:.85}
+
+/* STATUS BADGES */
+.status-banned{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.status-paused{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;background:rgba(245,158,11,.12);color:var(--or);border:1px solid rgba(245,158,11,.22)}
+
+/* PLAN FILTER TABS */
+.plan-filter-row{display:flex;gap:6px;flex-wrap:wrap;padding:14px 24px;border-bottom:1px solid var(--border)}
+.plan-filter-btn{background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:5px 14px;font-size:12px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;color:var(--tx2);transition:all .2s}
+.plan-filter-btn.active{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.3);color:var(--ac)}
+
+/* REVENUE & API USAGE */
+.rev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;padding:24px}
+.rev-card{background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.rev-card-label{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.rev-card-val{font-size:24px;font-weight:800}
+.rev-card-sub{font-size:12px;color:var(--tx2);margin-top:3px}
+.service-row{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);font-size:13px}
+.service-row:last-child{border-bottom:none}
+.service-bar-wrap{display:flex;align-items:center;gap:10px;flex:1;margin:0 16px}
+.service-bar{flex:1;height:6px;background:var(--glass-b);border-radius:6px;overflow:hidden}
+.service-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--ac),var(--ac2))}
+.service-credits{font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap}
+
+/* MISC */
+#toast{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px}
+.t{padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;animation:tin .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.t.success{background:#10b981;color:#fff}
+.t.error{background:#ef4444;color:#fff}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.empty-state{padding:60px;text-align:center;color:var(--tx3)}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border-b);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none!important}
+.divider{height:1px;background:var(--border);margin:20px 0}
+
+/* WELCOME BANNER */
+.welcome-banner{background:linear-gradient(135deg,rgba(0,229,255,.07),rgba(124,58,237,.07));border-bottom:1px solid var(--border);padding:11px 32px;display:flex;align-items:center;justify-content:space-between;animation:slideDown .4s ease}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.welcome-msg{font-size:13px;font-weight:500;color:var(--tx)}
+.welcome-date{font-size:12px;color:var(--tx3)}
+
+/* ONBOARDING MODAL */
+.onb-hero{text-align:center;padding:8px 0 20px}
+.onb-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--ac2),var(--ac));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;margin:0 auto 12px}
+.onb-hi{font-size:22px;font-weight:800;margin-bottom:4px}
+.onb-sub{font-size:13px;color:var(--tx2)}
+.onb-role-pill{display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:10px}
+.onb-role-support{background:rgba(245,158,11,.12);color:var(--or);border:1px solid rgba(245,158,11,.25)}
+.onb-role-employee{background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.25)}
+.onb-features{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:4px}
+.onb-features-title{font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo" style="display:flex;align-items:center;justify-content:center;gap:10px"><img src="/uploads/logo.jpg" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:cover" onerror="this.style.display='none'">Ugoin<span>g</span>Viral</div>
+    <div class="login-sub">Admin Panel</div>
+    <div class="login-fields">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="din@email.com" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      <label>Adgangskode</label>
+      <div class="pw-wrap">
+        <input type="password" id="admin-pw" placeholder="" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="eye" type="button" onclick="togglePw()">👁</button>
+      </div>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Log ind →</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo" style="display:flex;align-items:center;gap:8px"><img src="/uploads/logo.jpg" alt="" style="width:26px;height:26px;border-radius:6px;object-fit:cover" onerror="this.style.display='none'">Ugoin<span>g</span>Viral <span style="color:var(--tx3);font-weight:400;font-size:13px">/ Admin</span></div>
+    <div class="topbar-right">
+      <span class="topbar-name" id="topbar-name"></span>
+      <span class="badge" id="role-badge"></span>
+      <button class="settings-btn" id="settings-btn" onclick="openSettingsModal()">⚙ Indstillinger</button>
+      <button class="logout-btn" onclick="doLogout()">Log ud</button>
+    </div>
+  </div>
+
+  <!-- WELCOME BANNER -->
+  <div id="welcome-banner" class="welcome-banner hidden">
+    <span id="welcome-msg" class="welcome-msg"></span>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span id="welcome-date" class="welcome-date"></span>
+      <button onclick="closeBanner()" style="background:none;border:none;color:var(--tx3);font-size:20px;cursor:pointer;padding:0;line-height:1;transition:color .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--tx3)'">×</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- EMPLOYEE PROFILE HEADER (non-owner) -->
+    <div id="emp-profile-header" class="emp-profile-header hidden">
+      <div class="emp-profile-avatar" id="emp-hdr-avatar"></div>
+      <div class="emp-profile-info">
+        <div class="emp-profile-name" id="emp-hdr-name"></div>
+        <div class="emp-profile-title" id="emp-hdr-title"></div>
+        <div class="emp-profile-email" id="emp-hdr-email"></div>
+      </div>
+    </div>
+
+    <!-- OWNER/SUPPORT: section tabs -->
+    <div class="section-tabs" id="owner-tabs">
+      <button class="sec-tab active" onclick="showSection('customers')">👥 Kunder</button>
+      <button class="sec-tab" onclick="showSection('employees')" id="tab-employees">🧑‍💼 Medarbejdere</button>
+      <button class="sec-tab" onclick="showSection('guidelines')" id="tab-guidelines">📋 Retningslinjer</button>
+      <button class="sec-tab hidden" onclick="showSection('revenue')" id="tab-revenue">💰 Omsætning</button>
+      <button class="sec-tab hidden" onclick="showSection('api_usage')" id="tab-api">📊 API Forbrug</button>
+    </div>
+
+    <!-- STATS (owner + support) -->
+    <div id="stats-section" class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Brugere i alt</div>
+        <div class="stat-val" id="stat-total">–</div>
+        <div class="stat-sub">Registrerede konti</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pro+ planer</div>
+        <div class="stat-val" id="stat-pro">–</div>
+        <div class="stat-sub">Pro, Elite, Personal</div>
+      </div>
+      <div class="stat-card" id="stat-mrr-card">
+        <div class="stat-label">MRR estimat</div>
+        <div class="stat-val" id="stat-mrr">–</div>
+        <div class="stat-sub">Månedlig omsætning</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Aktive i dag</div>
+        <div class="stat-val" id="stat-active">–</div>
+        <div class="stat-sub">Filtreret efter dato</div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS SECTION -->
+    <div id="section-customers">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title" id="customers-title">👥 Alle kunder</div>
+          <input class="search-input" type="text" placeholder="Søg på email, navn, firma..." oninput="filterUsers(this.value)">
+        </div>
+        <div class="plan-filter-row" id="plan-filter-row">
+          <button class="plan-filter-btn active" onclick="filterByPlan('')">Alle</button>
+          <button class="plan-filter-btn" onclick="filterByPlan('free')">Gratis</button>
+          <button class="plan-filter-btn" onclick="filterByPlan('starter')">Starter</button>
+          <button class="plan-filter-btn" onclick="filterByPlan('basic')">Basic</button>
+          <button class="plan-filter-btn" onclick="filterByPlan('pro')">Pro</button>
+          <button class="plan-filter-btn" onclick="filterByPlan('elite')">Elite</button>
+          <button class="plan-filter-btn" onclick="filterByPlan('personal')">Personal</button>
+        </div>
+        <div id="table-wrap"><div class="empty-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- REVENUE SECTION -->
+    <div id="section-revenue" class="hidden">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">💰 Omsætning oversigt</div>
+          <button class="action-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="loadRevenue()">Opdater</button>
+        </div>
+        <div id="revenue-wrap"><div class="empty-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- API USAGE SECTION -->
+    <div id="section-api_usage" class="hidden">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">📊 API Forbrug (alle brugere)</div>
+          <button class="action-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="loadApiUsage()">Opdater</button>
+        </div>
+        <div id="api-usage-wrap"><div class="empty-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES SECTION (owner only) -->
+    <div id="section-employees" class="hidden">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">🧑‍💼 Medarbejdere</div>
+          <button class="action-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="openCreateEmp()">+ Tilføj medarbejder</button>
+        </div>
+        <div id="emp-grid-wrap" class="emp-grid"><div class="empty-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- GUIDELINES SECTION -->
+    <div id="section-guidelines" class="hidden">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">📋 Personlig Assistent Retningslinjer</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="guidelines-updated" style="font-size:11px;color:var(--tx3)"></span>
+            <button class="action-btn" id="edit-guidelines-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="openGuidelinesModal()">Rediger</button>
+          </div>
+        </div>
+        <div id="guidelines-wrap" class="guidelines-wrap"><div class="empty-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ONBOARDING MODAL -->
+<div class="modal-overlay" id="onboarding-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="onb-hero">
+      <div class="onb-avatar" id="onb-avatar">👋</div>
+      <div class="onb-hi">Velkommen, <span id="onb-name"></span>!</div>
+      <div class="onb-sub">Vi er glade for at have dig med på holdet</div>
+      <div id="onb-role-pill" class="onb-role-pill"></div>
+    </div>
+    <div class="onb-features">
+      <div class="onb-features-title">Hvad du kan gøre i systemet</div>
+      <div id="onb-features-list"></div>
+    </div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn-save" id="onb-start-btn" style="font-size:15px;padding:14px">Kom i gang 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAN MODAL -->
+<div class="modal-overlay" id="plan-modal" onclick="if(event.target===this)closePlanModal()">
+  <div class="modal">
+    <div class="modal-title">Skift plan</div>
+    <div class="modal-sub" id="plan-modal-sub">–</div>
+    <div class="plan-options" id="plan-options"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePlanModal()">Annuller</button>
+      <button class="btn-save" onclick="savePlan()">Gem plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREDITS MODAL -->
+<div class="modal-overlay" id="credits-modal" onclick="if(event.target===this)closeCreditsModal()">
+  <div class="modal">
+    <div class="modal-title">Juster credits</div>
+    <div class="modal-sub" id="credits-modal-sub">–</div>
+    <input class="credits-input" type="number" id="credits-input" min="0">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeCreditsModal()">Annuller</button>
+      <button class="btn-save" onclick="saveCredits()">Gem credits</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE EMPLOYEE MODAL -->
+<div class="modal-overlay" id="create-emp-modal" onclick="if(event.target===this)closeCreateEmp()">
+  <div class="modal">
+    <div class="modal-title">Tilføj medarbejder</div>
+    <div class="modal-sub">Opret ny medarbejder-konto</div>
+    <label>Navn</label>
+    <input type="text" id="new-emp-name" placeholder="Fulde navn">
+    <label>Email</label>
+    <input type="email" id="new-emp-email" placeholder="email@example.com">
+    <label>Titel</label>
+    <input type="text" id="new-emp-title" placeholder="f.eks. Account Manager">
+    <label>Rolle</label>
+    <select id="new-emp-role">
+      <option value="employee">Employee — ser kun tildelte kunder</option>
+      <option value="support">Support — ser alle kunder</option>
+    </select>
+    <label>Adgangskode</label>
+    <input type="password" id="new-emp-pw" placeholder="Vælg en adgangskode">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeCreateEmp()">Annuller</button>
+      <button class="btn-save" onclick="saveCreateEmp()">Opret</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUPPORT NOTES MODAL -->
+<div class="modal-overlay" id="notes-modal" onclick="if(event.target===this)closeNotesModal()">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">Support noter</div>
+    <div class="modal-sub" id="notes-modal-sub">–</div>
+    <div class="notes-list" id="notes-list"></div>
+    <label style="margin-top:0;margin-bottom:8px">Tilføj note</label>
+    <div class="note-input-wrap">
+      <textarea id="note-text" placeholder="Skriv en note..."></textarea>
+      <button class="note-send" onclick="sendNote()">Send</button>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-cancel" style="flex:1" onclick="closeNotesModal()">Luk</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL (for employees/support) -->
+<div class="modal-overlay" id="settings-modal" onclick="if(event.target===this)closeSettingsModal()">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">Indstillinger</div>
+    <div class="modal-sub" id="settings-modal-sub">Profil og konto</div>
+
+    <div class="settings-tabs">
+      <button class="settings-tab active" id="stab-profile" onclick="switchSettingsTab('profile')">Profil</button>
+      <button class="settings-tab" id="stab-password" onclick="switchSettingsTab('password')">Skift adgangskode</button>
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div id="settings-profile">
+      <div class="avatar-upload-wrap">
+        <div class="avatar-preview" id="settings-avatar-preview"></div>
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px" id="settings-avatar-name"></div>
+          <label for="settings-avatar-file" class="avatar-upload-btn">Skift billede</label>
+          <input type="file" id="settings-avatar-file" accept="image/*" style="display:none" onchange="handleAvatarUpload(this)">
+        </div>
+      </div>
+      <div class="divider"></div>
+      <label>Navn</label>
+      <input type="text" id="settings-name" placeholder="Dit fulde navn">
+      <label>Titel</label>
+      <input type="text" id="settings-title" placeholder="f.eks. Account Manager">
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeSettingsModal()">Annuller</button>
+        <button class="btn-save" onclick="saveProfile()">Gem profil</button>
+      </div>
+    </div>
+
+    <!-- PASSWORD TAB -->
+    <div id="settings-password" class="hidden">
+      <label>Nuværende adgangskode</label>
+      <input type="password" id="old-pw" placeholder="">
+      <label>Ny adgangskode</label>
+      <input type="password" id="new-pw" placeholder="Mindst 6 tegn">
+      <label>Gentag ny adgangskode</label>
+      <input type="password" id="new-pw2" placeholder="">
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeSettingsModal()">Annuller</button>
+        <button class="btn-save" onclick="savePassword()">Skift adgangskode</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GUIDELINES EDIT MODAL -->
+<div class="modal-overlay" id="guidelines-modal" onclick="if(event.target===this)closeGuidelinesModal()">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-title">Rediger retningslinjer</div>
+    <div class="modal-sub">Disse retningslinjer vises til alle medarbejdere</div>
+    <div id="guidelines-editor"></div>
+    <div class="modal-actions" style="margin-top:24px">
+      <button class="btn-cancel" onclick="closeGuidelinesModal()">Annuller</button>
+      <button class="btn-save" onclick="saveGuidelines()">Gem</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const PLANS = {
+  free:     {name:'Gratis',   price:0,    credits:50},
+  starter:  {name:'Starter',  price:299,  credits:300},
+  basic:    {name:'Basic',    price:499,  credits:650},
+  pro:      {name:'Pro',      price:999,  credits:1500},
+  elite:    {name:'Elite',    price:1499, credits:2800},
+  personal: {name:'Personal', price:2499, credits:5000},
+};
+
+let token = localStorage.getItem('ugv_admin_token') || '';
+let userRole = localStorage.getItem('ugv_admin_role') || '';
+let myProfile = {};
+let allUsers = [];
+let allEmployees = [];
+let editUserId = '';
+let editSelectedPlan = '';
+let notesUserId = '';
+let guidelinesData = null;
+let settingsTab = 'profile';
+let activePlanFilter = '';
+let activeSearch = '';
+
+// ── LOGIN ────────────────────────────────────────────────────────────────────
+
+function togglePw() {
+  const inp = document.getElementById('admin-pw');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('admin-pw').value;
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if (!email) { err.textContent = 'Indtast email'; return; }
+  if (!pw) { err.textContent = 'Indtast adgangskode'; return; }
+
+  try {
+    const r = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password: pw}),
+    });
+    const d = await r.json();
+    if (d.token) {
+      token = d.token;
+      userRole = d.role;
+      localStorage.setItem('ugv_admin_token', token);
+      localStorage.setItem('ugv_admin_role', userRole);
+      document.getElementById('login-email').value = '';
+      document.getElementById('admin-pw').value = '';
+      showApp(d);
+    } else {
+      err.textContent = d.detail || 'Forkert email eller adgangskode';
+    }
+  } catch(e) { err.textContent = 'Fejl — prøv igen'; }
+}
+
+function doLogout() {
+  localStorage.removeItem('ugv_admin_token');
+  localStorage.removeItem('ugv_admin_role');
+  token = ''; userRole = ''; myProfile = {};
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-screen').classList.remove('hide');
+}
+
+async function showApp(info) {
+  const role = info ? info.role : userRole;
+  const name = info ? (info.name || '') : '';
+
+  document.getElementById('login-screen').classList.add('hide');
+  document.getElementById('app').classList.add('show');
+
+  const badge = document.getElementById('role-badge');
+  const ownerTabs = document.getElementById('owner-tabs');
+  const statsSection = document.getElementById('stats-section');
+  const settingsBtn = document.getElementById('settings-btn');
+
+  if (role === 'owner') {
+    badge.textContent = 'Owner';
+    badge.className = 'badge badge-owner';
+    ownerTabs.classList.remove('hidden');
+    statsSection.classList.remove('hidden');
+    document.getElementById('customers-title').textContent = '👥 Alle kunder';
+    document.getElementById('tab-employees').classList.remove('hidden');
+    document.getElementById('tab-guidelines').classList.remove('hidden');
+    document.getElementById('tab-revenue').classList.remove('hidden');
+    document.getElementById('tab-api').classList.remove('hidden');
+    settingsBtn.classList.add('hidden');
+    document.getElementById('emp-profile-header').classList.add('hidden');
+  } else if (role === 'support') {
+    badge.textContent = 'Support';
+    badge.className = 'badge badge-support';
+    ownerTabs.classList.remove('hidden');
+    statsSection.classList.remove('hidden');
+    document.getElementById('stat-mrr-card').classList.add('hidden');
+    document.getElementById('customers-title').textContent = '👥 Alle kunder';
+    document.getElementById('tab-employees').classList.add('hidden');
+    document.getElementById('tab-guidelines').classList.remove('hidden');
+    settingsBtn.classList.remove('hidden');
+    await loadMyProfile();
+  } else {
+    badge.textContent = 'Medarbejder';
+    badge.className = 'badge badge-employee';
+    ownerTabs.classList.add('hidden');
+    statsSection.classList.add('hidden');
+    document.getElementById('customers-title').textContent = '👥 Mine kunder';
+    settingsBtn.classList.remove('hidden');
+    await loadMyProfile();
+  }
+
+  if (name) document.getElementById('topbar-name').textContent = name;
+
+  loadCustomers();
+  if (role === 'owner') loadEmployees();
+
+  const empEmail = info ? (info.email || '') : '';
+  const empName  = info ? (info.name  || '') : localStorage.getItem('ugv_admin_name') || '';
+  if (info && info.name) localStorage.setItem('ugv_admin_name', info.name);
+  checkWelcome(empName, empEmail || userRole, role);
+}
+
+async function loadMyProfile() {
+  try {
+    const r = await fetch('/api/admin/employee/me', {headers:{'Authorization':'Bearer '+token}});
+    if (!r.ok) return;
+    myProfile = await r.json();
+    renderProfileHeader();
+  } catch(e) {}
+}
+
+function renderProfileHeader() {
+  const hdr = document.getElementById('emp-profile-header');
+  if (userRole === 'owner') { hdr.classList.add('hidden'); return; }
+  hdr.classList.remove('hidden');
+  const initials = (myProfile.name||'?').split(' ').map(w=>w[0]||'').join('').toUpperCase().substring(0,2);
+  const avatarEl = document.getElementById('emp-hdr-avatar');
+  if (myProfile.profile_image) {
+    avatarEl.innerHTML = `<img src="${esc(myProfile.profile_image)}" alt="">`;
+  } else {
+    avatarEl.textContent = initials;
+  }
+  document.getElementById('emp-hdr-name').textContent = myProfile.name || '';
+  document.getElementById('emp-hdr-title').textContent = myProfile.title || '';
+  document.getElementById('emp-hdr-email').textContent = myProfile.email || '';
+}
+
+// ── SECTIONS ─────────────────────────────────────────────────────────────────
+
+function showSection(sec) {
+  const allSections = ['customers', 'employees', 'guidelines', 'revenue', 'api_usage'];
+  allSections.forEach(s => {
+    const el = document.getElementById('section-' + s);
+    if (el) el.classList.toggle('hidden', s !== sec);
+  });
+  document.getElementById('stats-section').classList.toggle('hidden', sec !== 'customers');
+  document.querySelectorAll('.sec-tab').forEach(t => {
+    const onclick = t.getAttribute('onclick') || '';
+    t.classList.toggle('active', onclick.includes("'" + sec + "'"));
+  });
+  if (sec === 'guidelines' && !guidelinesData) loadGuidelines();
+  if (sec === 'revenue') loadRevenue();
+  if (sec === 'api_usage') loadApiUsage();
+}
+
+// ── USERS ────────────────────────────────────────────────────────────────────
+
+async function loadCustomers() {
+  const endpoint = userRole === 'owner' || userRole === 'support'
+    ? '/api/admin/users'
+    : '/api/admin/my_customers';
+  try {
+    const r = await fetch(endpoint, {headers:{'Authorization':'Bearer '+token}});
+    if (r.status === 401) { doLogout(); return; }
+    allUsers = await r.json();
+    if (userRole === 'owner' || userRole === 'support') renderStats(allUsers);
+    renderTable(allUsers);
+  } catch(e) {
+    document.getElementById('table-wrap').innerHTML = '<div class="empty-state">Kunne ikke hente kunder</div>';
+  }
+}
+
+function renderStats(users) {
+  const today = new Date().toLocaleDateString('da-DK',{day:'2-digit',month:'2-digit'});
+  document.getElementById('stat-total').textContent = users.length;
+  document.getElementById('stat-pro').textContent = users.filter(u => ['pro','elite','personal'].includes(u.plan)).length;
+  const mrr = users.reduce((s,u) => s + (PLANS[u.plan]?.price || 0), 0);
+  document.getElementById('stat-mrr').textContent = mrr.toLocaleString('da-DK') + ' kr';
+  const todayStr = today.substring(0,5);
+  document.getElementById('stat-active').textContent = users.filter(u => u.last_active && u.last_active.startsWith(todayStr)).length;
+}
+
+function filterUsers(q) {
+  activeSearch = q;
+  applyFilters();
+}
+
+function filterByPlan(plan) {
+  activePlanFilter = plan;
+  document.querySelectorAll('.plan-filter-btn').forEach(b => {
+    const onclick = b.getAttribute('onclick') || '';
+    b.classList.toggle('active', onclick.includes("'" + plan + "'") || (plan === '' && onclick.includes("''")));
+  });
+  applyFilters();
+}
+
+function applyFilters() {
+  let filtered = allUsers;
+  if (activePlanFilter) filtered = filtered.filter(u => u.plan === activePlanFilter);
+  if (activeSearch) {
+    const low = activeSearch.toLowerCase();
+    filtered = filtered.filter(u =>
+      u.email.toLowerCase().includes(low) ||
+      (u.name||'').toLowerCase().includes(low) ||
+      (u.company||'').toLowerCase().includes(low)
+    );
+  }
+  renderTable(filtered);
+}
+
+function renderTable(users) {
+  if (!users.length) {
+    document.getElementById('table-wrap').innerHTML = '<div class="empty-state">Ingen kunder fundet</div>';
+    return;
+  }
+  const pct = (u) => u.max_credits > 0 ? Math.round((u.credits / u.max_credits) * 100) : 0;
+  const col = (p) => p < 20 ? '#ef4444' : p < 50 ? '#f59e0b' : '#00e5ff';
+  const canManage = userRole === 'owner';
+  const canAssign = userRole === 'owner' || userRole === 'support';
+
+  document.getElementById('table-wrap').innerHTML = `
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th>Bruger</th>
+        <th>Plan</th>
+        <th>Credits</th>
+        <th>Platforme</th>
+        <th>Sidst aktiv</th>
+        ${canAssign ? '<th>Tildelt</th>' : ''}
+        <th>Handlinger</th>
+      </tr></thead>
+      <tbody>
+        ${users.map(u => {
+          const p = pct(u);
+          const c = col(p);
+          const noteBtn = u.open_notes > 0
+            ? `<button class="action-btn" onclick="openNotesModal('${u.id}','${esc(u.email)}')">
+                 Noter<span class="note-badge">${u.open_notes}</span>
+               </button>`
+            : `<button class="action-btn" onclick="openNotesModal('${u.id}','${esc(u.email)}')">Noter</button>`;
+          const platforms = (u.connected_platforms||[]);
+          const platformHtml = platforms.length
+            ? `<div class="platform-dots">${platforms.map(pp=>`<div class="pdot" title="${pp}"></div>`).join('')}</div><div class="platform-label">${platforms.join(', ')}</div>`
+            : `<span style="color:var(--tx3);font-size:12px">Ingen</span>`;
+          const assignCell = canAssign ? `<td>
+            <select class="assign-select" onchange="assignEmployee('${u.id}',this.value)">
+              <option value="">– Ingen –</option>
+              ${allEmployees.map(e=>`<option value="${e.id}" ${e.id===u.assigned_employee_id?'selected':''}>${e.name}</option>`).join('')}
+            </select>
+          </td>` : '';
+          const statusBadge = u.status === 'banned'
+            ? `<span class="status-banned">Banned</span>`
+            : u.status === 'paused'
+            ? `<span class="status-paused">Pause</span>`
+            : '';
+          const banLabel = u.status === 'banned' ? 'Unban' : 'Ban';
+          const pauseLabel = u.status === 'paused' ? 'Resume' : 'Pause';
+          return `<tr>
+            <td>
+              <div class="user-name">${esc(u.name || u.email.split('@')[0])} ${statusBadge}</div>
+              <div class="user-email">${esc(u.email)}</div>
+              ${u.company ? `<div class="user-company">${esc(u.company)}</div>` : ''}
+            </td>
+            <td><span class="plan-badge plan-${u.plan}">${u.plan_name}</span></td>
+            <td>
+              <div class="credits-bar-wrap">
+                <div class="credits-bar"><div class="credits-bar-fill" style="width:${p}%;background:${c}"></div></div>
+                <span class="credits-num">${u.credits}/${u.max_credits}</span>
+              </div>
+            </td>
+            <td>${platformHtml}</td>
+            <td style="color:var(--tx2);font-size:12px">${u.last_active}</td>
+            ${assignCell}
+            <td>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                ${canManage ? `<button class="action-btn" onclick="openPlanModal('${u.id}','${u.plan}','${esc(u.email)}')">Plan</button>` : ''}
+                ${canManage ? `<button class="action-btn" onclick="openCreditsModal('${u.id}',${u.credits},'${esc(u.email)}')">Credits</button>` : ''}
+                ${noteBtn}
+                ${canManage ? `<button class="action-btn" onclick="openSubsModal('${u.id}','${esc(u.email)}')" title="${u.sub_count||0} under-konti">U-konti${u.sub_count ? ` (${u.sub_count})` : ''}</button>` : ''}
+                ${canManage ? `<button class="action-btn" onclick="pauseUser('${u.id}')">${pauseLabel}</button>` : ''}
+                ${canManage ? `<button class="action-btn red" onclick="banUser('${u.id}','${esc(u.email)}')">${banLabel}</button>` : ''}
+                ${canManage ? `<button class="action-btn red" onclick="deleteUser('${u.id}','${esc(u.email)}')">Slet</button>` : ''}
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>`;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ── ASSIGN ────────────────────────────────────────────────────────────────────
+
+async function assignEmployee(userId, employeeId) {
+  try {
+    const r = await fetch('/api/admin/assign', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({user_id: userId, employee_id: employeeId})
+    });
+    const d = await r.json();
+    if (d.ok) toast('Tildeling gemt', 'success');
+    else toast('Fejl', 'error');
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+// ── EMPLOYEES ─────────────────────────────────────────────────────────────────
+
+async function loadEmployees() {
+  try {
+    const r = await fetch('/api/admin/employees', {headers:{'Authorization':'Bearer '+token}});
+    if (!r.ok) return;
+    allEmployees = await r.json();
+    renderEmployees();
+  } catch(e) {}
+}
+
+function renderEmployees() {
+  const wrap = document.getElementById('emp-grid-wrap');
+  const initials = (name) => name.split(' ').map(w=>w[0]||'').join('').toUpperCase().substring(0,2);
+  wrap.innerHTML = allEmployees.map(e => {
+    const avatarHtml = e.profile_image
+      ? `<img src="${esc(e.profile_image)}" alt="">`
+      : esc(initials(e.name));
+    const roleBadge = e.role === 'support'
+      ? `<span class="emp-role-badge emp-role-support">Support</span>`
+      : `<span class="emp-role-badge emp-role-employee">Employee</span>`;
+    return `
+    <div class="emp-card">
+      <div class="emp-card-top">
+        <div style="display:flex;align-items:center">
+          <div class="emp-avatar">${avatarHtml}</div>
+          <div class="emp-info">
+            <div class="emp-name">${esc(e.name)}</div>
+            <div class="emp-title">${esc(e.title||'Medarbejder')}</div>
+          </div>
+        </div>
+        <button class="emp-del" onclick="deleteEmployee('${e.id}','${esc(e.name)}')">Slet</button>
+      </div>
+      <div class="emp-email">${esc(e.email)}</div>
+      ${roleBadge}
+    </div>`;
+  }).join('') + `
+    <div class="add-emp-card" onclick="openCreateEmp()">
+      <span>➕</span>
+      <p>Tilføj medarbejder</p>
+    </div>`;
+}
+
+function openCreateEmp() {
+  ['new-emp-name','new-emp-email','new-emp-title','new-emp-pw'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('new-emp-role').value = 'employee';
+  document.getElementById('create-emp-modal').classList.add('open');
+  setTimeout(() => document.getElementById('new-emp-name').focus(), 100);
+}
+function closeCreateEmp() { document.getElementById('create-emp-modal').classList.remove('open'); }
+
+async function saveCreateEmp() {
+  const name = document.getElementById('new-emp-name').value.trim();
+  const email = document.getElementById('new-emp-email').value.trim();
+  const title = document.getElementById('new-emp-title').value.trim();
+  const role = document.getElementById('new-emp-role').value;
+  const pw = document.getElementById('new-emp-pw').value;
+  if (!name || !email || !pw) { toast('Udfyld alle felter', 'error'); return; }
+  try {
+    const r = await fetch('/api/admin/employees', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({name, email, title, password: pw, role})
+    });
+    const d = await r.json();
+    if (d.id) {
+      toast('Medarbejder oprettet', 'success');
+      closeCreateEmp();
+      await loadEmployees();
+      loadCustomers();
+    } else { toast(d.detail || 'Fejl', 'error'); }
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+async function deleteEmployee(id, name) {
+  if (!confirm(`Slet ${name}? Tildelte kunder bliver ikke-tildelt.`)) return;
+  try {
+    const r = await fetch(`/api/admin/employees/${id}`, {method:'DELETE', headers:{'Authorization':'Bearer '+token}});
+    const d = await r.json();
+    if (d.ok) { toast('Medarbejder slettet', 'success'); await loadEmployees(); loadCustomers(); }
+    else toast('Fejl', 'error');
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+// ── SETTINGS MODAL ────────────────────────────────────────────────────────────
+
+function openSettingsModal() {
+  switchSettingsTab('profile');
+  // Pre-fill profile fields
+  document.getElementById('settings-name').value = myProfile.name || '';
+  document.getElementById('settings-title').value = myProfile.title || '';
+  document.getElementById('settings-modal-sub').textContent = myProfile.email || '';
+  document.getElementById('settings-avatar-name').textContent = myProfile.name || '';
+  const initials = (myProfile.name||'?').split(' ').map(w=>w[0]||'').join('').toUpperCase().substring(0,2);
+  const preview = document.getElementById('settings-avatar-preview');
+  if (myProfile.profile_image) {
+    preview.innerHTML = `<img src="${esc(myProfile.profile_image)}" alt="">`;
+  } else {
+    preview.textContent = initials;
+  }
+  document.getElementById('old-pw').value = '';
+  document.getElementById('new-pw').value = '';
+  document.getElementById('new-pw2').value = '';
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettingsModal() { document.getElementById('settings-modal').classList.remove('open'); }
+
+function switchSettingsTab(tab) {
+  settingsTab = tab;
+  document.getElementById('stab-profile').classList.toggle('active', tab === 'profile');
+  document.getElementById('stab-password').classList.toggle('active', tab === 'password');
+  document.getElementById('settings-profile').classList.toggle('hidden', tab !== 'profile');
+  document.getElementById('settings-password').classList.toggle('hidden', tab !== 'password');
+}
+
+function handleAvatarUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('settings-avatar-preview');
+    preview.innerHTML = `<img src="${e.target.result}" alt="">`;
+    myProfile._pendingImage = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveProfile() {
+  const name = document.getElementById('settings-name').value.trim();
+  const title = document.getElementById('settings-title').value.trim();
+  const profile_image = myProfile._pendingImage || myProfile.profile_image || '';
+  try {
+    const r = await fetch('/api/admin/employees/me', {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({name, title, profile_image})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      myProfile.name = d.name;
+      myProfile.title = d.title;
+      myProfile.profile_image = d.profile_image;
+      delete myProfile._pendingImage;
+      renderProfileHeader();
+      document.getElementById('topbar-name').textContent = d.name;
+      toast('Profil gemt', 'success');
+      closeSettingsModal();
+    } else { toast(d.detail || 'Fejl', 'error'); }
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+async function savePassword() {
+  const old_password = document.getElementById('old-pw').value;
+  const new_password = document.getElementById('new-pw').value;
+  const new_pw2 = document.getElementById('new-pw2').value;
+  if (!old_password || !new_password) { toast('Udfyld alle felter', 'error'); return; }
+  if (new_password !== new_pw2) { toast('De nye adgangskoder matcher ikke', 'error'); return; }
+  if (new_password.length < 6) { toast('Adgangskode skal være mindst 6 tegn', 'error'); return; }
+  try {
+    const r = await fetch('/api/admin/employee/change_password', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({old_password, new_password})
+    });
+    const d = await r.json();
+    if (d.ok) { toast('Adgangskode ændret', 'success'); closeSettingsModal(); }
+    else { toast(d.detail || 'Fejl', 'error'); }
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+// ── PLAN MODAL ────────────────────────────────────────────────────────────────
+
+function openPlanModal(uid, currentPlan, email) {
+  editUserId = uid;
+  editSelectedPlan = currentPlan;
+  document.getElementById('plan-modal-sub').textContent = email;
+  document.getElementById('plan-options').innerHTML = Object.entries(PLANS).map(([key, p]) =>
+    `<div class="plan-option ${key===currentPlan?'selected':''}" onclick="selectPlan('${key}')">
+      <div>
+        <div class="plan-option-name">${p.name}</div>
+        <div class="plan-option-price">${p.credits} credits / md</div>
+      </div>
+      <div style="font-weight:700;color:var(--tx)">${p.price} kr</div>
+    </div>`
+  ).join('');
+  document.getElementById('plan-modal').classList.add('open');
+}
+
+function selectPlan(key) {
+  editSelectedPlan = key;
+  document.querySelectorAll('.plan-option').forEach((el, i) => {
+    el.classList.toggle('selected', Object.keys(PLANS)[i] === key);
+  });
+}
+function closePlanModal() { document.getElementById('plan-modal').classList.remove('open'); }
+
+async function savePlan() {
+  try {
+    const r = await fetch(`/api/admin/users/${editUserId}/plan`, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({plan: editSelectedPlan})
+    });
+    const d = await r.json();
+    if (d.ok) { toast('Plan opdateret', 'success'); closePlanModal(); loadCustomers(); }
+    else toast('Fejl: ' + (d.detail||''), 'error');
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+// ── CREDITS MODAL ─────────────────────────────────────────────────────────────
+
+function openCreditsModal(uid, current, email) {
+  editUserId = uid;
+  document.getElementById('credits-modal-sub').textContent = email;
+  document.getElementById('credits-input').value = current;
+  document.getElementById('credits-modal').classList.add('open');
+  setTimeout(() => document.getElementById('credits-input').focus(), 100);
+}
+function closeCreditsModal() { document.getElementById('credits-modal').classList.remove('open'); }
+
+async function saveCredits() {
+  const val = parseInt(document.getElementById('credits-input').value);
+  if (isNaN(val) || val < 0) { toast('Ugyldigt antal', 'error'); return; }
+  try {
+    const r = await fetch(`/api/admin/users/${editUserId}/credits`, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({credits: val})
+    });
+    const d = await r.json();
+    if (d.ok) { toast('Credits opdateret', 'success'); closeCreditsModal(); loadCustomers(); }
+    else toast('Fejl: ' + (d.detail||''), 'error');
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+// ── NOTES MODAL ───────────────────────────────────────────────────────────────
+
+async function openNotesModal(userId, email) {
+  notesUserId = userId;
+  document.getElementById('notes-modal-sub').textContent = email;
+  document.getElementById('note-text').value = '';
+  document.getElementById('notes-modal').classList.add('open');
+  await refreshNotes();
+}
+function closeNotesModal() { document.getElementById('notes-modal').classList.remove('open'); }
+
+async function refreshNotes() {
+  const list = document.getElementById('notes-list');
+  list.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(`/api/admin/support_notes/${notesUserId}`, {headers:{'Authorization':'Bearer '+token}});
+    const notes = await r.json();
+    if (!notes.length) { list.innerHTML = '<div style="color:var(--tx3);font-size:13px;text-align:center;padding:16px">Ingen noter endnu</div>'; return; }
+    list.innerHTML = notes.map(n => {
+      const isSystem = n.system === true;
+      return `
+      <div class="note-item ${n.resolved?'resolved':''} ${isSystem?'system-note':''}">
+        <div class="note-header">
+          <span class="note-author ${isSystem?'system':''}">${esc(n.author)}</span>
+          <span class="note-date">${esc(n.created_at)}</span>
+        </div>
+        <div class="note-text">${esc(n.text)}</div>
+        ${!n.resolved ? `<button class="note-resolve" onclick="resolveNote('${n.id}')">Marker løst ✓</button>` : '<div class="note-resolved-tag">✓ Løst</div>'}
+      </div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = '<div style="color:var(--red);padding:16px">Fejl ved hentning</div>'; }
+}
+
+async function sendNote() {
+  const text = document.getElementById('note-text').value.trim();
+  if (!text) return;
+  try {
+    const r = await fetch('/api/admin/support_note', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({user_id: notesUserId, text})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('note-text').value = '';
+      toast('Note tilføjet', 'success');
+      await refreshNotes();
+      loadCustomers();
+    } else toast(d.detail||'Fejl', 'error');
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+async function resolveNote(noteId) {
+  try {
+    const r = await fetch('/api/admin/resolve_note', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({user_id: notesUserId, note_id: noteId})
+    });
+    const d = await r.json();
+    if (d.ok) { await refreshNotes(); loadCustomers(); }
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+// ── GUIDELINES ────────────────────────────────────────────────────────────────
+
+async function loadGuidelines() {
+  try {
+    const r = await fetch('/api/admin/guidelines', {headers:{'Authorization':'Bearer '+token}});
+    guidelinesData = await r.json();
+    renderGuidelines();
+  } catch(e) {
+    document.getElementById('guidelines-wrap').innerHTML = '<div class="empty-state">Kunne ikke hente retningslinjer</div>';
+  }
+}
+
+function renderGuidelines() {
+  const wrap = document.getElementById('guidelines-wrap');
+  if (!guidelinesData) return;
+  if (guidelinesData.updated_at) {
+    document.getElementById('guidelines-updated').textContent = 'Sidst opdateret: ' + guidelinesData.updated_at;
+  }
+  const isOwner = userRole === 'owner';
+  document.getElementById('edit-guidelines-btn').classList.toggle('hidden', !isOwner);
+  wrap.innerHTML = (guidelinesData.sections || []).map(s => `
+    <div class="guideline-section">
+      <div class="guideline-heading">${esc(s.heading)}</div>
+      <div class="guideline-text">${esc(s.text)}</div>
+    </div>
+  `).join('') || '<div class="empty-state" style="padding:32px">Ingen retningslinjer endnu</div>';
+}
+
+function openGuidelinesModal() {
+  if (!guidelinesData) return;
+  const editor = document.getElementById('guidelines-editor');
+  editor.innerHTML = (guidelinesData.sections || []).map((s, i) => `
+    <div style="margin-bottom:16px">
+      <label>Afsnit ${i+1} — Overskrift</label>
+      <input type="text" class="gl-heading" data-i="${i}" value="${esc(s.heading)}">
+      <label style="margin-top:10px">Tekst</label>
+      <textarea class="gl-text" data-i="${i}" style="height:80px;resize:vertical">${esc(s.text)}</textarea>
+    </div>
+  `).join('') + `
+    <button class="action-btn" style="margin-top:8px;color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="addGuidelineSection()">+ Tilføj afsnit</button>`;
+  document.getElementById('guidelines-modal').classList.add('open');
+}
+function closeGuidelinesModal() { document.getElementById('guidelines-modal').classList.remove('open'); }
+
+function addGuidelineSection() {
+  if (!guidelinesData) return;
+  guidelinesData.sections.push({heading: 'Nyt afsnit', text: ''});
+  openGuidelinesModal();
+}
+
+async function saveGuidelines() {
+  const headings = document.querySelectorAll('.gl-heading');
+  const texts = document.querySelectorAll('.gl-text');
+  const sections = Array.from(headings).map((h, i) => ({
+    heading: h.value.trim(),
+    text: texts[i].value.trim(),
+  }));
+  try {
+    const r = await fetch('/api/admin/guidelines', {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({sections})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      guidelinesData.sections = sections;
+      closeGuidelinesModal();
+      loadGuidelines();
+      toast('Retningslinjer gemt', 'success');
+    } else toast(d.detail || 'Fejl', 'error');
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+
+function toast(msg, type) {
+  const el = document.createElement('div');
+  el.className = 't ' + type;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ── WELCOME SYSTEM ────────────────────────────────────────────────────────────
+
+const EMP_MSGS = [
+  'Hej {n}, dejligt at have dig med i dag! ☀️',
+  'God morgen {n}, klar til at gøre en forskel i dag? 💪',
+  'Hej {n}, dagens opgaver venter — du klarer det! 🚀',
+  'Velkommen tilbage {n}, teamet er glad for du er her ✨',
+  'Hej {n}, en ny dag fuld af muligheder! 🌟',
+];
+
+function checkWelcome(name, email, role) {
+  if (role === 'owner') return;
+  const today = new Date().toISOString().slice(0, 10);
+  const onbKey  = 'ugv_adm_onb_' + email;
+  const dayKey  = 'ugv_adm_day_' + email;
+
+  if (!localStorage.getItem(onbKey)) {
+    showOnboardingModal(name, role, onbKey, dayKey, today);
+  } else if (localStorage.getItem(dayKey) !== today) {
+    showWelcomeBanner(name, dayKey, today);
+  }
+}
+
+function showWelcomeBanner(name, dayKey, today) {
+  const first = (name || 'du').split(' ')[0];
+  const msg = EMP_MSGS[Math.floor(Math.random() * EMP_MSGS.length)].replace('{n}', first);
+  localStorage.setItem(dayKey, today);
+  document.getElementById('welcome-msg').textContent = msg;
+  document.getElementById('welcome-date').textContent =
+    new Date().toLocaleDateString('da-DK', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('welcome-banner').classList.remove('hidden');
+}
+
+function closeBanner() {
+  document.getElementById('welcome-banner').classList.add('hidden');
+}
+
+function showOnboardingModal(name, role, onbKey, dayKey, today) {
+  const first = (name || 'du').split(' ')[0];
+  document.getElementById('onb-name').textContent = first;
+  document.getElementById('onb-avatar').textContent = first.charAt(0).toUpperCase();
+
+  const pill = document.getElementById('onb-role-pill');
+  if (role === 'support') {
+    pill.textContent = 'Support';
+    pill.className = 'onb-role-pill onb-role-support';
+  } else {
+    pill.textContent = 'Medarbejder';
+    pill.className = 'onb-role-pill onb-role-employee';
+  }
+
+  const features = role === 'support' ? [
+    ['👥', 'Se og søge i alle kunder'],
+    ['🔀', 'Tildele kunder til medarbejdere'],
+    ['📝', 'Tilføje og løse support noter'],
+    ['📋', 'Se retningslinjer for personlig assistent'],
+    ['⚙️', 'Opdatere din profil og adgangskode'],
+  ] : [
+    ['👥', 'Se dine tildelte kunder'],
+    ['📝', 'Tilføje og løse support noter'],
+    ['📋', 'Se retningslinjer for personlig assistent'],
+    ['⚙️', 'Opdatere din profil og adgangskode'],
+  ];
+
+  document.getElementById('onb-features-list').innerHTML = features.map(([icon, txt]) =>
+    `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:13px;color:var(--tx2)">
+      <span style="font-size:15px;width:20px;text-align:center">${icon}</span><span>${txt}</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('onboarding-modal').classList.add('open');
+  document.getElementById('onb-start-btn').onclick = () => {
+    localStorage.setItem(onbKey, '1');
+    document.getElementById('onboarding-modal').classList.remove('open');
+    showWelcomeBanner(name, dayKey, today);
+  };
+}
+
+// ── BAN / PAUSE / DELETE ──────────────────────────────────────────────────────
+
+async function banUser(uid, email) {
+  const u = allUsers.find(x => x.id === uid);
+  const action = u && u.status === 'banned' ? 'unban' : 'ban';
+  if (!confirm(`${action === 'ban' ? 'Ban' : 'Unban'} bruger: ${email}?`)) return;
+  try {
+    const r = await fetch(`/api/admin/users/${uid}/ban`, {method:'POST', headers:{'Authorization':'Bearer '+token}});
+    const d = await r.json();
+    if (d.ok) { toast(`Bruger ${action === 'ban' ? 'banned' : 'unbanned'}`, 'success'); loadCustomers(); }
+    else toast(d.detail || 'Fejl', 'error');
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+async function pauseUser(uid) {
+  const u = allUsers.find(x => x.id === uid);
+  const action = u && u.status === 'paused' ? 'resume' : 'pause';
+  try {
+    const r = await fetch(`/api/admin/users/${uid}/pause`, {method:'POST', headers:{'Authorization':'Bearer '+token}});
+    const d = await r.json();
+    if (d.ok) { toast(`Bruger ${action === 'pause' ? 'pauset' : 'genaktiveret'}`, 'success'); loadCustomers(); }
+    else toast(d.detail || 'Fejl', 'error');
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+async function deleteUser(uid, email) {
+  if (!confirm(`SLET bruger permanent: ${email}?\n\nDette kan ikke fortrydes!`)) return;
+  try {
+    const r = await fetch(`/api/admin/users/${uid}`, {method:'DELETE', headers:{'Authorization':'Bearer '+token}});
+    const d = await r.json();
+    if (d.ok) { toast('Bruger slettet', 'success'); loadCustomers(); }
+    else toast(d.detail || 'Fejl', 'error');
+  } catch(e) { toast('Fejl', 'error'); }
+}
+
+// ── REVENUE ───────────────────────────────────────────────────────────────────
+
+async function loadRevenue() {
+  document.getElementById('revenue-wrap').innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch('/api/admin/revenue', {headers:{'Authorization':'Bearer '+token}});
+    const d = await r.json();
+    renderRevenue(d);
+  } catch(e) {
+    document.getElementById('revenue-wrap').innerHTML = '<div class="empty-state">Kunne ikke hente omsætning</div>';
+  }
+}
+
+function renderRevenue(d) {
+  const wrap = document.getElementById('revenue-wrap');
+  const topCards = `
+    <div class="rev-grid" style="grid-template-columns:repeat(3,1fr);max-width:600px">
+      <div class="rev-card">
+        <div class="rev-card-label">MRR</div>
+        <div class="rev-card-val">${(d.mrr||0).toLocaleString('da-DK')} kr</div>
+        <div class="rev-card-sub">Månedlig omsætning</div>
+      </div>
+      <div class="rev-card">
+        <div class="rev-card-label">ARR</div>
+        <div class="rev-card-val">${(d.arr||0).toLocaleString('da-DK')} kr</div>
+        <div class="rev-card-sub">Årlig omsætning</div>
+      </div>
+      <div class="rev-card">
+        <div class="rev-card-label">Betalende</div>
+        <div class="rev-card-val">${Object.entries(d.plan_counts||{}).filter(([k])=>k!=='free').reduce((s,[,v])=>s+v,0)}</div>
+        <div class="rev-card-sub">Ikke-gratis brugere</div>
+      </div>
+    </div>`;
+  const planRows = Object.entries(d.plans||{}).map(([key, plan]) => {
+    const count = (d.plan_counts||{})[key] || 0;
+    const rev = (d.plan_revenue||{})[key] || 0;
+    return `
+    <div class="service-row">
+      <div style="min-width:90px;font-weight:600">${plan.name}</div>
+      <div style="min-width:70px;font-size:12px;color:var(--tx2)">${plan.price} kr/md</div>
+      <div class="service-bar-wrap">
+        <div class="service-bar"><div class="service-bar-fill" style="width:${d.mrr>0?Math.round(rev/d.mrr*100):0}%"></div></div>
+      </div>
+      <div class="service-credits">${count} brugere</div>
+      <div style="min-width:90px;text-align:right;font-weight:700;color:var(--ac)">${rev.toLocaleString('da-DK')} kr</div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML = topCards + `<div style="margin:0 24px 24px;background:var(--glass-b);border:1px solid var(--border);border-radius:12px;overflow:hidden">${planRows}</div>`;
+}
+
+// ── API USAGE ─────────────────────────────────────────────────────────────────
+
+async function loadApiUsage() {
+  document.getElementById('api-usage-wrap').innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch('/api/admin/api_usage', {headers:{'Authorization':'Bearer '+token}});
+    const d = await r.json();
+    renderApiUsage(d);
+  } catch(e) {
+    document.getElementById('api-usage-wrap').innerHTML = '<div class="empty-state">Kunne ikke hente API forbrug</div>';
+  }
+}
+
+function renderApiUsage(d) {
+  const wrap = document.getElementById('api-usage-wrap');
+  const total = d.total_credits || 0;
+  const services = d.by_service || {};
+  const actions = d.by_action || {};
+  const serviceOrder = ['Anthropic','ElevenLabs','Runway','Platforms','Internal','Other'];
+  const serviceIcons = {Anthropic:'🤖', ElevenLabs:'🎙️', Runway:'🎬', Platforms:'📲', Internal:'⚙️', Other:'📦'};
+  const serviceRows = serviceOrder.filter(s => services[s] > 0).map(s => {
+    const cr = services[s] || 0;
+    const pct = total > 0 ? Math.round(cr / total * 100) : 0;
+    return `
+    <div class="service-row">
+      <div style="min-width:110px;font-weight:600">${serviceIcons[s]||''} ${s}</div>
+      <div class="service-bar-wrap">
+        <div class="service-bar"><div class="service-bar-fill" style="width:${pct}%"></div></div>
+        <span style="font-size:12px;color:var(--tx2);min-width:36px">${pct}%</span>
+      </div>
+      <div class="service-credits">${cr.toLocaleString()} cr</div>
+    </div>`;
+  }).join('') || '<div style="padding:24px;color:var(--tx3);font-size:13px">Ingen data endnu</div>';
+  wrap.innerHTML = `
+    <div class="rev-grid" style="grid-template-columns:repeat(2,1fr);max-width:400px">
+      <div class="rev-card">
+        <div class="rev-card-label">Credits brugt i alt</div>
+        <div class="rev-card-val">${total.toLocaleString()}</div>
+        <div class="rev-card-sub">Alle brugere</div>
+      </div>
+      <div class="rev-card">
+        <div class="rev-card-label">Services aktive</div>
+        <div class="rev-card-val">${Object.keys(services).length}</div>
+        <div class="rev-card-sub">Med forbrug</div>
+      </div>
+    </div>
+    <div style="margin:0 24px 24px;background:var(--glass-b);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="padding:14px 24px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px">Fordeling per service</div>
+      ${serviceRows}
+    </div>`;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+if (token) {
+  userRole = localStorage.getItem('ugv_admin_role') || 'owner';
+  showApp(null);
+  if (userRole === 'owner') loadEmployees();
+}
+
+// ── Sub-accounts modal ────────────────────────────────────────────────────────
+let _subsModalUserId = '';
+let _subsBlocked = false;
+
+async function openSubsModal(userId, email) {
+  _subsModalUserId = userId;
+  document.getElementById('subs-modal-sub').textContent = email;
+  document.getElementById('subs-modal-body').innerHTML = 'Indlæser...';
+  document.getElementById('subs-modal').classList.add('open');
+  try {
+    const r = await fetch(`/api/admin/users/${userId}/subaccounts`, {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    const d = await r.json();
+    _subsBlocked = d.subs_blocked || false;
+    updateSubsBlockToggle();
+    const subs = d.sub_accounts || [];
+    const extra = d.extra_sub_slots || 0;
+    if (!subs.length) {
+      document.getElementById('subs-modal-body').innerHTML = `<div style="color:var(--tx3);font-size:13px;padding:16px 0;text-align:center">Ingen under-konti oprettet${extra?' · '+extra+' ekstra slots købt':''}</div>`;
+    } else {
+      document.getElementById('subs-modal-body').innerHTML = `
+        ${extra ? `<div style="font-size:11px;color:var(--ac3);margin-bottom:10px">✅ ${extra} ekstra slot${extra>1?'s':''} købt (tilkøb)</div>` : ''}
+        <div style="display:flex;flex-direction:column;gap:8px">
+        ${subs.map(s => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--border-b)">
+            <div>
+              <div style="font-size:13px;font-weight:600">${s.name}${s.status==='inactive'?' <span style="font-size:10px;color:#ef4444">[Inaktiv]</span>':''}</div>
+              <div style="font-size:11px;color:var(--tx3)">Oprettet: ${s.created_at||'–'}</div>
+            </div>
+            <button style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer" onclick="adminDeleteSub('${userId}','${s.id}','${s.name}')">🗑️ Slet</button>
+          </div>`).join('')}
+        </div>`;
+    }
+  } catch(e) {
+    document.getElementById('subs-modal-body').innerHTML = '<div style="color:#ef4444">Fejl ved indlæsning</div>';
+  }
+}
+
+function closeSubsModal() {
+  document.getElementById('subs-modal').classList.remove('open');
+  _subsModalUserId = '';
+}
+
+function updateSubsBlockToggle() {
+  const tog = document.getElementById('subs-block-tog');
+  const knob = document.getElementById('subs-block-knob');
+  const label = document.getElementById('subs-block-label');
+  if (_subsBlocked) {
+    tog.style.background = '#ef4444';
+    knob.style.left = '21px';
+    label.textContent = 'Blokeret — brugeren kan ikke oprette flere under-konti';
+    label.style.color = '#ef4444';
+  } else {
+    tog.style.background = 'rgba(255,255,255,.1)';
+    knob.style.left = '3px';
+    label.textContent = 'Blokering er slået fra';
+    label.style.color = 'var(--tx3)';
+  }
+}
+
+async function toggleSubsBlock() {
+  if (!_subsModalUserId) return;
+  const newBlocked = !_subsBlocked;
+  try {
+    const r = await fetch(`/api/admin/users/${_subsModalUserId}/block_subs`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({blocked: newBlocked})
+    });
+    if (r.ok) {
+      _subsBlocked = newBlocked;
+      updateSubsBlockToggle();
+    }
+  } catch(e) {}
+}
+
+async function adminDeleteSub(userId, subId, name) {
+  if (!confirm(`Slet under-konto "${name}" permanent? Al data går tabt.`)) return;
+  try {
+    const r = await fetch(`/api/admin/users/${userId}/subaccounts/${subId}`, {
+      method: 'DELETE',
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    if (r.ok) {
+      await openSubsModal(userId, document.getElementById('subs-modal-sub').textContent);
+    }
+  } catch(e) { alert('Fejl ved sletning'); }
+}
+</script>
+
+<!-- Sub-accounts modal -->
+<div class="modal-overlay" id="subs-modal" onclick="if(event.target===this)closeSubsModal()">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">👥 Under-konti</div>
+    <div class="modal-sub" id="subs-modal-sub">–</div>
+    <div id="subs-modal-body" style="margin-bottom:16px">Indlæser...</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border-b);margin-top:8px">
+      <div style="font-size:13px;font-weight:600">Bloker oprettelse af nye under-konti</div>
+      <div id="subs-block-tog" style="width:40px;height:22px;border-radius:11px;background:rgba(255,255,255,.1);cursor:pointer;position:relative;transition:background .2s" onclick="toggleSubsBlock()">
+        <div id="subs-block-knob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s"></div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:4px" id="subs-block-label">Blokering er slået fra</div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeSubsModal()">Luk</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
