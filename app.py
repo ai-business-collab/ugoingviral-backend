@@ -75,6 +75,11 @@ def admin_page():
         return FileResponse(ADMIN_HTML, media_type="text/html")
     return {"msg": "Admin panel ikke fundet"}
 
+@app.get("/delete-data")
+def delete_data_page():
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "delete-data.html")
+    return FileResponse(p, media_type="text/html")
+
 @app.get("/app")
 def serve_frontend(request: Request):
     # Tjek om bruger er logget ind
