@@ -28,6 +28,13 @@ async def tiktok_oauth_callback(code: str = "", error: str = "", state: str = ""
 
     try:
         from tiktok_api import exchange_code_for_token, get_user_info
+        from services.users import load_users
+        from services.store import set_user_context
+        users_data = load_users()
+        users = users_data.get("users", [])
+        active_user = next((u for u in users if u.get("is_active")), None)
+        if active_user:
+            set_user_context(active_user["id"])
         token_data = await exchange_code_for_token(code)
         access_token  = token_data.get("access_token", "")
         refresh_token = token_data.get("refresh_token", "")

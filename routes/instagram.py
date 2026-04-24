@@ -31,8 +31,10 @@ async def instagram_oauth_callback(code: str = "", state: str = "", error: str =
         return {"status": "error", "message": "Ingen code modtaget"}
     try:
         from instagram_api import exchange_code_for_token, get_long_lived_token, get_instagram_account_id, get_account_info
+        import httpx as _httpx
         # Exchange code for token
         token_data = await exchange_code_for_token(code)
+        add_log(f"DEBUG token_data: {str(token_data)[:200]}", "info")
         short_token = token_data.get("access_token")
         if not short_token:
             return {"status": "error", "message": "Ingen access token"}
@@ -40,6 +42,10 @@ async def instagram_oauth_callback(code: str = "", state: str = "", error: str =
         long_data = await get_long_lived_token(short_token)
         long_token = long_data.get("access_token", short_token)
         expires_at = long_data.get("expires_at")
+        # Debug — hvad returnerer /me/accounts?
+        async with _httpx.AsyncClient() as c:
+            r = await c.get("https://graph.facebook.com/v19.0/me/accounts", params={"access_token": long_token, "fields": "id,name,instagram_business_account"})
+            add_log(f"DEBUG accounts: {r.text[:300]}", "info")
         # Hent Instagram account ID
         ig_id = await get_instagram_account_id(long_token)
         if not ig_id:

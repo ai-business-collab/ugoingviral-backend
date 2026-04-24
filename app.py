@@ -90,6 +90,26 @@ def serve_frontend(request: Request):
         return FileResponse(FRONTEND, media_type="text/html")
     return {"msg": "Frontend ikke fundet"}
 
+
+@app.get("/tiktok0pPHr8lF9An0dqJulvuzcW8LH93JdBeb.txt")
+def tiktok_verify():
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "tiktok0pPHr8lF9An0dqJulvuzcW8LH93JdBeb.txt"), media_type="text/plain")
+
+
+@app.get("/tiktokFP3k9ZuaAI7YQzz7LN1nmGdk1XKrZsRF.txt")
+def tiktok_verify2():
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "tiktokFP3k9ZuaAI7YQzz7LN1nmGdk1XKrZsRF.txt"), media_type="text/plain")
+
+
+@app.get("/tiktokSw68ZsEm2ws9Y0yr73osmK8HUtYmyHIN.txt")
+def tiktok_verify3():
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "tiktokSw68ZsEm2ws9Y0yr73osmK8HUtYmyHIN.txt"), media_type="text/plain")
+
+
+@app.get("/tiktok50KIALdvtg3pFgadwqJ17IpICFOwbkpT.txt")
+def tiktok_verify4():
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "tiktok50KIALdvtg3pFgadwqJ17IpICFOwbkpT.txt"), media_type="text/plain")
+
 @app.get("/privacy")
 def privacy_policy():
     from fastapi.responses import HTMLResponse

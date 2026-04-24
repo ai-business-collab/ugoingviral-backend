@@ -129,7 +129,8 @@ with sync_playwright() as p:
         headless=True,
         slow_mo=80,
         proxy=_proxy,
-        args=[
+        ignore_https_errors=True,
+args=[
             "--disable-blink-features=AutomationControlled",
             "--no-sandbox",
             "--disable-dev-shm-usage",
@@ -139,8 +140,7 @@ with sync_playwright() as p:
         locale="da-DK",
         timezone_id="Europe/Copenhagen",
         extra_http_headers={"Accept-Language": "da-DK,da;q=0.9,en;q=0.8"},
-        ignore_https_errors=True,
-    )
+)
     browser = None  # ikke brugt med persistent context
     print("PERSISTENT_CONTEXT_LOADED")
     ctx.add_init_script("""
