@@ -72,6 +72,10 @@ def get_connections():
     }
     for p in ["instagram", "tiktok", "facebook", "twitter", "youtube"]:
         conns[p] = bool(s.get(f"{p}_user") and s.get(f"{p}_pass"))
+    # Tilføj API forbindelser
+    if s.get("instagram_api_connected"): conns["instagram"] = True
+    if s.get("tiktok_api_connected"): conns["tiktok"] = True
+    if s.get("youtube_api_connected"): conns["youtube"] = True
     return conns
 
 # ── Automation settings ───────────────────────────────────────────────────────

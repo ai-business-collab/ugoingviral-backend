@@ -1189,9 +1189,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <div class="sbfoot">
     
+    <div class="status-item"><span class="sdot off" id="dot-pw"></span><span id="txt-pw">Playwright</span></div>
     <div class="status-item"><span class="sdot off" id="dot-api"></span><span id="txt-api">Backend offline</span></div>
     <div class="status-item"><span class="sdot off" id="dot-shop"></span><span id="txt-shop">Shopify</span></div>
-    <div class="status-item"><span class="sdot off" id="dot-ai"></span><span id="txt-ai">AI Model</span></div>
+    
     
   </div>
 </aside>
@@ -1273,7 +1274,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="trow"><div><div class="tname">🎵 TikTok</div><div class="tdesc" id="d-tt">Ikke forbundet</div></div><span class="sdot off" id="dot-s-tt"></span></div>
         <div class="trow"><div><div class="tname">📘 Facebook</div><div class="tdesc" id="d-fb">Ikke forbundet</div></div><span class="sdot off" id="dot-s-fb"></span></div>
         <div class="trow"><div><div class="tname">🐦 X / Twitter</div><div class="tdesc" id="d-tw">Ikke forbundet</div></div><span class="sdot off" id="dot-s-tw"></span></div>
-        <div class="trow"><div><div class="tname">🤖 AI Model</div><div class="tdesc" id="d-ai">Ikke konfigureret</div></div><span class="sdot off" id="dot-s-ai"></span></div>
+        <div class="trow"><div><div class="tname">▶️ YouTube</div><div class="tdesc" id="d-yt">Ikke forbundet</div></div><span class="sdot off" id="dot-s-yt"></span></div>
+        
       </div>
       <div class="card">
         <div class="ctitle">📋 Seneste content</div>
@@ -2231,7 +2233,14 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectInstagramAPI()">📸 Forbind Instagram via officiel API</button>
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Kræver Instagram Business/Creator konto forbundet til en Facebook side.</div>
-            
+            <details style="margin-bottom:10px">
+              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Playwright login (fallback)</summary>
+              <div style="margin-top:10px">
+                <div class="fg"><label class="fl">Brugernavn</label><input class="fi" id="ig-user" placeholder="@brugernavn"></div>
+                <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="ig-pass" placeholder="Adgangskode"></div>
+                <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('instagram')">💾 Gem</button><button class="btn bg bsm" onclick="testLogin('instagram')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('instagram')">🗑️ Slet</button></div>
+              </div>
+            </details>
 
           </div>
         </div>
@@ -2257,6 +2266,14 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectTikTokAPI()">🎵 Forbind TikTok via officiel API</button>
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Kræver TikTok Business/Creator konto. Giver adgang til direkte video-posting uden browser-automation.</div>
+            <details style="margin-bottom:10px">
+              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Playwright login (fallback)</summary>
+              <div style="margin-top:10px">
+                <div class="fg"><label class="fl">Email / Brugernavn</label><input class="fi" id="tt-user" placeholder="email eller @brugernavn"></div>
+                <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="tt-pass" placeholder="Adgangskode"></div>
+                <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('tiktok')">💾 Gem</button><button class="btn bg bsm" onclick="testLogin('tiktok')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('tiktok')">🗑️ Slet</button></div>
+              </div>
+            </details>
             
           </div>
         </div>
@@ -2328,18 +2345,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
         </div>
 
-        <div class="concard" id="con-ai" style="opacity:1">
-          <div class="concard-top">
-            <div class="conico">🤖</div>
-            <div class="coninfo">
-              <div class="conname">AI Model</div>
-              <div class="constatus" style="color:var(--ac3)" id="cs-ai">✅ Kører via UgoingViral</div>
-            </div>
-          </div>
-          <div style="padding:0 16px 16px;font-size:12px;color:var(--tx2);line-height:1.7;background:rgba(16,185,129,.06);border-radius:0 0 14px 14px;border-top:1px solid var(--border)">
-            AI content generering (Claude, Runway, ElevenLabs) kører centralt via UgoingViral platformen. Du behøver ikke konfigurere egne API nøgler.
-          </div>
-        </div>
 
         <div class="card">
           <div class="ctitle"><span>🔍 Forbindelsesstatus</span><button class="btn bg bsm" onclick="loadConnections()">↻</button></div>
@@ -2349,7 +2354,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="trow"><div><div class="tname">📘 Facebook</div><div class="tdesc" id="ov-fb">–</div></div><span class="sdot off" id="ovd-fb"></span></div>
           <div class="trow"><div><div class="tname">🐦 X / Twitter</div><div class="tdesc" id="ov-tw">–</div></div><span class="sdot off" id="ovd-tw"></span></div>
           <div class="trow"><div><div class="tname">▶️ YouTube</div><div class="tdesc" id="ov-yt">–</div></div><span class="sdot off" id="ovd-yt"></span></div>
-          <div class="trow"><div><div class="tname">🤖 AI</div><div class="tdesc" id="ov-ai">–</div></div><span class="sdot off" id="ovd-ai"></span></div>
+          
         </div>
       </div>
     </div>
@@ -4826,6 +4831,7 @@ async function loadConnections() {
       tiktok:    ['','','cs-tiktok','ov-tt','ovd-tt','dot-s-tt','d-tt'],
       facebook:  ['','','cs-facebook','ov-fb','ovd-fb','dot-s-fb','d-fb'],
       twitter:   ['','','cs-twitter','ov-tw','ovd-tw','dot-s-tw','d-tw'],
+      youtube:   ['','','cs-youtube','ov-yt','ovd-yt','dot-s-yt','d-yt'],
       ai:        ['dot-ai','txt-ai','cs-ai','ov-ai','ovd-ai','dot-s-ai','d-ai'],
     };
     for (const [k, ids] of Object.entries(platMap)) {
