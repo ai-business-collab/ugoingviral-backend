@@ -564,7 +564,7 @@ def add_support_note(req: SupportNoteRequest, staff=Depends(require_staff)):
     note = {
         "id": str(uuid.uuid4())[:8],
         "text": req.text.strip(),
-        "author": staff.get("name", "Admin"),
+        "author": staff.get("display_email", staff.get("email", staff.get("name", "Admin"))),
         "created_at": datetime.utcnow().strftime("%d/%m %H:%M"),
         "resolved": False,
     }
