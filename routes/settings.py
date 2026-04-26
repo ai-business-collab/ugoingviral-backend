@@ -76,6 +76,7 @@ def get_connections():
     if s.get("instagram_api_connected"): conns["instagram"] = True
     if s.get("tiktok_api_connected"): conns["tiktok"] = True
     if s.get("youtube_api_connected"): conns["youtube"] = True
+    if s.get("twitter_api_connected"): conns["twitter"] = True
     return conns
 
 # ── Automation settings ───────────────────────────────────────────────────────
