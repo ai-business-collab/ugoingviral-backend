@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from services.store import set_user_context, reset_user_context
-from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio
+from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio
 
 app = FastAPI(title="Command Central API v4")
 
@@ -181,6 +181,7 @@ app.include_router(playwright.router)
 app.include_router(instagram.router)
 app.include_router(tiktok.router)
 app.include_router(youtube.router)
+app.include_router(twitter.router)
 app.include_router(scheduler.router)
 app.include_router(email.router)
 app.include_router(billing.router)

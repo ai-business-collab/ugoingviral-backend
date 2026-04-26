@@ -319,8 +319,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="sec-tab active" onclick="showSection('customers')">👥 Kunder</button>
       <button class="sec-tab" onclick="showSection('employees')" id="tab-employees">🧑‍💼 Medarbejdere</button>
       <button class="sec-tab" onclick="showSection('guidelines')" id="tab-guidelines">📋 Retningslinjer</button>
-      <button class="sec-tab hidden" onclick="showSection('revenue')" id="tab-revenue">💰 Omsætning</button>
+      <button class="sec-tab hidden" onclick="showSection('revenue')" id="tab-revenue">💰 Revenue</button>
       <button class="sec-tab hidden" onclick="showSection('api_usage')" id="tab-api">📊 API Forbrug</button>
+      <button class="sec-tab hidden" onclick="showSection('automation_log')" id="tab-automation-log">📋 Automation Log</button>
     </div>
 
     <!-- STATS (owner + support) -->
@@ -338,7 +339,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="stat-card" id="stat-mrr-card">
         <div class="stat-label">MRR estimat</div>
         <div class="stat-val" id="stat-mrr">–</div>
-        <div class="stat-sub">Månedlig omsætning</div>
+        <div class="stat-sub">Monthly revenue</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Aktive i dag</div>
@@ -352,7 +353,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="table-card">
         <div class="table-header">
           <div class="table-title" id="customers-title">👥 Alle kunder</div>
-          <input class="search-input" type="text" placeholder="Søg på email, navn, firma..." oninput="filterUsers(this.value)">
+          <input class="search-input" type="text" placeholder="Search by email, name, company..." oninput="filterUsers(this.value)">
         </div>
         <div class="plan-filter-row" id="plan-filter-row">
           <button class="plan-filter-btn active" onclick="filterByPlan('')">Alle</button>
@@ -371,7 +372,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div id="section-revenue" class="hidden">
       <div class="table-card">
         <div class="table-header">
-          <div class="table-title">💰 Omsætning oversigt</div>
+          <div class="table-title">💰 Revenue overview</div>
           <button class="action-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="loadRevenue()">Opdater</button>
         </div>
         <div id="revenue-wrap"><div class="empty-state"><div class="spinner"></div></div></div>
@@ -394,13 +395,44 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="table-card">
         <div class="table-header">
           <div class="table-title">🧑‍💼 Medarbejdere</div>
-          <button class="action-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="openCreateEmp()">+ Tilføj medarbejder</button>
+          <button class="action-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="openCreateEmp()">+ Add employee</button>
         </div>
         <div id="emp-grid-wrap" class="emp-grid"><div class="empty-state"><div class="spinner"></div></div></div>
       </div>
     </div>
 
     <!-- GUIDELINES SECTION -->
+    <!-- Automation Log section — owner/support only, per-user inspection -->
+    <div id="section-automation_log" class="hidden">
+      <div class="table-card">
+        <div class="table-header" style="flex-wrap:wrap;gap:12px">
+          <div class="table-title">📋 Automation Log</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="log-user-select" class="search-input" style="width:220px" onchange="loadAutomationLog()">
+              <option value="">— Select user —</option>
+            </select>
+            <button class="action-btn" onclick="loadAutomationLog()">↻ Refresh</button>
+            <button class="action-btn" style="color:#ef4444;border-color:rgba(239,68,68,.3)" onclick="clearUserLog()">🗑️ Clear</button>
+          </div>
+        </div>
+        <div style="padding:0 16px 16px">
+          <div id="admin-auto-log" style="height:480px;overflow-y:scroll;font-family:'JetBrains Mono',monospace;font-size:11px;background:rgba(0,0,0,.3);border-radius:10px;padding:12px;min-height:200px;border:1px solid var(--border)">
+            <div style="color:var(--tx3);font-size:12px">Select a user to view their automation log.</div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button class="action-btn" style="flex:1" onclick="loadAutomationLog()">↻ Refresh</button>
+            <button class="action-btn" onclick="document.getElementById('admin-auto-log').scrollTop=document.getElementById('admin-auto-log').scrollHeight">⬇️ Bottom</button>
+            <button class="action-btn" onclick="document.getElementById('admin-auto-log').scrollTop=0">⬆️ Top</button>
+          </div>
+          <div style="margin-top:12px;padding:10px 14px;background:rgba(var(--ac-rgb),.04);border:1px solid rgba(var(--ac-rgb),.1);border-radius:8px">
+            <div style="font-size:11px;color:var(--tx3);line-height:1.6">
+              🔒 <strong>Staff only.</strong> Users do not see this log. Use it to diagnose automation errors, failed posts, API failures, and rate-limit hits.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="section-guidelines" class="hidden">
       <div class="table-card">
         <div class="table-header">
@@ -422,11 +454,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="onb-hero">
       <div class="onb-avatar" id="onb-avatar">👋</div>
       <div class="onb-hi">Velkommen, <span id="onb-name"></span>!</div>
-      <div class="onb-sub">Vi er glade for at have dig med på holdet</div>
+      <div class="onb-sub">We are glad to have you on the team</div>
       <div id="onb-role-pill" class="onb-role-pill"></div>
     </div>
     <div class="onb-features">
-      <div class="onb-features-title">Hvad du kan gøre i systemet</div>
+      <div class="onb-features-title">What you can do in the system</div>
       <div id="onb-features-list"></div>
     </div>
     <div class="modal-actions" style="margin-top:20px">
@@ -464,7 +496,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <!-- CREATE EMPLOYEE MODAL -->
 <div class="modal-overlay" id="create-emp-modal" onclick="if(event.target===this)closeCreateEmp()">
   <div class="modal">
-    <div class="modal-title">Tilføj medarbejder</div>
+    <div class="modal-title">Add employee</div>
     <div class="modal-sub">Opret ny medarbejder-konto</div>
     <label>Navn</label>
     <input type="text" id="new-emp-name" placeholder="Fulde navn">
@@ -478,7 +510,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <option value="support">Support — ser alle kunder</option>
     </select>
     <label>Adgangskode</label>
-    <input type="password" id="new-emp-pw" placeholder="Vælg en adgangskode">
+    <input type="password" id="new-emp-pw" placeholder="Choose a password">
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeCreateEmp()">Annuller</button>
       <button class="btn-save" onclick="saveCreateEmp()">Opret</button>
@@ -492,7 +524,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="modal-title">Support noter</div>
     <div class="modal-sub" id="notes-modal-sub">–</div>
     <div class="notes-list" id="notes-list"></div>
-    <label style="margin-top:0;margin-bottom:8px">Tilføj note</label>
+    <label style="margin-top:0;margin-bottom:8px">Add note</label>
     <div class="note-input-wrap">
       <textarea id="note-text" placeholder="Skriv en note..."></textarea>
       <button class="note-send" onclick="sendNote()">Send</button>
@@ -537,7 +569,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
     <!-- PASSWORD TAB -->
     <div id="settings-password" class="hidden">
-      <label>Nuværende adgangskode</label>
+      <label>Current password</label>
       <input type="password" id="old-pw" placeholder="">
       <label>Ny adgangskode</label>
       <input type="password" id="new-pw" placeholder="Mindst 6 tegn">
@@ -622,7 +654,7 @@ async function doLogin() {
     } else {
       err.textContent = d.detail || 'Forkert email eller adgangskode';
     }
-  } catch(e) { err.textContent = 'Fejl — prøv igen'; }
+  } catch(e) { err.textContent = 'Error — please try again'; }
 }
 
 function doLogout() {
@@ -655,6 +687,7 @@ async function showApp(info) {
     document.getElementById('tab-guidelines').classList.remove('hidden');
     document.getElementById('tab-revenue').classList.remove('hidden');
     document.getElementById('tab-api').classList.remove('hidden');
+      document.getElementById('tab-automation-log').classList.remove('hidden');
     settingsBtn.classList.add('hidden');
     document.getElementById('emp-profile-header').classList.add('hidden');
   } else if (role === 'support') {
@@ -717,7 +750,7 @@ function renderProfileHeader() {
 // ── SECTIONS ─────────────────────────────────────────────────────────────────
 
 function showSection(sec) {
-  const allSections = ['customers', 'employees', 'guidelines', 'revenue', 'api_usage'];
+  const allSections = ['customers', 'employees', 'guidelines', 'revenue', 'api_usage', 'automation_log'];
   allSections.forEach(s => {
     const el = document.getElementById('section-' + s);
     if (el) el.classList.toggle('hidden', s !== sec);
@@ -730,6 +763,7 @@ function showSection(sec) {
   if (sec === 'guidelines' && !guidelinesData) loadGuidelines();
   if (sec === 'revenue') loadRevenue();
   if (sec === 'api_usage') loadApiUsage();
+  if (sec === 'automation_log') { populateLogUserSelect(); loadAutomationLog(); }
 }
 
 // ── USERS ────────────────────────────────────────────────────────────────────
@@ -925,7 +959,7 @@ function renderEmployees() {
   }).join('') + `
     <div class="add-emp-card" onclick="openCreateEmp()">
       <span>➕</span>
-      <p>Tilføj medarbejder</p>
+      <p>Add employee</p>
     </div>`;
 }
 
@@ -1043,7 +1077,7 @@ async function savePassword() {
   const new_pw2 = document.getElementById('new-pw2').value;
   if (!old_password || !new_password) { toast('Udfyld alle felter', 'error'); return; }
   if (new_password !== new_pw2) { toast('De nye adgangskoder matcher ikke', 'error'); return; }
-  if (new_password.length < 6) { toast('Adgangskode skal være mindst 6 tegn', 'error'); return; }
+  if (new_password.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
   try {
     const r = await fetch('/api/admin/employee/change_password', {
       method:'POST',
@@ -1051,7 +1085,7 @@ async function savePassword() {
       body: JSON.stringify({old_password, new_password})
     });
     const d = await r.json();
-    if (d.ok) { toast('Adgangskode ændret', 'success'); closeSettingsModal(); }
+    if (d.ok) { toast('Password changed', 'success'); closeSettingsModal(); }
     else { toast(d.detail || 'Fejl', 'error'); }
   } catch(e) { toast('Fejl', 'error'); }
 }
@@ -1146,7 +1180,7 @@ async function refreshNotes() {
           <span class="note-date">${esc(n.created_at)}</span>
         </div>
         <div class="note-text">${esc(n.text)}</div>
-        ${!n.resolved ? `<button class="note-resolve" onclick="resolveNote('${n.id}')">Marker løst ✓</button>` : '<div class="note-resolved-tag">✓ Løst</div>'}
+        ${!n.resolved ? `<button class="note-resolve" onclick="resolveNote('${n.id}')">Mark resolved ✓</button>` : '<div class="note-resolved-tag">✓ Resolved</div>'}
       </div>`;
     }).join('');
   } catch(e) { list.innerHTML = '<div style="color:var(--red);padding:16px">Fejl ved hentning</div>'; }
@@ -1163,7 +1197,7 @@ async function sendNote() {
     const d = await r.json();
     if (d.ok) {
       document.getElementById('note-text').value = '';
-      toast('Note tilføjet', 'success');
+      toast('Note added', 'success');
       await refreshNotes();
       loadCustomers();
     } else toast(d.detail||'Fejl', 'error');
@@ -1220,7 +1254,7 @@ function openGuidelinesModal() {
       <textarea class="gl-text" data-i="${i}" style="height:80px;resize:vertical">${esc(s.text)}</textarea>
     </div>
   `).join('') + `
-    <button class="action-btn" style="margin-top:8px;color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="addGuidelineSection()">+ Tilføj afsnit</button>`;
+    <button class="action-btn" style="margin-top:8px;color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="addGuidelineSection()">+ Add section</button>`;
   document.getElementById('guidelines-modal').classList.add('open');
 }
 function closeGuidelinesModal() { document.getElementById('guidelines-modal').classList.remove('open'); }
@@ -1268,7 +1302,7 @@ function toast(msg, type) {
 
 const EMP_MSGS = [
   'Hej {n}, dejligt at have dig med i dag! ☀️',
-  'God morgen {n}, klar til at gøre en forskel i dag? 💪',
+  'Good morning {n}, ready to make a difference today? 💪',
   'Hej {n}, dagens opgaver venter — du klarer det! 🚀',
   'Velkommen tilbage {n}, teamet er glad for du er her ✨',
   'Hej {n}, en ny dag fuld af muligheder! 🌟',
@@ -1316,14 +1350,14 @@ function showOnboardingModal(name, role, onbKey, dayKey, today) {
   }
 
   const features = role === 'support' ? [
-    ['👥', 'Se og søge i alle kunder'],
+    ['👥', 'View and search all customers'],
     ['🔀', 'Tildele kunder til medarbejdere'],
-    ['📝', 'Tilføje og løse support noter'],
+    ['📝', 'Add and resolve support notes'],
     ['📋', 'Se retningslinjer for personlig assistent'],
     ['⚙️', 'Opdatere din profil og adgangskode'],
   ] : [
     ['👥', 'Se dine tildelte kunder'],
-    ['📝', 'Tilføje og løse support noter'],
+    ['📝', 'Add and resolve support notes'],
     ['📋', 'Se retningslinjer for personlig assistent'],
     ['⚙️', 'Opdatere din profil og adgangskode'],
   ];
@@ -1386,7 +1420,7 @@ async function loadRevenue() {
     const d = await r.json();
     renderRevenue(d);
   } catch(e) {
-    document.getElementById('revenue-wrap').innerHTML = '<div class="empty-state">Kunne ikke hente omsætning</div>';
+    document.getElementById('revenue-wrap').innerHTML = '<div class="empty-state">Could not fetch revenue</div>';
   }
 }
 
@@ -1397,12 +1431,12 @@ function renderRevenue(d) {
       <div class="rev-card">
         <div class="rev-card-label">MRR</div>
         <div class="rev-card-val">${(d.mrr||0).toLocaleString('da-DK')} kr</div>
-        <div class="rev-card-sub">Månedlig omsætning</div>
+        <div class="rev-card-sub">Monthly revenue</div>
       </div>
       <div class="rev-card">
         <div class="rev-card-label">ARR</div>
         <div class="rev-card-val">${(d.arr||0).toLocaleString('da-DK')} kr</div>
-        <div class="rev-card-sub">Årlig omsætning</div>
+        <div class="rev-card-sub">Annual revenue</div>
       </div>
       <div class="rev-card">
         <div class="rev-card-label">Betalende</div>
@@ -1494,7 +1528,7 @@ let _subsBlocked = false;
 async function openSubsModal(userId, email) {
   _subsModalUserId = userId;
   document.getElementById('subs-modal-sub').textContent = email;
-  document.getElementById('subs-modal-body').innerHTML = 'Indlæser...';
+  document.getElementById('subs-modal-body').innerHTML = 'Loading...';
   document.getElementById('subs-modal').classList.add('open');
   try {
     const r = await fetch(`/api/admin/users/${userId}/subaccounts`, {
@@ -1506,10 +1540,10 @@ async function openSubsModal(userId, email) {
     const subs = d.sub_accounts || [];
     const extra = d.extra_sub_slots || 0;
     if (!subs.length) {
-      document.getElementById('subs-modal-body').innerHTML = `<div style="color:var(--tx3);font-size:13px;padding:16px 0;text-align:center">Ingen under-konti oprettet${extra?' · '+extra+' ekstra slots købt':''}</div>`;
+      document.getElementById('subs-modal-body').innerHTML = `<div style="color:var(--tx3);font-size:13px;padding:16px 0;text-align:center">No extra profiles created${extra?' · '+extra+' extra slots purchased':''}</div>`;
     } else {
       document.getElementById('subs-modal-body').innerHTML = `
-        ${extra ? `<div style="font-size:11px;color:var(--ac3);margin-bottom:10px">✅ ${extra} ekstra slot${extra>1?'s':''} købt (tilkøb)</div>` : ''}
+        ${extra ? `<div style="font-size:11px;color:var(--ac3);margin-bottom:10px">✅ ${extra} extra slot${extra>1?'s':''} purchased (add-on)</div>` : ''}
         <div style="display:flex;flex-direction:column;gap:8px">
         ${subs.map(s => `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--border-b)">
@@ -1522,7 +1556,7 @@ async function openSubsModal(userId, email) {
         </div>`;
     }
   } catch(e) {
-    document.getElementById('subs-modal-body').innerHTML = '<div style="color:#ef4444">Fejl ved indlæsning</div>';
+    document.getElementById('subs-modal-body').innerHTML = '<div style="color:#ef4444">Error loading data</div>';
   }
 }
 
@@ -1543,7 +1577,7 @@ function updateSubsBlockToggle() {
   } else {
     tog.style.background = 'rgba(255,255,255,.1)';
     knob.style.left = '3px';
-    label.textContent = 'Blokering er slået fra';
+    label.textContent = 'Blocking is disabled';
     label.style.color = 'var(--tx3)';
   }
 }
@@ -1565,7 +1599,7 @@ async function toggleSubsBlock() {
 }
 
 async function adminDeleteSub(userId, subId, name) {
-  if (!confirm(`Slet under-konto "${name}" permanent? Al data går tabt.`)) return;
+  if (!confirm(`Delete extra profile "${name}" permanently? All data will be lost.`)) return;
   try {
     const r = await fetch(`/api/admin/users/${userId}/subaccounts/${subId}`, {
       method: 'DELETE',
@@ -1576,6 +1610,56 @@ async function adminDeleteSub(userId, subId, name) {
     }
   } catch(e) { alert('Fejl ved sletning'); }
 }
+
+// ── Automation Log (admin) ────────────────────────────────────────────────────
+async function populateLogUserSelect() {
+  try {
+    var d = await adminFetch('/api/admin/users');
+    var users = d.users || d || [];
+    var sel = document.getElementById('log-user-select');
+    if (!sel) return;
+    while (sel.options.length > 1) sel.remove(1);
+    users.forEach(function(u) {
+      var opt = document.createElement('option');
+      opt.value = u.id || u.user_id || u.email;
+      opt.textContent = (u.name || u.email || u.id);
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+async function loadAutomationLog() {
+  var sel = document.getElementById('log-user-select');
+  var userId = sel ? sel.value : '';
+  var el = document.getElementById('admin-auto-log');
+  if (!el) return;
+  if (!userId) { el.innerHTML = '<div style="color:var(--tx3)">Select a user to view their automation log.</div>'; return; }
+  el.innerHTML = '<div style="color:var(--tx3)">Loading...</div>';
+  try {
+    var r = await adminFetch('/api/admin/automation_log?user_id=' + encodeURIComponent(userId));
+    var logs = r.log || r.logs || [];
+    if (!logs.length) { el.innerHTML = '<div style="color:var(--tx3)">No log entries for this user.</div>'; return; }
+    var html = logs.map(function(l) {
+      var col = l.level === 'error' ? '#ef4444' : l.level === 'success' ? '#22c55e' : l.level === 'warning' ? '#f59e0b' : '#7d8fa3';
+      var time = l.time || '';
+      var msg  = (l.msg || l.message || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return '<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">'
+           + '<span style="color:#3d4f61;margin-right:8px">' + time + '</span>'
+           + '<span style="color:' + col + '">' + msg + '</span></div>';
+    }).join('');
+    el.innerHTML = html;
+    el.scrollTop = el.scrollHeight;
+  } catch(e) { el.innerHTML = '<div style="color:#ef4444">Error: ' + e.message + '</div>'; }
+}
+async function clearUserLog() {
+  var sel = document.getElementById('log-user-select');
+  var userId = sel ? sel.value : '';
+  if (!userId) { alert('Select a user first'); return; }
+  if (!confirm('Clear automation log for this user?')) return;
+  try {
+    await adminFetch('/api/admin/automation_log?user_id=' + encodeURIComponent(userId), 'DELETE');
+    document.getElementById('admin-auto-log').innerHTML = '<div style="color:var(--tx3)">Log cleared.</div>';
+  } catch(e) { alert('Error: ' + e.message); }
+}
 </script>
 
 <!-- Sub-accounts modal -->
@@ -1583,14 +1667,14 @@ async function adminDeleteSub(userId, subId, name) {
   <div class="modal" style="max-width:520px">
     <div class="modal-title">👥 Under-konti</div>
     <div class="modal-sub" id="subs-modal-sub">–</div>
-    <div id="subs-modal-body" style="margin-bottom:16px">Indlæser...</div>
+    <div id="subs-modal-body" style="margin-bottom:16px">Loading...</div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border-b);margin-top:8px">
       <div style="font-size:13px;font-weight:600">Bloker oprettelse af nye under-konti</div>
       <div id="subs-block-tog" style="width:40px;height:22px;border-radius:11px;background:rgba(255,255,255,.1);cursor:pointer;position:relative;transition:background .2s" onclick="toggleSubsBlock()">
         <div id="subs-block-knob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s"></div>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--tx3);margin-top:4px" id="subs-block-label">Blokering er slået fra</div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:4px" id="subs-block-label">Blocking is disabled</div>
     <div class="modal-actions">
       <button class="btn-primary" onclick="closeSubsModal()">Luk</button>
     </div>
