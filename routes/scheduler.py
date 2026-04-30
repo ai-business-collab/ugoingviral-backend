@@ -478,6 +478,52 @@ async def _run_for_user():
         add_log(f"❌ Scheduler fejl: {str(e)[:80]}", "error")
 
 
+
+async def send_daily_reminders():
+    """Send re-engagement emails to users who haven't logged in for 3+ days."""
+    from services.store import get_all_user_ids, _load_user_store
+    from services.users import get_user_by_id
+    from routes.email import send_reminder_email
+    from datetime import datetime, timezone
+    import logging
+
+    now = datetime.utcnow()
+    sent = 0
+    for uid in get_all_user_ids():
+        try:
+            user = get_user_by_id(uid)
+            if not user or not user.get("is_active"):
+                continue
+            # Check notification preference
+            ustore = _load_user_store(uid)
+            if ustore.get("notif_disabled"):
+                continue
+            last_login_str = user.get("last_login", user.get("created_at", ""))
+            if not last_login_str:
+                continue
+            try:
+                last_login = datetime.fromisoformat(last_login_str.replace("Z", ""))
+            except Exception:
+                continue
+            days_away = (now - last_login).days
+            if days_away < 3:
+                continue
+            # Avoid sending more than once per day
+            reminder_key = f"reminder_{now.strftime('%Y-%m-%d')}"
+            if ustore.get(reminder_key):
+                continue
+            ok = send_reminder_email(user["email"], user.get("name", ""), days_away)
+            if ok:
+                ustore[reminder_key] = True
+                from services.store import _save_user_store
+                _save_user_store(uid, ustore)
+                sent += 1
+        except Exception:
+            pass
+    if sent:
+        print(f"[reminder] Sent {sent} reminder emails")
+
+
 async def run_scheduler():
     global _scheduler_running
     _scheduler_running = True
@@ -507,7 +553,15 @@ async def run_scheduler():
                 finally:
                     reset_user_context(tokens)
         except Exception:
-            await asyncio.sleep(60)
+            pass
+        # Daily reminder at 09:00 CET (08:00 UTC)
+        _now_utc = __import__('datetime').datetime.utcnow()
+        if _now_utc.hour == 8 and _now_utc.minute < 2:
+            try:
+                await send_daily_reminders()
+            except Exception as _re:
+                print(f"[reminder] error: {_re}")
+        await asyncio.sleep(60)
 
 
 def _pw_post_sync(platform, content, image_url, username, password):

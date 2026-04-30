@@ -4,7 +4,7 @@
 <meta name="facebook-domain-verification" content="q11qgeqa3f97zmxd5kcuxbrb15ohc1" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UgoingViral — Kør dine sociale medier automatisk</title>
+<title>UgoingViral — Run your social media on autopilot</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -308,7 +308,7 @@ nav {
 /* ── PRICING ── */
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-top: 60px;
 }
@@ -320,7 +320,7 @@ nav {
   padding: 28px 20px;
   transition: border-color .2s, transform .2s;
 }
-.price-card:hover { border-color: rgba(255,62,0,.3); transform: translateY(-4px); }
+.price-card:hover { border-color: rgba(255,62,0,.4); transform: translateY(-8px); box-shadow: 0 20px 60px rgba(255,62,0,.12), 0 8px 30px rgba(0,0,0,.4); }
 .price-card.featured {
   background: rgba(255,62,0,.08);
   border-color: rgba(255,62,0,.4);
@@ -373,6 +373,10 @@ nav {
 .price-features li::before { content: "✓"; color: var(--accent); font-size: 11px; }
 .price-features li.plus { color: var(--accent); font-weight: 700; font-size: 11px; }
 .price-features li.plus::before { content: ""; display: none; }
+.price-features-extra { max-height: 0; overflow: hidden; transition: max-height .35s ease, opacity .3s ease; opacity: 0; }
+.price-card:hover .price-features-extra { max-height: 200px; opacity: 1; }
+.price-card-growth { border-color: rgba(34,197,94,.2); }
+.price-card-growth:hover { border-color: rgba(34,197,94,.5) !important; box-shadow: 0 20px 60px rgba(34,197,94,.1), 0 8px 30px rgba(0,0,0,.4) !important; }
 .price-cta {
   display: block; margin-top: 18px; text-align: center;
   background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
@@ -610,6 +614,13 @@ footer p { font-size: 13px; color: var(--text2); }
   .platforms-logos { gap: 24px; }
   footer { padding: 28px 24px; flex-direction: column; gap: 16px; text-align: center; }
 }
+
+/* ── Currency toggle ─────────────────────────────────────── */
+.curr-toggle { display:flex; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:20px; padding:3px; gap:2px; }
+.curr-btn { background:none; border:none; color:rgba(255,255,255,.45); font-size:12px; font-weight:600; padding:5px 11px; border-radius:16px; cursor:pointer; transition:all .2s; white-space:nowrap; }
+.curr-btn.curr-active { background:rgba(255,255,255,.14); color:#fff; }
+.curr-btn:hover:not(.curr-active) { color:rgba(255,255,255,.75); }
+@media(max-width:768px) { .curr-toggle { display:none; } }
 </style>
 </head>
 <body>
@@ -620,12 +631,17 @@ footer p { font-size: 13px; color: var(--text2); }
   <div class="nav-links">
     <a href="#features">Features</a>
     <a href="#studio" style="color:#a78bfa">🎬 Video Studio</a>
-    <a href="#how">Sådan virker det</a>
-    <a href="#pricing">Priser</a>
+    <a href="#how">How it works</a>
+    <a href="#pricing">Pricing</a>
     <a href="#faq">FAQ</a>
-    <a href="#about">Om os</a>
+    <a href="#about">About</a>
   </div>
-  <a href="#" class="nav-cta" onclick="openModal('login')">Log ind →</a>
+  <div class="curr-toggle">
+    <button class="curr-btn" data-curr="USD" onclick="setCurrency('USD')">$ USD</button>
+    <button class="curr-btn" data-curr="EUR" onclick="setCurrency('EUR')">€ EUR</button>
+    <button class="curr-btn" data-curr="DKK" onclick="setCurrency('DKK')">kr DKK</button>
+  </div>
+  <a href="#" class="nav-cta" onclick="openModal('login')">Log in →</a>
 </nav>
 
 <!-- HERO -->
@@ -633,21 +649,24 @@ footer p { font-size: 13px; color: var(--text2); }
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
   <div class="hero-content">
-    <div class="hero-tag">🚀 AI-drevet social media automation</div>
-    <h1>Kør dine sociale<br>medier <span class="accent">automatisk</span></h1>
-    <p>Upload dit produkt eller vælg din niche — vores platform laver, planlægger og poster dit content automatisk på Instagram, TikTok og YouTube.</p>
+    <div class="hero-tag">🚀 AI-powered social media automation</div>
+    <h1>Run your social<br>media on <span class="accent">autopilot</span></h1>
+    <p>Upload your product or choose your niche — our platform creates, schedules and posts your content automatically on Instagram, TikTok and YouTube.</p>
     <div class="hero-buttons">
-      <a href="#" class="btn-primary" onclick="openModal('register')">🔥 Start gratis — ingen binding</a>
-      <a href="#how" class="btn-secondary">Se hvordan det virker →</a>
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px">
+      <a href="#" class="btn-primary" onclick="openModal('register')">🔥 Start Free — No commitment</a>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);padding-left:4px">Get 10 free AI videos now</div>
+      </div>
+      <a href="#how" class="btn-secondary">See how it works →</a>
     </div>
     <div class="hero-stats">
       <div class="stat-item">
         <div class="stat-num">100%</div>
-        <div class="stat-label">Automatisk</div>
+        <div class="stat-label">Automatic</div>
       </div>
       <div class="stat-item">
         <div class="stat-num">3+</div>
-        <div class="stat-label">Platforme</div>
+        <div class="stat-label">Platforms</div>
       </div>
       <div class="stat-item">
         <div class="stat-num">AI</div>
@@ -663,7 +682,7 @@ footer p { font-size: 13px; color: var(--text2); }
 
 <!-- PLATFORM LOGOS BAR -->
 <div class="platforms-bar">
-  <div class="platforms-label">Virker med alle store platforme</div>
+  <div class="platforms-label">Works with all major platforms</div>
   <div class="platforms-logos">
     <div class="platform-logo"><span class="platform-logo-icon">📸</span> Instagram</div>
     <div class="platform-logo"><span class="platform-logo-icon">🎵</span> TikTok</div>
@@ -675,39 +694,39 @@ footer p { font-size: 13px; color: var(--text2); }
 
 <!-- FEATURES -->
 <section class="section" id="features">
-  <div class="section-tag">Hvad du får</div>
-  <h2>Alt dit content.<br>Én platform.</h2>
-  <p class="lead">Du logger ind, vælger dine indstillinger — og så klarer systemet resten.</p>
+  <div class="section-tag">What you get</div>
+  <h2>All your content.<br>One platform.</h2>
+  <p class="lead">You log in, choose your settings — and the system handles the rest.</p>
   <div class="feature-grid">
     <div class="feature-card">
       <span class="feature-icon">✨</span>
       <h3>AI Content Generator</h3>
-      <p>Upload et produkt og få captions, hooks, hashtags og reel-scripts klar på sekunder.</p>
+      <p>Upload a product and get captions, hooks, hashtags and reel scripts ready in seconds.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">📅</span>
-      <h3>Auto-planlægning</h3>
-      <p>Sæt dine præfererede tidspunkter og lad systemet poste automatisk hver dag.</p>
+      <h3>Auto-scheduling</h3>
+      <p>Set your preferred times and let the system post automatically every day.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">📸</span>
       <h3>Instagram + TikTok + YouTube</h3>
-      <p>Post til alle platforme på én gang via officielle APIs — ingen browser hacks.</p>
+      <p>Post to all platforms at once via official APIs — no browser hacks.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">💬</span>
-      <h3>Auto DM & Kommentarer</h3>
-      <p>AI svarer automatisk på dine DMs og kommentarer i den tone du vælger.</p>
+      <h3>Auto DM & Comments</h3>
+      <p>AI automatically replies to your DMs and comments in the tone you choose.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">📈</span>
       <h3>Account Growth</h3>
-      <p>Tilknyt support-konti der automatisk liker og deler dit content for mere reach.</p>
+      <p>Connect growth accounts that automatically like and share your content for more reach.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">🛡️</span>
       <h3>Anti-ban System</h3>
-      <p>Tilfældig forsinkelse og aktivitetsgrænser beskytter automatisk din konto.</p>
+      <p>Random delays and activity limits automatically protect your account.</p>
     </div>
   </div>
 </section>
@@ -715,29 +734,29 @@ footer p { font-size: 13px; color: var(--text2); }
 <!-- HOW IT WORKS -->
 <section class="how-section" id="how">
   <div class="how-inner">
-    <div class="section-tag">Processen</div>
-    <h2>Kom i gang på 4 trin</h2>
-    <p class="lead">Fra tilmelding til automatisk content på under 5 minutter.</p>
+    <div class="section-tag">The process</div>
+    <h2>Get started in 4 steps</h2>
+    <p class="lead">From sign-up to automatic content in under 5 minutes.</p>
     <div class="steps">
       <div class="step">
         <div class="step-num">01</div>
-        <h3>Forbind dine konti</h3>
-        <p>Log ind med Instagram, TikTok eller YouTube via vores sikre OAuth integration.</p>
+        <h3>Connect your accounts</h3>
+        <p>Log in with Instagram, TikTok or YouTube via our secure OAuth integration.</p>
       </div>
       <div class="step">
         <div class="step-num">02</div>
-        <h3>Tilføj dine produkter</h3>
-        <p>Forbind Shopify eller tilføj produkter manuelt. Vi henter billeder automatisk.</p>
+        <h3>Add your products</h3>
+        <p>Connect Shopify or add products manually. We fetch images automatically.</p>
       </div>
       <div class="step">
         <div class="step-num">03</div>
-        <h3>Generer content</h3>
-        <p>AI laver captions, hooks, hashtags og scripts tilpasset din niche og tone.</p>
+        <h3>Generate content</h3>
+        <p>AI creates captions, hooks, hashtags and scripts tailored to your niche and tone.</p>
       </div>
       <div class="step">
         <div class="step-num">04</div>
-        <h3>Sæt det på autopilot</h3>
-        <p>Vælg tidspunkter og platforme — systemet poster automatisk hver dag fremover.</p>
+        <h3>Put it on autopilot</h3>
+        <p>Choose times and platforms — the system posts automatically every day going forward.</p>
       </div>
     </div>
   </div>
@@ -749,8 +768,8 @@ footer p { font-size: 13px; color: var(--text2); }
   <div style="max-width:1200px;margin:0 auto;position:relative">
     <div style="text-align:center;margin-bottom:64px">
       <div class="section-tag" style="color:#a78bfa">Video Studio</div>
-      <h2 style="font-family:var(--font-display);font-size:clamp(32px,4vw,52px);font-weight:800;letter-spacing:-1.5px;color:var(--white);line-height:1.1;margin-bottom:16px">Fra produkt til færdig<br><span style="background:linear-gradient(135deg,#7c3aed,#00e5ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">AI-video på minutter</span></h2>
-      <p style="font-size:17px;color:var(--text2);max-width:560px;margin:0 auto;line-height:1.7">Upload et billede, vælg stil og antal scener — vores AI genererer scriptet, laver videoen og poster den automatisk.</p>
+      <h2 style="font-family:var(--font-display);font-size:clamp(32px,4vw,52px);font-weight:800;letter-spacing:-1.5px;color:var(--white);line-height:1.1;margin-bottom:16px">From product to finished<br><span style="background:linear-gradient(135deg,#7c3aed,#00e5ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">AI video in minutes</span></h2>
+      <p style="font-size:17px;color:var(--text2);max-width:560px;margin:0 auto;line-height:1.7">Upload an image, choose style and number of scenes — our AI generates the script, creates the video and posts it automatically.</p>
     </div>
 
     <!-- Video demo mockup -->
@@ -775,7 +794,7 @@ footer p { font-size: 13px; color: var(--text2); }
               </div>
               <!-- TikTok-style UI overlay -->
               <div style="position:absolute;bottom:12px;left:12px;right:12px">
-                <div style="font-size:9px;color:rgba(255,255,255,.7);line-height:1.5">✨ AI-genereret video<br>ElevenLabs voiceover inkluderet</div>
+                <div style="font-size:9px;color:rgba(255,255,255,.7);line-height:1.5">✨ AI-generated video<br>ElevenLabs voiceover included</div>
               </div>
               <div style="position:absolute;right:10px;bottom:60px;display:flex;flex-direction:column;align-items:center;gap:14px">
                 <div style="text-align:center"><div style="font-size:18px">❤️</div><div style="font-size:8px;color:rgba(255,255,255,.6)">2.4k</div></div>
@@ -794,28 +813,28 @@ footer p { font-size: 13px; color: var(--text2); }
             <div style="width:40px;height:40px;border-radius:10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎬</div>
             <div>
               <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Multi-scene AI Video</div>
-              <div style="font-size:13px;color:var(--text2);line-height:1.6">Vælg 3, 6 eller 10 scener. AI scripter, render og samler automatisk via Runway, Luma og Replicate.</div>
+              <div style="font-size:13px;color:var(--text2);line-height:1.6">Choose 3, 6 or 10 scenes. AI scripts, renders and assembles automatically via Runway, Luma and Replicate.</div>
             </div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="width:40px;height:40px;border-radius:10px;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎙️</div>
             <div>
               <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">ElevenLabs AI Voiceover</div>
-              <div style="font-size:13px;color:var(--text2);line-height:1.6">Professionel AI-stemme over dine videoer. Dansk og engelsk understøttet. Inkluderet i alle studio-pakker.</div>
+              <div style="font-size:13px;color:var(--text2);line-height:1.6">Professional AI voice for your videos. Danish and English supported. Included in all studio packages.</div>
             </div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">✂️</div>
             <div>
               <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Smart Clip Cutter</div>
-              <div style="font-size:13px;color:var(--text2);line-height:1.6">Klipper automatisk din video til det bedste format: 9:16 (TikTok/Reels), 16:9 (YouTube), 1:1 og 4:5.</div>
+              <div style="font-size:13px;color:var(--text2);line-height:1.6">Automatically trims your video to the best format: 9:16 (TikTok/Reels), 16:9 (YouTube), 1:1 and 4:5.</div>
             </div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="width:40px;height:40px;border-radius:10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🚀</div>
             <div>
-              <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Auto-upload til alle platforme</div>
-              <div style="font-size:13px;color:var(--text2);line-height:1.6">Færdig video postes direkte på Instagram Reels, TikTok og YouTube Shorts — alt i én handling.</div>
+              <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Auto-upload to all platforms</div>
+              <div style="font-size:13px;color:var(--text2);line-height:1.6">Finished video posted directly to Instagram Reels, TikTok and YouTube Shorts — all in one action.</div>
             </div>
           </div>
         </div>
@@ -824,33 +843,33 @@ footer p { font-size: 13px; color: var(--text2); }
 
     <!-- Studio packages -->
     <div style="margin-bottom:20px;text-align:center">
-      <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:2px">Video Studio Pakker</div>
+      <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:2px">Video Studio Packages</div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
       <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:14px;padding:28px">
         <div style="font-size:28px;margin-bottom:12px">🎬</div>
-        <div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--white);margin-bottom:4px">3-Scene Serie</div>
+        <div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--white);margin-bottom:4px">3-Scene Series</div>
         <div style="font-size:28px;font-weight:800;color:var(--white);margin:12px 0 4px;font-family:var(--font-display)">149 <span style="font-size:14px;font-weight:400;color:var(--text2)">kr</span></div>
-        <div style="font-size:12px;color:#00e5ff;margin-bottom:16px">250 credits inkluderet</div>
+        <div style="font-size:12px;color:#00e5ff;margin-bottom:16px">250 credits included</div>
         <ul style="list-style:none;font-size:12px;color:var(--text2)">
-          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Op til 3 scener</li>
-          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Smart Clip Cutter — 6 klip</li>
-          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ 2 formater (9:16 + 16:9)</li>
-          <li style="padding:4px 0">✓ ElevenLabs voice-over</li>
+          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Up to 3 scenes</li>
+          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Smart Clip Cutter — 6 clips</li>
+          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ 2 formats (9:16 + 16:9)</li>
+          <li style="padding:4px 0">✓ ElevenLabs voiceover</li>
         </ul>
-        <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;margin-top:16px;display:block;background:rgba(0,229,255,.15);color:#00e5ff;border:1px solid rgba(0,229,255,.3);font-weight:700;font-size:13px;text-align:center;padding:10px;border-radius:8px;text-decoration:none">Kom i gang →</a>
+        <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;margin-top:16px;display:block;background:rgba(0,229,255,.15);color:#00e5ff;border:1px solid rgba(0,229,255,.3);font-weight:700;font-size:13px;text-align:center;padding:10px;border-radius:8px;text-decoration:none">Get started →</a>
       </div>
       <div style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);border-radius:14px;padding:28px;position:relative">
-        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:20px;padding:3px 14px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap">Populær</div>
+        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:20px;padding:3px 14px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap">Popular</div>
         <div style="font-size:28px;margin-bottom:12px">🎞️</div>
-        <div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--white);margin-bottom:4px">6-Scene Serie</div>
+        <div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--white);margin-bottom:4px">6-Scene Series</div>
         <div style="font-size:28px;font-weight:800;color:var(--white);margin:12px 0 4px;font-family:var(--font-display)">299 <span style="font-size:14px;font-weight:400;color:var(--text2)">kr</span></div>
-        <div style="font-size:12px;color:#a78bfa;margin-bottom:16px">580 credits inkluderet</div>
+        <div style="font-size:12px;color:#a78bfa;margin-bottom:16px">580 credits included</div>
         <ul style="list-style:none;font-size:12px;color:var(--text2)">
-          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Op til 6 scener</li>
-          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Smart Clip Cutter — 10 klip</li>
-          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Alle 4 formater</li>
-          <li style="padding:4px 0">✓ Produkt-blend + AI prompts</li>
+          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Up to 6 scenes</li>
+          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Smart Clip Cutter — 10 clips</li>
+          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ All 4 formats</li>
+          <li style="padding:4px 0">✓ Product-blend + AI prompts</li>
         </ul>
         <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;margin-top:16px;display:block">Kom i gang →</a>
       </div>
@@ -858,140 +877,247 @@ footer p { font-size: 13px; color: var(--text2); }
         <div style="font-size:28px;margin-bottom:12px">🏆</div>
         <div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--white);margin-bottom:4px">10-Scene Studio</div>
         <div style="font-size:28px;font-weight:800;color:var(--white);margin:12px 0 4px;font-family:var(--font-display)">549 <span style="font-size:14px;font-weight:400;color:var(--text2)">kr</span></div>
-        <div style="font-size:12px;color:#f59e0b;margin-bottom:16px">1.200 credits inkluderet</div>
+        <div style="font-size:12px;color:#f59e0b;margin-bottom:16px">1,200 credits included</div>
         <ul style="list-style:none;font-size:12px;color:var(--text2)">
-          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Op til 10 scener</li>
+          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Up to 10 scenes</li>
           <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Multi-provider: Runway + Luma</li>
-          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Prioriteret rendering</li>
-          <li style="padding:4px 0">✓ Auto-upload alle platforme</li>
+          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Priority rendering</li>
+          <li style="padding:4px 0">✓ Auto-upload all platforms</li>
         </ul>
-        <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;margin-top:16px;display:block;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);font-weight:700;font-size:13px;text-align:center;padding:10px;border-radius:8px;text-decoration:none">Kom i gang →</a>
+        <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;margin-top:16px;display:block;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);font-weight:700;font-size:13px;text-align:center;padding:10px;border-radius:8px;text-decoration:none">Get started →</a>
       </div>
     </div>
   </div>
-  <style>@keyframes studioPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.4)}50%{box-shadow:0 0 0 12px rgba(124,58,237,0)}}</style>
+  <style>@keyframes studioPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.4)}50%{box-shadow:0 0 0 12px rgba(124,58,237,0)}}
+/* ── Currency toggle ─────────────────────────────────────── */
+.curr-toggle { display:flex; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:20px; padding:3px; gap:2px; }
+.curr-btn { background:none; border:none; color:rgba(255,255,255,.45); font-size:12px; font-weight:600; padding:5px 11px; border-radius:16px; cursor:pointer; transition:all .2s; white-space:nowrap; }
+.curr-btn.curr-active { background:rgba(255,255,255,.14); color:#fff; }
+.curr-btn:hover:not(.curr-active) { color:rgba(255,255,255,.75); }
+@media(max-width:768px) { .curr-toggle { display:none; } }
+</style>
 </section>
 
 <!-- PRICING -->
 <section class="section" id="pricing">
-  <div class="section-tag">Priser</div>
-  <h2>Simpelt. Gennemsigtigt.</h2>
-  <p class="lead">Ingen skjulte gebyrer. Alle planer inkluderer gratis prøveperiode.</p>
-  <div class="pricing-grid" style="grid-template-columns:repeat(6,1fr)">
+  <div class="section-tag">Pricing</div>
+  <h2>Simple. Transparent.</h2>
+  <p class="lead">No hidden fees. All plans include a free trial. <strong style="color:var(--accent)">Sign up and get 10 free AI videos.</strong></p>
+  <p style="font-size:13px;color:rgba(255,255,255,.4);margin-top:-8px;margin-bottom:24px">Prices shown in <span id="curr-label">USD</span>. Stripe charges in USD — displayed prices are for reference.</p>
+  <div class="pricing-grid">
     <div class="price-card">
-      <div class="price-name">Gratis</div>
-      <div class="price-amount">0 <span>kr/md</span></div>
+      <div class="price-name">Free</div>
+      <div class="price-amount" data-usd="0">$0<span>/mo</span></div>
       <div class="price-credits">50 credits</div>
       <ul class="price-features">
-        <li>50 credits/md</li>
+        <li>50 credits/mo</li>
         <li>1 platform</li>
-        <li>AI tekst content</li>
-        <li>Content historik</li>
-        <li style="color:#555">Ingen video</li>
+        <li>AI text content</li>
+        <li>Content history</li>
+        <li style="color:#555;text-decoration:line-through">No video</li>
       </ul>
-      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Start gratis →</a>
+      <ul class="price-features price-features-extra">
+        <li>Basic scheduling</li>
+        <li>Community support</li>
+      </ul>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Start Free &#8594;</a>
     </div>
     <div class="price-card">
       <div class="price-name">Starter</div>
-      <div class="price-amount">299 <span>kr/md</span></div>
+      <div class="price-amount" data-usd="40">$40<span>/mo</span></div>
       <div class="price-credits">300 credits</div>
       <ul class="price-features">
-        <li class="plus">Alt i Gratis +</li>
-        <li>300 credits/md</li>
-        <li>Alle platforme</li>
-        <li>Auto-post & planlægning</li>
-        <li>Content Pipeline (tekst)</li>
-        <li>1 main account</li>
+        <li class="plus">Everything in Free +</li>
+        <li>300 credits/mo</li>
+        <li>All platforms</li>
+        <li>Auto-post &amp; scheduling</li>
+        <li>Content Pipeline (text)</li>
       </ul>
-      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Vælg Starter →</a>
+      <ul class="price-features price-features-extra">
+        <li>1 main account</li>
+        <li>Content history</li>
+        <li>Email support</li>
+      </ul>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Choose Starter &#8594;</a>
+    </div>
+    <div class="price-card price-card-growth">
+      <div class="price-tag" style="color:#22c55e">Engagement</div>
+      <div class="price-name">Growth</div>
+      <div class="price-amount" data-usd="57">$57<span>/mo</span></div>
+      <div class="price-credits" style="color:#22c55e">400 credits + automation</div>
+      <ul class="price-features">
+        <li class="plus" style="color:#22c55e">Everything in Starter +</li>
+        <li>400 credits/mo</li>
+        <li>1 growth account</li>
+        <li>Auto DM replies</li>
+        <li>Auto comment replies</li>
+      </ul>
+      <ul class="price-features price-features-extra">
+        <li>Engagement targeting</li>
+        <li>Follower growth tools</li>
+        <li>Anti-ban system</li>
+      </ul>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)">Choose Growth &#8594;</a>
     </div>
     <div class="price-card">
       <div class="price-name">Basic</div>
-      <div class="price-amount">499 <span>kr/md</span></div>
+      <div class="price-amount" data-usd="70">$70<span>/mo</span></div>
       <div class="price-credits">650 credits</div>
       <ul class="price-features">
-        <li class="plus">Alt i Starter +</li>
-        <li>650 credits/md</li>
-        <li>2 under-konti</li>
-        <li>Medie bibliotek</li>
+        <li class="plus">Everything in Growth +</li>
+        <li>650 credits/mo</li>
+        <li>0 growth accounts</li>
+        <li>Media library</li>
         <li>Content Mapper</li>
-        <li>Statistik basis</li>
       </ul>
-      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Vælg Basic →</a>
+      <ul class="price-features price-features-extra">
+        <li>Basic analytics</li>
+        <li>Scheduled campaigns</li>
+        <li>Priority queue</li>
+      </ul>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Choose Basic &#8594;</a>
     </div>
     <div class="price-card featured">
-      <div class="price-tag">Mest populær</div>
+      <div class="price-tag">Most popular</div>
       <div class="price-name">Pro</div>
-      <div class="price-amount">999 <span>kr/md</span></div>
-      <div class="price-credits">1.500 credits</div>
+      <div class="price-amount" data-usd="140">$140<span>/mo</span></div>
+      <div class="price-credits">1,500 credits</div>
       <ul class="price-features">
-        <li class="plus">Alt i Basic +</li>
-        <li>1.500 credits/md</li>
-        <li>5 under-konti</li>
-        <li>AI video generering</li>
+        <li class="plus">Everything in Basic +</li>
+        <li>1,500 credits/mo</li>
+        <li>2 growth accounts</li>
+        <li>AI video generation</li>
         <li>AI voiceover</li>
-        <li>Auto DM svar</li>
+      </ul>
+      <ul class="price-features price-features-extra">
+        <li>Auto DM replies</li>
+        <li>Advanced analytics</li>
         <li>Live chat support</li>
       </ul>
-      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Vælg Pro →</a>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Choose Pro &#8594;</a>
     </div>
     <div class="price-card">
       <div class="price-name">Elite</div>
-      <div class="price-amount">1.499 <span>kr/md</span></div>
-      <div class="price-credits">2.800 credits</div>
+      <div class="price-amount" data-usd="210">$210<span>/mo</span></div>
+      <div class="price-credits">2,800 credits</div>
       <ul class="price-features">
-        <li class="plus">Alt i Pro +</li>
-        <li>2.800 credits/md</li>
-        <li>10 under-konti</li>
-        <li>Prioritet rendering</li>
+        <li class="plus">Everything in Pro +</li>
+        <li>2,800 credits/mo</li>
+        <li>5 growth accounts</li>
+        <li>Priority rendering</li>
         <li>Growth automation</li>
-        <li>Anti-ban pro system</li>
       </ul>
-      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Vælg Elite →</a>
+      <ul class="price-features price-features-extra">
+        <li>Anti-ban pro system</li>
+        <li>Bulk scheduling</li>
+        <li>Dedicated support</li>
+      </ul>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Choose Elite &#8594;</a>
     </div>
     <div class="price-card">
       <div class="price-name">Personal</div>
-      <div class="price-amount">2.499 <span>kr/md</span></div>
-      <div class="price-credits">5.000 credits</div>
+      <div class="price-amount" data-usd="350">$350<span>/mo</span></div>
+      <div class="price-credits">5,000 credits</div>
       <ul class="price-features">
-        <li class="plus">Alt i Elite +</li>
-        <li>5.000 credits/md</li>
-        <li>Ubegrænset under-konti</li>
-        <li>Dedikeret AI assistent</li>
-        <li>Prioritet support</li>
-        <li>White-label mulighed</li>
+        <li class="plus">Everything in Elite +</li>
+        <li>5,000 credits/mo</li>
+        <li>Unlimited growth accounts</li>
+        <li>Dedicated AI assistant</li>
+        <li>Priority support</li>
       </ul>
-      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Vælg Personal →</a>
+      <ul class="price-features price-features-extra">
+        <li>White-label option</li>
+        <li>Custom integrations</li>
+        <li>SLA guarantee</li>
+      </ul>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Choose Personal &#8594;</a>
+    </div>
+
+    <div class="price-card" style="border-color:rgba(167,139,250,.2)">
+      <div class="price-tag" style="color:#a78bfa">For agencies</div>
+      <div class="price-name">Agency</div>
+      <div class="price-amount" data-usd="199">$199<span>/mo</span></div>
+      <div class="price-credits">2,000 credits</div>
+      <ul class="price-features">
+        <li class="plus">Everything in Pro +</li>
+        <li>2,000 credits/mo</li>
+        <li>10 client accounts</li>
+        <li>Agency dashboard</li>
+        <li>Per-client settings</li>
+      </ul>
+      <ul class="price-features price-features-extra">
+        <li>White-label ready</li>
+        <li>Priority support</li>
+        <li>Bulk scheduling</li>
+      </ul>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;background:rgba(167,139,250,.12);color:#a78bfa;border:1px solid rgba(167,139,250,.3)">Choose Agency &#8594;</a>
     </div>
   </div>
 </section>
 
-<!-- OM OS -->
+<!-- ABOUT -->
 <section class="about-section" id="about">
   <div class="about-inner">
     <div class="about-text">
-      <div class="section-tag">Om os</div>
-      <h2>Bygget af folk der forstår sociale medier</h2>
-      <p>UgoingViral er bygget af et dansk team med erfaring inden for e-commerce, content creation og AI-automatisering.</p>
-      <p>Vi så, at brands brugte timesvis på manuelt at lave og poste content. Løsningen var enkel: byg én platform der gør det hele automatisk — fra script til færdig video til planlagt opslag.</p>
-      <p>I dag hjælper vi webshops og brands med at vokse på sociale medier uden at ofre tid på det.</p>
+      <div class="section-tag">About us</div>
+      <h2>Built by people who understand social media</h2>
+      <p>UgoingViral is built by a team with experience in e-commerce, content creation and AI automation.</p>
+      <p>We saw brands spending hours manually creating and posting content. The solution was simple: build one platform that does it all automatically — from script to finished video to scheduled post.</p>
+      <p>Today we help webshops and brands grow on social media without sacrificing time.</p>
     </div>
     <div class="about-stats">
       <div class="about-stat">
         <div class="about-stat-num">100%</div>
-        <div class="about-stat-lbl">Automatisk posting</div>
+        <div class="about-stat-lbl">Automatic posting</div>
       </div>
       <div class="about-stat">
         <div class="about-stat-num">5+</div>
-        <div class="about-stat-lbl">Platforme understøttet</div>
+        <div class="about-stat-lbl">Platforms supported</div>
       </div>
       <div class="about-stat">
         <div class="about-stat-num">AI</div>
-        <div class="about-stat-lbl">Video & content engine</div>
+        <div class="about-stat-lbl">Video &amp; content engine</div>
       </div>
       <div class="about-stat">
         <div class="about-stat-num">DK</div>
-        <div class="about-stat-lbl">Dansk support</div>
+        <div class="about-stat-lbl">Danish support</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section style="padding:80px 60px;border-top:1px solid rgba(255,255,255,.06)" id="team">
+  <div style="max-width:900px;margin:0 auto;text-align:center">
+    <div class="section-tag">The team</div>
+    <h2 style="font-family:var(--font-display);font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-1.5px;color:var(--white);margin-bottom:16px">The people behind UgoingViral</h2>
+    <p style="font-size:16px;color:var(--text2);max-width:560px;margin:0 auto 60px;line-height:1.7">A small, focused team obsessed with automation, AI and helping brands grow online.</p>
+    <div style="margin-bottom:56px">
+      <div style="width:100%;max-width:700px;margin:0 auto;aspect-ratio:16/7;background:linear-gradient(135deg,rgba(255,62,0,.08),rgba(0,229,255,.06));border:1px solid rgba(255,255,255,.08);border-radius:20px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+        <div style="text-align:center;color:rgba(255,255,255,.2)">
+          <div style="font-size:48px;margin-bottom:12px">📸</div>
+          <div style="font-size:13px;font-weight:500">Team photo coming soon</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px">
+      <div style="background:var(--gray);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:28px 20px;text-align:center;transition:border-color .2s,transform .2s" onmouseover="this.style.borderColor='rgba(255,62,0,.3)';this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='rgba(255,255,255,.06)';this.style.transform='translateY(0)'">
+        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,rgba(255,62,0,.3),rgba(255,62,0,.1));margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:28px">👤</div>
+        <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Founder</div>
+        <div style="font-size:12px;color:var(--accent);margin-bottom:10px">CEO &amp; Product</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6">Vision, product strategy and customer success.</div>
+      </div>
+      <div style="background:var(--gray);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:28px 20px;text-align:center;transition:border-color .2s,transform .2s" onmouseover="this.style.borderColor='rgba(255,62,0,.3)';this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='rgba(255,255,255,.06)';this.style.transform='translateY(0)'">
+        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,rgba(0,229,255,.3),rgba(0,229,255,.1));margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:28px">👤</div>
+        <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Lead Developer</div>
+        <div style="font-size:12px;color:#00e5ff;margin-bottom:10px">Backend &amp; AI</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6">API integrations, AI pipeline and platform infrastructure.</div>
+      </div>
+      <div style="background:var(--gray);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:28px 20px;text-align:center;transition:border-color .2s,transform .2s" onmouseover="this.style.borderColor='rgba(255,62,0,.3)';this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='rgba(255,255,255,.06)';this.style.transform='translateY(0)'">
+        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(124,58,237,.1));margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:28px">👤</div>
+        <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Growth Lead</div>
+        <div style="font-size:12px;color:#a78bfa;margin-bottom:10px">Marketing &amp; Partnerships</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6">Growth strategy, content and partner relations.</div>
       </div>
     </div>
   </div>
@@ -1001,58 +1127,58 @@ footer p { font-size: 13px; color: var(--text2); }
 <section style="padding:100px 60px" id="faq">
   <div class="faq-section" style="padding:0">
     <div style="text-align:center;margin-bottom:60px">
-      <div class="section-tag">Spørgsmål & svar</div>
-      <h2 style="font-family:var(--font-display);font-size:clamp(32px,4vw,52px);font-weight:800;letter-spacing:-1.5px;color:var(--white)">Ofte stillede spørgsmål</h2>
+      <div class="section-tag">Q &amp; A</div>
+      <h2 style="font-family:var(--font-display);font-size:clamp(32px,4vw,52px);font-weight:800;letter-spacing:-1.5px;color:var(--white)">Frequently asked questions</h2>
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
-      <div class="faq-q">Hvad er credits og hvordan bruges de? <span class="faq-arrow">+</span></div>
-      <div class="faq-a">Credits er den valuta du bruger til at generere AI content på platformen. Hvert script koster 5 credits, en AI-video koster 20-80 credits afhængig af varighed, og en voiceover koster 15 credits. Du får nye credits hver måned med dit abonnement.</div>
+      <div class="faq-q">What are credits and how are they used? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">Credits are the currency you use to generate AI content on the platform. Each script costs 5 credits, an AI video costs 20-80 credits depending on length, and a voiceover costs 15 credits. You receive new credits each month with your subscription.</div>
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
-      <div class="faq-q">Kan jeg prøve platformen gratis? <span class="faq-arrow">+</span></div>
-      <div class="faq-a">Ja — opret en gratis konto og få 50 credits. Det er nok til at generere flere AI-scripts og teste platformen. Du opgraderer når du er klar. Ingen kreditkort kræves.</div>
+      <div class="faq-q">Can I try the platform for free? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">Yes — create a free account and get 50 credits. That's enough to generate several AI scripts and test the platform. Upgrade when you're ready. No credit card required.</div>
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
-      <div class="faq-q">Hvilke platforme understøttes? <span class="faq-arrow">+</span></div>
-      <div class="faq-a">Vi understøtter Instagram, TikTok, YouTube, Facebook og X (Twitter). Du kan poste til flere platforme på én gang og administrere alt fra ét dashboard.</div>
+      <div class="faq-q">Which platforms are supported? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">We support Instagram, TikTok, YouTube, Facebook and X (Twitter). You can post to multiple platforms at once and manage everything from one dashboard.</div>
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
-      <div class="faq-q">Er mine konti sikre? <span class="faq-arrow">+</span></div>
-      <div class="faq-a">Vi bruger officielle OAuth-integrationer til alle platforme. Dine adgangskoder gemmes aldrig — vi gemmer kun de adgangstokens platformene giver os. Vores anti-ban system sikrer naturlig aktivitet der ikke bryder platformenes retningslinjer.</div>
+      <div class="faq-q">Are my accounts safe? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">We use official OAuth integrations for all platforms. Your passwords are never stored — we only store the access tokens the platforms provide us. Our anti-ban system ensures natural activity that does not violate platform guidelines.</div>
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
-      <div class="faq-q">Kan jeg annullere når som helst? <span class="faq-arrow">+</span></div>
-      <div class="faq-a">Ja, ingen binding. Du kan annullere dit abonnement når som helst og beholder adgang til resten af måneden. Ingen skjulte gebyrer.</div>
+      <div class="faq-q">Can I cancel at any time? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">Yes, no commitment. You can cancel your subscription at any time and keep access for the rest of the month. No hidden fees.</div>
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
-      <div class="faq-q">Hvad sker der hvis jeg løber tør for credits? <span class="faq-arrow">+</span></div>
-      <div class="faq-a">Du kan købe ekstra credits til enhver tid: 100 credits for 29 kr, 500 credits for 99 kr eller 1.500 credits for 249 kr. Du kan også opgradere din plan for at få flere månedlige credits.</div>
+      <div class="faq-q">What happens if I run out of credits? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">You can buy extra credits at any time: 100 credits for 29 kr, 500 credits for 99 kr or 1,500 credits for 249 kr. You can also upgrade your plan to get more monthly credits.</div>
     </div>
   </div>
 </section>
 
 <!-- KONTAKT -->
 <section class="contact-section" id="contact-section">
-  <div class="section-tag">Kontakt</div>
-  <h2>Vi er her for at hjælpe</h2>
-  <p>Har du spørgsmål til platformen, din konto eller tekniske problemer? Kontakt os direkte.</p>
+  <div class="section-tag">Contact</div>
+  <h2>We are here to help</h2>
+  <p>Have questions about the platform, your account or technical issues? Contact us directly.</p>
   <div class="contact-links">
     <a href="mailto:support@ugoingviral.com" class="contact-link">📧 support@ugoingviral.com</a>
-    <a href="mailto:info@ugoingviral.com" class="contact-link">💼 info@ugoingviral.com</a>
-    <a href="#" class="contact-link" onclick="openModal('register');return false">🚀 Opret konto gratis</a>
+    <a href="mailto:support@ugoingviral.com" class="contact-link">💼 support@ugoingviral.com</a>
+    <a href="#" class="contact-link" onclick="openModal('register');return false">🚀 Create account for free</a>
   </div>
 </section>
 
 <!-- CTA -->
 <section class="cta-section">
-  <h2>Klar til at vokse<br>på autopilot?</h2>
-  <p>Få 10 gratis AI-videoer til din profil — ingen betaling, ingen binding.</p>
-  <a href="#" class="btn-primary" onclick="openModal('register')" style="display:inline-flex">🎥 Få 10 gratis videoer nu</a>
+  <h2>Ready to grow<br>on autopilot?</h2>
+  <p>Get 10 free AI videos for your profile — no payment, no commitment.</p>
+  <a href="#" class="btn-primary" onclick="openModal('register')" style="display:inline-flex">🎥 Get 10 free videos now</a>
 </section>
 
 <!-- PLATFORM LOGOER -->
 <section style="padding:60px 60px 40px;text-align:center;border-top:1px solid rgba(255,255,255,.07)">
-  <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:2px;margin-bottom:32px">Poster automatisk til alle platforme</div>
+  <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:2px;margin-bottom:32px">Posts automatically to all platforms</div>
   <div style="display:flex;align-items:center;justify-content:center;gap:40px;flex-wrap:wrap">
     <!-- Instagram -->
     <div style="display:flex;flex-direction:column;align-items:center;gap:10px;opacity:.85;transition:opacity .2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.85'">
@@ -1086,26 +1212,26 @@ footer p { font-size: 13px; color: var(--text2); }
 <footer id="contact">
   <div class="logo" style="display:flex;align-items:center;gap:10px"><img src="/uploads/logo.jpg" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover" onerror="this.style.display='none'">Ugoin<span style="color:var(--accent)">g</span>Viral</div>
   <div class="footer-links">
-    <a href="#pricing">Priser</a>
+    <a href="#pricing">Pricing</a>
     <a href="#faq">FAQ</a>
-    <a href="#about">Om os</a>
-    <a href="#contact-section">Kontakt</a>
-    <a href="/privacy">Privatlivspolitik</a>
-    <a href="/terms">Vilkår</a>
-    <a href="mailto:info@ugoingviral.com">info@ugoingviral.com</a>
+    <a href="#about">About</a>
+    <a href="#contact-section">Contact</a>
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms</a>
+    <a href="mailto:support@ugoingviral.com">support@ugoingviral.com</a>
   </div>
-  <p>© 2026 UgoingViral · Bygget i Danmark 🇩🇰</p>
+  <p>© 2026 UgoingViral · Built in Denmark 🇩🇰</p>
 </footer>
 
 <!-- LOGIN MODAL -->
 <div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">✕</button>
-    <h2 id="modal-title">Velkommen tilbage</h2>
-    <p id="modal-subtitle">Log ind på din konto</p>
+    <h2 id="modal-title">Welcome back</h2>
+    <p id="modal-subtitle">Log in to your account</p>
     <div class="modal-tabs">
-      <div class="modal-tab active" id="tab-login" onclick="switchTab('login')">Log ind</div>
-      <div class="modal-tab" id="tab-register" onclick="switchTab('register')">Opret konto</div>
+      <div class="modal-tab active" id="tab-login" onclick="switchTab('login')">Log in</div>
+      <div class="modal-tab" id="tab-register" onclick="switchTab('register')">Create account</div>
     </div>
 
     <!-- LOGIN FORM -->
@@ -1115,14 +1241,14 @@ footer p { font-size: 13px; color: var(--text2); }
         <input type="email" placeholder="din@email.com" id="login-email" autocomplete="username">
       </div>
       <div class="form-group">
-        <label>ADGANGSKODE</label>
+        <label>PASSWORD</label>
         <div style="position:relative">
           <input type="password" placeholder="" id="login-pass" autocomplete="current-password" style="padding-right:44px">
           <button type="button" onclick="togglePw('login-pass',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;font-size:17px;padding:0;line-height:1">👁</button>
         </div>
       </div>
       <div id="login-msg" style="font-size:13px;color:#ef4444;min-height:18px;margin-top:4px"></div>
-      <button class="btn-submit" onclick="handleLogin()">Log ind →</button>
+      <button class="btn-submit" onclick="handleLogin()">Log in →</button>
       <div style="display:flex;align-items:center;gap:10px;margin:16px 0 4px">
         <div style="flex:1;height:1px;background:#222"></div>
         <span style="color:#555;font-size:12px">ELLER</span>
@@ -1130,33 +1256,33 @@ footer p { font-size: 13px; color: var(--text2); }
       </div>
       <a href="/api/auth/google/login" class="btn-google">
         <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Fortsæt med Google
+        Continue with Google
       </a>
     </div>
 
     <!-- REGISTER FORM -->
     <div id="form-register" style="display:none">
       <div class="form-group">
-        <label>NAVN</label>
-        <input type="text" placeholder="Dit navn" id="reg-name" autocomplete="name">
+        <label>NAME</label>
+        <input type="text" placeholder="Your name" id="reg-name" autocomplete="name">
       </div>
       <div class="form-group">
-        <label>VIRKSOMHEDSNAVN <span style="color:#555;font-weight:400">(valgfrit)</span></label>
-        <input type="text" placeholder="Din virksomhed" id="reg-company" autocomplete="organization">
+        <label>COMPANY NAME <span style="color:#555;font-weight:400">(optional)</span></label>
+        <input type="text" placeholder="Your company" id="reg-company" autocomplete="organization">
       </div>
       <div class="form-group">
         <label>EMAIL</label>
         <input type="email" placeholder="din@email.com" id="reg-email" autocomplete="email">
       </div>
       <div class="form-group">
-        <label>ADGANGSKODE <span style="color:#555;font-weight:400">(min. 6 tegn)</span></label>
+        <label>PASSWORD <span style="color:#555;font-weight:400">(min. 6 chars)</span></label>
         <div style="position:relative">
           <input type="password" placeholder="" id="reg-pass" autocomplete="new-password" style="padding-right:44px">
           <button type="button" onclick="togglePw('reg-pass',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;font-size:17px;padding:0;line-height:1">👁</button>
         </div>
       </div>
       <div id="reg-msg" style="font-size:13px;color:#ef4444;min-height:18px;margin-top:4px"></div>
-      <button class="btn-submit" onclick="handleRegister()">Opret konto →</button>
+      <button class="btn-submit" onclick="handleRegister()">Create account →</button>
       <div style="display:flex;align-items:center;gap:10px;margin:16px 0 4px">
         <div style="flex:1;height:1px;background:#222"></div>
         <span style="color:#555;font-size:12px">ELLER</span>
@@ -1164,10 +1290,10 @@ footer p { font-size: 13px; color: var(--text2); }
       </div>
       <a href="/api/auth/google/login" class="btn-google">
         <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Fortsæt med Google
+        Continue with Google
       </a>
       <div class="form-footer">
-        Ved oprettelse accepterer du vores <a href="/terms">vilkår</a>
+        By signing up you agree to our <a href="/terms">terms</a>
       </div>
     </div>
   </div>
@@ -1195,8 +1321,8 @@ function switchTab(tab) {
   document.getElementById('tab-register').classList.toggle('active', !isLogin);
   document.getElementById('form-login').style.display = isLogin ? 'block' : 'none';
   document.getElementById('form-register').style.display = isLogin ? 'none' : 'block';
-  document.getElementById('modal-title').textContent = isLogin ? 'Velkommen tilbage' : 'Kom i gang';
-  document.getElementById('modal-subtitle').textContent = isLogin ? 'Log ind på din konto' : 'Opret din gratis konto';
+  document.getElementById('modal-title').textContent = isLogin ? 'Welcome back' : 'Get started';
+  document.getElementById('modal-subtitle').textContent = isLogin ? 'Log in to your account' : 'Create your free account';
 }
 
 function togglePw(id, btn) {
@@ -1210,7 +1336,7 @@ async function handleLogin() {
   var pass = document.getElementById('login-pass').value;
   var msg = document.getElementById('login-msg');
   msg.textContent = '';
-  if (!email || !pass) { msg.textContent = 'Udfyld email og adgangskode'; return; }
+  if (!email || !pass) { msg.textContent = 'Please fill in email and password'; return; }
   try {
     var r = await fetch('/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password: pass})});
     var d = await r.json();
@@ -1221,9 +1347,9 @@ async function handleLogin() {
       document.getElementById('login-pass').value = '';
       window.location.href = '/app';
     } else {
-      msg.textContent = d.detail || 'Forkert email eller adgangskode';
+      msg.textContent = d.detail || 'Incorrect email or password';
     }
-  } catch(e) { msg.textContent = 'Fejl — prøv igen'; }
+  } catch(e) { msg.textContent = 'Error — please try again'; }
 }
 
 async function handleRegister() {
@@ -1233,7 +1359,7 @@ async function handleRegister() {
   var pass = document.getElementById('reg-pass').value;
   var msg = document.getElementById('reg-msg');
   msg.textContent = '';
-  if (!name || !email || !pass) { msg.textContent = 'Udfyld navn, email og adgangskode'; return; }
+  if (!name || !email || !pass) { msg.textContent = 'Please fill in name, email and password'; return; }
   var ref = new URLSearchParams(window.location.search).get('ref') || '';
   try {
     var r = await fetch('/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password: pass, name, company, ref})});
@@ -1245,11 +1371,12 @@ async function handleRegister() {
       document.getElementById('reg-company').value = '';
       document.getElementById('reg-email').value = '';
       document.getElementById('reg-pass').value = '';
-      window.location.href = '/app';
+      closeModal();
+      showOnboarding(name);
     } else {
-      msg.textContent = d.detail || 'Kunne ikke oprette konto';
+      msg.textContent = d.detail || 'Could not create account';
     }
-  } catch(e) { msg.textContent = 'Fejl — prøv igen'; }
+  } catch(e) { msg.textContent = 'Error — please try again'; }
 }
 
 document.addEventListener('keydown', function(e) {
@@ -1265,7 +1392,7 @@ document.addEventListener('keydown', function(e) {
     setTimeout(function() {
       openModal('register');
       var msg = document.getElementById('reg-msg');
-      if (msg) { msg.style.color = '#22c55e'; msg.textContent = '🎉 Du er inviteret! Opret konto og kom i gang.'; }
+      if (msg) { msg.style.color = '#22c55e'; msg.textContent = '🎉 You are invited! Create an account and get started.'; }
     }, 400);
   }
 })();
@@ -1276,15 +1403,15 @@ document.addEventListener('keydown', function(e) {
   var err = p.get('error');
   if (err) {
     var msgs = {
-      google_cancelled: 'Google login annulleret',
-      google_not_configured: 'Google login er ikke aktiveret endnu',
-      google_token_failed: 'Google login fejlede — prøv igen',
-      google_userinfo_failed: 'Kunne ikke hente Google-profilinfo',
-      google_no_email: 'Ingen email fra Google-konto',
-      account_inactive: 'Din konto er deaktiveret',
+      google_cancelled: 'Google login cancelled',
+      google_not_configured: 'Google login is not enabled yet',
+      google_token_failed: 'Google login failed — try again',
+      google_userinfo_failed: 'Could not retrieve Google profile info',
+      google_no_email: 'No email from Google account',
+      account_inactive: 'Your account is deactivated',
     };
     openModal('login');
-    document.getElementById('login-msg').textContent = msgs[err] || 'Login fejlede — prøv igen';
+    document.getElementById('login-msg').textContent = msgs[err] || 'Login failed — try again';
     window.history.replaceState({}, '', '/');
   }
 })();
@@ -1297,6 +1424,118 @@ function toggleFaq(el) {
 
 if (new URLSearchParams(window.location.search).get('login') === '1') {
   openModal('login');
+}
+
+// ── Currency ──────────────────────────────────────────────────────────────────
+var CURRENCY_RATES  = { USD:1, EUR:0.92, DKK:7.0 };
+var EU_CC = ['AT','BE','BG','HR','CY','CZ','EE','FI','FR','DE','GR','HU','IE',
+             'IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
+var _currency = localStorage.getItem('ugv_currency') || 'USD';
+
+function fmtPrice(usd) {
+  var rate = CURRENCY_RATES[_currency] || 1;
+  var val  = Math.round(usd * rate);
+  if (_currency === 'DKK') return val.toLocaleString('da-DK') + ' kr';
+  var sym  = _currency === 'EUR' ? '€' : '$';
+  return sym + val.toLocaleString('en-US');
+}
+
+function renderPrices() {
+  document.querySelectorAll('.price-amount[data-usd]').forEach(function(el) {
+    var usd = parseFloat(el.getAttribute('data-usd'));
+    el.innerHTML = fmtPrice(usd) + '<span>/mo</span>';
+  });
+  document.querySelectorAll('.curr-btn').forEach(function(b) {
+    b.classList.toggle('curr-active', b.getAttribute('data-curr') === _currency);
+  });
+  var lbl = document.getElementById('curr-label');
+  if (lbl) lbl.textContent = _currency;
+}
+
+function setCurrency(code) {
+  _currency = code;
+  localStorage.setItem('ugv_currency', code);
+  renderPrices();
+}
+
+async function detectCurrency() {
+  if (localStorage.getItem('ugv_currency')) { renderPrices(); return; }
+  try {
+    var res = await fetch('https://ipapi.co/json/');
+    var d   = await res.json();
+    var cc  = d.country_code || '';
+    if (cc === 'DK') _currency = 'DKK';
+    else if (EU_CC.indexOf(cc) > -1) _currency = 'EUR';
+    else _currency = 'USD';
+    localStorage.setItem('ugv_currency', _currency);
+  } catch(e) {}
+  renderPrices();
+}
+
+detectCurrency();
+
+</script>
+
+<!-- ONBOARDING MODAL -->
+<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);backdrop-filter:blur(12px);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:#0d1526;border:1px solid rgba(255,255,255,.1);border-radius:20px;max-width:480px;width:90%;padding:40px 36px;position:relative;text-align:center">
+    <div id="onb-step-1">
+      <div style="font-size:48px;margin-bottom:16px">🎉</div>
+      <h2 style="font-family:var(--font-display);font-size:26px;font-weight:800;color:#fff;margin-bottom:8px">Welcome, <span id="onb-name"></span>!</h2>
+      <p style="font-size:15px;color:rgba(255,255,255,.6);margin-bottom:24px;line-height:1.7">Your account is ready. As a welcome gift, we've added <strong style="color:var(--accent)">10 free AI videos</strong> to your account — on top of your 50 starter credits.</p>
+      <div style="background:rgba(255,62,0,.07);border:1px solid rgba(255,62,0,.2);border-radius:12px;padding:18px;margin-bottom:28px">
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px">🎁 Your welcome bonus</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:rgba(255,255,255,.04);border-radius:8px;padding:12px">
+            <div style="font-size:22px;font-weight:800;color:#fff;font-family:var(--font-display)">50</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.5)">Starter credits</div>
+          </div>
+          <div style="background:rgba(255,62,0,.1);border-radius:8px;padding:12px;border:1px solid rgba(255,62,0,.2)">
+            <div style="font-size:22px;font-weight:800;color:var(--accent);font-family:var(--font-display)">+10</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.5)">Free AI videos</div>
+          </div>
+        </div>
+      </div>
+      <button onclick="onbNext(2)" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-display)">Get started →</button>
+    </div>
+    <div id="onb-step-2" style="display:none">
+      <div style="font-size:48px;margin-bottom:16px">🚀</div>
+      <h2 style="font-family:var(--font-display);font-size:22px;font-weight:800;color:#fff;margin-bottom:8px">3 steps to your first post</h2>
+      <div style="text-align:left;margin:24px 0">
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:18px">
+          <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,62,0,.15);border:1px solid rgba(255,62,0,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--accent);flex-shrink:0">1</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">Connect your social accounts</div><div style="font-size:12px;color:rgba(255,255,255,.5)">Instagram, TikTok or YouTube via secure OAuth</div></div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:18px">
+          <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,62,0,.15);border:1px solid rgba(255,62,0,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--accent);flex-shrink:0">2</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">Upload your first product</div><div style="font-size:12px;color:rgba(255,255,255,.5)">Or connect Shopify to import automatically</div></div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,62,0,.15);border:1px solid rgba(255,62,0,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--accent);flex-shrink:0">3</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">Generate and schedule your content</div><div style="font-size:12px;color:rgba(255,255,255,.5)">AI writes, creates and posts — you just approve</div></div>
+        </div>
+      </div>
+      <button onclick="onbFinish()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-display)">Open my dashboard →</button>
+      <div style="margin-top:12px"><a href="#" onclick="onbFinish();return false" style="font-size:12px;color:rgba(255,255,255,.3)">Skip intro</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showOnboarding(name) {
+  var el = document.getElementById('onboarding-overlay');
+  el.style.display = 'flex';
+  document.getElementById('onb-name').textContent = name || 'there';
+  document.body.style.overflow = 'hidden';
+}
+function onbNext(step) {
+  document.getElementById('onb-step-1').style.display = 'none';
+  document.getElementById('onb-step-' + step).style.display = 'block';
+}
+function onbFinish() {
+  document.getElementById('onboarding-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  window.location.href = '/app';
 }
 </script>
 </body>

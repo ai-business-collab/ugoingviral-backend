@@ -1090,6 +1090,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 .stat-kpi-val{font-size:28px;font-weight:800;color:var(--ac);letter-spacing:-1px}
 .stat-kpi-lbl{font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
 </style>
+<style>.curr-btn.curr-active{background:rgba(255,255,255,.14)!important;color:#fff!important}</style>
 </head>
 <body>
 <div id="toast"></div>
@@ -2618,20 +2619,97 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
 <!-- ══ INDSTILLINGER ══════════════════════════════════════════════════════ -->
   <div id="page-settings" class="page">
-    <div class="card">
-      <div class="ctitle">⚙️ System Indstillinger</div>
-      <div class="fg"><label class="fl">Standard sprog for content</label>
-        <select class="fs" id="set-lang"><option value="da">🇩🇰 Dansk</option><option value="en">🇬🇧 Engelsk</option><option value="both">🌍 Begge</option></select>
-      </div>
-      <div class="trow">
-        <div><div class="tname">Theme</div><div class="tdesc" id="theme-desc">Dark theme active</div></div>
-        <div class="tog on" id="tog-theme" onclick="toggleTheme()"></div>
-      </div>
-      <div class="trow"><div><div class="tname">Gem content historik</div><div class="tdesc">Alt genereret content gemmes i data.json</div></div><div class="tog on"></div></div>
-      <button class="btn bp" style="margin-top:16px" onclick="toast('✅ Indstillinger gemt','success')">💾 Gem</button>
-      <button class="btn bg bsm" style="margin-top:8px" onclick="obReset()">👋 Gense onboarding guide</button>
-    </div>
+    <div style="max-width:760px">
 
+      <!-- ACCOUNT -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">👤 Account</div>
+        <div class="fg">
+          <label class="fl">Display name</label>
+          <input class="fi" id="set-display-name" placeholder="Your name">
+        </div>
+        <div class="fg">
+          <label class="fl">Username</label>
+          <input class="fi" id="set-username" placeholder="username (no spaces)">
+        </div>
+        <div class="fg">
+          <label class="fl">Email address</label>
+          <input class="fi" id="set-email" type="email" placeholder="your@email.com">
+        </div>
+        <button class="btn bp bsm" onclick="saveAccountSettings()">Save changes</button>
+      </div>
+
+      <!-- PASSWORD -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">🔒 Change Password</div>
+        <div class="fg">
+          <label class="fl">Current password</label>
+          <input class="fi" id="set-pw-current" type="password" placeholder="">
+        </div>
+        <div class="fg">
+          <label class="fl">New password</label>
+          <input class="fi" id="set-pw-new" type="password" placeholder="Min. 6 characters">
+        </div>
+        <div class="fg">
+          <label class="fl">Confirm new password</label>
+          <input class="fi" id="set-pw-confirm" type="password" placeholder="">
+        </div>
+        <button class="btn bp bsm" onclick="changePasswordSettings()">Update password</button>
+      </div>
+
+      <!-- INTERFACE -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">🎨 Interface &amp; Language</div>
+        <div class="fg" style="margin-bottom:4px">
+          <label class="fl">UI language</label>
+          <select class="fs" id="set-ui-lang" onchange="setLangFromSettings(this.value)">
+            <option value="en">🇬🇧 English</option>
+            <option value="da">🇩🇰 Dansk</option>
+          </select>
+        </div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:16px;margin-left:2px">Changes the interface language immediately</div>
+        <div class="fg">
+          <label class="fl">Content language</label>
+          <select class="fs" id="set-lang">
+            <option value="en">🇬🇧 English</option>
+            <option value="da">🇩🇰 Dansk</option>
+            <option value="both">🌍 Both</option>
+          </select>
+        </div>
+        <div class="trow">
+          <div><div class="tname">Dark theme</div><div class="tdesc" id="theme-desc">Dark theme active</div></div>
+          <div class="tog on" id="tog-theme" onclick="toggleTheme()"></div>
+        </div>
+        <div class="trow">
+          <div><div class="tname">Email notifications</div><div class="tdesc">Failed posts, credit warnings, system alerts</div></div>
+          <div class="tog" id="tog-notifications" onclick="togIt(this);saveNotifPref(this)"></div>
+        </div>
+        <div class="trow">
+          <div><div class="tname">Save content history</div><div class="tdesc">All generated content is saved in your history</div></div>
+          <div class="tog on"></div>
+        </div>
+        <button class="btn bg bsm" style="margin-top:14px" onclick="obReset()">👋 Show onboarding guide</button>
+      </div>
+
+      <!-- PLAN FEATURES -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">💎 Plan Features</div>
+        <div id="settings-plan-features"><div style="color:var(--tx3);font-size:13px;padding:8px 0">Loading...</div></div>
+      </div>
+
+      <!-- DANGER ZONE -->
+      <div class="card" style="margin-bottom:20px;border-color:rgba(239,68,68,.18)">
+        <div class="ctitle" style="color:#ef4444">⚠️ Danger Zone</div>
+        <div class="trow" style="border-color:rgba(239,68,68,.1)">
+          <div>
+            <div class="tname" style="color:var(--tx)">Deactivate account</div>
+            <div class="tdesc">Your account will be deactivated. All data is retained and the account can be reactivated by contacting support.</div>
+          </div>
+          <button class="btn bsm" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;white-space:nowrap;margin-left:16px" onclick="confirmDeactivate()">Deactivate</button>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- ══ UNDER-KONTI ═══════════════════════════════════════════════════════ -->
@@ -2702,19 +2780,22 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
         </div>
         <div style="font-size:13px;color:var(--tx2);margin-bottom:8px">Credits are used when you generate content with AI. New credits are assigned at plan renewal.</div>
+        <div id="low-credits-banner" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#f87171">
+          ⚠️ <strong>Running low on credits.</strong> Top up below to keep posting, or <span style="cursor:pointer;text-decoration:underline" onclick="document.getElementById('billing-plans-grid').scrollIntoView({behavior:'smooth'})">upgrade your plan</span>.
+        </div>
       </div>
 
       <!-- BONUS CREDITS -->
       <div class="card" style="margin-bottom:20px">
-        <div class="ctitle">🎁 Bonus credits — tildeles automatisk
+        <div class="ctitle">🎁 Bonus credits — awarded automatically
           <span class="tip"><span class="tip-icon">?</span><span class="tip-box">Bonus credits are automatically assigned when you perform the action. No extra steps needed.</span></span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px" id="bonus-grid">
           <div class="bonus-item" id="bonus-connect_social">
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div>
-                <div style="font-size:13px;font-weight:700">🔗 Forbind social media</div>
-                <div style="font-size:11px;color:var(--tx3);margin-top:2px">Tilknyt Instagram eller TikTok</div>
+                <div style="font-size:13px;font-weight:700">🔗 Connect social media</div>
+                <div style="font-size:11px;color:var(--tx3);margin-top:2px">First social account — awarded once</div>
               </div>
               <span class="bonus-badge" id="bbadge-connect_social">+10 cr</span>
             </div>
@@ -2740,8 +2821,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="bonus-item" id="bonus-daily_login">
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div>
-                <div style="font-size:13px;font-weight:700">📅 Dagligt login</div>
-                <div style="font-size:11px;color:var(--tx3);margin-top:2px">Log ind hver dag — automatisk bonus</div>
+                <div style="font-size:13px;font-weight:700">📅 Login after a break</div>
+                <div style="font-size:11px;color:var(--tx3);margin-top:2px">Log in after 24+ hours away — awarded once</div>
               </div>
               <span class="bonus-badge" id="bbadge-daily_login">+100 cr</span>
             </div>
@@ -2749,8 +2830,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="bonus-item" id="bonus-invite_friend" style="cursor:default">
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div>
-                <div style="font-size:13px;font-weight:700">👥 Inviter en ven</div>
-                <div style="font-size:11px;color:var(--tx3);margin-top:2px" id="invite-count-lbl">Del dit link — +50 cr per ven</div>
+                <div style="font-size:13px;font-weight:700">👥 Invite a friend</div>
+                <div style="font-size:11px;color:var(--tx3);margin-top:2px" id="invite-count-lbl">Share your link — +50 cr per friend</div>
               </div>
               <span class="bonus-badge">+50 cr</span>
             </div>
@@ -2762,7 +2843,15 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
 
-      <div class="ctitle" style="margin-bottom:14px">Select Plan</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="ctitle" style="margin:0">Select Plan</div>
+        <div style="display:flex;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:3px;gap:2px">
+          <button class="curr-btn" data-curr="USD" onclick="setCurrency('USD')" style="background:none;border:none;color:rgba(255,255,255,.45);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">$ USD</button>
+          <button class="curr-btn" data-curr="EUR" onclick="setCurrency('EUR')" style="background:none;border:none;color:rgba(255,255,255,.45);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">€ EUR</button>
+          <button class="curr-btn" data-curr="DKK" onclick="setCurrency('DKK')" style="background:none;border:none;color:rgba(255,255,255,.45);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">kr DKK</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:-8px;margin-bottom:14px">Stripe charges in USD — displayed prices are for reference</div>
       <div id="billing-plans-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px"></div>
 
       <!-- ADD-ONS -->
@@ -2771,47 +2860,37 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="ctitle" style="margin:0">⚡ Ekstra Credits</div>
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-bottom:14px">Running low mid-month? Buy extra credits. A subscription always gives the most credits for your money.</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
           <div class="card" style="padding:18px;text-align:center;position:relative">
             <div style="font-size:24px;font-weight:900;color:var(--ac)">100</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span style="font-size:9px">(0,49 kr/cr)</span></div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Hurtig genopfyldning</div>
-            <div style="font-size:22px;font-weight:800;margin-bottom:12px">49 <span style="font-size:12px;font-weight:500;color:var(--tx2)">kr</span></div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="4" data-rate-cr="100" style="font-size:9px">($0.04/cr)</span></div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Quick top-up</div>
+            <div data-credit-usd="4" style="font-size:22px;font-weight:800;margin-bottom:12px">$4</div>
             <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(100,49)">💳 Stripe →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(100,49,'paypal')">🅿️ PayPal →</button>
-            </div>
-          </div>
-          <div class="card" style="padding:18px;text-align:center;position:relative">
-            <div style="font-size:24px;font-weight:900;color:var(--ac)">350</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span style="font-size:9px">(0,43 kr/cr)</span></div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Til en mini-serie</div>
-            <div style="font-size:22px;font-weight:800;margin-bottom:12px">149 <span style="font-size:12px;font-weight:500;color:var(--tx2)">kr</span></div>
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(350,149)">💳 Stripe →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(350,149,'paypal')">🅿️ PayPal →</button>
-            </div>
-          </div>
-          <div class="card" style="padding:18px;text-align:center;position:relative">
-            <div style="position:absolute;top:10px;right:10px;background:var(--ac);color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px">POPULAR</div>
-            <div style="font-size:24px;font-weight:900;color:var(--ac)">700</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span style="font-size:9px">(0,36 kr/cr)</span></div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Popular choice</div>
-            <div style="font-size:22px;font-weight:800;margin-bottom:12px">249 <span style="font-size:12px;font-weight:500;color:var(--tx2)">kr</span></div>
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(700,249)">💳 Stripe →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(700,249,'paypal')">🅿️ PayPal →</button>
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(100,29)">💳 Stripe →</button>
+              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(100,29,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
           <div class="card" style="padding:18px;text-align:center;border-color:var(--border-ac);position:relative">
-            <div style="position:absolute;top:10px;right:10px;background:var(--ac3);color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px">BEDST</div>
-            <div style="font-size:24px;font-weight:900;color:var(--ac)">1.500</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span style="font-size:9px">(0,30 kr/cr)</span></div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Bedste pris per credit</div>
-            <div style="font-size:22px;font-weight:800;margin-bottom:12px">449 <span style="font-size:12px;font-weight:500;color:var(--tx2)">kr</span></div>
+            <div style="position:absolute;top:10px;right:10px;background:var(--ac);color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px">POPULAR</div>
+            <div style="font-size:24px;font-weight:900;color:var(--ac)">500</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="14" data-rate-cr="500" style="font-size:9px">($0.028/cr)</span></div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Best value</div>
+            <div data-credit-usd="14" style="font-size:22px;font-weight:800;margin-bottom:12px">$14</div>
             <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(1500,449)">💳 Stripe →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(1500,449,'paypal')">🅿️ PayPal →</button>
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(500,99)">💳 Stripe →</button>
+              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(500,99,'paypal')">🅿️ PayPal →</button>
+            </div>
+          </div>
+          <div class="card" style="padding:18px;text-align:center;position:relative">
+            <div style="position:absolute;top:10px;right:10px;background:var(--ac3);color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px">BEST</div>
+            <div style="font-size:24px;font-weight:900;color:var(--ac)">1,500</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="36" data-rate-cr="1500" style="font-size:9px">($0.024/cr)</span></div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Best price per credit</div>
+            <div data-credit-usd="36" style="font-size:22px;font-weight:800;margin-bottom:12px">$36</div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(1500,249)">💳 Stripe →</button>
+              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(1500,249,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
         </div>
@@ -2834,10 +2913,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyCustomTopup('paypal')">🅿️ PayPal →</button>
             </div>
           </div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:8px">2,0 cr/DKK — faste pakker giver op til 3,3 cr/DKK</div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:8px">Rate scales with amount — more spent = cheaper per credit. Billed in USD.</div>
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-top:10px;padding:8px 12px;background:rgba(0,229,255,.05);border-radius:8px;border:1px solid rgba(0,229,255,.1)">
-          💡 <strong>Tip:</strong> Studio packages offer the best price (0.31–0.33 DKK/cr) and include credits + ready workflow. Fixed top-up packages are cheaper than custom amounts. Plan subscription recommended for daily use.
+          💡 <strong>Tip:</strong> Fixed packages give the best price per credit. Custom amounts use the same tier rates — more spent means cheaper per credit. A plan subscription is always the most cost-effective for daily use.
         </div>
       </div>
 
@@ -3488,6 +3567,8 @@ function switchSubAccount(id) {
 }
 
 async function loadBilling() {
+  // Track if we're in a sub-account context (no bonuses there)
+  try { const _ctx = await apiFetch('/api/user/profile'); window._isSubAccount = !!_ctx.is_sub_account; } catch(e) {}
   try {
     const d = await apiFetch('/api/billing/plan');
     const pct = Math.round((d.credits / d.max_credits) * 100);
@@ -3510,6 +3591,77 @@ async function loadBilling() {
     renderBillingPage(d);
     loadInvite();
   } catch(e) {}
+}
+
+
+// ── Currency ──────────────────────────────────────────────────────────────────
+var PLAN_USD = {free:0, starter:40, growth:57, basic:70, pro:140, elite:210, personal:350};
+var _CURR_RATES = { USD:1, EUR:0.92, DKK:7.0 };
+var _EU_CC = ['AT','BE','BG','HR','CY','CZ','EE','FI','FR','DE','GR','HU','IE',
+              'IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
+var _currency = localStorage.getItem('ugv_currency') || 'USD';
+
+function fmtPrice(usd) {
+  if (usd === 0) return 'Free';
+  var rate = _CURR_RATES[_currency] || 1;
+  var val  = Math.round(usd * rate);
+  if (_currency === 'DKK') return val.toLocaleString('da-DK') + ' kr';
+  var sym  = _currency === 'EUR' ? '€' : '$';
+  return sym + val.toLocaleString('en-US');
+}
+
+function fmtCreditPrice(usd) {
+  var rate = _CURR_RATES[_currency] || 1;
+  var val  = Math.round(usd * rate);
+  if (_currency === 'DKK') return val.toLocaleString('da-DK') + ' kr';
+  var sym  = _currency === 'EUR' ? '€' : '$';
+  return sym + val.toLocaleString('en-US');
+}
+
+function fmtRate(usd, credits) {
+  var rate    = _CURR_RATES[_currency] || 1;
+  var perCr   = (usd * rate / credits);
+  if (_currency === 'DKK') return '(' + perCr.toFixed(2) + ' kr/cr)';
+  var sym     = _currency === 'EUR' ? '€' : '$';
+  return '(' + sym + perCr.toFixed(3).replace(/\.?0+$/, '') + '/cr)';
+}
+
+function renderBillingPrices() {
+  // Credit package prices
+  document.querySelectorAll('[data-credit-usd]').forEach(function(el) {
+    el.textContent = fmtCreditPrice(parseFloat(el.getAttribute('data-credit-usd')));
+  });
+  // Per-credit rates
+  document.querySelectorAll('[data-rate-usd]').forEach(function(el) {
+    var usd = parseFloat(el.getAttribute('data-rate-usd'));
+    var cr  = parseFloat(el.getAttribute('data-rate-cr'));
+    el.textContent = fmtRate(usd, cr);
+  });
+  // Currency toggle buttons
+  document.querySelectorAll('.curr-btn').forEach(function(b) {
+    b.classList.toggle('curr-active', b.getAttribute('data-curr') === _currency);
+  });
+}
+
+function setCurrency(code) {
+  _currency = code;
+  localStorage.setItem('ugv_currency', code);
+  renderBillingPrices();
+  loadBilling(); // re-render plan cards with new currency
+}
+
+async function detectBillingCurrency() {
+  if (localStorage.getItem('ugv_currency')) { _currency = localStorage.getItem('ugv_currency'); renderBillingPrices(); return; }
+  try {
+    var res = await fetch('https://ipapi.co/json/');
+    var d   = await res.json();
+    var cc  = d.country_code || '';
+    if (cc === 'DK') _currency = 'DKK';
+    else if (_EU_CC.indexOf(cc) > -1) _currency = 'EUR';
+    else _currency = 'USD';
+    localStorage.setItem('ugv_currency', _currency);
+  } catch(e) {}
+  renderBillingPrices();
 }
 
 function renderBillingPage(d) {
@@ -3536,9 +3688,9 @@ function renderBillingPage(d) {
                             : `<li style="font-size:12px;color:var(--tx2);padding:3px 0;display:flex;gap:5px"><span style="color:var(--ac)">✓</span>${f}</li>`
     ).join('');
     return `<div style="background:${active ? 'linear-gradient(135deg,rgba(0,229,255,.08),rgba(124,58,237,.08))' : 'var(--glass)'};border:1px solid ${active ? 'var(--border-ac)' : 'var(--border)'};border-radius:16px;padding:20px;position:relative;transition:all .2s">
-      ${active ? '<div style="position:absolute;top:10px;right:10px;background:var(--ac);color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">AKTIV</div>' : ''}
+      ${active ? '<div style="position:absolute;top:10px;right:10px;background:var(--ac);color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">ACTIVE</div>' : ''}
       <div style="font-size:16px;font-weight:800;color:${active ? 'var(--ac)' : 'var(--tx)'};margin-bottom:2px">${p.name}</div>
-      <div style="font-size:22px;font-weight:900;color:var(--tx);margin-bottom:2px">${p.price === 0 ? 'Gratis' : p.price + '<span style="font-size:12px;font-weight:500;color:var(--tx2)"> kr/md</span>'}</div>
+      <div style="font-size:22px;font-weight:900;color:var(--tx);margin-bottom:2px">${fmtPrice(PLAN_USD[key] !== undefined ? PLAN_USD[key] : Math.round(p.price/7))}${(PLAN_USD[key] || p.price) > 0 ? '<span style="font-size:12px;font-weight:500;color:var(--tx2)"> /mo</span>' : ''}</div>
       <ul style="list-style:none;margin:10px 0 16px;padding:0;border-top:1px solid var(--border);padding-top:10px">${feats}</ul>
       <button class="btn ${active ? 'bp' : 'bg'} bsm" style="width:100%;margin-bottom:${(!active && p.price > 0) ? '6px' : '0'}" onclick="${active ? '' : (p.price === 0 ? 'setPlan(\'' + key + '\')' : 'buyPlan(\'' + key + '\')')}" ${active ? 'disabled' : ''}>${active ? '✓ Current plan' : (p.price === 0 ? 'Start free →' : '💳 Stripe →')}</button>
       ${(!active && p.price > 0) ? `<button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.15);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyPlanPayPal('${key}')">🅿️ PayPal →</button>` : ''}
@@ -3547,6 +3699,7 @@ function renderBillingPage(d) {
 
   // Load studio packages
   loadStudioPackages();
+  renderBillingPrices();
 }
 
 async function buyPlan(planKey, provider='stripe') {
@@ -3569,16 +3722,68 @@ async function setPlan(planKey) {
   } catch(e) { toast('Fejl: ' + e.message, 'error'); }
 }
 
+function showBonusPopup(bonusKey, amount) {
+  const labels = {
+    connect_social: 'Social account connected!',
+    first_video: 'First AI video generated!',
+    first_post: 'First post published!',
+    daily_login: 'Welcome back bonus!',
+    invite_friend: 'Friend joined!'
+  };
+  const label = labels[bonusKey] || 'Bonus earned!';
+  const popup = document.createElement('div');
+  popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-60%) scale(.8);z-index:9999;background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid rgba(0,229,255,.35);border-radius:20px;padding:32px 40px;text-align:center;box-shadow:0 20px 80px rgba(0,0,0,.7),0 0 40px rgba(0,229,255,.15);transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .35s;opacity:0;min-width:260px';
+  popup.innerHTML = '<div style="font-size:48px;margin-bottom:8px">🎉</div>'
+    + '<div style="font-size:13px;color:var(--tx3);margin-bottom:4px;letter-spacing:.5px;text-transform:uppercase">' + label + '</div>'
+    + '<div style="font-size:52px;font-weight:900;color:#00e5ff;line-height:1;margin-bottom:6px">+' + amount + '</div>'
+    + '<div style="font-size:16px;color:var(--tx2);font-weight:600">credits added</div>'
+    + '<div style="margin-top:20px"><button onclick="this.closest('div[style]').remove()" style="background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.25);color:#00e5ff;border-radius:10px;padding:8px 28px;font-size:13px;font-weight:700;cursor:pointer">Awesome!</button></div>';
+  document.body.appendChild(popup);
+  requestAnimationFrame(() => {
+    popup.style.transform = 'translate(-50%,-50%) scale(1)';
+    popup.style.opacity = '1';
+  });
+  setTimeout(() => {
+    popup.style.transform = 'translate(-50%,-50%) scale(.9)';
+    popup.style.opacity = '0';
+    setTimeout(() => popup.remove(), 350);
+  }, 4000);
+}
+
+async 
+function checkLowCredits() {
+  apiFetch('/api/billing/plan').then(d => {
+    const banner = document.getElementById('low-credits-banner');
+    if (!banner) return;
+    const cr = d.credits || 0;
+    banner.style.display = cr <= 10 ? 'block' : 'none';
+  }).catch(() => {});
+}
+function checkAndClaimBonus(bonusKey, extra) {
+  if (window._isSubAccount) return;
+  try {
+    const payload = Object.assign({bonus: bonusKey}, extra || {});
+    const d = await apiFetch('/api/billing/claim_bonus', 'POST', payload);
+    if (d && d.amount) {
+      showBonusPopup(bonusKey, d.amount);
+      const el = document.getElementById('bonus-' + bonusKey);
+      if (el) el.classList.add('claimed');
+      loadBilling();
+    }
+  } catch(e) {}
+}
+
 async function claimBonus(bonusKey) {
+  if (window._isSubAccount) { toast('Bonuses only apply to your main account', 'info'); return; }
   try {
     const d = await apiFetch('/api/billing/claim_bonus', 'POST', {bonus: bonusKey});
-    toast('🎉 +' + d.amount + ' credits optjent!', 'success');
+    showBonusPopup(bonusKey, d.amount);
     const el = document.getElementById('bonus-' + bonusKey);
     if (el) el.classList.add('claimed');
     loadBilling();
   } catch(e) {
-    if (e.message && e.message.includes('allerede')) toast('Bonus allerede hentet', 'info');
-    else toast('Fejl: ' + e.message, 'error');
+    if (e.message && (e.message.includes('allerede') || e.message.includes('already'))) toast('Bonus already claimed', 'info');
+    else toast('Error: ' + e.message, 'error');
   }
 }
 
@@ -3620,21 +3825,17 @@ async function loadStudioPackages() {
         <ul style="list-style:none;padding:0;margin:0 0 14px;border-top:1px solid var(--border);padding-top:10px">
           ${(pkg.features||[]).map(f => `<li style="font-size:11px;color:var(--tx2);padding:3px 0;display:flex;gap:6px"><span style="color:${pkg.color}">✓</span>${f}</li>`).join('')}
         </ul>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div>
-            <div style="font-size:11px;color:var(--tx3)">Pris</div>
+                <div style="margin-bottom:12px">
+            <div style="font-size:11px;color:var(--tx3)">Price</div>
             <div style="font-size:22px;font-weight:900;color:var(--tx)">${pkg.price} <span style="font-size:12px;font-weight:500;color:var(--tx2)">kr</span></div>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:11px;color:var(--tx3)">Inkluderet</div>
-            <div style="font-size:18px;font-weight:800;color:${pkg.color}">${pkg.credits} cr</div>
           </div>
         </div>
         <button class="btn bsm" style="width:100%;background:${pkg.color};color:#000;font-weight:700;border:none;border-radius:10px;padding:11px;cursor:pointer;font-size:13px;margin-bottom:6px" onclick="buyStudioPackage('${key}')">
           🛒 Buy ${pkg.name} →
         </button>
         <button class="btn bg bsm" style="width:100%;font-size:12px" onclick="startStudioWithCredits('${key}', ${pkg.scenes}, ${pkg.credits})">
-          🎬 Start med mine credits (${pkg.credits} cr)
+          🎬 Start with my credits
         </button>
       </div>`).join('');
   } catch(e) {}
@@ -3665,7 +3866,11 @@ function updateCustomTopupPreview() {
   const el = document.getElementById('custom-topup-credits');
   if (!el) return;
   if (amt < 25 || amt > 5000) { el.textContent = '–'; return; }
-  el.textContent = (Math.floor(amt * 2.0)).toLocaleString('da-DK');
+  let credits;
+  if (amt < 99)       credits = Math.floor(amt / 0.29);
+  else if (amt < 249) credits = Math.floor(amt / 0.198);
+  else                credits = Math.floor(amt / 0.166);
+  el.textContent = credits.toLocaleString('da-DK');
 }
 
 async function buyCustomTopup(provider) {
@@ -4465,7 +4670,7 @@ async function studioGenerate() {
     studioRender();
 
     // First video bonus
-    try { const r = await apiFetch('/api/billing/claim_bonus','POST',{bonus:'first_video'}); if(r?.amount) toast(`🎉 +${r.amount} bonus credits!`,'success'); } catch(e) {}
+    checkAndClaimBonus('first_video');
   } catch(e) {
     clearInterval(progressInterval);
     _studio.generating = false;
@@ -4875,6 +5080,143 @@ function toggleLang() {
   applyLang();
 }
 
+
+// ── Settings page ─────────────────────────────────────────────────────────────
+async function loadSettingsPage() {
+  // Set UI language dropdown
+  const langSel = document.getElementById('set-ui-lang');
+  if (langSel) langSel.value = currentLang;
+  // Load profile
+  try {
+    const d = await apiFetch('/api/user/profile');
+    if (d.name && document.getElementById('set-display-name')) document.getElementById('set-display-name').value = d.name;
+    if (d.username && document.getElementById('set-username')) document.getElementById('set-username').value = d.username;
+    if (d.email && document.getElementById('set-email')) document.getElementById('set-email').value = d.email;
+  } catch(e) {}
+  // Load plan features
+  try {
+    const d = await apiFetch('/api/billing/plan');
+    renderSettingsPlanFeatures(d);
+  } catch(e) {}
+  // Notifications pref
+  const notifTog = document.getElementById('tog-notifications');
+  if (notifTog) {
+    const on = localStorage.getItem('ugv_notif') !== '0';
+    notifTog.classList.toggle('on', on);
+  }
+}
+
+function setLangFromSettings(lang) {
+  currentLang = lang;
+  localStorage.setItem('ugv_lang', lang);
+  applyLang();
+  toast('Language updated', 'success');
+}
+
+function renderSettingsPlanFeatures(d) {
+  const el = document.getElementById('settings-plan-features');
+  if (!el) return;
+  const plan = (d.plan || 'free').toLowerCase();
+  const planName = d.plan_name || 'Free';
+  const GROWTH = {free:0, starter:0, growth:1, basic:0, pro:2, elite:5, personal:-1};
+  const growthCount = GROWTH[plan] !== undefined ? GROWTH[plan] : 0;
+  const growthTxt = growthCount === -1 ? 'Unlimited' : String(growthCount);
+  const growthColor = growthCount > 0 ? 'var(--ac)' : 'var(--tx3)';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Active Plan</div>
+        <div style="font-size:20px;font-weight:800;color:var(--ac)">${planName}</div>
+      </div>
+      <button class="btn bg bsm" onclick="nav('billing')" style="margin-left:auto">Upgrade →</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="settings-extras-grid">
+      <div style="background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Extra Profiles</div>
+        <div style="font-size:24px;font-weight:800;color:var(--tx);margin-bottom:2px" id="settings-sub-count">–</div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:12px" id="settings-sub-limit-txt">included in plan</div>
+        <button class="btn bg bsm" style="width:100%;margin-bottom:6px" onclick="nav('subaccounts')">Manage →</button>
+        <div id="settings-sub-buy" style="display:none">
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">At plan limit — buy more:</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn bg bsm" style="flex:1" onclick="buyExtraProfileSlot(1)">+1 — $7</button>
+            <button class="btn bg bsm" style="flex:1" onclick="buyExtraProfileSlot(3)">+3 — $14</button>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Growth Accounts</div>
+        <div style="font-size:24px;font-weight:800;color:${growthColor};margin-bottom:2px">${growthTxt}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">included in plan</div>
+        ${growthCount === 0
+          ? `<div style="font-size:11px;color:var(--tx3);margin-bottom:8px">Growth accounts included from Growth plan and above.</div>
+             <button class="btn bg bsm" style="width:100%" onclick="nav('billing')">Upgrade plan →</button>`
+          : `<button class="btn bg bsm" style="width:100%" onclick="nav('growth-accounts')">Manage →</button>`}
+      </div>
+    </div>`;
+
+  apiFetch('/api/subaccounts').then(d2 => {
+    const count = (d2.sub_accounts || []).length;
+    const limit = d2.limit || 0;
+    const el2 = document.getElementById('settings-sub-count');
+    const lt  = document.getElementById('settings-sub-limit-txt');
+    const buy = document.getElementById('settings-sub-buy');
+    if (el2) el2.textContent = count + ' / ' + limit;
+    if (lt)  lt.textContent  = limit + ' included in plan';
+    if (buy) buy.style.display = (limit >= 0 && count >= limit) ? 'block' : 'none';
+  }).catch(() => {});
+}
+
+async function saveAccountSettings() {
+  const name  = (document.getElementById('set-display-name')?.value || '').trim();
+  const uname = (document.getElementById('set-username')?.value || '').trim();
+  const email = (document.getElementById('set-email')?.value || '').trim();
+  if (!name || !email) { toast('Name and email required', 'error'); return; }
+  try {
+    await apiFetch('/api/user/update_profile', 'POST', {name, username: uname || undefined, email});
+    toast('Account updated', 'success');
+    const dn = document.getElementById('sb-display-name');
+    if (dn) dn.textContent = name;
+  } catch(e) { toast('Error: ' + (e.message || 'Unknown error'), 'error'); }
+}
+
+async function changePasswordSettings() {
+  const cur = document.getElementById('set-pw-current')?.value || '';
+  const nw  = document.getElementById('set-pw-new')?.value || '';
+  const cf  = document.getElementById('set-pw-confirm')?.value || '';
+  if (!cur || !nw) { toast('Fill in current and new password', 'error'); return; }
+  if (nw !== cf)   { toast('Passwords do not match', 'error'); return; }
+  if (nw.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
+  try {
+    await apiFetch('/api/user/change_password', 'POST', {current_password: cur, new_password: nw});
+    toast('Password changed', 'success');
+    document.getElementById('set-pw-current').value = '';
+    document.getElementById('set-pw-new').value = '';
+    document.getElementById('set-pw-confirm').value = '';
+  } catch(e) { toast('Error: ' + (e.message || 'Unknown error'), 'error'); }
+}
+
+function saveNotifPref(toggle) {
+  localStorage.setItem('ugv_notif', toggle.classList.contains('on') ? '1' : '0');
+}
+
+function confirmDeactivate() {
+  if (!confirm('Deactivate your account? You can reactivate it by contacting support. All your data will be retained.')) return;
+  apiFetch('/api/user/deactivate', 'POST').then(() => {
+    toast('Account deactivated. Logging out...', 'info');
+    setTimeout(() => { localStorage.clear(); window.location.href = '/'; }, 2000);
+  }).catch(e => toast('Error: ' + (e.message || 'Unknown error'), 'error'));
+}
+
+async function buyExtraProfileSlot(qty) {
+  try {
+    const d = await apiFetch('/api/billing/create_checkout', 'POST', {type:'extra_sub', quantity:qty}, true);
+    if (d.url) window.location.href = d.url;
+    else toast('Payment not available', 'error');
+  } catch(e) { toast('Error: ' + (e.message||''), 'error'); }
+}
+
 // ── Navigation ────────────────────────────────────────────────────────────────
 const titles = {
   dashboard:'🏠 Dashboard',
@@ -4911,7 +5253,9 @@ function nav(p) {
   if (p === 'products' && !allProducts.length) loadProducts();
   if (p === 'pipeline') { loadPipeline(); loadPipeHistory(); pipeLoadCredits(); }
   if (p === 'stats') { loadStats(); }
-  if (p === 'billing') { loadBilling(); }
+  if (p === 'billing') { loadBilling(); detectBillingCurrency(); }
+  if (p === 'billing') { setTimeout(checkLowCredits, 800); }
+  if (p === 'settings') { loadSettingsPage(); }
   if (p === 'posting') { if (!allProducts.length) { loadProducts().then(function() { renderPostingProductGrid(); loadAutoGroups(); }); } else { renderPostingProductGrid(); loadAutoGroups(); } loadRecentPosts(); loadGroups(); }
   if (p === 'library') { loadLibFolders(); renderLibrary(libFiles); }
   if (p === 'content-library') { loadClib(); }
@@ -5025,12 +5369,8 @@ async function saveConn(type) {
   if (type === 'ai')        body = { anthropic_key: v('ai-anth'), openai_key: v('ai-oai') };
   await apiFetch('/api/settings', 'POST', body);
   toast(`✅ ${type} gemt!`, 'success'); loadConnections(); toggleCon(type);
-  // Bonus: first time a social account is connected
   if (['instagram','tiktok','facebook','twitter','youtube'].includes(type)) {
-    try {
-      const r = await apiFetch('/api/billing/claim_bonus', 'POST', {bonus:'connect_social'});
-      if (r.amount) toast(`🎉 +${r.amount} bonus credits for at forbinde ${type}!`, 'success');
-    } catch(e) {}
+    checkAndClaimBonus('connect_social');
   }
 }
 async function deleteConn(type) {
@@ -7356,6 +7696,8 @@ postNow = async function() {
     }
   }
   
+  // first_post bonus
+  checkAndClaimBonus('first_post');
   // Ryd formular EFTER API kaldet
   setTimeout(function() {
     if (postContent) postContent.value = '';
@@ -7598,6 +7940,36 @@ function sendQueueToPost(id) {
 }
 </script>
 
+
+  <!-- UPLOAD MEDIA PAGE -->
+  <div id="page-media-upload" class="page" style="display:none">
+    <div style="max-width:760px">
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">📁 Upload Media</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Upload your own videos and audio files. Max 500 MB. Supported: mp4, mov, mp3, wav.</div>
+        <div id="upload-drop-zone" style="border:2px dashed var(--border);border-radius:14px;padding:40px 20px;text-align:center;cursor:pointer;margin-bottom:16px"
+          onclick="document.getElementById('upload-file-input').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--ac)';"
+          ondragleave="this.style.borderColor=''"
+          ondrop="handleUploadDrop(event)">
+          <div style="font-size:36px;margin-bottom:8px">&#11014;</div>
+          <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px">Click to browse or drag and drop</div>
+          <div style="font-size:12px;color:var(--tx3)">mp4 / mov / mp3 / wav &mdash; max 500 MB</div>
+          <input type="file" id="upload-file-input" accept=".mp4,.mov,.mp3,.wav" multiple style="display:none" onchange="handleUploadFiles(this.files)">
+        </div>
+        <div id="upload-progress-list" style="display:none;margin-bottom:16px"></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="ctitle" style="margin:0">My Uploads</div>
+          <button class="btn bg bsm" onclick="loadMyUploads()">&#8635; Refresh</button>
+        </div>
+        <div id="my-uploads-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+          <div style="color:var(--tx3);font-size:13px;padding:20px;text-align:center;grid-column:1/-1">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
 <!-- ══ ONBOARDING FLOW ══════════════════════════════════════════════════ -->
 <div id="obf-overlay">
   <div class="obf-progress" id="obf-bar"></div>
@@ -8257,11 +8629,7 @@ async function _pipeRunRunway(platform, imgUrl, shotlist, script) {
     const finalUrl = assembleRes.final_url || '';
     pipeAddToHistory({url: finalUrl, script: script, platform: platform});
     showPipeResult(finalUrl, script);
-    // Bonus: first video
-    try {
-      const bv = await apiFetch('/api/billing/claim_bonus', 'POST', {bonus:'first_video'});
-      if (bv.amount) toast(`🎉 +${bv.amount} bonus credits for your first AI video!`, 'success');
-    } catch(e) {}
+    checkAndClaimBonus('first_video');
     pipeLoadCredits(); // full refresh
     toast('Finished video ready! 🎬', 'success');
   } catch(e) {
