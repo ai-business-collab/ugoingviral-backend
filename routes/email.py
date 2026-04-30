@@ -292,6 +292,27 @@ def _system_smtp_cfg() -> dict:
 
 
 def send_system_email(to_addr: str, subject: str, html_body: str) -> bool:
+    # Try SendGrid first (preferred)
+    sg_key = os.getenv("SENDGRID_API_KEY", "")
+    if sg_key:
+        try:
+            import httpx
+            from_email = os.getenv("SENDGRID_FROM", "noreply@ugoingviral.com")
+            r = httpx.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={"Authorization": f"Bearer {sg_key}", "Content-Type": "application/json"},
+                json={
+                    "personalizations": [{"to": [{"email": to_addr}]}],
+                    "from": {"email": from_email, "name": "UgoingViral"},
+                    "subject": subject,
+                    "content": [{"type": "text/html", "value": html_body}],
+                },
+                timeout=15,
+            )
+            return r.status_code in (200, 202)
+        except Exception:
+            pass  # Fall through to SMTP
+
     cfg = _system_smtp_cfg()
     if not cfg["user"] or not cfg["password"]:
         return False
