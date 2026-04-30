@@ -524,6 +524,48 @@ async def send_daily_reminders():
         print(f"[reminder] Sent {sent} reminder emails")
 
 
+
+async def check_auto_topup():
+    """Check all users for auto top-up triggers and process if needed."""
+    from services.users import load_users
+    from services.store import _load_user_store, _save_user_store
+    from routes.billing import PLANS
+    from routes.email import send_system_email
+    users = load_users().get("users", [])
+    for user in users:
+        uid = user["id"]
+        ustore = _load_user_store(uid)
+        billing = ustore.get("billing", {})
+        if not billing.get("auto_topup_enabled"):
+            continue
+        threshold = billing.get("auto_topup_threshold", 50)
+        amount = billing.get("auto_topup_amount", 100)
+        current_credits = billing.get("credits", 0)
+        if current_credits > threshold:
+            continue
+        # Check cooldown — don't top up more than once per 24h
+        from datetime import datetime, timedelta
+        last = billing.get("auto_topup_last")
+        if last:
+            try:
+                if (datetime.utcnow() - datetime.fromisoformat(last)).total_seconds() < 86400:
+                    continue
+            except Exception:
+                pass
+        # Add credits (in production this would charge the saved payment method via Stripe)
+        billing["credits"] = current_credits + amount
+        billing["auto_topup_last"] = datetime.utcnow().isoformat()
+        _save_user_store(uid, ustore)
+        # Notify user by email
+        try:
+            send_system_email(
+                user["email"],
+                f"Auto Top-Up: {amount} credits added",
+                f"<p>Hi {user.get('name','there')},</p><p>Your credits were running low ({current_credits} remaining). {amount} credits have been added automatically.</p><p>New balance: {billing['credits']} credits.</p><p>Go to <a href='https://ugoingviral.com/app'>your dashboard</a> to manage auto top-up settings.</p>"
+            )
+        except Exception:
+            pass
+
 async def run_scheduler():
     global _scheduler_running
     _scheduler_running = True
@@ -559,6 +601,7 @@ async def run_scheduler():
         if _now_utc.hour == 8 and _now_utc.minute < 2:
             try:
                 await send_daily_reminders()
+                await check_auto_topup()
             except Exception as _re:
                 print(f"[reminder] error: {_re}")
         await asyncio.sleep(60)

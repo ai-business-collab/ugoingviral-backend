@@ -828,3 +828,31 @@ def referral_signup(body: dict):
                 _save_user_store(uid, ustore)
             return {"ok": True}
     return {"ok": False}
+
+
+# ── Auto Top-Up ───────────────────────────────────────────────────────────────
+
+@router.get("/api/billing/auto_topup")
+def get_auto_topup(current_user: dict = Depends(get_current_user)):
+    billing = store.get("billing", {})
+    return {
+        "enabled":   billing.get("auto_topup_enabled", False),
+        "threshold":  billing.get("auto_topup_threshold", 50),
+        "amount":    billing.get("auto_topup_amount", 100),
+        "last_topup": billing.get("auto_topup_last", None),
+    }
+
+
+@router.post("/api/billing/auto_topup")
+async def save_auto_topup(req: Request, current_user: dict = Depends(get_current_user)):
+    d = await req.json()
+    billing = store.setdefault("billing", {})
+    billing["auto_topup_enabled"]   = bool(d.get("enabled", False))
+    billing["auto_topup_threshold"]  = max(10, min(500, int(d.get("threshold", 50))))
+    billing["auto_topup_amount"]    = int(d.get("amount", 100))
+    save_store()
+    return {"ok": True, "auto_topup": {
+        "enabled":  billing["auto_topup_enabled"],
+        "threshold": billing["auto_topup_threshold"],
+        "amount":   billing["auto_topup_amount"],
+    }}

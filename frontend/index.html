@@ -1184,14 +1184,17 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
     <!-- ── STATISTIK ── -->
     <div class="nav-section" data-i18n="nav.analytics">Analyse</div>
+    <div class="ni" id="ni-growth-dash" onclick="nav('growth-dashboard')"><span class="ico">🌱</span><span>Growth Dashboard</span></div>
     <div class="ni" id="ni-stats" onclick="nav('stats')"><span class="ico">📊</span><span data-i18n="nav.stats">Statistik</span></div>
 
     <!-- ── SYSTEM ── -->
     <div class="nav-section" data-i18n="nav.system">System</div>
+    <div class="ni" onclick="nav('telegram-settings')"><span class="ico">✈️</span><span>Telegram Bot</span></div>
     <div class="ni" id="ni-connect" onclick="nav('connect')"><span class="ico">🔗</span><span data-i18n="nav.connect">Connect</span></div>
     <div class="ni has-sub" id="ni-settings" onclick="toggleSubMenu('settings-sub')"><span class="ico">⚙️</span><span data-i18n="nav.settings">Indstillinger</span><span class="chevron">›</span></div>
     <div class="submenu" id="settings-sub">
       <div class="sub-item" onclick="nav('settings')">⚙️ <span data-i18n="nav.settings">Indstillinger</span></div>
+      <div class="sub-item" onclick="nav('agency-dashboard')">🏢 <span>Agency Dashboard</span></div>
       <div class="sub-item" onclick="nav('subaccounts')">👥 <span>Extra Profile</span></div>
       <div class="sub-item" style="color:var(--red)" onclick="logout()">🚪 <span data-i18n="nav.logout">Log ud</span></div>
     </div>
@@ -2737,7 +2740,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="card" id="sub-create-card" style="display:none;margin-bottom:20px">
         <div class="ctitle">＋ Opret extra-profile</div>
         <div class="fg"><label class="fl">Navn *</label><input class="fi" id="sub-new-name" placeholder="fx Brand A, Personlig, Klient 1"></div>
-        <div class="fg"><label class="fl">Platform fokus</label><input class="fi" id="sub-new-focus" placeholder="fx Instagram & TikTok"></div>
+        <div class="fg"><label class="fl">Niche</label><select class="fi" id="sub-new-niche"><option value="">Select niche...</option><option value="ecommerce">E-commerce</option><option value="creator">Creator</option><option value="restaurant">Restaurant</option><option value="fitness">Fitness</option><option value="agency">Agency</option><option value="saas">SaaS / Tech</option><option value="other">Other</option></select></div>
+        <div class="fg"><label class="fl">Platform focus</label><input class="fi" id="sub-new-focus" placeholder="e.g. Instagram and TikTok"></div>
         <div class="fg"><label class="fl">Avatar farve</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px" id="sub-color-picker">
             <div onclick="selectSubColor('#00e5ff')" style="width:28px;height:28px;border-radius:50%;background:#00e5ff;cursor:pointer;border:2px solid transparent" data-color="#00e5ff"></div>
@@ -2854,7 +2858,41 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-top:-8px;margin-bottom:14px">Stripe charges in USD — displayed prices are for reference</div>
-      <div id="billing-plans-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px"></div>
+      
+        <!-- Auto Top-Up -->
+        <div class="card" style="margin-bottom:20px" id="auto-topup-card">
+          <div class="ctitle">Auto Top-Up</div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">Automatically add credits when your balance runs low</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <span style="font-size:13px;color:var(--tx)">Enable auto top-up</span>
+            <div id="atu-toggle" onclick="toggleAutoTopup()" style="width:44px;height:24px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0">
+              <div id="atu-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
+            </div>
+          </div>
+          <div id="atu-settings" style="display:none;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">TOP UP WHEN BELOW</label>
+              <select id="atu-threshold" class="inp" style="width:100%" onchange="saveAutoTopup()">
+                <option value="25">25 credits</option>
+                <option value="50" selected>50 credits</option>
+                <option value="100">100 credits</option>
+                <option value="200">200 credits</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">AMOUNT TO ADD</label>
+              <select id="atu-amount" class="inp" style="width:100%" onchange="saveAutoTopup()">
+                <option value="100">100 credits</option>
+                <option value="500" selected>500 credits</option>
+                <option value="1500">1,500 credits</option>
+              </select>
+            </div>
+          </div>
+          <div id="atu-last" style="font-size:11px;color:var(--tx3);display:none"></div>
+        </div>
+
+
+        <div id="billing-plans-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px"></div>
 
       <!-- ADD-ONS -->
       <div style="margin-top:28px">
@@ -2996,6 +3034,175 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   <!-- CONTENT ENGINE PAGE -->
   
   <!-- AUTO PILOT PAGE -->
+  
+  <!-- GROWTH DASHBOARD PAGE -->
+  
+  <!-- AGENCY DASHBOARD PAGE -->
+  
+  <!-- TELEGRAM SETTINGS PAGE -->
+  <div id="page-telegram-settings" class="page" style="display:none">
+    <div style="max-width:600px">
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="font-size:32px">✈️</div>
+          <div>
+            <div class="ctitle" style="margin:0">Telegram Bot</div>
+            <div style="font-size:12px;color:var(--tx3)">Control UgoingViral from your Telegram app</div>
+          </div>
+        </div>
+        <div id="tg-status-box" style="margin-bottom:16px;padding:12px 14px;border-radius:10px;border:1px solid var(--border);font-size:13px;color:var(--tx3)">
+          Checking bot status...
+        </div>
+
+        <!-- Step 1: Token -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px">Step 1 — Add Bot Token to server</div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Create a bot at <a href="https://t.me/BotFather" target="_blank" style="color:var(--ac)">@BotFather</a> and add the token to <code style="background:var(--bg);padding:1px 5px;border-radius:4px">/root/ugoingviral-backend/.env</code>:</div>
+          <div style="font-family:monospace;font-size:12px;background:var(--bg);padding:10px 14px;border-radius:8px;border:1px solid var(--border);color:var(--tx2)">TELEGRAM_BOT_TOKEN=1234567890:ABCdef...</div>
+        </div>
+
+        <!-- Step 2: Register webhook -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px">Step 2 — Register Webhook</div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:10px">Tell Telegram where to send messages:</div>
+          <button class="btn bp" onclick="registerTelegramWebhook()">Register Webhook</button>
+          <div id="tg-webhook-result" style="margin-top:8px;font-size:12px;color:var(--tx3)"></div>
+        </div>
+
+        <!-- Step 3: Link account -->
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px">Step 3 — Link Your Account</div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:10px">Generate a link token, open your bot in Telegram, and send: <code style="background:var(--bg);padding:1px 5px;border-radius:4px">/link TOKEN</code></div>
+          <button class="btn bg" onclick="generateTelegramLinkToken()">Generate Link Token</button>
+          <div id="tg-link-result" style="margin-top:12px;display:none;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">Send this to your Telegram bot:</div>
+            <div id="tg-link-cmd" style="font-family:monospace;font-size:13px;font-weight:700;color:var(--ac)"></div>
+            <div id="tg-bot-link" style="margin-top:8px;font-size:12px;color:var(--tx3)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bot commands reference -->
+      <div class="card">
+        <div class="ctitle">Bot Commands</div>
+        <div style="margin-top:8px">
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+            <code style="color:var(--ac)">/start</code><span style="color:var(--tx3)">Welcome message and quick stats</span>
+            <code style="color:var(--ac)">/stats</code><span style="color:var(--tx3)">Today's posts, credits used, plan info</span>
+            <code style="color:var(--ac)">/credits</code><span style="color:var(--tx3)">Current credit balance with visual bar</span>
+            <code style="color:var(--ac)">/autopilot on|off</code><span style="color:var(--tx3)">Enable or disable Auto Pilot</span>
+            <code style="color:var(--ac)">/post</code><span style="color:var(--tx3)">Quick link to Content Engine</span>
+            <code style="color:var(--ac)">/help</code><span style="color:var(--tx3)">Show all commands</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="page-agency-dashboard" class="page" style="display:none">
+    <div style="max-width:960px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:22px;font-weight:800;color:var(--tx)">Agency Dashboard</div>
+          <div style="font-size:12px;color:var(--tx3)">Manage all client accounts from one place</div>
+        </div>
+        <button class="btn bp" onclick="openCreateSub()">+ Add Client Account</button>
+      </div>
+
+      <!-- Agency KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:28px;font-weight:800;color:var(--ac)" id="ag-kpi-accounts">-</div>
+          <div style="font-size:11px;color:var(--tx3)">Client accounts</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:28px;font-weight:800;color:#10b981" id="ag-kpi-limit">-</div>
+          <div style="font-size:11px;color:var(--tx3)">Account limit</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:28px;font-weight:800;color:#f59e0b" id="ag-kpi-active">-</div>
+          <div style="font-size:11px;color:var(--tx3)">Active accounts</div>
+        </div>
+      </div>
+
+      <!-- Client grid -->
+      <div id="ag-client-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+        <div style="color:var(--tx3);text-align:center;padding:40px;grid-column:1/-1;font-size:13px">Loading client accounts...</div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="page-growth-dashboard" class="page" style="display:none">
+    <div style="max-width:960px">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:22px;font-weight:800;color:var(--tx)">Growth Dashboard</div>
+          <div style="font-size:12px;color:var(--tx3)">Last 30 days of content performance</div>
+        </div>
+        <button class="btn bg bsm" onclick="loadGrowthDashboard()">Refresh</button>
+      </div>
+
+      <!-- KPI row -->
+      <div id="gd-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:24px;font-weight:800;color:var(--ac)" id="gd-kpi-posts">-</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:4px">Posts published</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:24px;font-weight:800;color:#10b981" id="gd-kpi-rate">-</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:4px">Completion rate</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:24px;font-weight:800;color:#f59e0b" id="gd-kpi-platforms">-</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:4px">Active platforms</div>
+        </div>
+        <div class="card" style="text-align:center;padding:16px">
+          <div style="font-size:24px;font-weight:800;color:#a78bfa" id="gd-kpi-hashtags">-</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:4px">Unique hashtags</div>
+        </div>
+      </div>
+
+      <!-- Posts chart + Best times -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card">
+          <div class="ctitle">Posts per Day</div>
+          <div id="gd-bar-chart" style="display:flex;align-items:flex-end;gap:2px;height:100px;margin-top:12px;overflow:hidden"></div>
+          <div id="gd-bar-labels" style="display:flex;gap:2px;margin-top:4px;overflow:hidden"></div>
+        </div>
+        <div class="card">
+          <div class="ctitle">Recommended Times</div>
+          <div id="gd-best-times" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- Platform breakdown + Content types -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card">
+          <div class="ctitle">Platform Breakdown</div>
+          <div id="gd-platforms" style="margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <div class="ctitle">Content Types</div>
+          <div id="gd-content-types" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- Top hashtags -->
+      <div class="card">
+        <div class="ctitle">Top Hashtags</div>
+        <div id="gd-hashtags" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px">
+          <div style="color:var(--tx3);font-size:13px">No hashtag data yet - start generating content</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
   <div id="page-autopilot" class="page" style="display:none">
     <div style="max-width:760px">
       <div class="card" style="margin-bottom:16px;padding:24px">
@@ -3648,7 +3855,8 @@ async function createSubAccount() {
   const color = document.getElementById('sub-new-color')?.value || '#7c3aed';
   if (!name) { toast('❌ Name is required','error'); return; }
   try {
-    await apiFetch('/api/subaccounts', 'POST', {name, platform_focus:focus, avatar_color:color}, true);
+    const niche = document.getElementById('sub-new-niche')?.value || '';
+    await apiFetch('/api/subaccounts', 'POST', {name, platform_focus:focus, avatar_color:color, niche}, true);
     document.getElementById('sub-new-name').value = '';
     document.getElementById('sub-new-focus').value = '';
     document.getElementById('sub-create-card').style.display = 'none';
@@ -5403,7 +5611,7 @@ function nav(p) {
   if (p === 'products' && !allProducts.length) loadProducts();
   if (p === 'pipeline') { loadPipeline(); loadPipeHistory(); pipeLoadCredits(); }
   if (p === 'stats') { loadStats(); }
-  if (p === 'billing') { loadBilling(); detectBillingCurrency(); }
+  if (p === 'billing') { loadBilling(); detectBillingCurrency(); loadAutoTopup(); }
   if (p === 'billing') { setTimeout(checkLowCredits, 800); }
   if (p === 'settings') { loadSettingsPage(); }
   if (p === 'posting') { if (!allProducts.length) { loadProducts().then(function() { renderPostingProductGrid(); loadAutoGroups(); }); } else { renderPostingProductGrid(); loadAutoGroups(); } loadRecentPosts(); loadGroups(); }
@@ -5433,6 +5641,9 @@ function nav(p) {
   if (p === 'studio') studioInit();
   if (p === 'content-engine') { loadContentCalendar(); }
   if (p === 'autopilot') { loadAutoPilot(); }
+  if (p === 'growth-dashboard') { loadGrowthDashboard(); }
+  if (p === 'agency-dashboard') { loadAgencyDashboard(); }
+  if (p === 'telegram-settings') { loadTelegramStatus(); }
   if (p === 'media-upload') { loadMyUploads(); }
   _currentPage = p;
 }
@@ -10345,6 +10556,263 @@ async function reconnectInstagram(){
     if(d.authorization_url) window.location.href=d.authorization_url;
     else if(typeof showToast==='function') showToast('Add Meta App credentials in Settings first');
   }catch(e){ if(typeof showToast==='function') showToast('Error: '+e.message); }
+}
+
+
+// ===== GROWTH DASHBOARD =====
+async function loadGrowthDashboard() {
+  try {
+    var d = await apiFetch('/api/growth/overview');
+    // KPIs
+    var el;
+    el=document.getElementById('gd-kpi-posts'); if(el) el.textContent=d.total_posted||0;
+    el=document.getElementById('gd-kpi-rate'); if(el) el.textContent=(d.engagement_rate||0)+'%';
+    el=document.getElementById('gd-kpi-platforms'); if(el) el.textContent=(d.platform_breakdown||[]).filter(function(p){return p.connected;}).length;
+    el=document.getElementById('gd-kpi-hashtags'); if(el) el.textContent=(d.top_hashtags||[]).length;
+
+    // Bar chart
+    renderGdBarChart(d.day_labels||[], d.posts_series||[]);
+
+    // Recommended times
+    renderGdBestTimes(d.recommended_times||['09:00','13:00','18:00'], d.platform_breakdown||[]);
+
+    // Platform breakdown
+    renderGdPlatforms(d.platform_breakdown||[]);
+
+    // Content types
+    renderGdContentTypes(d.content_types||[]);
+
+    // Hashtags
+    renderGdHashtags(d.top_hashtags||[]);
+
+  } catch(e) { console.error('growth dashboard load error', e); }
+}
+
+function renderGdBarChart(labels, series) {
+  var chart = document.getElementById('gd-bar-chart');
+  var labelsEl = document.getElementById('gd-bar-labels');
+  if (!chart) return;
+  var max = Math.max.apply(null, series.concat([1]));
+  var barW = Math.floor(100 / Math.min(series.length, 30));
+  var html = '';
+  var lhtml = '';
+  // Show last 14 for readability
+  var start = Math.max(0, series.length - 14);
+  for (var i = start; i < series.length; i++) {
+    var v = series[i];
+    var h = Math.round(100 * v / max);
+    var color = v > 0 ? 'var(--ac)' : 'var(--border)';
+    html += '<div title="' + labels[i] + ': ' + v + ' posts" style="flex:1;background:' + color + ';border-radius:3px 3px 0 0;height:' + Math.max(h,2) + '%;min-height:2px;transition:height .3s"></div>';
+    var showLabel = (i === start || i === series.length - 1 || i % 2 === 0);
+    lhtml += '<div style="flex:1;font-size:8px;color:var(--tx3);text-align:center;overflow:hidden">' + (showLabel ? labels[i].slice(-5) : '') + '</div>';
+  }
+  chart.innerHTML = html;
+  if (labelsEl) labelsEl.innerHTML = lhtml;
+}
+
+function renderGdBestTimes(times, platforms) {
+  var el = document.getElementById('gd-best-times'); if (!el) return;
+  var html = '';
+  times.forEach(function(t) {
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="font-size:16px;font-weight:800;color:var(--ac);min-width:48px">' + t + '</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">Optimal engagement window</div></div>';
+  });
+  if (!times.length) html = '<div style="color:var(--tx3);font-size:13px">Post more content to get personalised timing</div>';
+  el.innerHTML = html;
+}
+
+function renderGdPlatforms(platforms) {
+  var el = document.getElementById('gd-platforms'); if (!el) return;
+  if (!platforms.length) {
+    el.innerHTML = '<div style="color:var(--tx3);font-size:13px">No platform data yet</div>'; return;
+  }
+  var ICONS = {instagram:'IG',tiktok:'TT',facebook:'FB',twitter:'TW',youtube:'YT'};
+  var total = platforms.reduce(function(a,b){return a+b.posts;},0)||1;
+  var html = '';
+  platforms.forEach(function(p) {
+    var pct = Math.round(100*p.posts/total);
+    html += '<div style="margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
+      + '<span style="font-size:12px;font-weight:600;color:var(--tx)">' + (ICONS[p.platform]||p.platform.toUpperCase()) + ' ' + p.platform + '</span>'
+      + '<span style="font-size:11px;color:var(--tx3)">' + p.posts + ' posts</span></div>'
+      + '<div style="height:6px;background:var(--border);border-radius:3px"><div style="height:100%;background:var(--ac);border-radius:3px;width:' + pct + '%"></div></div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function renderGdContentTypes(types) {
+  var el = document.getElementById('gd-content-types'); if (!el) return;
+  if (!types.length) {
+    el.innerHTML = '<div style="color:var(--tx3);font-size:13px">No content type data yet</div>'; return;
+  }
+  var html = '';
+  types.forEach(function(t, i) {
+    var colors = ['var(--ac)','#10b981','#f59e0b','#a78bfa','#ef4444'];
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="width:8px;height:8px;border-radius:50%;background:' + (colors[i]||'var(--ac)') + ';flex-shrink:0"></div>'
+      + '<div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--tx);text-transform:capitalize">' + t.type + '</div>'
+      + (t.tip ? '<div style="font-size:10px;color:var(--tx3)">' + t.tip + '</div>' : '') + '</div>'
+      + '<div style="font-size:12px;font-weight:700;color:var(--tx3)">' + t.count + '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function renderGdHashtags(hashtags) {
+  var el = document.getElementById('gd-hashtags'); if (!el) return;
+  if (!hashtags.length) {
+    el.innerHTML = '<div style="color:var(--tx3);font-size:13px">No hashtag data yet - start generating content</div>'; return;
+  }
+  var maxC = hashtags[0] ? hashtags[0].count : 1;
+  var html = '';
+  hashtags.forEach(function(h) {
+    var size = 11 + Math.round(4 * h.count / maxC);
+    var opacity = 0.5 + 0.5 * h.count / maxC;
+    html += '<span style="font-size:' + size + 'px;color:var(--ac);opacity:' + opacity + ';cursor:default" title="' + h.count + ' uses">#' + h.tag + '</span> ';
+  });
+  el.innerHTML = html;
+}
+
+// ===== AGENCY DASHBOARD =====
+async function loadAgencyDashboard() {
+  try {
+    var d = await apiFetch('/api/subaccounts');
+    var el;
+    el=document.getElementById('ag-kpi-accounts'); if(el) el.textContent=d.count||0;
+    el=document.getElementById('ag-kpi-limit'); if(el) el.textContent=d.limit||0;
+    el=document.getElementById('ag-kpi-active'); if(el) el.textContent=(d.sub_accounts||[]).filter(function(s){return s.status!=='inactive';}).length;
+
+    renderAgencyClientGrid(d.sub_accounts||[], d.limit||0);
+  } catch(e) { console.error('agency dashboard error', e); }
+}
+
+function renderAgencyClientGrid(subs, limit) {
+  var el = document.getElementById('ag-client-grid'); if (!el) return;
+  var html = '';
+
+  subs.forEach(function(sub) {
+    var inactive = sub.status === 'inactive';
+    html += '<div class="card" style="padding:16px;position:relative">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+      + '<div style="width:40px;height:40px;border-radius:50%;background:' + (sub.avatar_color||'#7c3aed') + ';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff">'
+      + sub.name.charAt(0).toUpperCase() + '</div>'
+      + '<div><div style="font-size:14px;font-weight:700;color:var(--tx)">' + sub.name + '</div>'
+      + '<div style="font-size:11px;color:var(--tx3)">' + (sub.platform_focus||'All platforms') + '</div></div>'
+      + '<div style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:' + (inactive?'var(--border)':'#10b981') + '"></div>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      + '<button class="btn bp bsm" onclick="switchSubAccount('' + sub.id + '');nav('connect')" style="flex:1">Open</button>'
+      + '<button class="btn bg bsm" onclick="switchSubAccount('' + sub.id + '');nav('content-engine')" style="flex:1">Content</button>'
+      + '</div></div>';
+  });
+
+  // Add account button if under limit
+  if (subs.length < limit) {
+    html += '<div class="card" style="padding:16px;border:2px dashed var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:130px" onclick="openCreateSub();nav('subaccounts')">'
+      + '<div style="text-align:center;color:var(--tx3)">'
+      + '<div style="font-size:28px;margin-bottom:8px">+</div>'
+      + '<div style="font-size:13px">Add Client Account</div>'
+      + '</div></div>';
+  }
+
+  if (!html) html = '<div style="color:var(--tx3);text-align:center;padding:40px;grid-column:1/-1;font-size:13px">No client accounts yet. Click "Add Client Account" to get started.</div>';
+  el.innerHTML = html;
+}
+
+// ===== TELEGRAM SETTINGS =====
+async function loadTelegramStatus() {
+  var box = document.getElementById('tg-status-box'); if (!box) return;
+  try {
+    var d = await apiFetch('/api/telegram/status');
+    if (!d.configured) {
+      box.style.background = 'rgba(239,68,68,.06)';
+      box.style.borderColor = 'rgba(239,68,68,.2)';
+      box.style.color = '#f87171';
+      box.textContent = 'Bot not configured - add TELEGRAM_BOT_TOKEN to .env';
+    } else if (!d.ok) {
+      box.style.background = 'rgba(245,158,11,.06)';
+      box.style.borderColor = 'rgba(245,158,11,.2)';
+      box.style.color = '#fbbf24';
+      box.textContent = 'Bot token invalid - check TELEGRAM_BOT_TOKEN in .env';
+    } else {
+      var linked = d.linked ? ' | Account linked' : ' | Account not linked yet';
+      var webhook = d.webhook_url ? ' | Webhook active' : ' | Webhook not set';
+      box.style.background = 'rgba(16,185,129,.06)';
+      box.style.borderColor = 'rgba(16,185,129,.2)';
+      box.style.color = '#34d399';
+      box.innerHTML = 'Bot active: <strong>@' + (d.bot_username||'unknown') + '</strong>' + webhook + linked;
+    }
+  } catch(e) {
+    box.textContent = 'Could not check bot status';
+  }
+}
+
+async function registerTelegramWebhook() {
+  var el = document.getElementById('tg-webhook-result'); if(el) el.textContent = 'Registering...';
+  try {
+    var d = await apiFetch('/api/telegram/setup');
+    if (d.ok) {
+      if(el) el.style.color='#10b981'; if(el) el.textContent='Webhook registered successfully!';
+      loadTelegramStatus();
+    } else {
+      if(el) el.style.color='var(--red)'; if(el) el.textContent='Error: ' + (d.description || d.error || 'Failed');
+    }
+  } catch(e) { if(el) el.textContent='Error: ' + e.message; }
+}
+
+async function generateTelegramLinkToken() {
+  try {
+    var d = await apiFetch('/api/telegram/generate-link-token', {method:'POST', body:JSON.stringify({})});
+    var res = document.getElementById('tg-link-result');
+    var cmd = document.getElementById('tg-link-cmd');
+    var botLink = document.getElementById('tg-bot-link');
+    if (res) res.style.display = 'block';
+    if (cmd) cmd.textContent = d.link_command;
+    if (botLink && d.bot_url) {
+      botLink.innerHTML = 'Open bot: <a href="' + d.bot_url + '" target="_blank" style="color:var(--ac)">' + d.bot_url + '</a>';
+    }
+  } catch(e) { if(typeof showToast==='function') showToast('Error: '+e.message); }
+}
+
+// ===== AUTO TOP-UP =====
+var _atuEnabled = false;
+
+async function loadAutoTopup() {
+  try {
+    var d = await apiFetch('/api/billing/auto_topup');
+    _atuEnabled = d.enabled;
+    renderAtuToggle(d.enabled);
+    var el;
+    el=document.getElementById('atu-threshold'); if(el && d.threshold) el.value=String(d.threshold);
+    el=document.getElementById('atu-amount'); if(el && d.amount) el.value=String(d.amount);
+    el=document.getElementById('atu-last');
+    if(el && d.last_topup) { el.style.display='block'; el.textContent='Last top-up: '+new Date(d.last_topup).toLocaleString(); }
+  } catch(e) {}
+}
+
+function renderAtuToggle(enabled) {
+  var toggle = document.getElementById('atu-toggle');
+  var thumb = document.getElementById('atu-thumb');
+  var settings = document.getElementById('atu-settings');
+  if (!toggle) return;
+  toggle.style.background = enabled ? '#10b981' : 'var(--border)';
+  if (thumb) thumb.style.left = enabled ? '22px' : '2px';
+  if (settings) settings.style.display = enabled ? 'grid' : 'none';
+}
+
+async function toggleAutoTopup() {
+  _atuEnabled = !_atuEnabled;
+  renderAtuToggle(_atuEnabled);
+  await saveAutoTopup();
+}
+
+async function saveAutoTopup() {
+  var threshold = parseInt((document.getElementById('atu-threshold')||{}).value||'50');
+  var amount = parseInt((document.getElementById('atu-amount')||{}).value||'500');
+  try {
+    await apiFetch('/api/billing/auto_topup', {method:'POST', body:JSON.stringify({enabled:_atuEnabled, threshold:threshold, amount:amount})});
+    if(typeof showToast==='function' && _atuEnabled) showToast('Auto top-up saved');
+  } catch(e) {}
 }
 
 </script>
