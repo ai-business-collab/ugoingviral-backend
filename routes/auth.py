@@ -2,7 +2,7 @@ import os
 import httpx
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -28,6 +28,7 @@ class RegisterRequest(BaseModel):
     password: str
     name: str = ""
     company: str = ""
+    niche: str = ""
     ref: str = ""
 
 
@@ -55,7 +56,7 @@ def _create_token(user_id: str, email: str) -> str:
 
 
 def _safe_user(user: dict) -> dict:
-    return {"id": user["id"], "email": user["email"], "name": user.get("name", ""), "company": user.get("company", "")}
+    return {"id": user["id"], "email": user["email"], "name": user.get("name", ""), "company": user.get("company", ""), "niche": user.get("niche", ""), "created_at": user.get("created_at", "")}
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -80,7 +81,7 @@ async def register(req: RegisterRequest):
         raise HTTPException(status_code=400, detail="Adgangskode skal være mindst 6 tegn")
     if get_user_by_email(req.email):
         raise HTTPException(status_code=400, detail="Email er allerede i brug")
-    user = create_user(req.email, req.password, req.name, req.company)
+    user = create_user(req.email, req.password, req.name, req.company, req.niche)
     token = _create_token(user["id"], user["email"])
     try:
         import asyncio
@@ -213,3 +214,13 @@ async def google_callback(code: str = None, error: str = None):
 
     token = _create_token(user["id"], user["email"])
     return RedirectResponse(f"/app?token={token}")
+
+
+@router.patch("/api/auth/niche")
+async def set_niche(req: Request, current_user: dict = Depends(get_current_user)):
+    d = await req.json()
+    niche = (d.get("niche") or "").strip()
+    if not niche:
+        raise HTTPException(status_code=400, detail="niche required")
+    update_user(current_user["id"], {"niche": niche})
+    return {"ok": True, "niche": niche}
