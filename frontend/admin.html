@@ -348,6 +348,16 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
     </div>
 
+    <!-- GROWTH GRAPH CARD -->
+    <div id="growth-graph-card" class="table-card hidden" style="margin-bottom:20px;padding:20px 24px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="table-title" style="margin:0">📈 User Growth</div>
+        <div id="growth-graph-total" style="font-size:12px;color:var(--tx3)"></div>
+      </div>
+      <canvas id="growth-graph-canvas" style="width:100%;height:180px;display:block"></canvas>
+      <div id="growth-graph-labels" style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--tx3);padding:0 2px"></div>
+    </div>
+
     <!-- CUSTOMERS SECTION -->
     <div id="section-customers">
       <div class="table-card">
@@ -383,8 +393,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div id="section-api_usage" class="hidden">
       <div class="table-card">
         <div class="table-header">
-          <div class="table-title">📊 API Forbrug (alle brugere)</div>
-          <button class="action-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="loadApiUsage()">Opdater</button>
+          <div class="table-title">📊 API Usage (all users)</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="action-btn" onclick="apiUsagePrevMonth()">← Prev</button>
+            <span id="api-usage-month-label" style="font-size:13px;font-weight:600;min-width:100px;text-align:center">This month</span>
+            <button class="action-btn" onclick="apiUsageNextMonth()" id="api-usage-next-btn" disabled style="opacity:.4">Next →</button>
+            <button class="action-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="loadApiUsage()">↻ Refresh</button>
+          </div>
         </div>
         <div id="api-usage-wrap"><div class="empty-state"><div class="spinner"></div></div></div>
       </div>
@@ -776,7 +791,7 @@ async function loadCustomers() {
     const r = await fetch(endpoint, {headers:{'Authorization':'Bearer '+token}});
     if (r.status === 401) { doLogout(); return; }
     allUsers = await r.json();
-    if (userRole === 'owner' || userRole === 'support') renderStats(allUsers);
+    if (userRole === 'owner' || userRole === 'support') { renderStats(allUsers); renderGrowthGraph(allUsers); }
     renderTable(allUsers);
   } catch(e) {
     document.getElementById('table-wrap').innerHTML = '<div class="empty-state">Kunne ikke hente kunder</div>';
@@ -891,6 +906,8 @@ function renderTable(users) {
                 ${canManage ? `<button class="action-btn" onclick="openCreditsModal('${u.id}',${u.credits},'${esc(u.email)}')">Credits</button>` : ''}
                 ${noteBtn}
                 ${canManage ? `<button class="action-btn" onclick="openSubsModal('${u.id}','${esc(u.email)}')" title="${u.sub_count||0} under-konti">U-konti${u.sub_count ? ` (${u.sub_count})` : ''}</button>` : ''}
+                <button class="action-btn" style="color:#a78bfa;border-color:rgba(167,139,250,.2)" onclick="viewUserProfile('${u.id}','${esc(u.email)}')">View</button>
+                ${canManage ? `<button class="action-btn" style="color:#a78bfa;border-color:rgba(167,139,250,.3)" onclick="openPromoModal('${u.id}','${esc(u.email)}')">🎁 Promo</button>` : ''}
                 ${canManage ? `<button class="action-btn" onclick="pauseUser('${u.id}')">${pauseLabel}</button>` : ''}
                 ${canManage ? `<button class="action-btn red" onclick="banUser('${u.id}','${esc(u.email)}')">${banLabel}</button>` : ''}
                 ${canManage ? `<button class="action-btn red" onclick="deleteUser('${u.id}','${esc(u.email)}')">Slet</button>` : ''}
@@ -1180,7 +1197,15 @@ async function refreshNotes() {
           <span class="note-date">${esc(n.created_at)}</span>
         </div>
         <div class="note-text">${esc(n.text)}</div>
-        ${!n.resolved ? `<button class="note-resolve" onclick="resolveNote('${n.id}')">Mark resolved ✓</button>` : '<div class="note-resolved-tag">✓ Resolved</div>'}
+        ${!n.resolved
+          ? `<div style="display:flex;gap:6px;margin-top:8px">
+               <button class="note-resolve" onclick="resolveNote('${n.id}')">Mark resolved ✓</button>
+               <button class="note-resolve" style="color:#ef4444;border-color:rgba(239,68,68,.3)" onclick="deleteNote('${n.id}')">🗑️ Delete</button>
+             </div>`
+          : `<div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+               <div class="note-resolved-tag">✓ Resolved</div>
+               <button class="note-resolve" style="color:#ef4444;border-color:rgba(239,68,68,.3)" onclick="deleteNote('${n.id}')">🗑️</button>
+             </div>`}
       </div>`;
     }).join('');
   } catch(e) { list.innerHTML = '<div style="color:var(--red);padding:16px">Fejl ved hentning</div>'; }
@@ -1204,6 +1229,19 @@ async function sendNote() {
   } catch(e) { toast('Fejl', 'error'); }
 }
 
+async function deleteNote(noteId) {
+  if (!confirm('Delete this note permanently?')) return;
+  try {
+    const r = await fetch('/api/admin/delete_note', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({user_id: notesUserId, note_id: noteId})
+    });
+    const d = await r.json();
+    if (d.ok) { await refreshNotes(); loadCustomers(); }
+    else toast(d.detail||'Error', 'error');
+  } catch(e) { toast('Error', 'error'); }
+}
+
 async function resolveNote(noteId) {
   try {
     const r = await fetch('/api/admin/resolve_note', {
@@ -1213,6 +1251,100 @@ async function resolveNote(noteId) {
     const d = await r.json();
     if (d.ok) { await refreshNotes(); loadCustomers(); }
   } catch(e) { toast('Fejl', 'error'); }
+}
+
+
+// ── User Profile View ─────────────────────────────────────────────────────────
+async function viewUserProfile(userId, email) {
+  const modal = document.getElementById('user-profile-modal');
+  document.getElementById('up-sub').textContent = email;
+  document.getElementById('up-title').textContent = 'User Profile';
+  document.getElementById('user-profile-body').innerHTML = '<div style="text-align:center;padding:32px"><div class="spinner"></div></div>';
+  modal.classList.add('open');
+  try {
+    const r2 = await fetch('/api/admin/users/'+userId, {headers:{'Authorization':'Bearer '+token}});
+    if (!r2.ok) throw new Error('Not found');
+    const u = await r2.json();
+    const conn = (u.connected_platforms||[]).join(', ')||'—';
+    const promoHtml = u.promo_active
+      ? '<div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:#a78bfa;margin-bottom:12px">🎁 Promotion active: '+(u.promo_days_remaining||'?')+' days remaining</div>'
+      : '';
+    document.getElementById('up-title').textContent = u.name || email.split('@')[0];
+    const uid2 = userId.replace(/'/g,"\'"), em2 = email.replace(/'/g,"\'");
+    document.getElementById('user-profile-body').innerHTML = promoHtml + `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Plan</div>
+          <div style="font-size:16px;font-weight:700;color:var(--ac)">${u.plan_name||u.plan||'–'}</div>
+        </div>
+        <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Credits</div>
+          <div style="font-size:16px;font-weight:700;color:var(--tx)">${u.credits||0} / ${u.max_credits||0}</div>
+        </div>
+        <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Platforms</div>
+          <div style="font-size:12px;font-weight:600;color:var(--tx)">${conn}</div>
+        </div>
+        <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Last active</div>
+          <div style="font-size:12px;font-weight:600;color:var(--tx)">${u.last_active||'–'}</div>
+        </div>
+      </div>
+      ${u.company?'<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Company: <strong style="color:var(--tx)">'+esc(u.company)+'</strong></div>':''}
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:16px">Registered: ${u.created_at||'–'}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="action-btn" onclick="document.getElementById('user-profile-modal').classList.remove('open');openNotesModal('${uid2}','${em2}')">📝 Notes</button>
+        <button class="action-btn" style="color:#a78bfa;border-color:rgba(167,139,250,.3)" onclick="document.getElementById('user-profile-modal').classList.remove('open');openPromoModal('${uid2}','${em2}')">🎁 Promo</button>
+      </div>`;
+  } catch(e) {
+    document.getElementById('user-profile-body').innerHTML = '<div style="color:#ef4444">Could not load profile</div>';
+  }
+}
+
+// ── Promotion Mode ────────────────────────────────────────────────────────────
+let _promoUserId = '';
+
+async function openPromoModal(userId, email) {
+  _promoUserId = userId;
+  document.getElementById('promo-modal-sub').textContent = email;
+  document.getElementById('promo-reason').value = '';
+  const info = document.getElementById('promo-active-info');
+  info.style.display = 'none';
+  document.getElementById('promo-modal').classList.add('open');
+  try {
+    const r3 = await fetch('/api/admin/users/'+userId+'/promo', {headers:{'Authorization':'Bearer '+token}});
+    if (r3.ok) {
+      const d3 = await r3.json();
+      if (d3.active) { info.style.display='block'; info.textContent='✅ Active: '+(d3.days_remaining||'?')+' days remaining (expires '+(d3.expires_at||'–')+')'; }
+    }
+  } catch(e) {}
+}
+
+async function grantPromo() {
+  const days = parseInt(document.getElementById('promo-days-select').value);
+  const reason = document.getElementById('promo-reason').value.trim();
+  try {
+    const r4 = await fetch('/api/admin/grant_promo', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({user_id:_promoUserId, days, reason})
+    });
+    const d4 = await r4.json();
+    if (d4.ok) { toast('Promo granted for '+days+' days','success'); document.getElementById('promo-modal').classList.remove('open'); loadCustomers(); }
+    else toast(d4.detail||'Error','error');
+  } catch(e) { toast('Error','error'); }
+}
+
+async function revokePromo() {
+  if (!confirm('Revoke promotion access for this user?')) return;
+  try {
+    const r5 = await fetch('/api/admin/revoke_promo', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({user_id:_promoUserId})
+    });
+    const d5 = await r5.json();
+    if (d5.ok) { toast('Promo revoked','success'); document.getElementById('promo-modal').classList.remove('open'); loadCustomers(); }
+    else toast(d5.detail||'Error','error');
+  } catch(e) { toast('Error','error'); }
 }
 
 // ── GUIDELINES ────────────────────────────────────────────────────────────────
@@ -1444,6 +1576,7 @@ function renderRevenue(d) {
         <div class="rev-card-sub">Ikke-gratis brugere</div>
       </div>
     </div>`;
+  const _maxCount = Math.max(1, ...Object.values(d.plan_counts||{}));
   const planRows = Object.entries(d.plans||{}).map(([key, plan]) => {
     const count = (d.plan_counts||{})[key] || 0;
     const rev = (d.plan_revenue||{})[key] || 0;
@@ -1452,7 +1585,7 @@ function renderRevenue(d) {
       <div style="min-width:90px;font-weight:600">${plan.name}</div>
       <div style="min-width:70px;font-size:12px;color:var(--tx2)">${plan.price} kr/md</div>
       <div class="service-bar-wrap">
-        <div class="service-bar"><div class="service-bar-fill" style="width:${d.mrr>0?Math.round(rev/d.mrr*100):0}%"></div></div>
+        <div class="service-bar"><div class="service-bar-fill" style="width:${Math.round(count/_maxCount*100)}%"></div></div>
       </div>
       <div class="service-credits">${count} brugere</div>
       <div style="min-width:90px;text-align:right;font-weight:700;color:var(--ac)">${rev.toLocaleString('da-DK')} kr</div>
@@ -1466,13 +1599,32 @@ function renderRevenue(d) {
 async function loadApiUsage() {
   document.getElementById('api-usage-wrap').innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
   try {
-    const r = await fetch('/api/admin/api_usage', {headers:{'Authorization':'Bearer '+token}});
+    const mq = _apiMonthOffset !== 0 ? ('?month=' + getApiMonthStr(_apiMonthOffset)) : '';
+    const r = await fetch('/api/admin/api_usage' + mq, {headers:{'Authorization':'Bearer '+token}});
     const d = await r.json();
     renderApiUsage(d);
   } catch(e) {
     document.getElementById('api-usage-wrap').innerHTML = '<div class="empty-state">Kunne ikke hente API forbrug</div>';
   }
 }
+
+let _apiMonthOffset = 0;
+
+function getApiMonthStr(offset) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + offset);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function updateApiMonthLabel() {
+  const lbl = document.getElementById('api-usage-month-label');
+  const nxt = document.getElementById('api-usage-next-btn');
+  if (!lbl) return;
+  lbl.textContent = _apiMonthOffset === 0 ? 'This month' : _apiMonthOffset === -1 ? 'Last month'
+    : (function(){ const d = new Date(); d.setMonth(d.getMonth() + _apiMonthOffset); return d.toLocaleDateString('en-US',{month:'short',year:'numeric'}); })();
+  if (nxt) { nxt.disabled = _apiMonthOffset >= 0; nxt.style.opacity = _apiMonthOffset >= 0 ? '.4' : '1'; }
+}
+function apiUsagePrevMonth() { _apiMonthOffset--; updateApiMonthLabel(); loadApiUsage(); }
+function apiUsageNextMonth() { if (_apiMonthOffset < 0) { _apiMonthOffset++; updateApiMonthLabel(); loadApiUsage(); } }
 
 function renderApiUsage(d) {
   const wrap = document.getElementById('api-usage-wrap');
@@ -1611,6 +1763,147 @@ async function adminDeleteSub(userId, subId, name) {
   } catch(e) { alert('Fejl ved sletning'); }
 }
 
+
+// ── Growth Graph ──────────────────────────────────────────────────────────────
+function renderGrowthGraph(users) {
+  const card = document.getElementById('growth-graph-card');
+  if (!card) return;
+  card.classList.remove('hidden');
+
+  const counts = {};
+  users.forEach(u => {
+    if (!u.created_at) return;
+    const d = new Date(u.created_at);
+    if (isNaN(d)) return;
+    const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    counts[k] = (counts[k]||0) + 1;
+  });
+
+  const now = new Date();
+  const allKeys = new Set(Object.keys(counts));
+  for (let i = 5; i >= 0; i--) {
+    const d2 = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    allKeys.add(d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0'));
+  }
+  const sorted = Array.from(allKeys).sort();
+
+  let cum = 0;
+  const points = sorted.map(k => { cum += (counts[k]||0); return {label:k, count:cum}; });
+
+  const totalEl = document.getElementById('growth-graph-total');
+  if (totalEl) totalEl.textContent = users.length+' total users';
+
+  const labelsEl = document.getElementById('growth-graph-labels');
+  if (labelsEl) {
+    const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    labelsEl.innerHTML = points.map(p => {
+      const [y,m] = p.label.split('-');
+      return '<span>'+MO[parseInt(m)-1]+' ''+y.slice(2)+'</span>';
+    }).join('');
+  }
+
+  const canvas = document.getElementById('growth-graph-canvas');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio||1;
+  const W = canvas.parentElement.offsetWidth || 700;
+  canvas.width  = W * dpr;
+  canvas.height = 180 * dpr;
+  canvas.style.width  = '100%';
+  canvas.style.height = '180px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const H = 180;
+  const pad = {top:28, right:24, bottom:10, left:48};
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+  const maxV = Math.max(1, ...points.map(p=>p.count));
+  const px = i => pad.left + (points.length<2 ? cW/2 : (i/(points.length-1))*cW);
+  const py = v => pad.top + cH*(1-(v/maxV));
+
+  const t0 = performance.now();
+  const DUR = 1400;
+
+  function draw(now2) {
+    const prog = Math.min(1, (now2-t0)/DUR);
+    const ease = 1-Math.pow(1-prog,3);
+    const endFrac = ease*(points.length-1);
+    const endIdx = Math.floor(endFrac);
+    const frac = endFrac-endIdx;
+
+    ctx.clearRect(0,0,W,H);
+
+    // Grid + labels
+    ctx.font = '10px Outfit,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.25)';
+    ctx.textAlign = 'right';
+    for (let i=0;i<=4;i++) {
+      const gy = pad.top+(i/4)*cH;
+      const val = Math.round(maxV*(1-i/4));
+      ctx.strokeStyle = 'rgba(255,255,255,.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pad.left,gy); ctx.lineTo(W-pad.right,gy); ctx.stroke();
+      if (val>0) ctx.fillText(val, pad.left-6, gy+3);
+    }
+
+    if (points.length < 2) { if(prog<1) requestAnimationFrame(draw); return; }
+
+    const sub = [];
+    for (let i=0;i<=endIdx&&i<points.length;i++) sub.push({x:px(i),y:py(points[i].count)});
+    if (endIdx < points.length-1) {
+      sub.push({x: px(endIdx)+(px(endIdx+1)-px(endIdx))*frac, y: py(points[endIdx].count)+(py(points[endIdx+1].count)-py(points[endIdx].count))*frac});
+    }
+    if (sub.length < 2) { if(prog<1) requestAnimationFrame(draw); return; }
+
+    // Fill
+    const grd = ctx.createLinearGradient(0,pad.top,0,H);
+    grd.addColorStop(0,'rgba(0,229,255,.22)');
+    grd.addColorStop(1,'rgba(0,229,255,0)');
+    ctx.beginPath();
+    ctx.moveTo(sub[0].x, H-pad.bottom);
+    sub.forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.lineTo(sub[sub.length-1].x, H-pad.bottom);
+    ctx.closePath();
+    ctx.fillStyle = grd;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    sub.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.shadowColor = 'rgba(0,229,255,.55)';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Dots
+    sub.slice(0,-1).forEach(p=>{
+      ctx.beginPath(); ctx.arc(p.x,p.y,3.5,0,Math.PI*2);
+      ctx.fillStyle='#00e5ff';
+      ctx.shadowColor='rgba(0,229,255,.7)'; ctx.shadowBlur=5;
+      ctx.fill(); ctx.shadowBlur=0;
+    });
+
+    // Head dot
+    const head = sub[sub.length-1];
+    ctx.beginPath(); ctx.arc(head.x,head.y,5.5,0,Math.PI*2);
+    ctx.fillStyle='#00e5ff';
+    ctx.shadowColor='rgba(0,229,255,1)'; ctx.shadowBlur=16;
+    ctx.fill(); ctx.shadowBlur=0;
+
+    if (prog<1) { requestAnimationFrame(draw); return; }
+
+    // Value labels at end
+    ctx.font = 'bold 10px Outfit,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0,229,255,.85)';
+    sub.slice(0,-1).forEach((p,i)=>{ if(points[i].count>0) ctx.fillText(points[i].count,p.x,p.y-9); });
+  }
+  requestAnimationFrame(draw);
+}
+
 // ── Automation Log (admin) ────────────────────────────────────────────────────
 async function populateLogUserSelect() {
   try {
@@ -1678,6 +1971,50 @@ async function clearUserLog() {
     <div class="modal-actions">
       <button class="btn-primary" onclick="closeSubsModal()">Luk</button>
     </div>
+  </div>
+</div>
+
+<!-- USER PROFILE MODAL -->
+<div class="modal-overlay" id="user-profile-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:520px;max-height:80vh;overflow-y:auto">
+    <button class="modal-close" onclick="document.getElementById('user-profile-modal').classList.remove('open')">✕</button>
+    <div class="modal-title" id="up-title">User Profile</div>
+    <div class="modal-sub" id="up-sub">–</div>
+    <div id="user-profile-body" style="margin-top:16px"><div style="text-align:center;padding:32px"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<!-- PROMO MODAL -->
+<div class="modal-overlay" id="promo-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:400px">
+    <button class="modal-close" onclick="document.getElementById('promo-modal').classList.remove('open')">✕</button>
+    <div class="modal-title">🎁 Promotion Mode</div>
+    <div class="modal-sub" id="promo-modal-sub">–</div>
+    <div style="background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.15);border-radius:10px;padding:14px;margin:16px 0;font-size:12px;color:var(--tx2);line-height:1.6">
+      Grant this user free access for a set period. Their plan renews automatically without charge. Visible only to admin and staff.
+    </div>
+    <div id="promo-active-info" style="display:none;margin-bottom:14px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:#22c55e"></div>
+    <div class="fg">
+      <label class="fl">Free access duration</label>
+      <select class="fs" id="promo-days-select">
+        <option value="7">7 days</option>
+        <option value="14">14 days</option>
+        <option value="30" selected>30 days</option>
+        <option value="60">60 days</option>
+        <option value="90">90 days</option>
+        <option value="180">180 days</option>
+        <option value="365">1 year</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Internal reason (optional)</label>
+      <input class="fi" id="promo-reason" placeholder="Support case, investigation, partnership...">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn bp" style="flex:1" onclick="grantPromo()">✅ Grant Promo</button>
+      <button class="btn bg" style="flex:1" onclick="revokePromo()">❌ Revoke</button>
+    </div>
+    <button class="btn-cancel" style="width:100%;margin-top:8px" onclick="document.getElementById('promo-modal').classList.remove('open')">Cancel</button>
   </div>
 </div>
 </body>

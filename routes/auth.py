@@ -121,6 +121,11 @@ async def login(req: LoginRequest):
             _save_user_store(user["id"], ustore)
     except Exception:
         pass
+    # Track last_login timestamp
+    try:
+        update_user(user["id"], {"last_login": __import__('datetime').datetime.utcnow().isoformat()})
+    except Exception:
+        pass
     return {"token": token, "user": _safe_user(user)}
 
 

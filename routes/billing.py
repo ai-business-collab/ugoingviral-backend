@@ -8,34 +8,44 @@ router = APIRouter()
 
 PLANS = {
     "free": {
-        "name": "Gratis", "price": 0, "credits": 50,
+        "name": "Free", "price": 0, "credits": 50,
         "sub_accounts": 0, "video": False, "live_support": False,
-        "features": ["50 credits/md", "1 platform", "AI tekst content", "Content historik"],
+        "features": ["50 credits/mo", "1 platform", "AI text content", "Content history"],
     },
     "starter": {
         "name": "Starter", "price": 299, "credits": 300,
         "sub_accounts": 0, "video": False, "live_support": False,
-        "features": ["Alt i Gratis +", "300 credits/md", "Alle platforme", "Auto-post & planlægning", "Content Pipeline (tekst)", "1 main account"],
+        "features": ["Everything in Free +", "300 credits/mo", "All platforms", "Auto-post & scheduling", "Content Pipeline (text)", "1 main account"],
+    },
+    "growth": {
+        "name": "Growth", "price": 399, "credits": 400,
+        "sub_accounts": 1, "video": False, "live_support": False,
+        "features": ["Everything in Starter +", "400 credits/mo", "1 growth account", "Auto DM replies", "Auto comment replies"],
     },
     "basic": {
         "name": "Basic", "price": 499, "credits": 650,
         "sub_accounts": 2, "video": False, "live_support": False,
-        "features": ["Alt i Starter +", "650 credits/md", "2 under-konti", "Medie bibliotek", "Content Mapper", "Statistik basis"],
+        "features": ["Everything in Growth +", "650 credits/mo", "2 sub-accounts", "Media library", "Content Mapper", "Basic analytics"],
     },
     "pro": {
         "name": "Pro", "price": 999, "credits": 1500,
         "sub_accounts": 5, "video": True, "live_support": True,
-        "features": ["Alt i Basic +", "1.500 credits/md", "5 under-konti", "AI video generering", "AI voiceover", "Auto DM svar", "Live chat support"],
+        "features": ["Everything in Basic +", "1,500 credits/mo", "5 sub-accounts", "AI video generation", "AI voiceover", "Auto DM replies", "Live chat support"],
     },
     "elite": {
         "name": "Elite", "price": 1499, "credits": 2800,
         "sub_accounts": 10, "video": True, "live_support": True,
-        "features": ["Alt i Pro +", "2.800 credits/md", "10 under-konti", "Prioritet video rendering", "Growth automation", "Anti-ban pro system"],
+        "features": ["Everything in Pro +", "2,800 credits/mo", "10 sub-accounts", "Priority video rendering", "Growth automation", "Anti-ban pro system"],
     },
     "personal": {
         "name": "Personal", "price": 2499, "credits": 5000,
         "sub_accounts": 999, "video": True, "live_support": True,
-        "features": ["Alt i Elite +", "5.000 credits/md", "Ubegrænset under-konti", "Dedikeret AI assistent", "Prioritet support", "White-label mulighed"],
+        "features": ["Everything in Elite +", "5,000 credits/mo", "Unlimited sub-accounts", "Dedicated AI assistant", "Priority support", "White-label option"],
+    },
+    "agency": {
+        "name": "Agency", "price": 1393, "credits": 2000,
+        "sub_accounts": 10, "video": True, "live_support": True,
+        "features": ["Everything in Pro +", "2,000 credits/mo", "10 client accounts", "Agency dashboard", "Per-client content settings", "Priority support"],
     },
 }
 
@@ -580,7 +590,7 @@ async def create_checkout(body: dict, current_user: dict = Depends(get_current_u
                 "currency": "dkk",
                 "product_data": {
                     "name": f"UgoingViral {plan_info['name']}",
-                    "description": f"{plan_info['credits']} credits per måned",
+                    "description": f"{plan_info['credits']} credits per month",
                 },
                 "unit_amount": plan_info["price"] * 100,
                 "recurring": {"interval": "month"},
@@ -652,16 +662,75 @@ async def stripe_webhook(request: Request):
                 plan_info = PLANS[plan_key]
                 user_store = _load_user_store(user_id)
                 billing = user_store.setdefault("billing", {})
-                billing["plan"] = plan_key
+                # Founding members keep their locked plan — skip downgrade
+                if not billing.get("founding_member"):
+                    billing["plan"] = plan_key
                 billing["credits"] = plan_info["credits"]
+                billing["stripe_customer_email"] = obj.get("customer_email", "")
                 user_store["billing"] = billing
                 _save_user_store(user_id, user_store)
+                # Send confirmation email
+                try:
+                    from services.users import get_user_by_id
+                    from routes.email import send_payment_confirmation_email
+                    u = get_user_by_id(user_id)
+                    if u:
+                        send_payment_confirmation_email(u["email"], u.get("name",""), plan_info["name"], plan_info["price"])
+                except Exception:
+                    pass
                 if plan_key == "personal":
                     try:
                         from routes.admin import _auto_assign_personal
                         _auto_assign_personal(user_id)
                     except Exception:
                         pass
+
+    elif event["type"] == "customer.subscription.deleted":
+        # Subscription cancelled — revert to free plan
+        obj = event["data"]["object"]
+        meta = obj.get("metadata") or {}
+        user_id = meta.get("user_id")
+        if not user_id:
+            cid = obj.get("customer")
+            if cid:
+                try:
+                    customers = stripe.Customer.list(limit=100)
+                    for c in customers.auto_paging_iter():
+                        if c.id == cid:
+                            user_id = c.metadata.get("user_id")
+                            break
+                except Exception:
+                    pass
+        if user_id:
+            user_store = _load_user_store(user_id)
+            billing = user_store.setdefault("billing", {})
+            if not billing.get("founding_member"):
+                billing["plan"] = "free"
+                billing["credits"] = PLANS["free"]["credits"]
+            user_store["billing"] = billing
+            _save_user_store(user_id, user_store)
+            try:
+                from services.users import get_user_by_id
+                from routes.email import send_subscription_cancelled_email
+                u = get_user_by_id(user_id)
+                if u:
+                    send_subscription_cancelled_email(u["email"], u.get("name",""))
+            except Exception:
+                pass
+
+    elif event["type"] == "invoice.payment_failed":
+        obj = event["data"]["object"]
+        meta = obj.get("metadata") or {}
+        user_id = obj.get("client_reference_id") or meta.get("user_id")
+        if user_id:
+            try:
+                from services.users import get_user_by_id
+                from routes.email import send_payment_failed_email
+                u = get_user_by_id(user_id)
+                if u:
+                    send_payment_failed_email(u["email"], u.get("name",""))
+            except Exception:
+                pass
 
     elif event["type"] == "invoice.payment_succeeded":
         # Recurring subscription renewal — top up credits
@@ -710,6 +779,21 @@ def get_invite(current_user: dict = Depends(get_current_user)):
         "credits_earned": len(invited) * BONUS_CREDITS.get("invite_friend", 50),
     }
 
+
+
+
+# ── Founding Member ───────────────────────────────────────────────────────────
+
+@router.get("/api/billing/founding_status")
+def get_founding_status(current_user: dict = Depends(get_current_user)):
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    billing = ustore.get("billing", {})
+    return {
+        "founding_member": billing.get("founding_member", False),
+        "locked_plan": billing.get("locked_plan", ""),
+        "locked_price": billing.get("locked_price", 0),
+    }
 
 @router.post("/api/billing/referral_signup")
 def referral_signup(body: dict):

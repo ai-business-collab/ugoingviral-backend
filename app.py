@@ -1,5 +1,5 @@
 """
-UgoingViral / Command Central — FastAPI Backend
+UgoingViral — FastAPI Backend
 Koden er splittet i moduler under routes/ og services/
 """
 import os
@@ -14,9 +14,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from services.store import set_user_context, reset_user_context
-from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio
+from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads
 
-app = FastAPI(title="Command Central API v4")
+app = FastAPI(title="UgoingViral API v4")
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,6 +55,7 @@ async def user_store_middleware(request: Request, call_next):
     return response
 
 os.makedirs("uploads", exist_ok=True)
+os.makedirs("uploads/user_media", exist_ok=True)
 os.makedirs("uploads/creators", exist_ok=True)
 os.makedirs("uploads/voice", exist_ok=True)
 os.makedirs("uploads/final", exist_ok=True)
@@ -123,9 +124,9 @@ def privacy_policy():
 <h2>How We Use Your Data</h2>
 <p>We use your data solely to provide the services you request, including automated social media posting and content generation.</p>
 <h2>Data Deletion</h2>
-<p>To request deletion of your data, contact us at: info@ugoingviral.com</p>
+<p>To request deletion of your data, contact us at: support@ugoingviral.com</p>
 <h2>Contact</h2>
-<p>Email: info@ugoingviral.com</p>
+<p>Email: support@ugoingviral.com</p>
 </body></html>"""
     return HTMLResponse(content=html)
 
@@ -139,7 +140,7 @@ def terms():
 <p>Last updated: April 2026</p>
 <p>By using UgoingViral, you agree to use the service in accordance with all applicable laws and platform terms of service.</p>
 <h2>Contact</h2>
-<p>Email: info@ugoingviral.com</p>
+<p>Email: support@ugoingviral.com</p>
 </body></html>"""
     return HTMLResponse(content=html)
 
@@ -150,7 +151,7 @@ def data_deletion():
 <html><head><meta charset="UTF-8"><title>Data Deletion - UgoingViral</title></head>
 <body style="font-family:sans-serif;max-width:800px;margin:40px auto;padding:20px">
 <h1>Data Deletion Request</h1>
-<p>To request deletion of your data, please email us at: info@ugoingviral.com</p>
+<p>To request deletion of your data, please email us at: support@ugoingviral.com</p>
 <p>We will process your request within 30 days.</p>
 </body></html>"""
     return HTMLResponse(content=html)
@@ -191,6 +192,7 @@ app.include_router(stats.router)
 app.include_router(agent.router)
 app.include_router(subaccounts.router)
 app.include_router(studio.router)
+app.include_router(uploads.router)
 
 
 @app.on_event("startup")

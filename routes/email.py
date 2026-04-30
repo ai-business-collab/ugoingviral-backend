@@ -316,7 +316,7 @@ def send_system_email(to_addr: str, subject: str, html_body: str) -> bool:
 
 def send_welcome_email(to_addr: str, name: str = "") -> bool:
     first = (name or to_addr.split("@")[0]).split(" ")[0].capitalize()
-    subject = f"Velkommen til UgoingViral, {first}! 🚀"
+    subject = f"Welcome to UgoingViral, {first}! 🚀"
     html = f"""<!DOCTYPE html>
 <html lang="da">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -383,11 +383,151 @@ def send_welcome_email(to_addr: str, name: str = "") -> bool:
   </div>
   <div class="footer">
     Du modtager denne email fordi du oprettede en konto på ugoingviral.com<br>
-    Spørgsmål? Skriv til info@ugoingviral.com
+    Spørgsmål? Skriv til support@ugoingviral.com
   </div>
 </div>
 </body>
 </html>"""
+    return send_system_email(to_addr, subject, html)
+
+
+
+def send_payment_confirmation_email(to_addr: str, name: str, plan_name: str, price_dkk: int) -> bool:
+    first = (name or to_addr.split("@")[0]).split(" ")[0].capitalize()
+    subject = f"Payment confirmed — {plan_name} plan active 🎉"
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body{{margin:0;padding:0;background:#080c18;font-family:Arial,sans-serif}}
+  .wrap{{max-width:560px;margin:40px auto;background:#0d1526;border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden}}
+  .hdr{{background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(124,58,237,.15));padding:32px 36px;text-align:center}}
+  .logo{{font-size:20px;font-weight:800;color:#f0f4f8}}.logo span{{color:#00e5ff}}
+  .body{{padding:28px 36px;color:#a0b0c0;font-size:14px;line-height:1.6}}
+  .plan-box{{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:12px;padding:20px;text-align:center;margin:20px 0}}
+  .plan-name{{font-size:24px;font-weight:800;color:#00e5ff}}
+  .btn{{display:inline-block;background:linear-gradient(135deg,#00e5ff,#7c3aed);color:#fff;padding:12px 32px;border-radius:10px;text-decoration:none;font-weight:700;margin-top:16px}}
+  .footer{{padding:16px 36px;font-size:11px;color:#3d4f61;border-top:1px solid rgba(255,255,255,.05);text-align:center}}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="logo">Ugoin<span>g</span>Viral</div>
+    <div style="font-size:22px;font-weight:800;color:#f0f4f8;margin-top:12px">Payment confirmed ✅</div>
+  </div>
+  <div class="body">
+    <p>Hi {first},</p>
+    <p>Your payment was successful and your plan has been activated.</p>
+    <div class="plan-box">
+      <div class="plan-name">{plan_name}</div>
+      <div style="color:#7d8fa3;margin-top:6px">Active now</div>
+    </div>
+    <p>Your credits have been topped up and all features are ready to use.</p>
+    <div style="text-align:center"><a href="https://ugoingviral.com/app" class="btn">Go to dashboard →</a></div>
+  </div>
+  <div class="footer">Questions? Email <a href="mailto:support@ugoingviral.com" style="color:#00e5ff">support@ugoingviral.com</a></div>
+</div>
+</body></html>"""
+    return send_system_email(to_addr, subject, html)
+
+
+def send_payment_failed_email(to_addr: str, name: str) -> bool:
+    first = (name or to_addr.split("@")[0]).split(" ")[0].capitalize()
+    subject = "Action required: Payment failed for UgoingViral"
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body{{margin:0;padding:0;background:#080c18;font-family:Arial,sans-serif}}
+  .wrap{{max-width:560px;margin:40px auto;background:#0d1526;border-radius:16px;border:1px solid rgba(239,68,68,.2);overflow:hidden}}
+  .hdr{{background:rgba(239,68,68,.1);padding:28px 36px;text-align:center}}
+  .logo{{font-size:20px;font-weight:800;color:#f0f4f8}}.logo span{{color:#00e5ff}}
+  .body{{padding:28px 36px;color:#a0b0c0;font-size:14px;line-height:1.6}}
+  .warn{{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:16px;color:#f87171;margin:16px 0}}
+  .btn{{display:inline-block;background:#ef4444;color:#fff;padding:12px 32px;border-radius:10px;text-decoration:none;font-weight:700;margin-top:16px}}
+  .footer{{padding:16px 36px;font-size:11px;color:#3d4f61;border-top:1px solid rgba(255,255,255,.05);text-align:center}}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="logo">Ugoin<span>g</span>Viral</div>
+    <div style="font-size:22px;font-weight:800;color:#f87171;margin-top:12px">Payment failed ⚠️</div>
+  </div>
+  <div class="body">
+    <p>Hi {first},</p>
+    <div class="warn">We were unable to process your payment. Please update your payment method to keep your plan active.</div>
+    <p>If your payment is not resolved, your account will revert to the free plan.</p>
+    <div style="text-align:center"><a href="https://ugoingviral.com/app#billing" class="btn">Update payment →</a></div>
+  </div>
+  <div class="footer">Questions? <a href="mailto:support@ugoingviral.com" style="color:#00e5ff">support@ugoingviral.com</a></div>
+</div>
+</body></html>"""
+    return send_system_email(to_addr, subject, html)
+
+
+def send_subscription_cancelled_email(to_addr: str, name: str) -> bool:
+    first = (name or to_addr.split("@")[0]).split(" ")[0].capitalize()
+    subject = "Your UgoingViral subscription has been cancelled"
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body{{margin:0;padding:0;background:#080c18;font-family:Arial,sans-serif}}
+  .wrap{{max-width:560px;margin:40px auto;background:#0d1526;border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden}}
+  .hdr{{padding:28px 36px;text-align:center;border-bottom:1px solid rgba(255,255,255,.07)}}
+  .logo{{font-size:20px;font-weight:800;color:#f0f4f8}}.logo span{{color:#00e5ff}}
+  .body{{padding:28px 36px;color:#a0b0c0;font-size:14px;line-height:1.6}}
+  .btn{{display:inline-block;background:linear-gradient(135deg,#00e5ff,#7c3aed);color:#fff;padding:12px 32px;border-radius:10px;text-decoration:none;font-weight:700;margin-top:16px}}
+  .footer{{padding:16px 36px;font-size:11px;color:#3d4f61;border-top:1px solid rgba(255,255,255,.05);text-align:center}}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="logo">Ugoin<span>g</span>Viral</div>
+    <div style="font-size:22px;font-weight:800;color:#f0f4f8;margin-top:12px">Subscription cancelled</div>
+  </div>
+  <div class="body">
+    <p>Hi {first},</p>
+    <p>Your subscription has been cancelled. Your account has been moved to the free plan.</p>
+    <p>Your content history and account data are still saved. You can reactivate anytime.</p>
+    <div style="text-align:center"><a href="https://ugoingviral.com/app#billing" class="btn">Reactivate plan →</a></div>
+  </div>
+  <div class="footer">Questions? <a href="mailto:support@ugoingviral.com" style="color:#00e5ff">support@ugoingviral.com</a></div>
+</div>
+</body></html>"""
+    return send_system_email(to_addr, subject, html)
+
+
+def send_reminder_email(to_addr: str, name: str, days_away: int = 3) -> bool:
+    first = (name or to_addr.split("@")[0]).split(" ")[0].capitalize()
+    subject = f"Hey {first}, your content is waiting 👀"
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body{{margin:0;padding:0;background:#080c18;font-family:Arial,sans-serif}}
+  .wrap{{max-width:560px;margin:40px auto;background:#0d1526;border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden}}
+  .hdr{{background:linear-gradient(135deg,rgba(0,229,255,.1),rgba(124,58,237,.1));padding:32px 36px;text-align:center}}
+  .logo{{font-size:20px;font-weight:800;color:#f0f4f8}}.logo span{{color:#00e5ff}}
+  .body{{padding:28px 36px;color:#a0b0c0;font-size:14px;line-height:1.6}}
+  .cta-box{{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:12px;padding:20px;text-align:center;margin:20px 0}}
+  .btn{{display:inline-block;background:linear-gradient(135deg,#00e5ff,#7c3aed);color:#fff;padding:13px 36px;border-radius:10px;text-decoration:none;font-weight:700}}
+  .footer{{padding:16px 36px;font-size:11px;color:#3d4f61;border-top:1px solid rgba(255,255,255,.05);text-align:center}}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="logo">Ugoin<span>g</span>Viral</div>
+    <div style="font-size:24px;font-weight:800;color:#f0f4f8;margin-top:12px">You've been away {days_away} days 👋</div>
+  </div>
+  <div class="body">
+    <p>Hi {first},</p>
+    <p>Your social media is running on autopilot — but the more you tune it, the better it performs.</p>
+    <div class="cta-box">
+      <div style="font-size:14px;color:#7d8fa3;margin-bottom:12px">Your dashboard is ready</div>
+      <a href="https://ugoingviral.com/app" class="btn">Continue where you left off →</a>
+    </div>
+    <p style="font-size:12px;color:#4d5f71">Don't want reminders? You can turn them off in Settings → Notifications.</p>
+  </div>
+  <div class="footer"><a href="mailto:support@ugoingviral.com" style="color:#00e5ff">support@ugoingviral.com</a></div>
+</div>
+</body></html>"""
     return send_system_email(to_addr, subject, html)
 
 
