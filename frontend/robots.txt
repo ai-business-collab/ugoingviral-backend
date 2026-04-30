@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /app
+Disallow: /api/
+Disallow: /user_data/
+Disallow: /admin
+
+Sitemap: https://ugoingviral.com/sitemap.xml

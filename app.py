@@ -92,6 +92,22 @@ def serve_frontend(request: Request):
     return {"msg": "Frontend ikke fundet"}
 
 
+@app.get("/robots.txt")
+def robots_txt():
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "robots.txt"), media_type="text/plain")
+
+
+@app.get("/sitemap.xml")
+def sitemap_xml():
+    from fastapi.responses import PlainTextResponse
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://ugoingviral.com/</loc><priority>1.0</priority></url>
+  <url><loc>https://ugoingviral.com/app</loc><priority>0.8</priority></url>
+</urlset>"""
+    return PlainTextResponse(xml, media_type="application/xml")
+
+
 @app.get("/tiktok0pPHr8lF9An0dqJulvuzcW8LH93JdBeb.txt")
 def tiktok_verify():
     return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "tiktok0pPHr8lF9An0dqJulvuzcW8LH93JdBeb.txt"), media_type="text/plain")
