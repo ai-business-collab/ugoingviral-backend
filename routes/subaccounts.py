@@ -44,6 +44,7 @@ class SubAccountCreate(BaseModel):
     name: str
     platform_focus: str = ""
     avatar_color: str = ""
+    niche: str = ""
 
 
 class SubAccountUpdate(BaseModel):
@@ -89,6 +90,7 @@ def create_subaccount(req: SubAccountCreate, current_user: dict = Depends(get_cu
         "name": name,
         "platform_focus": req.platform_focus.strip(),
         "avatar_color": color,
+        "niche": req.niche.strip(),
         "created_at": datetime.utcnow().isoformat(),
     }
 
