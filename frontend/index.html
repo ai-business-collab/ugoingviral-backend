@@ -1137,6 +1137,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     </div>
     <div class="submenu" id="content-sub">
       <div class="sub-item" id="ni-generator" onclick="nav('generator')">✨ <span data-i18n="nav.generator">Generator</span></div>
+      <div class="sub-item" id="ni-content-engine" onclick="nav('content-engine')">📅 <span>Content Engine</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NEW</span></div>
       <div class="sub-item" id="ni-studio" onclick="nav('studio')">🎬 <span>Video Studio</span> <span style="font-size:9px;background:linear-gradient(90deg,var(--ac),var(--ac2));color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NY</span></div>
       <div class="sub-item" id="ni-pipeline" onclick="nav('pipeline')">⚡ <span data-i18n="nav.pipeline">Pipeline</span></div>
       <div class="sub-item" onclick="nav('history')">📚 <span data-i18n="nav.history">Historik</span></div>
@@ -1170,6 +1171,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="ni has-sub" id="ni-posting" onclick="toggleSubMenu('posting-sub')"><span class="ico">📤</span><span data-i18n="nav.schedule">Post & Schedule</span><span class="nbadge" id="qbadge">0</span><span class="chevron">›</span></div>
     <div class="submenu" id="posting-sub">
       <div class="sub-item" onclick="nav('posting')">📅 <span>Schedule</span></div>
+      <div class="sub-item" id="ni-autopilot" onclick="nav('autopilot')">🚀 <span>Auto Pilot</span> <span style="font-size:9px;background:linear-gradient(90deg,#10b981,#34d399);color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NEW</span></div>
       <div class="sub-item" onclick="nav('autopost')">🤖 <span>Auto-post</span></div>
       <div class="sub-item" onclick="nav('autorepost')">🔁 <span>Auto Repost</span></div>
     </div>
@@ -2990,6 +2992,152 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   </div>
 
   <!-- ══ CONTENT PIPELINE ══════════════════════════════════════════════════ -->
+  
+  <!-- CONTENT ENGINE PAGE -->
+  
+  <!-- AUTO PILOT PAGE -->
+  <div id="page-autopilot" class="page" style="display:none">
+    <div style="max-width:760px">
+      <div class="card" style="margin-bottom:16px;padding:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div>
+            <div class="ctitle" style="margin:0">Auto Pilot</div>
+            <div style="font-size:12px;color:var(--tx3);margin-top:4px">When ON, UgoingViral posts automatically at optimal times</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div id="ap-toggle-label" style="font-size:13px;font-weight:700;color:var(--tx3)">OFF</div>
+            <div id="ap-toggle" onclick="toggleAutoPilot()" style="width:52px;height:28px;border-radius:14px;background:var(--border);position:relative;cursor:pointer;transition:background .25s">
+              <div id="ap-thumb" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .25s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+            </div>
+          </div>
+        </div>
+        <div id="ap-active-banner" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);border-radius:8px;font-size:13px;color:#34d399">
+          Auto Pilot is active - posting at scheduled times
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="ctitle">Platforms</div>
+        <div id="ap-platforms" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px"></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="ctitle">Posting Schedule</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">POSTS PER DAY</label>
+            <select id="ap-ppd" class="inp" style="width:100%" onchange="saveApSettings()">
+              <option value="1">1 post/day</option>
+              <option value="2">2 posts/day</option>
+              <option value="3" selected>3 posts/day</option>
+              <option value="5">5 posts/day</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">ACTIVE DAYS</label>
+            <div id="ap-days" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="ctitle" style="margin:0">Upcoming Posts</div>
+          <button class="btn bg bsm" onclick="loadAutoPilot()">Refresh</button>
+        </div>
+        <div id="ap-upcoming"><div style="color:var(--tx3);font-size:13px;text-align:center;padding:20px">Loading...</div></div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Activity Log</div>
+        <div id="ap-log" style="margin-top:8px;max-height:320px;overflow-y:auto">
+          <div style="color:var(--tx3);font-size:13px;text-align:center;padding:20px">No activity yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="page-content-engine" class="page" style="display:none">
+    <div style="max-width:960px">
+      <div class="card" style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="font-size:28px">📅</div>
+          <div>
+            <div class="ctitle" style="margin:0">Content Engine</div>
+            <div style="font-size:12px;color:var(--tx3)">Generate 30 days of AI content ideas tailored to your niche</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end">
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">NICHE</label>
+            <select id="ce-niche" class="inp" style="width:100%">
+              <option value="ecommerce">E-commerce</option>
+              <option value="creator">Creator</option>
+              <option value="agency">Agency</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="fitness">Fitness</option>
+              <option value="saas">SaaS / Tech</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">TONE</label>
+            <select id="ce-tone" class="inp" style="width:100%">
+              <option value="engaging and friendly">Engaging and Friendly</option>
+              <option value="professional and authoritative">Professional</option>
+              <option value="fun and humorous">Fun and Humorous</option>
+              <option value="inspirational and motivating">Inspirational</option>
+              <option value="educational and informative">Educational</option>
+              <option value="bold and direct">Bold and Direct</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">TARGET AUDIENCE</label>
+            <input id="ce-audience" class="inp" style="width:100%" placeholder="e.g. women 25-35, fitness lovers" value="">
+          </div>
+          <button class="btn bp" onclick="generateContentCalendar()" id="ce-gen-btn" style="white-space:nowrap;padding:10px 20px">
+            Generate Calendar
+          </button>
+        </div>
+        <div id="ce-status" style="margin-top:10px;font-size:12px;color:var(--tx3);display:none"></div>
+      </div>
+      <div id="ce-meta-bar" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--card);border-radius:10px;border:1px solid var(--border);align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="font-size:12px;color:var(--tx3)">Generated: <span id="ce-meta-date" style="color:var(--tx)">-</span></div>
+        <div style="font-size:12px;color:var(--tx3)">Niche: <span id="ce-meta-niche" style="color:var(--ac)">-</span></div>
+        <div style="font-size:12px;color:var(--tx3)">Audience: <span id="ce-meta-audience" style="color:var(--tx)">-</span></div>
+        <button class="btn bg bsm" onclick="generateContentCalendar()" style="margin-left:auto">Regenerate</button>
+      </div>
+      <div id="ce-calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px">
+        <div style="text-align:center;font-size:10px;font-weight:700;color:var(--tx3);padding:4px">MON</div>
+        <div style="text-align:center;font-size:10px;font-weight:700;color:var(--tx3);padding:4px">TUE</div>
+        <div style="text-align:center;font-size:10px;font-weight:700;color:var(--tx3);padding:4px">WED</div>
+        <div style="text-align:center;font-size:10px;font-weight:700;color:var(--tx3);padding:4px">THU</div>
+        <div style="text-align:center;font-size:10px;font-weight:700;color:var(--tx3);padding:4px">FRI</div>
+        <div style="text-align:center;font-size:10px;font-weight:700;color:var(--tx3);padding:4px">SAT</div>
+        <div style="text-align:center;font-size:10px;font-weight:700;color:var(--tx3);padding:4px">SUN</div>
+      </div>
+      <div id="ce-idea-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:var(--card);border-radius:16px;padding:28px;max-width:560px;width:90%;border:1px solid var(--border);position:relative">
+          <button onclick="closeCeModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--tx3);font-size:20px;cursor:pointer">x</button>
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">DAY <span id="ce-modal-day"></span></div>
+          <div id="ce-modal-title" style="font-size:18px;font-weight:700;color:var(--tx);margin-bottom:10px"></div>
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">HOOK</div>
+          <div id="ce-modal-hook" style="font-size:13px;color:var(--ac);font-style:italic;margin-bottom:12px"></div>
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">CAPTION</div>
+          <div id="ce-modal-caption" style="font-size:13px;color:var(--tx);background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;line-height:1.5;white-space:pre-wrap"></div>
+          <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+            <div><div style="font-size:11px;color:var(--tx3);margin-bottom:4px">BEST TIME</div><div id="ce-modal-time" style="font-size:13px;color:var(--tx);font-weight:600"></div></div>
+            <div><div style="font-size:11px;color:var(--tx3);margin-bottom:4px">FORMAT</div><div id="ce-modal-type" style="font-size:13px;color:var(--tx);font-weight:600;text-transform:uppercase"></div></div>
+          </div>
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">HASHTAGS</div>
+          <div id="ce-modal-hashtags" style="font-size:12px;color:var(--ac2);margin-bottom:18px;line-height:1.8"></div>
+          <div style="display:flex;gap:10px">
+            <button class="btn bp" style="flex:1" onclick="generatePostFromIdea()">Generate Full Post</button>
+            <button class="btn bg" onclick="copyCeCaption()">Copy Caption</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <div id="page-pipeline" class="page">
 
     <!-- FORM -->
@@ -4097,6 +4245,8 @@ document.addEventListener('DOMContentLoaded', () => {
   checkHealth(); loadConnections(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus();
   loadBilling(); loadSubAccounts();
   checkTikTokAPIStatus(); checkYouTubeAPIStatus();
+  if(typeof checkInstagramToken==='function') checkInstagramToken();
+  apiFetch('/api/auth/me').then(function(u){ if(typeof checkNicheModal==='function') checkNicheModal(u||{}); }).catch(function(){});
   const _urlp = new URLSearchParams(window.location.search);
   if (_urlp.get('payment') === 'success' && _urlp.get('provider') === 'paypal') {
     const _token = _urlp.get('token') || _urlp.get('order_id') || '';
@@ -5281,6 +5431,9 @@ function nav(p) {
   if (p === 'billing') loadBilling();
   if (p === 'subaccounts') loadSubAccounts();
   if (p === 'studio') studioInit();
+  if (p === 'content-engine') { loadContentCalendar(); }
+  if (p === 'autopilot') { loadAutoPilot(); }
+  if (p === 'media-upload') { loadMyUploads(); }
   _currentPage = p;
 }
 function toggleSubMenu(id) {
@@ -9927,6 +10080,292 @@ async function agClearHistory() {
 
 // ── Init on load ──────────────────────────────────────────────────────────────
 setTimeout(agInit, 1200);
+
+// ===== CONTENT ENGINE =====
+var _ceIdeas = [];
+var _ceActiveIdea = null;
+
+async function generateContentCalendar() {
+  var btn = document.getElementById('ce-gen-btn');
+  var status = document.getElementById('ce-status');
+  var niche = document.getElementById('ce-niche').value;
+  var tone = document.getElementById('ce-tone').value;
+  var audience = document.getElementById('ce-audience').value || 'general audience';
+  btn.disabled = true; btn.textContent = 'Generating...';
+  status.style.display = 'block';
+  status.textContent = 'Calling AI - this takes about 15-20 seconds...';
+  try {
+    var d = await apiFetch('/api/content-engine/generate', {
+      method:'POST', body:JSON.stringify({niche:niche,tone:tone,target_audience:audience,days:30,platforms:['instagram','tiktok']})
+    });
+    if (d.ok) {
+      _ceIdeas = d.ideas || [];
+      renderContentCalendar(_ceIdeas);
+      status.style.display = 'none';
+      if(typeof showToast==='function') showToast('Generated ' + d.count + ' content ideas!');
+    } else { status.textContent = 'Error: ' + (d.detail || d.message || 'Generation failed'); }
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
+  finally { btn.disabled=false; btn.textContent='Generate Calendar'; }
+}
+
+async function loadContentCalendar() {
+  try {
+    var d = await apiFetch('/api/content-engine/calendar');
+    if (d.ok && d.ideas && d.ideas.length) {
+      _ceIdeas = d.ideas; renderContentCalendar(d.ideas);
+      var mb = document.getElementById('ce-meta-bar');
+      if (mb && d.meta) {
+        mb.style.display = 'flex';
+        var el; el = document.getElementById('ce-meta-date'); if(el) el.textContent = d.meta.generated_at ? new Date(d.meta.generated_at).toLocaleDateString() : '-';
+        el = document.getElementById('ce-meta-niche'); if(el) el.textContent = d.meta.niche || '-';
+        el = document.getElementById('ce-meta-audience'); if(el) el.textContent = d.meta.audience || '-';
+        el = document.getElementById('ce-niche'); if(el && d.meta.niche) el.value = d.meta.niche;
+        el = document.getElementById('ce-audience'); if(el && d.meta.audience) el.value = d.meta.audience;
+      }
+    }
+  } catch(e) {}
+}
+
+var _TYPE_ICONS = {image:'IMG',video:'VID',carousel:'CAR',story:'STR',reel:'REEL'};
+
+function renderContentCalendar(ideas) {
+  var grid = document.getElementById('ce-calendar-grid');
+  if (!grid) return;
+  var header = '';
+  ['MON','TUE','WED','THU','FRI','SAT','SUN'].forEach(function(d){
+    header += '<div style="text-align:center;font-size:10px;font-weight:700;color:var(--tx3);padding:4px">'+d+'</div>';
+  });
+  var cells = '';
+  for (var i=0; i<Math.min(ideas.length,30); i++) {
+    var idea = ideas[i];
+    var used = idea.used ? 'opacity:.5;' : '';
+    cells += '<div onclick="openCeIdea('+i+')" style="'+used+'background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;min-height:80px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--ac)'" onmouseout="this.style.borderColor='var(--border)'">'
+      +'<div style="font-size:9px;color:var(--tx3);margin-bottom:3px">Day '+idea.day+'</div>'
+      +'<div style="font-size:10px;font-weight:700;color:var(--tx);line-height:1.3;margin-bottom:4px;overflow:hidden;max-height:40px">'+ceEsc(idea.title)+'</div>'
+      +'<div style="font-size:10px;color:var(--tx3)">'+(_TYPE_ICONS[idea.content_type]||'IMG')+' '+idea.best_time+'</div>'
+      +(idea.used?'<div style="font-size:9px;color:#10b981;margin-top:3px">done</div>':'')
+      +'</div>';
+  }
+  grid.innerHTML = header + cells;
+  var mb = document.getElementById('ce-meta-bar');
+  if(mb) mb.style.display = 'flex';
+}
+
+function openCeIdea(idx) {
+  _ceActiveIdea = _ceIdeas[idx]; var idea = _ceActiveIdea;
+  var el;
+  el=document.getElementById('ce-modal-day'); if(el) el.textContent=idea.day;
+  el=document.getElementById('ce-modal-title'); if(el) el.textContent=idea.title||'';
+  el=document.getElementById('ce-modal-hook'); if(el) el.textContent=idea.hook||'';
+  el=document.getElementById('ce-modal-caption'); if(el) el.textContent=idea.caption||'';
+  el=document.getElementById('ce-modal-time'); if(el) el.textContent=idea.best_time||'';
+  el=document.getElementById('ce-modal-type'); if(el) el.textContent=(idea.content_type||'image').toUpperCase();
+  var tags=(idea.hashtags||[]).map(function(t){return t.startsWith('#')?t:'#'+t;}).join(' ');
+  el=document.getElementById('ce-modal-hashtags'); if(el) el.textContent=tags;
+  var modal=document.getElementById('ce-idea-modal');
+  if(modal) modal.style.display='flex';
+}
+
+function closeCeModal() {
+  var modal=document.getElementById('ce-idea-modal'); if(modal) modal.style.display='none'; _ceActiveIdea=null;
+}
+
+function copyCeCaption() {
+  if(!_ceActiveIdea) return;
+  var text=(_ceActiveIdea.caption||'')+'
+
+'+(_ceActiveIdea.hashtags||[]).map(function(t){return t.startsWith('#')?t:'#'+t;}).join(' ');
+  navigator.clipboard.writeText(text).then(function(){ if(typeof showToast==='function') showToast('Caption + hashtags copied!'); });
+}
+
+function generatePostFromIdea() {
+  if(!_ceActiveIdea) return;
+  var idea=_ceActiveIdea; closeCeModal();
+  nav('generator');
+  setTimeout(function(){
+    var el=document.getElementById('content-topic')||document.querySelector('input[placeholder*="product"]')||document.querySelector('input[placeholder*="produkt"]');
+    if(el) el.value=idea.title;
+    if(typeof showToast==='function') showToast('Idea loaded in Generator!');
+  },200);
+}
+
+function ceEsc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ===== AUTO PILOT =====
+var _apActive = false;
+var _apDays = [1,2,3,4,5];
+
+async function loadAutoPilot() {
+  try {
+    var d = await apiFetch('/api/autopilot/status');
+    _apActive=d.active; _apDays=d.schedule_days||[1,2,3,4,5];
+    renderApToggle(d.active);
+    renderApPlatforms(d.platforms||{});
+    renderApDays(_apDays);
+    renderApUpcoming(d.upcoming_posts||[]);
+    renderApLog(d.recent_log||[]);
+    var el=document.getElementById('ap-ppd'); if(el && d.posts_per_day) el.value=String(d.posts_per_day);
+  } catch(e) { console.error('autopilot load error',e); }
+}
+
+function renderApToggle(active) {
+  var toggle=document.getElementById('ap-toggle'),thumb=document.getElementById('ap-thumb'),label=document.getElementById('ap-toggle-label'),banner=document.getElementById('ap-active-banner');
+  if(!toggle) return;
+  toggle.style.background=active?'#10b981':'var(--border)';
+  thumb.style.left=active?'27px':'3px';
+  label.textContent=active?'ON':'OFF'; label.style.color=active?'#10b981':'var(--tx3)';
+  banner.style.display=active?'block':'none';
+}
+
+function renderApPlatforms(platforms) {
+  var el=document.getElementById('ap-platforms'); if(!el) return;
+  var ICONS={instagram:'IG',tiktok:'TT',facebook:'FB',twitter:'TW',youtube:'YT'};
+  var html=''; Object.keys(platforms).forEach(function(p){
+    var on=(platforms[p]||{}).active;
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:'+(on?'rgba(0,229,255,.06)':'var(--bg)')+'" onclick="toggleApPlatform(''+p+'')">'
+      +'<span style="font-size:12px;font-weight:800;color:'+(on?'var(--ac)':'var(--tx3)')+'">'+ICONS[p]+'</span>'
+      +'<span style="font-size:12px;font-weight:600;color:'+(on?'var(--ac)':'var(--tx3)')+'">'+p.charAt(0).toUpperCase()+p.slice(1)+'</span>'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+(on?'#10b981':'var(--border)')+'"></div>'
+      +'</div>';
+  });
+  el.innerHTML=html||'<div style="color:var(--tx3);font-size:13px">Go to Connect to link accounts</div>';
+}
+
+var _apDayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function renderApDays(activeDays) {
+  var el=document.getElementById('ap-days'); if(!el) return;
+  var html=''; for(var i=1;i<=7;i++){
+    var on=activeDays.indexOf(i)!==-1;
+    html+='<div onclick="toggleApDay('+i+')" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:'+(on?'var(--ac)':'var(--bg)')+';color:'+(on?'#000':'var(--tx3)')+'">'+_apDayNames[i-1]+'</div>';
+  } el.innerHTML=html;
+}
+
+function toggleApDay(day){
+  var idx=_apDays.indexOf(day); if(idx!==-1) _apDays.splice(idx,1); else _apDays.push(day);
+  renderApDays(_apDays); saveApSettings();
+}
+
+async function toggleApPlatform(p){
+  try{
+    var d=await apiFetch('/api/autopilot/status');
+    var cur=((d.platforms||{})[p]||{}).active;
+    await apiFetch('/api/autopilot/settings',{method:'POST',body:JSON.stringify({platforms:{[p]:{active:!cur,auto_post:!cur}}})});
+    loadAutoPilot();
+  }catch(e){}
+}
+
+async function toggleAutoPilot(){
+  _apActive=!_apActive; renderApToggle(_apActive);
+  try{
+    await apiFetch('/api/autopilot/toggle',{method:'POST',body:JSON.stringify({active:_apActive})});
+    if(typeof showToast==='function') showToast(_apActive?'Auto Pilot ON':'Auto Pilot OFF');
+    loadAutoPilot();
+  }catch(e){ _apActive=!_apActive; renderApToggle(_apActive); }
+}
+
+async function saveApSettings(){
+  var ppd=parseInt((document.getElementById('ap-ppd')||{}).value||'3');
+  try{ await apiFetch('/api/autopilot/settings',{method:'POST',body:JSON.stringify({posts_per_day:ppd,schedule_days:_apDays})}); }catch(e){}
+}
+
+function renderApUpcoming(posts){
+  var el=document.getElementById('ap-upcoming'); if(!el) return;
+  if(!posts||!posts.length){el.innerHTML='<div style="color:var(--tx3);font-size:13px;text-align:center;padding:20px">No posts scheduled - go to Schedule to queue posts</div>';return;}
+  var PICONS={instagram:'IG',tiktok:'TT',facebook:'FB',twitter:'TW',youtube:'YT'};
+  var html=''; posts.forEach(function(p){
+    html+='<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="font-size:12px;font-weight:800;color:var(--ac);min-width:24px">'+(PICONS[p.platform]||'?')+'</div>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(p.caption||'(no caption)')+'</div>'
+      +'<div style="font-size:11px;color:var(--tx3)">'+(p.scheduled||'unscheduled')+'</div></div></div>';
+  }); el.innerHTML=html;
+}
+
+function renderApLog(log){
+  var el=document.getElementById('ap-log'); if(!el) return;
+  if(!log||!log.length){el.innerHTML='<div style="color:var(--tx3);font-size:13px;text-align:center;padding:20px">No activity yet</div>';return;}
+  var html=''; log.forEach(function(entry){
+    var msg=typeof entry==='string'?entry:(entry.message||entry.msg||JSON.stringify(entry));
+    var ts=typeof entry==='object'?(entry.ts||entry.time||''):'';
+    var color=(msg.includes('OK')||msg.includes('success'))?'#10b981':(msg.includes('error')||msg.includes('fail'))?'var(--red)':'var(--tx3)';
+    html+='<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)">'
+      +'<div style="font-size:11px;color:var(--tx3);min-width:50px;white-space:nowrap">'+(ts?ts.slice(11,16):'')+'</div>'
+      +'<div style="font-size:12px;color:'+color+'">'+ceEsc(msg)+'</div></div>';
+  }); el.innerHTML=html;
+}
+
+// ===== NICHE DETECTION =====
+function checkNicheModal(user){
+  if(!user) return;
+  if(!user.niche && !localStorage.getItem('ugv_niche_skipped')){
+    setTimeout(function(){
+      var modal=document.getElementById('niche-modal'); if(modal) modal.style.display='flex';
+    },1500);
+  } else if(user.niche){
+    var el=document.getElementById('ce-niche'); if(el) el.value=user.niche;
+    localStorage.setItem('ugv_niche',user.niche);
+  }
+}
+
+async function selectNiche(niche){
+  document.querySelectorAll('.niche-btn').forEach(function(b){
+    b.style.borderColor='var(--border)'; b.style.background='var(--bg)'; b.style.color='var(--tx)';
+  });
+  if(event&&event.target){ event.target.style.borderColor='var(--ac)'; event.target.style.background='rgba(0,229,255,.08)'; event.target.style.color='var(--ac)'; }
+  try{
+    await apiFetch('/api/auth/niche',{method:'PATCH',body:JSON.stringify({niche:niche})});
+    localStorage.setItem('ugv_niche',niche);
+    var el=document.getElementById('ce-niche'); if(el) el.value=niche;
+    if(typeof showToast==='function') showToast('Niche saved: '+niche);
+  }catch(e){}
+  setTimeout(function(){ var m=document.getElementById('niche-modal'); if(m) m.style.display='none'; },400);
+}
+
+// ===== INSTAGRAM RECONNECT =====
+async function checkInstagramToken(){
+  try{
+    var d=await apiFetch('/api/instagram/status');
+    if(d.connected && d.expires_at){
+      var daysLeft=Math.floor((new Date(d.expires_at)-Date.now())/86400000);
+      if(daysLeft<7 && daysLeft>=0 && typeof showToast==='function') showToast('Instagram token expires in '+daysLeft+' days - reconnect soon',6000);
+      if(daysLeft<0) showInstagramReconnect('Instagram token expired - please reconnect');
+    }
+  }catch(e){}
+}
+
+function showInstagramReconnect(msg){
+  var banner=document.createElement('div');
+  banner.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:12px 20px;color:#f87171;font-size:13px;z-index:999;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  banner.innerHTML='<span>'+(msg||'Instagram token expired')+'</span><button onclick="reconnectInstagram()" style="background:#7c3aed;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">Reconnect</button><button onclick="this.parentNode.remove()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:16px">x</button>';
+  document.body.appendChild(banner);
+}
+
+async function reconnectInstagram(){
+  try{
+    var d=await apiFetch('/api/instagram/oauth/start');
+    if(d.authorization_url) window.location.href=d.authorization_url;
+    else if(typeof showToast==='function') showToast('Add Meta App credentials in Settings first');
+  }catch(e){ if(typeof showToast==='function') showToast('Error: '+e.message); }
+}
+
 </script>
+
+<!-- NICHE DETECTION MODAL -->
+<div id="niche-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:20px;padding:36px 32px;max-width:480px;width:90%;border:1px solid var(--border);text-align:center">
+    <div style="font-size:40px;margin-bottom:12px">&#x1F3AF;</div>
+    <div style="font-size:22px;font-weight:800;color:var(--tx);margin-bottom:8px">What best describes your business?</div>
+    <div style="font-size:13px;color:var(--tx3);margin-bottom:24px">We will personalise your AI content to your niche</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <button class="niche-btn" onclick="selectNiche('ecommerce')" style="padding:14px 10px;border-radius:12px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s">&#x1F6CD; E-commerce</button>
+      <button class="niche-btn" onclick="selectNiche('creator')" style="padding:14px 10px;border-radius:12px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s">&#x2728; Creator</button>
+      <button class="niche-btn" onclick="selectNiche('agency')" style="padding:14px 10px;border-radius:12px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s">&#x1F3E2; Agency</button>
+      <button class="niche-btn" onclick="selectNiche('restaurant')" style="padding:14px 10px;border-radius:12px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s">&#x1F37D; Restaurant</button>
+      <button class="niche-btn" onclick="selectNiche('fitness')" style="padding:14px 10px;border-radius:12px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s">&#x1F4AA; Fitness</button>
+      <button class="niche-btn" onclick="selectNiche('other')" style="padding:14px 10px;border-radius:12px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s">&#x2699; Other</button>
+    </div>
+    <button onclick="document.getElementById('niche-modal').style.display='none';localStorage.setItem('ugv_niche_skipped','1')" style="background:none;border:none;color:var(--tx3);font-size:12px;cursor:pointer;text-decoration:underline">Skip for now</button>
+  </div>
+</div>
+
 </body>
 </html>

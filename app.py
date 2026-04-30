@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from services.store import set_user_context, reset_user_context
-from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads
+from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads, content_engine, autopilot
 
 app = FastAPI(title="UgoingViral API v4")
 
@@ -193,6 +193,8 @@ app.include_router(agent.router)
 app.include_router(subaccounts.router)
 app.include_router(studio.router)
 app.include_router(uploads.router)
+app.include_router(content_engine.router)
+app.include_router(autopilot.router)
 
 
 @app.on_event("startup")

@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Request
 from typing import Optional, List
 import httpx, os, json, asyncio, shutil
 from datetime import datetime
 from services.store import store, save_store, add_log
+from routes.auth import get_current_user
 from models import Settings, ApiToggle, PlatformAutomation, ContentRequest, PostRequest, DMReplyRequest, AutomationSettings, DMSettings, ManualProduct, Creator, PlaywrightPost
 
 router = APIRouter()
@@ -144,4 +145,112 @@ async def instagram_account_insights():
     return await get_account_insights(ig_id, token)
 
 # ══════════════════════════════════════════════════════════
-# SCHEDULER — kører automatisk i baggrunden
+# SCHEDULER — kører automatisk i bagg@router.post("/api/instagram/post/test")
+async def instagram_post_test(current_user: dict = Depends(get_current_user)):
+    """Test Instagram API connection — verifies token is valid"""
+    ig_token = store["settings"].get("instagram_api_token")
+    ig_id = store["settings"].get("instagram_ig_id")
+    connected = store["settings"].get("instagram_api_connected", False)
+
+    if not ig_token or not ig_id or not connected:
+        return {
+            "status": "error",
+            "message": "Instagram not connected",
+            "reconnect_required": True,
+            "action": "Go to Connect page and reconnect Instagram"
+        }
+
+    try:
+        from instagram_api import refresh_token_if_needed
+        expires_at = store["settings"].get("instagram_api_expires")
+        ig_token, new_expires = await refresh_token_if_needed(ig_token, expires_at)
+        if new_expires:
+            store["settings"]["instagram_api_expires"] = new_expires
+            store["settings"]["instagram_api_token"] = ig_token
+            save_store()
+
+        async with httpx.AsyncClient() as c:
+            r = await c.get(
+                f"https://graph.facebook.com/v19.0/{ig_id}",
+                params={"fields": "id,username,followers_count", "access_token": ig_token},
+                timeout=10,
+            )
+            data = r.json()
+
+        if "error" in data:
+            err = data["error"]
+            store["settings"]["instagram_api_connected"] = False
+            save_store()
+            return {
+                "status": "error",
+                "message": err.get("message", "Token invalid"),
+                "error_code": err.get("code"),
+                "reconnect_required": True,
+            }
+
+        add_log(f"✅ Instagram test OK: @{data.get('username')} ({data.get('followers_count',0)} followers)", "success")
+        return {
+            "status": "ok",
+            "username": data.get("username"),
+            "followers": data.get("followers_count", 0),
+            "ig_id": ig_id,
+            "message": f"Connected as @{data.get('username')}",
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e), "reconnect_required": True}
+
+@router.post("/api/instagram/post/test")
+async def instagram_post_test(req: Request):
+    """Test Instagram connection by posting a test caption (no media — text-only test)"""
+    from routes.auth import get_current_user
+    from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+    token_store = store["settings"].get("instagram_api_token")
+    ig_id = store["settings"].get("instagram_ig_id")
+    connected = store["settings"].get("instagram_api_connected", False)
+
+    if not token_store or not ig_id or not connected:
+        return {
+            "status": "error",
+            "message": "Instagram not connected",
+            "reconnect_required": True,
+            "action": "Go to Connect page and reconnect Instagram"
+        }
+
+    try:
+        from instagram_api import refresh_token_if_needed
+        expires_at = store["settings"].get("instagram_api_expires")
+        token, new_expires = await refresh_token_if_needed(token, expires_at)
+        if new_expires:
+            store["settings"]["instagram_api_expires"] = new_expires
+            store["settings"]["instagram_api_token"] = token
+            save_store()
+
+        async with httpx.AsyncClient() as c:
+            r = await c.get(
+                f"https://graph.facebook.com/v19.0/{ig_id}",
+                params={"fields": "id,username,followers_count", "access_token": token},
+                timeout=10,
+            )
+            data = r.json()
+
+        if "error" in data:
+            err = data["error"]
+            store["settings"]["instagram_api_connected"] = False
+            save_store()
+            return {
+                "status": "error",
+                "message": err.get("message", "Token invalid"),
+                "error_code": err.get("code"),
+                "reconnect_required": True,
+            }
+
+        add_log(f"✅ Instagram test OK: @{data.get('username')} ({data.get('followers_count',0)} followers)", "success")
+        return {
+            "status": "ok",
+            "username": data.get("username"),
+            "followers": data.get("followers_count", 0),
+            "ig_id": ig_id,
+            "message": f"Connected as @{data.get('username')}",
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e), "reconnect_required": True}
