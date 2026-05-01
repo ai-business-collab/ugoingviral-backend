@@ -1798,7 +1798,7 @@ function renderGrowthGraph(users) {
     const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     labelsEl.innerHTML = points.map(p => {
       const [y,m] = p.label.split('-');
-      return '<span>'+MO[parseInt(m)-1]+' ''+y.slice(2)+'</span>';
+      return '<span>'+MO[parseInt(m)-1]+' \''+y.slice(2)+'</span>';
     }).join('');
   }
 
