@@ -70,6 +70,25 @@ def delete_range(start: str, end: str):
     save_store()
     return {"status": "deleted", "count": before - len(store["scheduled_posts"])}
 
+@router.patch("/api/posts/{pid}/reschedule")
+async def reschedule_post(pid: str, request: Request):
+    """Update a post's scheduled_time for calendar drag-to-reschedule."""
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    new_time = str(body.get("scheduled_time", "")).strip()
+    if not new_time:
+        raise HTTPException(status_code=422, detail="scheduled_time required")
+    posts = store.get("scheduled_posts", [])
+    for p in posts:
+        if p.get("id") == pid:
+            p["scheduled_time"] = new_time
+            save_store()
+            return {"ok": True, "post": p}
+    raise HTTPException(status_code=404, detail="Post not found")
+
+
 @router.delete("/api/posts/{pid}")
 def delete_post(pid: str):
     store["scheduled_posts"] = [p for p in store["scheduled_posts"] if p["id"] != pid]

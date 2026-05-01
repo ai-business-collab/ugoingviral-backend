@@ -15,6 +15,7 @@ async def _generate_autopilot_content(
     product_title: str = "",
     product_desc: str = "",
     platform: str = "instagram",
+    language: str = "english",
 ) -> dict:
     """Generate AI caption + hashtags. Returns {"caption": str, "hashtags": [str]} or {} on failure."""
     import json as _json
@@ -31,8 +32,9 @@ async def _generate_autopilot_content(
         "facebook": "Facebook post, conversational, 100-200 chars",
     }
     style = style_map.get(platform, "social media caption with emojis, 100-180 chars")
+    lang_str = "" if language in ("english", "") else f"Write everything in {language.capitalize()}. "
     prompt = (
-        f"Write a {style} for {subject}.\n"
+        f"{lang_str}Write a {style} for {subject}.\n"
         'Return ONLY valid JSON: {"caption": "<text>", "hashtags": ["tag1","tag2","tag3","tag4","tag5"]}'
     )
     def _parse(text):
@@ -484,7 +486,8 @@ async def _run_for_user(force: bool = False):
                 caption_text = captions[0]["content"]
             else:
                 for _plat in active_platforms:
-                    ai_result = await _generate_autopilot_content(
+                    _lang2 = store.get("settings", {}).get("content_language", "english")
+                    ai_result = await _generate_autopilot_content(language=_lang2,
                         niche=niche,
                         product_title=product["title"],
                         product_desc=product.get("description", ""),
@@ -516,7 +519,8 @@ async def _run_for_user(force: bool = False):
                 save_store()
                 return
 
-            ai_result = await _generate_autopilot_content(niche=niche, platform=active_platforms[0])
+            _lang = store.get("settings", {}).get("content_language", "english")
+            ai_result = await _generate_autopilot_content(niche=niche, platform=active_platforms[0], language=_lang)
             if not ai_result.get("caption"):
                 add_log(
                     "⚠️ Auto Pilot: no products and AI content generation failed — "
