@@ -1142,6 +1142,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" id="ni-pipeline" onclick="nav('pipeline')">⚡ <span data-i18n="nav.pipeline">Pipeline</span></div>
       <div class="sub-item" id="ni-templates" onclick="nav('templates')">📝 <span>Templates</span> <span style="font-size:9px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">FREE</span></div>
       <div class="sub-item" id="ni-brand-kit" onclick="nav('brand-kit')">🎨 <span>Brand Kit</span></div>
+      <div class="sub-item" id="ni-hashtags" onclick="nav('hashtags')">🏷️ <span>Hashtag Research</span></div>
       <div class="sub-item" onclick="nav('history')">📚 <span data-i18n="nav.history">Historik</span></div>
       <div class="sub-item" onclick="nav('content-library')">🗂️ <span data-i18n="nav.library">Bibliotek</span></div>
       <div class="sub-item" onclick="nav('library')">📁 <span data-i18n="nav.mapper">Content Mapper</span></div>
@@ -1524,6 +1525,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <button class="btn bg bsm" onclick="genVariation('hashtags')">#️⃣ Tags</button>
             <button class="btn bg bsm" onclick="genVariation('caption')">📝 Ny caption</button>
             <button class="btn bg bsm" onclick="genVariation('reel_script')">🎬 Reel</button>
+            <button class="btn bg bsm" style="margin-left:auto;background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.4);color:#a78bfa" onclick="openImproveModal(document.getElementById('gout').textContent,curPlat,'other',function(c){document.getElementById('gout').textContent=c;})">🪄 Improve</button>
           </div>
         </div>
         <div class="card" id="pkg-card" style="display:none">
@@ -3380,6 +3382,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div style="font-size:12px;color:var(--tx3)">Generated: <span id="ce-meta-date" style="color:var(--tx)">-</span></div>
         <div style="font-size:12px;color:var(--tx3)">Niche: <span id="ce-meta-niche" style="color:var(--ac)">-</span></div>
         <div style="font-size:12px;color:var(--tx3)">Audience: <span id="ce-meta-audience" style="color:var(--tx)">-</span></div>
+        <button class="btn bg bsm" onclick="exportCalendarCSV()">📊 CSV</button>
+        <button class="btn bg bsm" onclick="exportCalendarPDF()">🖨️ PDF</button>
+        <label class="btn bg bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin:0">📥 Import<input type="file" accept=".csv" style="display:none" onchange="importCalendarCSV(this)"></label>
         <button class="btn bg bsm" onclick="generateContentCalendar()" style="margin-left:auto">Regenerate</button>
       </div>
       <div id="ce-calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px">
@@ -3410,6 +3415,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <button class="btn bp" style="flex:1" onclick="generatePostFromIdea()">Generate Full Post</button>
             <button class="btn bg" onclick="copyCeCaption()">Copy Caption</button>
             <button class="btn bg bsm" onclick="runCeModalViralScore()" style="white-space:nowrap">🔮 Score</button>
+            <button class="btn bg bsm" onclick="openImproveModal(document.getElementById('ce-modal-caption').textContent,'instagram',document.getElementById('ce-niche')?.value||'other',function(c){if(_ceActiveIdea)_ceActiveIdea.caption=c;document.getElementById('ce-modal-caption').textContent=c;})" style="white-space:nowrap;background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.4);color:#a78bfa">🪄 Improve</button>
           </div>
           <div id="ce-modal-viral-score"></div>
         </div>
@@ -5704,6 +5710,7 @@ const titles = {
   studio:'🎬 Video Studio',
   'brand-kit':'🎨 Brand Kit',
   competitor:'🔍 Competitor Spy',
+  hashtags:'🏷️ Hashtag Research',
 };
 function nav(p) {
   // Aliases — redirect sub-items to parent page + tab
@@ -5760,6 +5767,7 @@ function nav(p) {
   if (p === 'analytics') { loadAnalytics(); }
   if (p === 'brand-kit') { loadBrandKit(); }
   if (p === 'competitor') { /* ready */ }
+  if (p === 'hashtags') { loadSavedHashtagSets(); }
   _currentPage = p;
 }
 function toggleSubMenu(id) {
@@ -8671,6 +8679,113 @@ function sendQueueToPost(id) {
     </div>
   </div>
 
+
+  <!-- ── HASHTAG RESEARCH ──────────────────────────────────────────────── -->
+  <div id="page-hashtags" class="page">
+    <div style="max-width:900px">
+      <!-- Input card -->
+      <div class="card" style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="font-size:28px">🏷️</div>
+          <div>
+            <div class="ctitle" style="margin:0">Hashtag Research</div>
+            <div style="font-size:12px;color:var(--tx3)">Find the best hashtags for any topic — trending, medium-reach, and niche-specific</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:end">
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">TOPIC / KEYWORD</label>
+            <input id="ht-topic" class="inp" placeholder="e.g. fitness motivation, coffee shop, luxury watches" style="width:100%" onkeydown="if(event.key==='Enter')researchHashtags()">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">PLATFORM</label>
+            <select id="ht-platform" class="inp">
+              <option value="instagram">Instagram</option>
+              <option value="tiktok">TikTok</option>
+              <option value="youtube">YouTube</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">NICHE</label>
+            <select id="ht-niche" class="inp">
+              <option value="general">General</option>
+              <option value="ecommerce">E-commerce</option>
+              <option value="creator">Creator</option>
+              <option value="fitness">Fitness</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="agency">Agency</option>
+            </select>
+          </div>
+          <button class="btn bp" id="ht-btn" onclick="researchHashtags()" style="white-space:nowrap;padding:10px 22px">Research 🔍</button>
+        </div>
+      </div>
+      <!-- Results -->
+      <div id="ht-results" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
+          <!-- Trending -->
+          <div class="card" id="ht-col-trending" style="border-top:3px solid #ef4444">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <span style="font-size:18px">🔥</span>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--tx)">Trending</div>
+                <div id="ht-trending-reach" style="font-size:10px;color:#ef4444"></div>
+              </div>
+              <button class="btn bg bsm" style="margin-left:auto;font-size:10px" onclick="copyHashtagGroup('trending')">Copy all</button>
+            </div>
+            <div id="ht-trending-desc" style="font-size:11px;color:var(--tx3);margin-bottom:10px"></div>
+            <div id="ht-trending-tags" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+          </div>
+          <!-- Medium -->
+          <div class="card" id="ht-col-medium" style="border-top:3px solid #f59e0b">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <span style="font-size:18px">📊</span>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--tx)">Medium</div>
+                <div id="ht-medium-reach" style="font-size:10px;color:#f59e0b"></div>
+              </div>
+              <button class="btn bg bsm" style="margin-left:auto;font-size:10px" onclick="copyHashtagGroup('medium')">Copy all</button>
+            </div>
+            <div id="ht-medium-desc" style="font-size:11px;color:var(--tx3);margin-bottom:10px"></div>
+            <div id="ht-medium-tags" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+          </div>
+          <!-- Niche -->
+          <div class="card" id="ht-col-niche" style="border-top:3px solid #10b981">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <span style="font-size:18px">🎯</span>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--tx)">Niche</div>
+                <div id="ht-niche-reach" style="font-size:10px;color:#10b981"></div>
+              </div>
+              <button class="btn bg bsm" style="margin-left:auto;font-size:10px" onclick="copyHashtagGroup('niche')">Copy all</button>
+            </div>
+            <div id="ht-niche-desc" style="font-size:11px;color:var(--tx3);margin-bottom:10px"></div>
+            <div id="ht-niche-tags" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+          </div>
+        </div>
+        <!-- Save set -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="ctitle" style="margin-bottom:12px">💾 Save Hashtag Set</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input id="ht-set-name" class="inp" placeholder="Set name (e.g. Fitness Monday, Product Launch)" style="flex:1;min-width:200px">
+            <select id="ht-save-group" class="inp" style="width:auto">
+              <option value="all">All 30 tags</option>
+              <option value="trending">Trending only</option>
+              <option value="medium">Medium only</option>
+              <option value="niche">Niche only</option>
+              <option value="recommended">Recommended mix (3+4+3)</option>
+            </select>
+            <button class="btn bp bsm" onclick="saveHashtagSet()">Save Set</button>
+          </div>
+        </div>
+      </div>
+      <!-- Saved sets -->
+      <div id="ht-saved-section" style="display:none">
+        <div class="ctitle" style="margin-bottom:12px">📁 Saved Hashtag Sets</div>
+        <div id="ht-saved-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="page-media-upload" class="page" style="display:none">
     <div style="max-width:760px">
       <div class="card" style="margin-bottom:20px">
@@ -10671,9 +10786,7 @@ async function generateContentCalendar() {
   status.style.display = 'block';
   status.textContent = 'Calling AI - this takes about 15-20 seconds...';
   try {
-    var d = await apiFetch('/api/content-engine/generate', {
-      method:'POST', body:JSON.stringify({niche:niche,tone:tone,target_audience:audience,days:30,platforms:['instagram','tiktok']})
-    });
+    var d = await apiFetch('/api/content-engine/generate', 'POST', {niche:niche,tone:tone,target_audience:audience,days:30,platforms:['instagram','tiktok']});
     if (d.ok) {
       _ceIdeas = d.ideas || [];
       renderContentCalendar(_ceIdeas);
@@ -11614,13 +11727,12 @@ async function _calReschedule(postId, newDateStr) {
   }
   var newScheduledTime = newDateStr + 'T' + currentTime + ':00';
   try {
-    var r = await apiFetch('/api/posts/' + postId + '/reschedule', 'PATCH', {scheduled_time: newScheduledTime});
-    var d = await r.json();
-    if (d.ok) {
+    var d = await apiFetch('/api/posts/' + postId + '/reschedule', 'PATCH', {scheduled_time: newScheduledTime});
+    if (d && d.ok) {
       toast('Post rescheduled to ' + newDateStr, 'success');
       renderCal();
     } else {
-      toast('Could not reschedule post', 'error');
+      toast('Could not reschedule: ' + ((d && d.detail) || 'unknown error'), 'error');
     }
   } catch(e) {
     toast('Reschedule failed: ' + (e.message||''), 'error');
@@ -11636,10 +11748,9 @@ document.addEventListener('dragleave', function(e) {
 // ── Content Language ──────────────────────────────────────────────────────────
 async function loadContentLanguage() {
   try {
-    var r = await apiFetch('/api/settings/content_language');
-    var d = await r.json();
+    var d = await apiFetch('/api/settings/content_language');
     var sel = document.getElementById('content-lang-select');
-    if (sel && d.language) sel.value = d.language;
+    if (sel && d && d.language) sel.value = d.language;
   } catch(e) {}
 }
 
@@ -11659,8 +11770,7 @@ var _bkLogoUrl = '';
 
 async function loadBrandKit() {
   try {
-    var r = await apiFetch('/api/brand-kit');
-    var kit = await r.json();
+    var kit = await apiFetch('/api/brand-kit');
     var p = function(id, v) { var el = document.getElementById(id); if (el && v) el.value = v; };
     p('bk-primary', kit.primary_color);
     p('bk-primary-hex', kit.primary_color);
@@ -11721,9 +11831,8 @@ async function saveBrandKit() {
     logo_url:        _bkLogoUrl,
   };
   try {
-    var r = await apiFetch('/api/brand-kit', 'POST', kit);
-    var d = await r.json();
-    if (d.ok) toast('Brand kit saved!', 'success');
+    var d = await apiFetch('/api/brand-kit', 'POST', kit);
+    if (d && d.ok) toast('Brand kit saved!', 'success');
     else toast('Error saving brand kit', 'error');
   } catch(e) { toast('Error: ' + (e.message||''), 'error'); }
 }
@@ -11743,9 +11852,8 @@ async function analyzeCompetitor() {
   if (status) { status.style.display = 'block'; status.textContent = '🔍 Analyzing @' + handle + ' — this takes a few seconds…'; }
 
   try {
-    var r = await apiFetch('/api/competitor/analyze', 'POST', {handle, platform, niche});
-    var d = await r.json();
-    if (d.ok) {
+    var d = await apiFetch('/api/competitor/analyze', 'POST', {handle, platform, niche});
+    if (d && d.ok) {
       _compAnalysis = d.analysis;
       _renderCompResults(d.analysis);
       document.getElementById('comp-results').style.display = 'block';
@@ -11823,15 +11931,14 @@ async function generateSimilarContent() {
   var btn = document.getElementById('comp-gen-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
   try {
-    var r = await apiFetch('/api/competitor/generate-similar', 'POST', {
+    var d = await apiFetch('/api/competitor/generate-similar', 'POST', {
       handle: a.handle,
       themes: a.content_themes || [],
       hashtags: a.best_hashtags || [],
       top_content_type: topType,
       niche: document.getElementById('comp-niche')?.value || 'creator',
     });
-    var d = await r.json();
-    if (d.ok && d.posts?.length) {
+    if (d && d.ok && d.posts?.length) {
       document.getElementById('comp-similar').style.display = 'block';
       document.getElementById('comp-similar-grid').innerHTML = d.posts.map(function(p) {
         var safeCap = (p.caption||'').replace(/'/g, "\\'");
@@ -11860,15 +11967,14 @@ async function checkViralScore(caption, hashtags, platform, postTime, targetEl) 
   if (_vsCache[key]) { _renderViralScore(_vsCache[key], targetEl); return; }
   if (targetEl) targetEl.innerHTML = '<div style="font-size:11px;color:var(--tx3);padding:10px 0">Calculating viral score…</div>';
   try {
-    var r = await apiFetch('/api/viral-score', 'POST', {
+    var d = await apiFetch('/api/viral-score', 'POST', {
       caption: caption,
       hashtags: Array.isArray(hashtags) ? hashtags : [],
       niche: document.getElementById('ce-niche')?.value || 'other',
       platform: platform || 'instagram',
       post_time: postTime || '',
     });
-    var d = await r.json();
-    if (d.ok) { _vsCache[key] = d; _renderViralScore(d, targetEl); }
+    if (d && d.ok) { _vsCache[key] = d; _renderViralScore(d, targetEl); }
   } catch(e) { if (targetEl) targetEl.innerHTML = ''; }
 }
 
@@ -11896,6 +12002,306 @@ function runCeModalViralScore() {
   var tagsText = document.getElementById('ce-modal-hashtags')?.textContent || '';
   var hashtags = (tagsText.match(/#\w+/g) || []);
   checkViralScore(caption, hashtags, 'instagram', '', document.getElementById('ce-modal-viral-score'));
+}
+
+
+// ── AI Caption Improver ───────────────────────────────────────────────────────
+var _improveCallback = null;
+var _improveOriginal = '';
+var _imPlatform = 'instagram';
+var _imNiche = 'other';
+
+function _ensureImproveModal() {
+  if (document.getElementById('improve-modal')) return;
+  var m = document.createElement('div');
+  m.id = 'improve-modal';
+  m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:3000;align-items:center;justify-content:center';
+  m.innerHTML = '<div style="background:var(--card);border-radius:18px;padding:28px;max-width:680px;width:94%;border:1px solid var(--border);position:relative;max-height:92vh;overflow-y:auto">'
+    + '<button onclick="closeImproveModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--tx3);font-size:22px;cursor:pointer;line-height:1">×</button>'
+    + '<div style="font-size:18px;font-weight:800;color:var(--tx);margin-bottom:16px">🪄 AI Caption Improver</div>'
+    + '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">'
+    + '<select id="im-type" class="inp" style="flex:1;min-width:160px">'
+    + '<option value="engaging">🔥 More Engaging</option>'
+    + '<option value="professional">💼 More Professional</option>'
+    + '<option value="shorter">✂️ Shorter</option>'
+    + '<option value="cta">📣 Add Strong CTA</option>'
+    + '<option value="viral">🚀 More Viral</option>'
+    + '</select>'
+    + '<button class="btn bp" id="im-run-btn" onclick="runImprove()" style="padding:10px 24px">Improve ✨</button>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">'
+    + '<div>'
+    + '<div style="font-size:10px;font-weight:700;color:var(--tx3);margin-bottom:6px;letter-spacing:.05em">ORIGINAL</div>'
+    + '<div id="im-original" style="font-size:12px;color:var(--tx2);background:var(--bg);border-radius:8px;padding:12px;min-height:80px;line-height:1.6;border:1px solid var(--border)"></div>'
+    + '</div>'
+    + '<div>'
+    + '<div style="font-size:10px;font-weight:700;color:var(--ac);margin-bottom:6px;letter-spacing:.05em">IMPROVED ✨</div>'
+    + '<div id="im-improved" style="font-size:12px;color:var(--tx);background:rgba(0,229,255,.05);border-radius:8px;padding:12px;min-height:80px;line-height:1.6;border:1px solid rgba(0,229,255,.2)"></div>'
+    + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px">'
+    + '<button class="btn bp" id="im-use-btn" onclick="useImprovedCaption()" style="flex:1;opacity:.5" disabled>✅ Use Improved Version</button>'
+    + '<button class="btn bg" onclick="closeImproveModal()">Cancel</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(m);
+}
+
+function openImproveModal(caption, platform, niche, useCallback) {
+  _ensureImproveModal();
+  _improveCallback = useCallback;
+  _improveOriginal = caption;
+  _imPlatform = platform || 'instagram';
+  _imNiche = niche || 'other';
+  document.getElementById('im-original').textContent = caption;
+  document.getElementById('im-improved').textContent = '';
+  var useBtn = document.getElementById('im-use-btn');
+  if (useBtn) { useBtn.disabled = true; useBtn.style.opacity = '0.5'; }
+  document.getElementById('improve-modal').style.display = 'flex';
+}
+
+async function runImprove() {
+  var type   = document.getElementById('im-type')?.value || 'engaging';
+  var impEl  = document.getElementById('im-improved');
+  var runBtn = document.getElementById('im-run-btn');
+  var useBtn = document.getElementById('im-use-btn');
+  if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Improving…'; }
+  if (impEl)  impEl.textContent = 'Working…';
+  try {
+    var d = await apiFetch('/api/caption/improve', 'POST', {
+      caption: _improveOriginal,
+      improvement_type: type,
+      niche: _imNiche,
+      platform: _imPlatform,
+    });
+    if (d && d.ok) {
+      if (impEl) impEl.textContent = d.improved || '';
+      if (useBtn) { useBtn.disabled = false; useBtn.style.opacity = '1'; }
+    } else {
+      if (impEl) impEl.textContent = 'Error: ' + (d?.detail || 'AI key not configured');
+    }
+  } catch(e) {
+    if (impEl) impEl.textContent = 'Error: ' + (e.message || '');
+  } finally {
+    if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Improve ✨'; }
+  }
+}
+
+function useImprovedCaption() {
+  var improved = document.getElementById('im-improved')?.textContent || '';
+  if (!improved || improved.startsWith('Error') || improved === 'Working…') return;
+  if (_improveCallback) _improveCallback(improved);
+  closeImproveModal();
+  toast('Caption updated!', 'success');
+}
+
+function closeImproveModal() {
+  var m = document.getElementById('improve-modal');
+  if (m) m.style.display = 'none';
+  _improveCallback = null;
+}
+
+// ── Hashtag Research ──────────────────────────────────────────────────────────
+var _htData = {};
+
+async function researchHashtags() {
+  var topic    = document.getElementById('ht-topic')?.value?.trim();
+  var platform = document.getElementById('ht-platform')?.value || 'instagram';
+  var niche    = document.getElementById('ht-niche')?.value || 'general';
+  if (!topic) { toast('Enter a topic first', 'error'); return; }
+
+  var btn = document.getElementById('ht-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Researching…'; }
+
+  try {
+    var d = await apiFetch('/api/hashtags/research', 'POST', {topic, platform, niche});
+    if (d && d.ok) {
+      _htData = d;
+      _renderHashtagResults(d);
+      document.getElementById('ht-results').style.display = 'block';
+      loadSavedHashtagSets();
+    } else {
+      toast((d && d.detail) || 'Research failed', 'error');
+    }
+  } catch(e) { toast('Error: ' + (e.message || ''), 'error'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Research 🔍'; } }
+}
+
+function _renderHashtagResults(d) {
+  var groups = [
+    {key:'trending', color:'#ef4444'},
+    {key:'medium',   color:'#f59e0b'},
+    {key:'niche',    color:'#10b981'},
+  ];
+  groups.forEach(function(g) {
+    var grp = d[g.key] || {};
+    var reach = document.getElementById('ht-' + g.key + '-reach');
+    var desc  = document.getElementById('ht-' + g.key + '-desc');
+    var tags  = document.getElementById('ht-' + g.key + '-tags');
+    if (reach) reach.textContent = grp.reach || '';
+    if (desc)  desc.textContent  = grp.description || '';
+    if (tags) tags.innerHTML = (grp.hashtags || []).map(function(t) {
+      var safet = t.replace(/'/g, "\\'");
+      return '<span onclick="navigator.clipboard.writeText(\'' + safet + '\');toast(\'Copied!\',\'success\')" '
+        + 'style="background:' + g.color + '18;color:' + g.color + ';border:1px solid ' + g.color + '33;'
+        + 'border-radius:16px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer" '
+        + 'title="Click to copy">' + t + '</span>';
+    }).join('');
+  });
+}
+
+function copyHashtagGroup(group) {
+  var grp = _htData[group] || {};
+  var text = (grp.hashtags || []).join(' ');
+  navigator.clipboard.writeText(text).then(function() { toast('Copied ' + (grp.hashtags||[]).length + ' tags!', 'success'); });
+}
+
+async function saveHashtagSet() {
+  var name = document.getElementById('ht-set-name')?.value?.trim();
+  var group = document.getElementById('ht-save-group')?.value || 'all';
+  if (!name) { toast('Enter a set name', 'error'); return; }
+
+  var tags = [];
+  if (group === 'all') {
+    ['trending','medium','niche'].forEach(function(g) {
+      tags = tags.concat((_htData[g]||{}).hashtags||[]);
+    });
+  } else if (group === 'recommended') {
+    tags = tags.concat(((_htData.trending||{}).hashtags||[]).slice(0,3));
+    tags = tags.concat(((_htData.medium||{}).hashtags||[]).slice(0,4));
+    tags = tags.concat(((_htData.niche||{}).hashtags||[]).slice(0,3));
+  } else {
+    tags = (_htData[group]||{}).hashtags || [];
+  }
+  if (!tags.length) { toast('No tags to save', 'error'); return; }
+
+  try {
+    var d = await apiFetch('/api/hashtags/sets', 'POST', {name, tags});
+    if (d && d.ok) {
+      toast('Hashtag set saved!', 'success');
+      document.getElementById('ht-set-name').value = '';
+      loadSavedHashtagSets();
+    }
+  } catch(e) { toast('Error: ' + (e.message||''), 'error'); }
+}
+
+async function loadSavedHashtagSets() {
+  try {
+    var d = await apiFetch('/api/hashtags/sets');
+    var sets = (d && d.sets) || [];
+    var section = document.getElementById('ht-saved-section');
+    var list = document.getElementById('ht-saved-list');
+    if (!section || !list) return;
+    if (!sets.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = sets.map(function(s) {
+      var safeId = s.id.replace(/'/g, "\\'");
+      var preview = (s.tags || []).slice(0,6).join(' ');
+      return '<div class="card" style="padding:14px">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--tx);flex:1">' + s.name + '</div>'
+        + '<button onclick="deleteHashtagSet(\'' + safeId + '\')" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2);color:#ef4444;font-size:10px;padding:2px 8px;border-radius:6px;cursor:pointer">Delete</button>'
+        + '</div>'
+        + '<div style="font-size:10px;color:var(--ac);line-height:1.7;margin-bottom:8px">' + preview + (s.tags.length > 6 ? ' +' + (s.tags.length-6) + ' more' : '') + '</div>'
+        + '<button class="btn bg bsm" style="font-size:10px;width:100%" onclick="copyToHashtagSet(\'' + safeId + '\')">📋 Copy All Tags</button>'
+        + '</div>';
+    }).join('');
+    // Store sets data for copy
+    window._htSets = sets;
+  } catch(e) {}
+}
+
+function copyToHashtagSet(id) {
+  var sets = window._htSets || [];
+  var s = sets.find(function(x) { return x.id === id; });
+  if (!s) return;
+  navigator.clipboard.writeText((s.tags || []).join(' ')).then(function() {
+    toast('Copied ' + s.tags.length + ' tags!', 'success');
+  });
+}
+
+async function deleteHashtagSet(id) {
+  try {
+    await apiFetch('/api/hashtags/sets/' + id, 'DELETE');
+    toast('Set deleted', 'info');
+    loadSavedHashtagSets();
+  } catch(e) { toast('Error: ' + (e.message||''), 'error'); }
+}
+
+// ── Content Calendar Export / Import ─────────────────────────────────────────
+function exportCalendarCSV() {
+  if (!_ceIdeas || !_ceIdeas.length) { toast('Generate a calendar first', 'error'); return; }
+  var rows = [['Day','Date','Title','Hook','Caption','Hashtags','Best Time','Content Type','Used']];
+  var today = new Date();
+  _ceIdeas.forEach(function(idea) {
+    var d = new Date(today);
+    d.setDate(today.getDate() + (idea.day - 1));
+    var dateStr = d.toISOString().slice(0,10);
+    var q = function(s) { return '"' + String(s||'').replace(/"/g,'""') + '"'; };
+    rows.push([
+      idea.day,
+      dateStr,
+      q(idea.title),
+      q(idea.hook),
+      q(idea.caption),
+      q((idea.hashtags||[]).join(' ')),
+      idea.best_time||'',
+      idea.content_type||'image',
+      idea.used ? 'yes' : 'no',
+    ]);
+  });
+  var csv = rows.map(function(r){ return r.join(','); }).join('\r\n');
+  var blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url; a.download = 'content-calendar.csv'; a.click();
+  URL.revokeObjectURL(url);
+  toast('Calendar exported as CSV!', 'success');
+}
+
+function exportCalendarPDF() {
+  if (!_ceIdeas || !_ceIdeas.length) { toast('Generate a calendar first', 'error'); return; }
+  var win = window.open('', '_blank');
+  if (!win) { toast('Allow popups to export PDF', 'error'); return; }
+  var rows = _ceIdeas.map(function(idea) {
+    return '<tr style="border-bottom:1px solid #e5e7eb">'
+      + '<td style="padding:8px;font-weight:700;color:#6b7280;width:40px">' + idea.day + '</td>'
+      + '<td style="padding:8px;font-weight:700">' + (idea.title||'') + '</td>'
+      + '<td style="padding:8px;color:#4b5563;font-size:12px">' + (idea.caption||'').slice(0,120) + '</td>'
+      + '<td style="padding:8px;color:#6b7280;font-size:11px">' + (idea.content_type||'').toUpperCase() + '</td>'
+      + '<td style="padding:8px;color:#6b7280;font-size:11px">' + (idea.best_time||'') + '</td>'
+      + '<td style="padding:8px;color:#2563eb;font-size:10px">' + (idea.hashtags||[]).slice(0,3).join(' ') + '</td>'
+      + '</tr>';
+  }).join('');
+  win.document.write('<html><head><title>Content Calendar</title><style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}h1{font-size:20px;margin-bottom:4px}p{color:#6b7280;font-size:13px;margin-bottom:20px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px;background:#f3f4f6;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280}@media print{@page{size:A4 landscape;margin:12mm}}</style></head>'
+    + '<body><h1>📅 Content Calendar</h1><p>Generated ' + new Date().toLocaleDateString() + ' · ' + _ceIdeas.length + ' ideas</p>'
+    + '<table><thead><tr><th>Day</th><th>Title</th><th>Caption</th><th>Type</th><th>Best Time</th><th>Hashtags</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<script>window.onload=function(){window.print();}<\/script></body></html>');
+  win.document.close();
+  toast('PDF preview opened — use browser Print to save', 'info');
+}
+
+async function importCalendarCSV(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var fd = new FormData();
+  fd.append('file', file);
+  var token = localStorage.getItem('ugv_token') || '';
+  try {
+    var r = await fetch(API + '/api/posts/import-csv', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + token},
+      body: fd,
+    });
+    var d = await r.json();
+    if (d.ok) {
+      var msg = 'Imported ' + d.imported + ' post' + (d.imported !== 1 ? 's' : '') + ' to schedule!';
+      if (d.errors && d.errors.length) msg += ' (' + d.errors.length + ' rows skipped)';
+      toast(msg, 'success');
+    } else {
+      toast(d.detail || 'Import failed', 'error');
+    }
+  } catch(e) { toast('Import error: ' + (e.message||''), 'error'); }
+  input.value = '';
 }
 
 </script>
