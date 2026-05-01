@@ -50,7 +50,7 @@ DEFAULT_STORE = {
     "scheduler_log": {}, "shopify_products_cache": [],
     "email_settings": {}, "email_templates": [],
     "groups": ["Alle"], "admin_tokens": [],
-    "billing": {"plan": "starter", "credits": 300},
+    "billing": {"plan": "free", "credits": 10},
 }
 
 

@@ -68,7 +68,8 @@ async def _call_ai(prompt: str) -> str:
                 return r.json()["choices"][0]["message"]["content"]
         except Exception as e:
             add_log(f"OpenAI error: {e}", "error")
-    raise Exception("No AI key configured — add Anthropic or OpenAI key in Settings")
+    from fastapi import HTTPException
+    raise HTTPException(status_code=422, detail="No AI key configured — add your Anthropic or OpenAI key in Settings → API Keys")
 
 
 @router.post("/api/content-engine/generate")
@@ -126,7 +127,8 @@ Return ONLY the JSON array, no markdown, no explanation."""
             idea["used"] = False
     except Exception as e:
         add_log(f"Content Engine generation error: {e}", "error")
-        raise
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=str(e))
 
     calendar_data = {
         "generated_at": datetime.utcnow().isoformat(),
