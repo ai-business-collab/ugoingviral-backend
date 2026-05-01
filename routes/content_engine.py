@@ -128,6 +128,7 @@ Return ONLY the JSON array, no markdown, no explanation."""
     except Exception as e:
         add_log(f"Content Engine generation error: {e}", "error")
         from fastapi import HTTPException
+        if isinstance(e, HTTPException): raise
         raise HTTPException(status_code=422, detail=str(e))
 
     calendar_data = {
