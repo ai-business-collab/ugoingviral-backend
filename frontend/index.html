@@ -1143,6 +1143,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" id="ni-templates" onclick="nav('templates')">📝 <span>Templates</span> <span style="font-size:9px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">FREE</span></div>
       <div class="sub-item" id="ni-brand-kit" onclick="nav('brand-kit')">🎨 <span>Brand Kit</span></div>
       <div class="sub-item" id="ni-hashtags" onclick="nav('hashtags')">🏷️ <span>Hashtag Research</span></div>
+      <div class="sub-item" id="ni-video-script" onclick="nav('video-script')">🎬 <span>Video Script</span></div>
+      <div class="sub-item" id="ni-reel-templates" onclick="nav('reel-templates')">📱 <span>Reel Templates</span></div>
       <div class="sub-item" onclick="nav('history')">📚 <span data-i18n="nav.history">Historik</span></div>
       <div class="sub-item" onclick="nav('content-library')">🗂️ <span data-i18n="nav.library">Bibliotek</span></div>
       <div class="sub-item" onclick="nav('library')">📁 <span data-i18n="nav.mapper">Content Mapper</span></div>
@@ -1191,6 +1193,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="ni" id="ni-growth-dash" onclick="nav('growth-dashboard')"><span class="ico">🌱</span><span>Growth Dashboard</span></div>
     <div class="ni" id="ni-stats" onclick="nav('stats')"><span class="ico">📊</span><span data-i18n="nav.stats">Statistik</span></div>
     <div class="ni" id="ni-competitor" onclick="nav('competitor')"><span class="ico">🔍</span><span>Competitor Spy</span></div>
+    <div class="ni" id="ni-audit" onclick="nav('audit')"><span class="ico">📋</span><span>Account Audit</span></div>
 
     <!-- ── SYSTEM ── -->
     <div class="nav-section" data-i18n="nav.system">System</div>
@@ -5711,6 +5714,9 @@ const titles = {
   'brand-kit':'🎨 Brand Kit',
   competitor:'🔍 Competitor Spy',
   hashtags:'🏷️ Hashtag Research',
+  'video-script':'🎬 Video Script Generator',
+  'reel-templates':'📱 Story & Reel Templates',
+  audit:'📋 Account Audit',
 };
 function nav(p) {
   // Aliases — redirect sub-items to parent page + tab
@@ -5768,6 +5774,9 @@ function nav(p) {
   if (p === 'brand-kit') { loadBrandKit(); }
   if (p === 'competitor') { /* ready */ }
   if (p === 'hashtags') { loadSavedHashtagSets(); }
+  if (p === 'video-script') { /* ready */ }
+  if (p === 'reel-templates') { loadReelTemplates(); }
+  if (p === 'audit') { /* ready */ }
   _currentPage = p;
 }
 function toggleSubMenu(id) {
@@ -8783,6 +8792,176 @@ function sendQueueToPost(id) {
         <div class="ctitle" style="margin-bottom:12px">📁 Saved Hashtag Sets</div>
         <div id="ht-saved-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
       </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════ VIDEO SCRIPT PAGE ═════════════════════ -->
+  <div id="page-video-script" class="page" style="display:none">
+    <div style="max-width:860px">
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">🎬 AI Video Script Generator</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:20px">Enter your topic and get a timestamped, ready-to-record video script with hook, scenes, and CTA.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Topic *</label>
+            <input id="vs-topic" type="text" placeholder="e.g. How to grow on Instagram in 2025" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Niche</label>
+            <select id="vs-niche" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+              <option value="creator">Creator / Personal Brand</option>
+              <option value="ecommerce">E-Commerce</option>
+              <option value="fitness">Fitness & Health</option>
+              <option value="food">Food & Restaurant</option>
+              <option value="finance">Finance & Business</option>
+              <option value="education">Education</option>
+              <option value="travel">Travel & Lifestyle</option>
+              <option value="beauty">Beauty & Fashion</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Duration</label>
+            <div style="display:flex;gap:8px">
+              <button onclick="setVsDuration(15,this)" class="vs-dur-btn" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer">15s</button>
+              <button onclick="setVsDuration(30,this)" class="vs-dur-btn active-dur" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--ac);background:rgba(0,229,255,.15);color:var(--ac);font-size:12px;font-weight:600;cursor:pointer">30s</button>
+              <button onclick="setVsDuration(60,this)" class="vs-dur-btn" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer">60s</button>
+              <button onclick="setVsDuration(90,this)" class="vs-dur-btn" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer">90s</button>
+            </div>
+            <input type="hidden" id="vs-duration" value="30">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Style</label>
+            <select id="vs-style" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+              <option value="educational">Educational</option>
+              <option value="entertaining">Entertaining</option>
+              <option value="promotional">Promotional</option>
+              <option value="storytelling">Storytelling</option>
+              <option value="tutorial">Tutorial / How-To</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Platform</label>
+            <select id="vs-platform" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+              <option value="tiktok">TikTok</option>
+              <option value="instagram">Instagram Reels</option>
+              <option value="youtube">YouTube Shorts</option>
+              <option value="facebook">Facebook Reels</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="generateVideoScript()" style="background:linear-gradient(135deg,var(--ac),var(--ac2));color:#000;font-weight:800;padding:12px 28px;border-radius:10px;border:none;cursor:pointer;font-size:14px">Generate Script ✨</button>
+      </div>
+
+      <div id="vs-loading" style="display:none;text-align:center;padding:40px">
+        <div class="spin" style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;display:inline-block;margin-bottom:12px"></div>
+        <div style="color:var(--tx2);font-size:14px">Writing your script…</div>
+      </div>
+
+      <div id="vs-result" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ REEL TEMPLATES PAGE ══════════════════ -->
+  <div id="page-reel-templates" class="page" style="display:none">
+    <div style="max-width:1000px">
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">📱 Story & Reel Templates</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">20 pre-built templates by niche. Pick one and instantly generate a complete script.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="rt-filter-bar">
+          <button onclick="filterReelTemplates('all',this)" class="rt-filter active-filter" style="padding:6px 14px;border-radius:20px;border:1px solid var(--ac);background:rgba(0,229,255,.15);color:var(--ac);font-size:12px;font-weight:700;cursor:pointer">All</button>
+          <button onclick="filterReelTemplates('ecommerce',this)" class="rt-filter" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer">🛍️ E-Commerce</button>
+          <button onclick="filterReelTemplates('creator',this)" class="rt-filter" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer">👤 Creator</button>
+          <button onclick="filterReelTemplates('fitness',this)" class="rt-filter" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer">💪 Fitness</button>
+          <button onclick="filterReelTemplates('restaurant',this)" class="rt-filter" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer">🍽️ Restaurant</button>
+          <button onclick="filterReelTemplates('motivation',this)" class="rt-filter" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer">🔥 Motivation</button>
+        </div>
+      </div>
+      <div id="rt-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px"></div>
+      <div id="rt-loading" style="display:none;text-align:center;padding:40px">
+        <div class="spin" style="width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;display:inline-block"></div>
+      </div>
+
+      <!-- Template modal -->
+      <div id="rt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box">
+        <div style="max-width:700px;margin:0 auto;background:var(--bg);border-radius:18px;padding:28px;position:relative">
+          <button onclick="document.getElementById('rt-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:transparent;border:none;color:var(--tx2);font-size:22px;cursor:pointer">✕</button>
+          <div id="rt-modal-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ ACCOUNT AUDIT PAGE ═══════════════════ -->
+  <div id="page-audit" class="page" style="display:none">
+    <div style="max-width:860px">
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">📋 Social Media Account Audit</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:20px">Get an AI-powered score and action plan for any social media account.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Account Handle *</label>
+            <input id="audit-handle" type="text" placeholder="@yourhandle" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Platform</label>
+            <select id="audit-platform" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+              <option value="instagram">Instagram</option>
+              <option value="tiktok">TikTok</option>
+              <option value="youtube">YouTube</option>
+              <option value="twitter">Twitter / X</option>
+              <option value="facebook">Facebook</option>
+              <option value="linkedin">LinkedIn</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Niche</label>
+            <select id="audit-niche" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+              <option value="creator">Creator / Personal Brand</option>
+              <option value="ecommerce">E-Commerce</option>
+              <option value="fitness">Fitness & Health</option>
+              <option value="food">Food & Restaurant</option>
+              <option value="finance">Finance & Business</option>
+              <option value="education">Education</option>
+              <option value="travel">Travel & Lifestyle</option>
+              <option value="beauty">Beauty & Fashion</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Followers Range</label>
+            <select id="audit-followers" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+              <option value="0-1K">0 – 1K</option>
+              <option value="1K-10K" selected>1K – 10K</option>
+              <option value="10K-50K">10K – 50K</option>
+              <option value="50K-100K">50K – 100K</option>
+              <option value="100K-500K">100K – 500K</option>
+              <option value="500K+">500K+</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Posts Per Week</label>
+            <input id="audit-ppw" type="number" value="3" min="0" max="30" step="0.5" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Bio (optional)</label>
+            <input id="audit-bio" type="text" placeholder="Paste your bio text..." style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+          </div>
+        </div>
+        <button onclick="runAudit()" style="background:linear-gradient(135deg,var(--ac),var(--ac2));color:#000;font-weight:800;padding:12px 28px;border-radius:10px;border:none;cursor:pointer;font-size:14px">Run Audit 📋</button>
+      </div>
+
+      <div id="audit-loading" style="display:none;text-align:center;padding:40px">
+        <div class="spin" style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;display:inline-block;margin-bottom:12px"></div>
+        <div style="color:var(--tx2);font-size:14px">Analyzing account…</div>
+      </div>
+
+      <div id="audit-result" style="display:none"></div>
     </div>
   </div>
 
@@ -12324,5 +12503,315 @@ async function importCalendarCSV(input) {
   </div>
 </div>
 
+
+<script>
+// VIDEO SCRIPT GENERATOR
+var _vsDuration = 30;
+function setVsDuration(d, btn) {
+  _vsDuration = d;
+  document.getElementById('vs-duration').value = d;
+  document.querySelectorAll('.vs-dur-btn').forEach(function(b) {
+    b.classList.remove('active-dur');
+    b.style.border = '1px solid var(--border)';
+    b.style.background = 'var(--bg2)';
+    b.style.color = 'var(--tx)';
+  });
+  btn.classList.add('active-dur');
+  btn.style.border = '1px solid var(--ac)';
+  btn.style.background = 'rgba(0,229,255,.15)';
+  btn.style.color = 'var(--ac)';
+}
+
+async function generateVideoScript(templateHint) {
+  var topicEl = document.getElementById('vs-topic');
+  var topic = topicEl ? topicEl.value.trim() : '';
+  if (!topic) { alert('Please enter a topic.'); return; }
+  var niche    = (document.getElementById('vs-niche') || {value:'creator'}).value;
+  var style    = (document.getElementById('vs-style') || {value:'educational'}).value;
+  var platform = (document.getElementById('vs-platform') || {value:'tiktok'}).value;
+  var loading  = document.getElementById('vs-loading');
+  var result   = document.getElementById('vs-result');
+  loading.style.display = 'block';
+  result.style.display = 'none';
+  var d = await apiFetch('/api/video-script/generate', 'POST', {
+    topic: topic, niche: niche, duration: _vsDuration,
+    style: style, platform: platform, template_hint: templateHint || ''
+  });
+  loading.style.display = 'none';
+  if (d && d.ok) {
+    renderVideoScript(d.script, d.meta);
+  } else {
+    result.style.display = 'block';
+    result.innerHTML = '<div style="color:var(--red);padding:16px">' + (d && d.detail ? d.detail : 'Failed to generate script.') + '</div>';
+  }
+}
+
+function renderVideoScript(s, meta) {
+  var result = document.getElementById('vs-result');
+  result.style.display = 'block';
+  var scenesHtml = (s.scenes || []).map(function(sc) {
+    return '<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+      '<div style="font-weight:700;font-size:14px">Scene ' + sc.id + ': ' + (sc.title || '') + '</div>' +
+      '<span style="font-size:11px;background:rgba(0,229,255,.15);color:var(--ac);border-radius:6px;padding:3px 10px;font-weight:700">' + (sc.time_range || '') + '</span>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--tx);margin-bottom:8px;line-height:1.6">' + (sc.script || '') + '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px">' +
+      '<div style="background:var(--bg);border-radius:8px;padding:8px"><div style="color:var(--tx2);margin-bottom:2px">Action</div><div>' + (sc.action || '-') + '</div></div>' +
+      '<div style="background:var(--bg);border-radius:8px;padding:8px"><div style="color:var(--tx2);margin-bottom:2px">Overlay</div><div>' + (sc.text_overlay || '-') + '</div></div>' +
+      '<div style="background:var(--bg);border-radius:8px;padding:8px"><div style="color:var(--tx2);margin-bottom:2px">B-Roll</div><div>' + (sc.b_roll || '-') + '</div></div>' +
+      '</div></div>';
+  }).join('');
+  var tipsHtml = (s.pro_tips || []).map(function(t) {
+    return '<div style="background:var(--bg2);border-radius:8px;padding:10px 14px;font-size:12px;display:flex;gap:8px"><span>&#x1F4A1;</span><span>' + t + '</span></div>';
+  }).join('');
+  var hook = s.hook || {};
+  var cta  = s.cta  || {};
+  result.innerHTML = '<div class="card" style="margin-bottom:16px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">' +
+    '<div><div class="ctitle" style="margin-bottom:4px">' + (s.title || 'Your Script') + '</div>' +
+    '<div style="font-size:12px;color:var(--tx2)">' + ((meta && meta.duration) || _vsDuration) + 's &middot; ' + ((meta && meta.style) || '') + ' &middot; ~' + (s.total_words || '?') + ' words &middot; ' + (s.music_mood || '') + '</div></div>' +
+    '<div style="display:flex;gap:8px">' +
+    '<button onclick="copyVideoScript()" style="background:var(--bg2);border:1px solid var(--border);color:var(--tx);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">Copy</button>' +
+    '<button onclick="exportVideoScriptPDF()" style="background:var(--bg2);border:1px solid var(--border);color:var(--tx);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">PDF</button>' +
+    '</div></div>' +
+    '<div style="background:linear-gradient(135deg,rgba(0,229,255,.1),rgba(168,85,247,.1));border:1px solid var(--ac);border-radius:14px;padding:16px;margin-bottom:16px">' +
+    '<div style="font-size:11px;font-weight:800;color:var(--ac);margin-bottom:8px">HOOK &middot; 0-3s</div>' +
+    '<div style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:10px;line-height:1.5">"' + (hook.text || '') + '"</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">' +
+    '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:8px"><div style="color:var(--tx2);margin-bottom:2px">Action</div><div>' + (hook.action || '-') + '</div></div>' +
+    '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:8px"><div style="color:var(--tx2);margin-bottom:2px">Overlay</div><div>' + (hook.text_overlay || '-') + '</div></div>' +
+    '</div></div>' +
+    scenesHtml +
+    '<div style="background:linear-gradient(135deg,rgba(168,85,247,.1),rgba(0,229,255,.1));border:1px solid var(--ac2);border-radius:14px;padding:16px;margin-bottom:20px">' +
+    '<div style="font-size:11px;font-weight:800;color:var(--ac2);margin-bottom:8px">CTA &middot; ' + (cta.time_range || '') + '</div>' +
+    '<div style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:10px;line-height:1.5">"' + (cta.text || '') + '"</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">' +
+    '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:8px"><div style="color:var(--tx2);margin-bottom:2px">Overlay</div><div>' + (cta.overlay || '-') + '</div></div>' +
+    '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:8px"><div style="color:var(--tx2);margin-bottom:2px">Action</div><div>' + (cta.action || '-') + '</div></div>' +
+    '</div></div>' +
+    (tipsHtml ? '<div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:10px">PRO TIPS</div><div style="display:flex;flex-direction:column;gap:8px">' + tipsHtml + '</div>' : '') +
+    '</div>';
+  window._lastScript = s;
+}
+
+function copyVideoScript() {
+  var s = window._lastScript;
+  if (!s) return;
+  var hook = s.hook || {};
+  var cta  = s.cta  || {};
+  var lines = [s.title || '', '', 'HOOK (0-3s)', hook.text || '', ''];
+  (s.scenes || []).forEach(function(sc) {
+    lines.push('SCENE ' + sc.id + ' (' + sc.time_range + '): ' + (sc.title || ''));
+    lines.push(sc.script || '');
+    lines.push('');
+  });
+  lines.push('CTA (' + (cta.time_range || '') + ')', cta.text || '');
+  navigator.clipboard.writeText(lines.join('
+')).then(function() {
+    var btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+  });
+}
+
+function exportVideoScriptPDF() {
+  var s = window._lastScript;
+  if (!s) return;
+  var hook = s.hook || {};
+  var cta  = s.cta  || {};
+  var win = window.open('', '_blank');
+  var html = '<html><head><title>Script</title><style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;color:#111;line-height:1.6}.hook,.cta{background:#f0f9ff;border-left:4px solid #0ea5e9;padding:12px 16px;margin:16px 0;border-radius:4px}.scene{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:12px 0}h1{font-size:22px}h2{font-size:15px;font-weight:700;margin:0 0 8px}p{margin:0 0 8px}@media print{body{margin:20px}}</style></head><body>';
+  html += '<h1>' + (s.title || 'Video Script') + '</h1>';
+  html += '<p style="color:#6b7280;font-size:13px">' + (s.music_mood || '') + ' &middot; ~' + (s.total_words || '') + ' words</p>';
+  html += '<div class="hook"><p><strong>HOOK (0-3s)</strong></p><p>"' + (hook.text || '') + '"</p></div>';
+  (s.scenes || []).forEach(function(sc) {
+    html += '<div class="scene"><h2>Scene ' + sc.id + ' &middot; ' + (sc.title || '') + ' (' + (sc.time_range || '') + ')</h2><p>' + (sc.script || '') + '</p></div>';
+  });
+  html += '<div class="cta"><p><strong>CTA (' + (cta.time_range || '') + ')</strong></p><p>"' + (cta.text || '') + '"</p></div>';
+  if (s.pro_tips && s.pro_tips.length) {
+    html += '<h2 style="margin-top:24px">Pro Tips</h2><ul>' + s.pro_tips.map(function(t){return '<li>'+t+'</li>';}).join('') + '</ul>';
+  }
+  html += '</body></html>';
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function() { win.print(); }, 500);
+}
+
+// REEL TEMPLATES
+var _allTemplates = [];
+
+async function loadReelTemplates() {
+  var loading = document.getElementById('rt-loading');
+  if (_allTemplates.length) { renderReelTemplatesGrid(_allTemplates); return; }
+  if (loading) loading.style.display = 'block';
+  var d = await apiFetch('/api/reel-templates');
+  if (loading) loading.style.display = 'none';
+  if (d && d.templates) {
+    _allTemplates = d.templates;
+    renderReelTemplatesGrid(_allTemplates);
+  }
+}
+
+function filterReelTemplates(niche, btn) {
+  document.querySelectorAll('.rt-filter').forEach(function(b) {
+    b.style.border = '1px solid var(--border)';
+    b.style.background = 'var(--bg2)';
+    b.style.color = 'var(--tx)';
+  });
+  btn.style.border = '1px solid var(--ac)';
+  btn.style.background = 'rgba(0,229,255,.15)';
+  btn.style.color = 'var(--ac)';
+  var filtered = niche === 'all' ? _allTemplates : _allTemplates.filter(function(t) { return t.niche === niche; });
+  renderReelTemplatesGrid(filtered);
+}
+
+function renderReelTemplatesGrid(templates) {
+  var grid = document.getElementById('rt-grid');
+  if (!grid) return;
+  if (!templates.length) { grid.innerHTML = '<div style="color:var(--tx2);padding:20px">No templates found.</div>'; return; }
+  var colors = {ecommerce:'#f59e0b',creator:'#8b5cf6',fitness:'#22c55e',restaurant:'#ef4444',motivation:'#00e5ff'};
+  grid.innerHTML = templates.map(function(t) {
+    var c = colors[t.niche] || '#00e5ff';
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer" onclick="openTemplateModal('' + t.id + '')">' +
+      '<div style="font-size:26px;margin-bottom:8px">' + (t.icon || '') + '</div>' +
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px">' + t.name + '</div>' +
+      '<div style="font-size:11px;color:var(--tx2);margin-bottom:10px;line-height:1.5">' + (t.description || '') + '</div>' +
+      '<div style="display:flex;gap:6px;margin-bottom:12px">' +
+      '<span style="font-size:10px;background:rgba(0,0,0,.2);border-radius:4px;padding:2px 7px;color:var(--tx2)">' + t.duration + 's</span>' +
+      '<span style="font-size:10px;background:rgba(0,0,0,.2);border-radius:4px;padding:2px 7px;color:var(--tx2)">' + t.style + '</span>' +
+      '</div>' +
+      '<button style="width:100%;background:' + c + ';color:#000;font-weight:700;padding:8px;border-radius:8px;border:none;cursor:pointer;font-size:12px">Use Template</button>' +
+      '</div>';
+  }).join('');
+}
+
+function openTemplateModal(tid) {
+  var t = _allTemplates.find(function(x) { return x.id === tid; });
+  if (!t) return;
+  var scenesHtml = (t.scenes || []).map(function(sc, i) {
+    return '<div style="display:flex;gap:12px;margin-bottom:10px">' +
+      '<div style="min-width:40px;text-align:center;background:var(--bg);border-radius:8px;padding:6px;font-size:11px;font-weight:700;color:var(--ac)">' + (sc.time || '') + '</div>' +
+      '<div style="flex:1;background:var(--bg);border-radius:8px;padding:10px">' +
+      '<div style="font-size:12px;font-weight:700;margin-bottom:4px">Scene ' + (i+1) + '</div>' +
+      '<div style="font-size:12px;color:var(--tx2)">' + (sc.description || '') + '</div>' +
+      (sc.text_overlay ? '<div style="font-size:11px;background:rgba(0,229,255,.1);color:var(--ac);border-radius:4px;padding:3px 8px;display:inline-block;margin-top:4px">' + sc.text_overlay + '</div>' : '') +
+      '</div></div>';
+  }).join('');
+  var modal = document.getElementById('rt-modal');
+  var body  = document.getElementById('rt-modal-body');
+  body.innerHTML =
+    '<div style="font-size:28px;margin-bottom:8px">' + (t.icon || '') + '</div>' +
+    '<div style="font-weight:800;font-size:18px;margin-bottom:4px">' + t.name + '</div>' +
+    '<div style="font-size:12px;color:var(--tx2);margin-bottom:16px">' + t.duration + 's &middot; ' + t.style + ' &middot; ' + t.music_mood + '</div>' +
+    '<div style="font-size:13px;color:var(--tx);margin-bottom:20px;line-height:1.6">' + (t.description || '') + '</div>' +
+    '<div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:10px">SCENE BREAKDOWN</div>' +
+    '<div style="background:rgba(0,229,255,.08);border-radius:10px;padding:12px;margin-bottom:8px">' +
+    '<div style="font-size:11px;font-weight:700;color:var(--ac);margin-bottom:6px">HOOK</div>' +
+    '<div style="font-size:13px">' + (t.hook || '') + '</div></div>' +
+    scenesHtml +
+    '<div style="margin-top:20px">' +
+    '<label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:8px">Topic for this template *</label>' +
+    '<input id="rt-topic-input" type="text" placeholder="e.g. My new summer collection" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px;margin-bottom:14px">' +
+    '<button onclick="generateFromTemplate('' + t.id + '')" style="width:100%;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#000;font-weight:800;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:14px">Generate Script from Template</button>' +
+    '</div>';
+  modal.style.display = 'block';
+}
+
+async function generateFromTemplate(tid) {
+  var inp = document.getElementById('rt-topic-input');
+  var topic = inp ? inp.value.trim() : '';
+  if (!topic) { alert('Please enter a topic for this template.'); return; }
+  document.getElementById('rt-modal').style.display = 'none';
+  nav('video-script');
+  setTimeout(async function() {
+    var topicEl = document.getElementById('vs-topic');
+    if (topicEl) topicEl.value = topic;
+    document.getElementById('vs-loading').style.display = 'block';
+    document.getElementById('vs-result').style.display = 'none';
+    var d = await apiFetch('/api/reel-templates/' + tid + '/use', 'POST', { topic: topic });
+    document.getElementById('vs-loading').style.display = 'none';
+    if (d && d.ok) {
+      var t = _allTemplates.find(function(x) { return x.id === tid; });
+      if (t) { _vsDuration = t.duration; }
+      renderVideoScript(d.script, d.meta);
+    } else {
+      document.getElementById('vs-result').style.display = 'block';
+      document.getElementById('vs-result').innerHTML = '<div style="color:var(--red);padding:16px">' + (d && d.detail ? d.detail : 'Failed.') + '</div>';
+    }
+  }, 150);
+}
+
+// ACCOUNT AUDIT
+async function runAudit() {
+  var handleEl = document.getElementById('audit-handle');
+  var handle = handleEl ? handleEl.value.trim().replace(/^@/, '') : '';
+  if (!handle) { alert('Please enter an account handle.'); return; }
+  var platform  = (document.getElementById('audit-platform')  || {value:'instagram'}).value;
+  var niche     = (document.getElementById('audit-niche')     || {value:'creator'}).value;
+  var followers = (document.getElementById('audit-followers') || {value:'1K-10K'}).value;
+  var ppw       = parseFloat((document.getElementById('audit-ppw') || {value:'3'}).value);
+  var bio       = (document.getElementById('audit-bio') || {value:''}).value;
+  document.getElementById('audit-loading').style.display = 'block';
+  document.getElementById('audit-result').style.display = 'none';
+  var d = await apiFetch('/api/audit/analyze', 'POST', {
+    handle: handle, platform: platform, niche: niche,
+    follower_range: followers, posts_per_week: ppw, bio: bio
+  });
+  document.getElementById('audit-loading').style.display = 'none';
+  if (d && d.ok) {
+    renderAuditReport(d.audit);
+  } else {
+    document.getElementById('audit-result').style.display = 'block';
+    document.getElementById('audit-result').innerHTML = '<div style="color:var(--red);padding:16px">' + (d && d.detail ? d.detail : 'Audit failed.') + '</div>';
+  }
+}
+
+function renderAuditReport(a) {
+  var result = document.getElementById('audit-result');
+  result.style.display = 'block';
+  var catsHtml = (a.categories || []).map(function(cat) {
+    var pct = Math.max(0, Math.min(100, cat.score));
+    var bc  = pct >= 80 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#ef4444';
+    var iss = (cat.issues || []).map(function(i) {
+      return '<div style="font-size:12px;color:#f97316;margin-bottom:4px;display:flex;gap:6px"><span>&#x26A0;</span><span>' + i + '</span></div>';
+    }).join('');
+    var fix = (cat.fixes || []).map(function(f) {
+      return '<div style="font-size:12px;color:var(--tx);margin-bottom:4px;display:flex;gap:6px"><span>&#x2705;</span><span>' + f + '</span></div>';
+    }).join('');
+    return '<div style="background:var(--bg2);border-radius:14px;padding:16px;margin-bottom:12px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+      '<div style="font-weight:700;font-size:14px">' + cat.icon + ' ' + cat.name + '</div>' +
+      '<div style="font-weight:800;font-size:16px;color:' + bc + '">' + pct + '</div>' +
+      '</div>' +
+      '<div style="background:var(--bg);border-radius:6px;height:8px;overflow:hidden;margin-bottom:14px">' +
+      '<div style="height:100%;width:' + pct + '%;background:' + bc + ';border-radius:6px"></div>' +
+      '</div>' +
+      (iss ? '<div style="margin-bottom:8px">' + iss + '</div>' : '') +
+      fix + '</div>';
+  }).join('');
+  var opps = (a.top_opportunities || []).map(function(o) {
+    return '<div style="background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:12px 14px;font-size:13px;display:flex;gap:10px"><span>&#x1F680;</span><span>' + o + '</span></div>';
+  }).join('');
+  var wins = (a.quick_wins || []).map(function(w) {
+    return '<div style="font-size:13px;display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)"><span>&#x26A1;</span><span>' + w + '</span></div>';
+  }).join('');
+  result.innerHTML = '<div class="card" style="margin-bottom:16px">' +
+    '<div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;flex-wrap:wrap">' +
+    '<div style="text-align:center;min-width:100px">' +
+    '<div style="font-size:52px;font-weight:900;color:' + (a.color || 'var(--ac)') + ';line-height:1">' + (a.overall_score || 0) + '</div>' +
+    '<div style="font-size:11px;color:var(--tx2);margin-top:4px">Overall Score</div>' +
+    '<div style="font-size:24px;font-weight:800;color:' + (a.color || 'var(--ac)') + ';margin-top:4px">' + (a.grade || 'B') + '</div>' +
+    '</div>' +
+    '<div style="flex:1;min-width:200px">' +
+    '<div style="font-weight:700;font-size:16px;margin-bottom:8px">Audit Complete</div>' +
+    '<div style="font-size:13px;color:var(--tx2);line-height:1.6">' + (a.verdict || '') + '</div>' +
+    '</div></div>' +
+    catsHtml +
+    (opps ? '<div style="font-size:12px;font-weight:800;color:var(--tx2);margin:20px 0 10px">TOP GROWTH OPPORTUNITIES</div><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">' + opps + '</div>' : '') +
+    (wins ? '<div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:10px">QUICK WINS</div><div>' + wins + '</div>' : '') +
+    '</div>';
+}
+</script>
 </body>
 </html>
