@@ -322,6 +322,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="sec-tab hidden" onclick="showSection('revenue')" id="tab-revenue">💰 Revenue</button>
       <button class="sec-tab hidden" onclick="showSection('api_usage')" id="tab-api">📊 API Forbrug</button>
       <button class="sec-tab hidden" onclick="showSection('automation_log')" id="tab-automation-log">📋 Automation Log</button>
+      <button class="sec-tab hidden" onclick="showSection('qa')" id="tab-qa">🧪 QA</button>
     </div>
 
     <!-- STATS (owner + support) -->
@@ -345,6 +346,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="stat-label">Aktive i dag</div>
         <div class="stat-val" id="stat-active">–</div>
         <div class="stat-sub">Filtreret efter dato</div>
+      </div>
+      <div class="stat-card" id="stat-qa-card" style="cursor:pointer;transition:border-color .2s" onclick="showSection('qa')">
+        <div class="stat-label">QA Status</div>
+        <div class="stat-val" id="stat-qa-dot" style="font-size:26px;line-height:1">●</div>
+        <div class="stat-sub" id="stat-qa-sub">–</div>
       </div>
     </div>
 
@@ -444,6 +450,22 @@ tr:hover td{background:rgba(255,255,255,.02)}
               🔒 <strong>Staff only.</strong> Users do not see this log. Use it to diagnose automation errors, failed posts, API failures, and rate-limit hits.
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-qa" class="hidden">
+      <div class="table-card">
+        <div class="table-header" style="flex-wrap:wrap;gap:12px">
+          <div class="table-title">🧪 QA Status</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div id="qa-status-badge" style="font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;letter-spacing:.3px">–</div>
+            <button class="action-btn" onclick="runQANow()">▶ Run now</button>
+            <button class="action-btn" onclick="loadQAResults()">↻ Refresh</button>
+          </div>
+        </div>
+        <div id="qa-results-wrap" style="padding:0 16px 16px">
+          <div style="color:var(--tx3);font-size:13px;padding:20px 0">Loading…</div>
         </div>
       </div>
     </div>
@@ -703,6 +725,7 @@ async function showApp(info) {
     document.getElementById('tab-revenue').classList.remove('hidden');
     document.getElementById('tab-api').classList.remove('hidden');
       document.getElementById('tab-automation-log').classList.remove('hidden');
+    document.getElementById('tab-qa').classList.remove('hidden');
     settingsBtn.classList.add('hidden');
     document.getElementById('emp-profile-header').classList.add('hidden');
   } else if (role === 'support') {
@@ -777,6 +800,7 @@ function showSection(sec) {
   });
   if (sec === 'guidelines' && !guidelinesData) loadGuidelines();
   if (sec === 'revenue') loadRevenue();
+  if (sec === 'qa') loadQAResults();
   if (sec === 'api_usage') loadApiUsage();
   if (sec === 'automation_log') { populateLogUserSelect(); loadAutomationLog(); }
 }
@@ -1953,6 +1977,115 @@ async function clearUserLog() {
     document.getElementById('admin-auto-log').innerHTML = '<div style="color:var(--tx3)">Log cleared.</div>';
   } catch(e) { alert('Error: ' + e.message); }
 }
+
+// ── QA Agent ─────────────────────────────────────────────────────────────
+const QA_KEY = 'nexora-core-2026';
+
+async function loadQAResults() {
+  const wrap = document.getElementById('qa-results-wrap');
+  if (wrap) wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:20px 0">Loading…</div>';
+  try {
+    const r = await fetch('/api/qa/results', {headers: {'X-Nexora-Key': QA_KEY}});
+    const d = await r.json();
+    const runs = (d.runs || []).slice().reverse();
+    _renderQAResults(runs);
+    _updateQAStatCard(runs);
+  } catch(e) {
+    if (wrap) wrap.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px 0">Failed to load QA results: ' + e.message + '</div>';
+  }
+}
+
+function _renderQAResults(runs) {
+  const wrap = document.getElementById('qa-results-wrap');
+  if (!wrap) return;
+  if (!runs.length) { wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:20px 0">No QA runs yet. Click ▶ Run now to start.</div>'; return; }
+  let html = '';
+  runs.forEach(function(run) {
+    const ts = run.timestamp ? run.timestamp.replace('T',' ').replace('Z','') + ' UTC' : run.run_id;
+    const allPass = run.all_pass;
+    const badge = allPass
+      ? '<span style="color:#22c55e;font-weight:700">✅ PASS</span>'
+      : '<span style="color:#ef4444;font-weight:700">❌ FAIL</span>';
+    html += '<div style="margin-bottom:20px;padding:16px;background:rgba(0,0,0,.18);border-radius:10px;border:1px solid var(--border)">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">';
+    html += '<div style="font-size:13px;font-weight:600">' + ts + '</div>';
+    html += '<div style="font-size:12px;display:flex;gap:12px;align-items:center">' + badge;
+    html += '&nbsp;&nbsp;<span style="color:var(--tx3)">' + run.passed + '/' + run.total + ' passed</span></div></div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html += '<tr style="color:var(--tx3);border-bottom:1px solid var(--border)">';
+    html += '<th style="text-align:left;padding:4px 8px">Test</th><th style="text-align:center;padding:4px 8px">Result</th>';
+    html += '<th style="text-align:right;padding:4px 8px">Status</th><th style="text-align:right;padding:4px 8px">ms</th></tr>';
+    (run.tests || []).forEach(function(t) {
+      const ok = t.pass;
+      html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">';
+      html += '<td style="padding:5px 8px;color:var(--tx2)">' + t.name + (t.note ? ' <span style="color:var(--tx3);font-size:10px">(' + t.note + ')</span>' : '') + '</td>';
+      html += '<td style="text-align:center;padding:5px 8px">' + (ok ? '<span style="color:#22c55e">✓</span>' : '<span style="color:#ef4444">✗</span>') + '</td>';
+      html += '<td style="text-align:right;padding:5px 8px;color:var(--tx3)">' + (t.status_code || (t.error ? 'ERR' : '–')) + '</td>';
+      html += '<td style="text-align:right;padding:5px 8px;color:var(--tx3)">' + (t.elapsed_ms || '–') + '</td>';
+      if (!ok && t.error) {
+        html += '<tr><td colspan="4" style="padding:2px 8px 6px;color:#ef4444;font-size:10px;font-family:monospace">' + t.error + '</td></tr>';
+      }
+    });
+    html += '</table></div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function _updateQAStatCard(runs) {
+  const dot = document.getElementById('stat-qa-dot');
+  const sub = document.getElementById('stat-qa-sub');
+  const badge = document.getElementById('qa-status-badge');
+  if (!runs.length) {
+    if (dot) { dot.textContent = '●'; dot.style.color = 'var(--tx3)'; }
+    if (sub) sub.textContent = 'No runs yet';
+    return;
+  }
+  const latest = runs[0];
+  const allPass = latest.all_pass;
+  if (dot) { dot.textContent = '●'; dot.style.color = allPass ? '#22c55e' : '#ef4444'; }
+  const ts = latest.timestamp ? latest.timestamp.slice(5,16).replace('T',' ') : '';
+  if (sub) sub.textContent = (allPass ? 'All passing' : latest.failed + ' failing') + ' · ' + ts;
+  if (badge) {
+    if (allPass) {
+      badge.textContent = '✅ All tests passing';
+      badge.style.cssText = 'font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)';
+    } else {
+      badge.textContent = '❌ ' + latest.failed + ' test' + (latest.failed > 1 ? 's' : '') + ' failing';
+      badge.style.cssText = 'font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)';
+    }
+  }
+}
+
+async function runQANow() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ Running…';
+  const wrap = document.getElementById('qa-results-wrap');
+  if (wrap) wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:20px 0">Running test suite… (up to 30s)</div>';
+  try {
+    const r = await fetch('/api/qa/run', {method:'POST', headers:{'X-Nexora-Key': QA_KEY}});
+    const run = await r.json();
+    _renderQAResults([run]);
+    _updateQAStatCard([run]);
+  } catch(e) {
+    if (wrap) wrap.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px 0">Run failed: ' + e.message + '</div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Run now';
+  }
+}
+
+// Auto-load QA stat card data on dashboard init
+(function() {
+  var orig = window.onload;
+  window.addEventListener('load', function() {
+    fetch('/api/qa/results', {headers: {'X-Nexora-Key': QA_KEY}})
+      .then(function(r) { return r.json(); })
+      .then(function(d) { _updateQAStatCard((d.runs || []).slice().reverse()); })
+      .catch(function() {});
+  });
+})();
+
 </script>
 
 <!-- Sub-accounts modal -->
