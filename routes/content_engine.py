@@ -83,12 +83,20 @@ async def generate_calendar(req: Request, current_user: dict = Depends(get_curre
     platform_str = ", ".join(platforms) if platforms else "instagram"
     niche_ctx   = NICHE_CONTEXTS.get(niche, NICHE_CONTEXTS["other"])
 
+    bk = store.get("brand_kit", {})
+    brand_parts = []
+    if bk.get("tagline"): brand_parts.append(f"tagline: \"{bk['tagline']}\"")
+    if bk.get("primary_color") and bk["primary_color"] != "#00e5ff": brand_parts.append(f"colors: {bk['primary_color']}/{bk.get('secondary_color','')}")
+    if bk.get("font") and bk["font"] != "Inter": brand_parts.append(f"font: {bk['font']}")
+    brand_line = ("Brand identity: " + ", ".join(brand_parts) + ".") if brand_parts else ""
+
     prompt = f"""You are an expert social media strategist. Create a {num_days}-day content calendar.
 
 Business type: {niche_ctx}
 Target audience: {audience}
 Tone: {tone}
 Platforms: {platform_str}
+{brand_line}
 
 Return ONLY a valid JSON array of exactly {num_days} objects. Each object must have these exact keys:
 {{
