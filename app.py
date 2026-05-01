@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from services.store import set_user_context, reset_user_context
-from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads, content_engine, autopilot, telegram, growth, nexora_core, nexora_events, qa_agent
+from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads, content_engine, autopilot, telegram, growth, nexora_core, nexora_events, qa_agent, affiliate
 
 app = FastAPI(title="UgoingViral API v4")
 
@@ -216,6 +216,15 @@ app.include_router(growth.router)
 app.include_router(nexora_core.router)
 app.include_router(nexora_events.router)
 app.include_router(qa_agent.router)
+app.include_router(affiliate.router)
+
+
+@app.get("/affiliate")
+async def serve_affiliate():
+    from fastapi.responses import FileResponse
+    import os
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "affiliate.html")
+    return FileResponse(p)
 
 
 @app.on_event("startup")

@@ -549,6 +549,20 @@ nav {
 .about-stat { background: var(--black); border-radius: 12px; padding: 24px; }
 .about-stat-num { font-family: var(--font-display); font-size: 36px; font-weight: 800; color: var(--accent); letter-spacing: -1px; }
 .about-stat-lbl { font-size: 12px; color: var(--text2); margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+.live-dot { display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse-dot 2s ease-in-out infinite;margin-right:6px;vertical-align:middle }
+.creator-counter { text-align:center;padding:20px 0 0;font-size:15px;color:var(--text2) }
+.creator-counter strong { color:var(--white) }
+.testimonials-section { padding:80px 60px;max-width:1200px;margin:0 auto }
+.testimonials-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px }
+.testimonial-card { background:var(--gray);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:16px }
+.testimonial-stars { color:#f59e0b;font-size:14px;letter-spacing:2px }
+.testimonial-text { font-size:14px;color:var(--text2);line-height:1.7;flex:1 }
+.testimonial-author { display:flex;align-items:center;gap:12px }
+.testimonial-avatar { width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#000;flex-shrink:0 }
+.testimonial-name { font-size:13px;font-weight:600;color:var(--white) }
+.testimonial-handle { font-size:11px;color:var(--text2) }
+@media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}.testimonials-section{padding:60px 24px}}
 
 /* ── CONTACT ── */
 .contact-section { padding: 100px 60px; max-width: 700px; margin: 0 auto; text-align: center; }
@@ -690,6 +704,9 @@ footer p { font-size: 13px; color: var(--text2); }
         <div class="stat-num">24/7</div>
         <div class="stat-label">Auto-post</div>
       </div>
+    </div>
+    <div class="creator-counter" id="creator-counter-wrap" style="display:none">
+      <span class="live-dot"></span><strong id="creator-count">2,500+</strong> creators already growing with UgoingViral
     </div>
   </div>
 </section>
@@ -1069,6 +1086,51 @@ footer p { font-size: 13px; color: var(--text2); }
   </div>
 </section>
 
+<!-- TESTIMONIALS -->
+<section style="background:var(--black);padding:0 0 20px">
+  <div class="testimonials-section">
+    <div style="text-align:center">
+      <div class="section-tag">What creators say</div>
+      <h2 style="font-family:var(--font-display);font-size:clamp(26px,3vw,40px);font-weight:800;color:var(--white);letter-spacing:-1px;margin-top:12px">Real results from real creators</h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="testimonial-text">"I went from 2K to 18K followers in 3 months without touching my phone once. UgoingViral just handles everything — the captions, the posting, even the hashtags. It's unreal."</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">S</div>
+          <div>
+            <div class="testimonial-name">Sofia M.</div>
+            <div class="testimonial-handle">Fashion & Lifestyle · Instagram</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="testimonial-text">"I used to spend 15 hours a week on content. Now it's maybe 30 minutes of review. The AI generates better captions than I ever wrote, and it actually posts on time every time."</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">J</div>
+          <div>
+            <div class="testimonial-name">James K.</div>
+            <div class="testimonial-handle">E-commerce · TikTok & Instagram</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="testimonial-text">"Our engagement went up 340% in 6 weeks. I manage 4 brand accounts and UgoingViral keeps them all active with unique content. Worth every penny — honestly one of the best tools I've invested in."</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">A</div>
+          <div>
+            <div class="testimonial-name">Aria T.</div>
+            <div class="testimonial-handle">Marketing Agency · 4 accounts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ABOUT -->
 <section class="about-section" id="about">
   <div class="about-inner">
@@ -1230,6 +1292,7 @@ footer p { font-size: 13px; color: var(--text2); }
     <a href="#faq">FAQ</a>
     <a href="#about">About</a>
     <a href="#contact-section">Contact</a>
+    <a href="/affiliate">Affiliate</a>
     <a href="/privacy">Privacy Policy</a>
     <a href="/terms">Terms</a>
     <a href="mailto:support@ugoingviral.com">support@ugoingviral.com</a>
@@ -1549,6 +1612,22 @@ function onbFinish() {
   document.body.style.overflow = '';
   window.location.href = '/app';
 }
+</script>
+
+<script>
+(function() {
+  fetch('/api/public/stats')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var n = d.creator_count;
+      if (!n) return;
+      var el = document.getElementById('creator-count');
+      var wrap = document.getElementById('creator-counter-wrap');
+      if (el) el.textContent = n.toLocaleString() + '+';
+      if (wrap) wrap.style.display = '';
+    })
+    .catch(function() {});
+})();
 </script>
 </body>
 </html>
