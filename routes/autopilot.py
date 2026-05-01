@@ -26,7 +26,7 @@ def autopilot_status(current_user: dict = Depends(get_current_user)):
         if not sp.get("posted", False):
             upcoming.append({
                 "id":        sp.get("id",""),
-                "caption":   (sp.get("caption","") or "")[:80] + ("…" if len(sp.get("caption","")) > 80 else ""),
+                "caption":   (sp.get("caption","") or "")[:80] + ("..." if len(sp.get("caption","")) > 80 else ""),
                 "platform":  sp.get("platform",""),
                 "scheduled": sp.get("scheduled_time",""),
             })
@@ -52,6 +52,7 @@ def autopilot_status(current_user: dict = Depends(get_current_user)):
         "upcoming_posts":  upcoming,
         "recent_log":      recent_log,
         "posts_per_day":   auto.get("posts_per_day", 3),
+        "niche":           auto.get("niche", ""),
     }
 
 
@@ -64,7 +65,7 @@ async def toggle_autopilot(req: Request, current_user: dict = Depends(get_curren
     store["automation"]["active"] = active
     save_store()
     status = "enabled" if active else "disabled"
-    add_log(f"🤖 Auto Pilot {status}", "info")
+    add_log(f"Auto Pilot {status}", "info")
     return {"ok": True, "active": active}
 
 
@@ -83,5 +84,20 @@ async def update_autopilot_settings(req: Request, current_user: dict = Depends(g
             if p not in auto.setdefault("platforms", {}):
                 auto["platforms"][p] = {}
             auto["platforms"][p].update(val)
+    if "niche" in d:
+        auto["niche"] = str(d["niche"]).strip()
     save_store()
     return {"ok": True}
+
+
+@router.post("/api/autopilot/run_now")
+async def autopilot_run_now(current_user: dict = Depends(get_current_user)):
+    """Immediately trigger autopilot for the current user.
+    Bypasses quiet hours, weekday, time-of-day, and rate-limit guards.
+    """
+    from routes.scheduler import _run_for_user
+    try:
+        await _run_for_user(force=True)
+        return {"ok": True, "message": "Auto Pilot triggered successfully"}
+    except Exception as e:
+        return {"ok": False, "message": str(e)[:200]}

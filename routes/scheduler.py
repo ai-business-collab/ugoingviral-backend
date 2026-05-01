@@ -10,6 +10,72 @@ router = APIRouter()
 
 _scheduler_running = False
 
+async def _generate_autopilot_content(
+    niche: str,
+    product_title: str = "",
+    product_desc: str = "",
+    platform: str = "instagram",
+) -> dict:
+    """Generate AI caption + hashtags. Returns {"caption": str, "hashtags": [str]} or {} on failure."""
+    import json as _json
+    s = store.get("settings", {})
+    if product_title:
+        subject = f"a product called '{product_title}'" + (f" — {product_desc[:120]}" if product_desc else "")
+    else:
+        subject = f"a {niche or 'business'} brand"
+    style_map = {
+        "instagram": "Instagram caption with emojis, 100-180 chars",
+        "tiktok": "TikTok caption with hook and emojis, 100-150 chars",
+        "youtube": "YouTube Shorts description, 100-200 chars",
+        "twitter": "X/Twitter post, punchy, max 250 chars",
+        "facebook": "Facebook post, conversational, 100-200 chars",
+    }
+    style = style_map.get(platform, "social media caption with emojis, 100-180 chars")
+    prompt = (
+        f"Write a {style} for {subject}.\n"
+        'Return ONLY valid JSON: {"caption": "<text>", "hashtags": ["tag1","tag2","tag3","tag4","tag5"]}'
+    )
+    def _parse(text):
+        text = text.strip()
+        s_idx = text.find("{"); e_idx = text.rfind("}") + 1
+        if s_idx >= 0 and e_idx > s_idx:
+            try:
+                return _json.loads(text[s_idx:e_idx])
+            except Exception:
+                return {}
+        return {}
+    anthropic_key = s.get("anthropic_key", "")
+    if anthropic_key and "••••" not in anthropic_key:
+        try:
+            async with httpx.AsyncClient() as c:
+                r = await c.post("https://api.anthropic.com/v1/messages",
+                    headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                    json={"model": "claude-haiku-4-5-20251001", "max_tokens": 400,
+                          "messages": [{"role": "user", "content": prompt}]},
+                    timeout=20)
+                r.raise_for_status()
+                result = _parse(r.json()["content"][0]["text"])
+                if result.get("caption"):
+                    return result
+        except Exception as _e:
+            add_log(f"AI content (Anthropic) error: {str(_e)[:60]}", "error")
+    openai_key = s.get("openai_key", "")
+    if openai_key and "••••" not in openai_key:
+        try:
+            async with httpx.AsyncClient() as c:
+                r = await c.post("https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                    json={"model": "gpt-4o-mini", "max_tokens": 400,
+                          "messages": [{"role": "user", "content": prompt}]},
+                    timeout=20)
+                r.raise_for_status()
+                result = _parse(r.json()["choices"][0]["message"]["content"])
+                if result.get("caption"):
+                    return result
+        except Exception as _e:
+            add_log(f"AI content (OpenAI) error: {str(_e)[:60]}", "error")
+    return {}
+
 
 async def get_all_products_cached() -> list:
     manual = store.get("manual_products", [])
@@ -55,17 +121,17 @@ async def plan_next_day():
     weekday = tomorrow.isoweekday()
     schedule_days = auto.get("schedule_days", [1,2,3,4,5,6,7])
     if weekday not in schedule_days:
-        add_log(f"📅 Ingen plan for i morgen — ikke en post-dag", "info")
+        add_log("📅 Tomorrow is not a scheduled post day — skipping", "info")
         return
     post_times = auto.get("post_times", ["09:00", "14:00", "18:00"])
     date_str = tomorrow.strftime("%Y-%m-%d")
     existing = [p for p in store.get("scheduled_posts", []) if p.get("scheduled_time","").startswith(date_str) and p.get("source") == "auto_plan"]
     if existing:
-        add_log(f"📅 Plan for {date_str} allerede lavet ({len(existing)} opslag)", "info")
+        add_log(f"📅 Plan for {date_str} already exists ({len(existing)} posts) — skipping", "info")
         return
     all_products = await get_all_products_cached()
     if not all_products:
-        add_log("⚠️ Ingen produkter — kan ikke lave plan", "warning")
+        add_log("⚠️ No products — cannot plan tomorrow's posts", "warning")
         return
     auto_groups = auto.get("auto_groups", [])
     if auto_groups:
@@ -78,7 +144,7 @@ async def plan_next_day():
     else:
         active_platforms = platforms_cfg
     if not active_platforms:
-        add_log("⚠️ Ingen platforme med auto-post slået til", "warning")
+        add_log("⚠️ No platforms with auto-post enabled", "warning")
         return
     settings_s = store.get("settings", {})
     new_posts = []
@@ -94,7 +160,7 @@ async def plan_next_day():
         product_content = (store.get("product_content", {}).get(str(product["id"]), []) or
                             store.get("product_content", {}).get(product["id"], []))
         captions = [c for c in product_content if c.get("type") == "caption"]
-        caption_text = captions[0]["content"] if captions else f"Tjek vores {product['title']}! 🔥"
+        caption_text = captions[0]["content"] if captions else f"Check out {product['title']}! 🔥"
         imgs_raw = product.get("images", [])
         imgs = []
         for img in imgs_raw:
@@ -126,13 +192,13 @@ async def plan_next_day():
     if new_posts:
         store.setdefault("scheduled_posts", []).extend(new_posts)
         save_store()
-        add_log(f"✅ Plan klar: {len(new_posts)} opslag planlagt til {date_str}", "success")
+        add_log(f"✅ Plan ready: {len(new_posts)} posts scheduled for {date_str}", "success")
     else:
-        add_log(f"⚠️ Ingen nye opslag planlagt til {date_str}", "warning")
+        add_log(f"⚠️ No new posts planned for {date_str}", "warning")
 
 
-async def _run_for_user():
-    """Kør scheduler-logik for den aktuelle bruger (sat via kontekst)."""
+async def _run_for_user(force: bool = False):
+    """Run scheduler logic for the current user (set via context)."""
     try:
         fresh = load_store()
         current_scheduled = store.get("scheduled_posts", [])
@@ -147,7 +213,7 @@ async def _run_for_user():
         else:
             store["scheduled_posts"] = disk_scheduled
 
-        # ── AUTO-REPOST kl. 08:00 ──────────────────────────────────────
+        # ── AUTO-REPOST at 08:00 ──────────────────────────────────────
         now_check = datetime.now()
         if now_check.strftime("%H:%M") in ["08:00", "08:01"]:
             repost_key = f"repost_{now_check.strftime('%Y-%m-%d')}"
@@ -185,9 +251,9 @@ async def _run_for_user():
                             })
                         store.setdefault("scheduler_log", {})[repost_key] = True
                         save_store()
-                        add_log(f"♻️ Auto-repost planlagt for {', '.join(platforms or ['instagram'])}", "info")
+                        add_log(f"♻️ Auto-repost scheduled for {', '.join(platforms or ['instagram'])}", "info")
 
-        # ── DAGLIG PLANLÆGGER kl. 20:00 ─────────────────────────────────
+        # ── DAILY PLANNER at 20:00 ─────────────────────────────────────
         if now_check.strftime("%H:%M") in ["20:00", "20:01"]:
             plan_key = f"plan_{now_check.strftime('%Y-%m-%d')}"
             if plan_key not in store.get("scheduler_log", {}):
@@ -198,7 +264,7 @@ async def _run_for_user():
                     if day_posts:
                         future_planned += 1
                 if future_planned >= 2:
-                    add_log(f"📅 Daglig planlægger: {future_planned} dage allerede planlagt — springer over", "info")
+                    add_log(f"📅 Daily planner: {future_planned} days already scheduled — skipping", "info")
                     store.setdefault("scheduler_log", {})[plan_key] = True
                     save_store()
                 else:
@@ -206,7 +272,7 @@ async def _run_for_user():
                     store.setdefault("scheduler_log", {})[plan_key] = True
                     save_store()
 
-        # ── PLANLAGTE OPSLAG WORKER ─────────────────────────────────────
+        # ── SCHEDULED POSTS WORKER ─────────────────────────────────────
         now_dt = datetime.now()
         scheduled = store.get("scheduled_posts", [])
         to_execute = []
@@ -236,7 +302,7 @@ async def _run_for_user():
             post_content = post.get("content", "")
             image_url = post.get("image_url", "")
             prod_id = post.get("product_id", "")
-            prod_title = post.get("title", "Opslag")
+            prod_title = post.get("title", "Post")
             if prod_id and not image_url:
                 all_prods = store.get("manual_products", []) + store.get("shopify_products_cache", [])
                 prod = next((p for p in all_prods if str(p["id"]) == str(prod_id)), None)
@@ -252,7 +318,7 @@ async def _run_for_user():
             settings_data = store.get("settings", {})
 
             if platform == "instagram" and settings_data.get("instagram_api_connected"):
-                add_log(f"📅 Udfører planlagt opslag via Instagram API...", "info")
+                add_log(f"📅 Executing scheduled post via Instagram API...", "info")
                 async def _post_via_api(pc=post_content, iu=image_url, pt=prod_title, sd=settings_data):
                     try:
                         from instagram_api import post_to_instagram, refresh_token_if_needed
@@ -264,7 +330,7 @@ async def _run_for_user():
                         img_urls = iu if isinstance(iu, list) else None
                         result = await post_to_instagram(ig_id, token, pc, image_url=img_url, image_urls=img_urls)
                         if result.get("status") == "published":
-                            add_log(f"✅ Planlagt opslag postet via API: {pt[:25]}", "success")
+                            add_log(f"✅ Scheduled post published via API: {pt[:25]}", "success")
                             now_s = datetime.now()
                             key = f"{now_s.strftime('%Y-%m-%d')}_{now_s.strftime('%H:%M')}_manual"
                             store.setdefault("scheduler_log", {})[key] = {
@@ -273,7 +339,7 @@ async def _run_for_user():
                             }
                             save_store()
                         else:
-                            add_log(f"❌ API post fejl: {result.get('message','')}", "error")
+                            add_log(f"❌ API post error: {result.get('message','')}", "error")
                     except Exception as e:
                         add_log(f"❌ API post exception: {str(e)[:80]}", "error")
                 asyncio.create_task(_post_via_api())
@@ -285,11 +351,11 @@ async def _run_for_user():
             has_session = os.path.exists(session_path)
             if not user or not pwd:
                 if not has_session:
-                    add_log(f"⚠️ Planlagt opslag: ingen login til {platform}", "warning")
+                    add_log(f"⚠️ Scheduled post: no credentials for {platform}", "warning")
                     continue
                 user = user or "session"
                 pwd = pwd or "session"
-            add_log(f"📅 Udfører planlagt opslag på {platform}: {prod_title[:25]}...", "info")
+            add_log(f"📅 Executing scheduled post on {platform}: {prod_title[:25]}...", "info")
             now_s2 = datetime.now()
             key2 = f"{now_s2.strftime('%Y-%m-%d')}_{now_s2.strftime('%H:%M')}_manual"
             store.setdefault("scheduler_log", {})[key2] = {
@@ -306,8 +372,8 @@ async def _run_for_user():
 
         now = datetime.now()
 
-        # ── Hvileperiode — ingen posting 23:00–07:00 (med mindre slået fra) ──
-        if auto.get("respect_quiet_hours", True):
+        # Quiet hours — no posting between 23:00–07:00 unless disabled
+        if not force and auto.get("respect_quiet_hours", True):
             quiet_start = auto.get("quiet_start", "23:00")
             quiet_end   = auto.get("quiet_end",   "07:00")
             try:
@@ -322,9 +388,9 @@ async def _run_for_user():
             except Exception:
                 pass
 
-        # ── Aktivitetsgrænse: max opslag per time ─────────────────────────
+        # Rate limit: max posts per hour
         max_per_hour = auto.get("max_posts_per_hour", 0)
-        if max_per_hour and max_per_hour > 0:
+        if not force and max_per_hour and max_per_hour > 0:
             hour_key = now.strftime("%Y-%m-%dT%H")
             posts_this_hour = store.get("scheduler_log", {}).get(f"hourly_{hour_key}", 0)
             if posts_this_hour >= max_per_hour:
@@ -332,7 +398,7 @@ async def _run_for_user():
 
         weekday = now.isoweekday()
         schedule_days = auto.get("schedule_days", [1,2,3,4,5])
-        if weekday not in schedule_days:
+        if not force and weekday not in schedule_days:
             return
 
         post_times = auto.get("post_times", ["09:00", "14:00", "18:00"])
@@ -353,87 +419,152 @@ async def _run_for_user():
             except Exception:
                 pass
 
-        if not time_match:
+        if not force and not time_match:
             return
 
         today = now.strftime("%Y-%m-%d")
         last_posts = store.get("scheduler_log", {})
         post_key = f"{today}_{current_time}"
-        if post_key in last_posts:
+        if not force and post_key in last_posts:
             return
 
+        # Determine active platforms early — bail if none enabled
+        platforms_cfg = auto.get("platforms", {})
+        if isinstance(platforms_cfg, list):
+            active_platforms = platforms_cfg
+        else:
+            active_platforms = [p for p, v in platforms_cfg.items() if isinstance(v, dict) and v.get("auto_post", False)]
+        if not active_platforms:
+            add_log("⚠️ Auto Pilot: no platforms have auto-post enabled", "warning")
+            return
+
+        niche = auto.get("niche") or store.get("settings", {}).get("niche") or ""
+
+        # ── Product selection ──────────────────────────────────────────
         all_products = await get_all_products_cached()
-        if not all_products:
-            add_log("⚠️ Ingen produkter at poste — tilslut Shopify eller tilføj manuelt", "warning")
-            return
-
         auto_groups = auto.get("auto_groups", [])
-        if auto_groups:
+        if auto_groups and all_products:
             products = [p for p in all_products if p.get("group", "") in auto_groups] or all_products
         else:
             products = all_products
 
-        if auto.get("post_order", "random") == "random":
-            product = random.choice(products)
+        product = None
+        caption_text = ""
+        image_url = None
+
+        if products:
+            if auto.get("post_order", "random") == "random":
+                product = random.choice(products)
+            else:
+                product = sorted(products, key=lambda p: p.get("created", ""), reverse=True)[0]
+
+            if auto.get("no_duplicate_days", True):
+                yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+                yesterday_posts = [v for k, v in last_posts.items()
+                                   if isinstance(v, dict) and k.startswith(yesterday)]
+                if any(p.get("product_id") == product["id"] for p in yesterday_posts):
+                    other_products = [p for p in products if p["id"] != product["id"]]
+                    if other_products:
+                        product = random.choice(other_products)
+
+            product_images = product.get("images", [])
+            if not product_images and product.get("image"):
+                product_images = [product["image"]]
+            if len(product_images) > 1:
+                image_url = product_images
+                add_log(f"🖼️ {len(product_images)} images — {product['title'][:20]}", "info")
+            elif product_images:
+                image_url = product_images[0]
+
+            product_content = (store.get("product_content", {}).get(str(product["id"]), []) or
+                                store.get("product_content", {}).get(product["id"], []))
+            captions = [c for c in product_content if c.get("type") == "caption"]
+
+            if captions:
+                caption_text = captions[0]["content"]
+            else:
+                for _plat in active_platforms:
+                    ai_result = await _generate_autopilot_content(
+                        niche=niche,
+                        product_title=product["title"],
+                        product_desc=product.get("description", ""),
+                        platform=_plat,
+                    )
+                    if ai_result.get("caption"):
+                        caption_text = ai_result["caption"]
+                        tags = ai_result.get("hashtags", [])
+                        if tags:
+                            caption_text += "\n\n" + " ".join(f"#{t.lstrip('#')}" for t in tags)
+                        pc = store.setdefault("product_content", {}).setdefault(str(product["id"]), [])
+                        pc.append({"type": "caption", "content": caption_text,
+                                   "platform": _plat, "auto_generated": True})
+                        save_store()
+                        break
+                if not caption_text:
+                    caption_text = f"Check out {product['title']}! 🔥"
+
         else:
-            product = sorted(products, key=lambda p: p.get("created",""), reverse=True)[0]
+            if not niche:
+                add_log(
+                    "⚠️ Auto Pilot: no products and no niche configured — "
+                    "connect Shopify, add products, or set your niche in Auto Pilot settings",
+                    "warning"
+                )
+                store.setdefault("scheduler_log", {})[post_key] = {
+                    "skipped": True, "reason": "no_products_no_niche", "date": today
+                }
+                save_store()
+                return
 
-        product_content = (store.get("product_content", {}).get(str(product["id"]), []) or
-                        store.get("product_content", {}).get(product["id"], []))
-        captions = [c for c in product_content if c.get("type") == "caption"]
+            ai_result = await _generate_autopilot_content(niche=niche, platform=active_platforms[0])
+            if not ai_result.get("caption"):
+                add_log(
+                    "⚠️ Auto Pilot: no products and AI content generation failed — "
+                    "add an OpenAI or Anthropic API key in Settings",
+                    "warning"
+                )
+                store.setdefault("scheduler_log", {})[post_key] = {
+                    "skipped": True, "reason": "no_products_no_ai", "date": today
+                }
+                save_store()
+                return
 
-        if auto.get("no_duplicate_days", True):
-            yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
-            yesterday_posts = [v for k, v in last_posts.items() if k.startswith(yesterday)]
-            if any(p.get("product_id") == product["id"] for p in yesterday_posts):
-                other_products = [p for p in products if p["id"] != product["id"]]
-                if other_products:
-                    product = random.choice(other_products)
-                    product_content = (store.get("product_content", {}).get(str(product["id"]), []) or
-                        store.get("product_content", {}).get(product["id"], []))
-                    captions = [c for c in product_content if c.get("type") == "caption"]
+            caption_text = ai_result["caption"]
+            tags = ai_result.get("hashtags", [])
+            if tags:
+                caption_text += "\n\n" + " ".join(f"#{t.lstrip('#')}" for t in tags)
 
-        caption_text = captions[0]["content"] if captions else f"Tjek vores {product['title']}! 🔥"
-        product_images = product.get("images", [])
-        if not product_images and product.get("image"):
-            product_images = [product["image"]]
-        image_url = product_images
-        if len(product_images) > 1:
-            add_log(f"🖼️ {len(product_images)} billeder — {product['title'][:20]}", "info")
-        elif product_images:
-            image_url = product_images[0]
-
-        platforms = auto.get("platforms", {})
-        if isinstance(platforms, list):
-            active_platforms = platforms
-        else:
-            active_platforms = [p for p, v in platforms.items() if isinstance(v, dict) and v.get("auto_post", False)]
+        # ── Post to each active platform ─────────────────────────────
+        settings = store.get("settings", {})
+        posted_count = 0
+        prod_label = product["title"] if product else niche
 
         for platform in active_platforms:
-            settings = store.get("settings", {})
-
-            # Brug officiel API hvis forbundet — ingen browser nødvendig
             if platform == "instagram" and settings.get("instagram_api_connected"):
-                add_log(f"⏰ Scheduler → Instagram API: {product['title'][:30]}", "info")
-                async def _auto_ig(pc=caption_text, iu=image_url, sd=settings, pt=product["title"]):
+                add_log(f"⏰ Auto Pilot → Instagram: {prod_label[:30]}", "info")
+                async def _auto_ig(pc=caption_text, iu=image_url, sd=settings, lbl=prod_label):
                     try:
                         from instagram_api import post_to_instagram, refresh_token_if_needed
                         token = sd.get("instagram_api_token", "")
                         ig_id = sd.get("instagram_ig_id", "")
                         exp   = sd.get("instagram_api_expires")
-                        token, new_exp = await refresh_token_if_needed(token, exp)
+                        token, _ = await refresh_token_if_needed(token, exp)
                         img_url  = iu if isinstance(iu, str) else None
                         img_urls = iu if isinstance(iu, list) else None
                         result = await post_to_instagram(ig_id, token, pc, image_url=img_url, image_urls=img_urls)
-                        add_log(f"{'✅' if result.get('status')=='published' else '❌'} Auto Instagram API: {pt[:25]}", "success" if result.get("status") == "published" else "error")
-                    except Exception as e:
-                        add_log(f"❌ Auto Instagram API fejl: {str(e)[:80]}", "error")
+                        if result.get("status") == "published":
+                            add_log(f"✅ Posted to Instagram: {pc[:60]}…", "success")
+                        else:
+                            add_log(f"❌ Instagram error: {result.get('message','unknown')[:60]}", "error")
+                    except Exception as _e:
+                        add_log(f"❌ Instagram exception: {str(_e)[:80]}", "error")
                 asyncio.create_task(_auto_ig())
+                posted_count += 1
                 continue
 
             if platform == "tiktok" and settings.get("tiktok_api_connected"):
-                add_log(f"⏰ Scheduler → TikTok API: {product['title'][:30]}", "info")
-                async def _auto_tt(pc=caption_text, iu=image_url, sd=settings, pt=product["title"]):
+                add_log(f"⏰ Auto Pilot → TikTok: {prod_label[:30]}", "info")
+                async def _auto_tt(pc=caption_text, iu=image_url, sd=settings, lbl=prod_label):
                     try:
                         from tiktok_api import refresh_token_if_needed as tt_refresh, publish_to_tiktok
                         token   = sd.get("tiktok_access_token", "")
@@ -444,40 +575,79 @@ async def _run_for_user():
                             store["settings"]["tiktok_access_token"] = new_token
                             save_store()
                             token = new_token
-                        vid_url = iu if isinstance(iu, str) and iu.endswith(('.mp4','.mov')) else None
+                        vid_url = iu if isinstance(iu, str) and iu.endswith(('.mp4', '.mov')) else None
                         img_url = iu if isinstance(iu, str) and not vid_url else None
                         result = await publish_to_tiktok(token, pc, video_url=vid_url, image_url=img_url)
-                        add_log(f"{'✅' if result.get('status') in ('published','processing') else '❌'} Auto TikTok API: {pt[:25]}", "success" if result.get("status") in ("published","processing") else "error")
-                    except Exception as e:
-                        add_log(f"❌ Auto TikTok API fejl: {str(e)[:80]}", "error")
+                        status = result.get("status", "")
+                        if status in ("published", "processing"):
+                            add_log(f"✅ Posted to TikTok: {pc[:60]}…", "success")
+                        else:
+                            add_log(f"❌ TikTok error: {result.get('message','unknown')[:60]}", "error")
+                    except Exception as _e:
+                        add_log(f"❌ TikTok exception: {str(_e)[:80]}", "error")
                 asyncio.create_task(_auto_tt())
+                posted_count += 1
                 continue
 
+            if platform == "twitter" and settings.get("twitter_api_connected"):
+                add_log(f"⏰ Auto Pilot → Twitter/X: {prod_label[:30]}", "info")
+                async def _auto_tw(pc=caption_text, sd=settings):
+                    try:
+                        from twitter_api import post_tweet
+                        result = await post_tweet(
+                            text=pc,
+                            access_token=sd.get("twitter_access_token", ""),
+                            access_secret=sd.get("twitter_access_secret", ""),
+                            consumer_key=sd.get("twitter_api_key", ""),
+                            consumer_secret=sd.get("twitter_api_secret", ""),
+                        )
+                        if result.get("ok") or result.get("id"):
+                            add_log(f"✅ Posted to Twitter/X: {pc[:60]}…", "success")
+                        else:
+                            add_log(f"❌ Twitter/X error: {str(result)[:60]}", "error")
+                    except ImportError:
+                        add_log("⏭️ Skipped Twitter/X: twitter_api module not configured", "info")
+                    except Exception as _e:
+                        add_log(f"❌ Twitter/X exception: {str(_e)[:80]}", "error")
+                asyncio.create_task(_auto_tw())
+                posted_count += 1
+                continue
+
+            if platform == "youtube":
+                vid = image_url if isinstance(image_url, str) else ""
+                if vid and vid.endswith(('.mp4', '.mov', '.avi')):
+                    add_log("⏰ Auto Pilot → YouTube: video queued", "info")
+                    posted_count += 1
+                else:
+                    add_log("⏭️ Skipped YouTube: video content required for YouTube posts", "info")
+                continue
+
+            # Playwright fallback for other platforms
             user = settings.get(f"{platform}_user", "")
             pwd  = settings.get(f"{platform}_pass", "")
             if not user or not pwd:
-                add_log(f"⚠️ {platform}: ingen login gemt", "warning")
+                add_log(f"⏭️ Skipped {platform}: no account connected", "info")
                 continue
-            add_log(f"⏰ Scheduler poster på {platform}: {product['title'][:30]}", "info")
-            asyncio.create_task(asyncio.to_thread(_pw_post_sync, platform, caption_text, image_url, user, pwd))
+            add_log(f"⏰ Auto Pilot → {platform}: {prod_label[:30]}", "info")
+            asyncio.create_task(asyncio.to_thread(
+                _pw_post_sync, platform, caption_text, image_url or "", user, pwd
+            ))
+            posted_count += 1
 
-        # Gem log + opdater times-tæller
+        # Save log + update hourly counter
         slog = store.setdefault("scheduler_log", {})
         slog[post_key] = {
-            "product_id": product["id"],
-            "product": product["title"],
+            "product_id": product["id"] if product else None,
+            "product": product["title"] if product else f"AI:{niche}",
             "time": current_time,
-            "date": today
+            "date": today,
         }
-        # Opdater timetæller
-        hour_key = now.strftime("%Y-%m-%dT%H")
-        slog[f"hourly_{hour_key}"] = slog.get(f"hourly_{hour_key}", 0) + len(active_platforms)
+        hour_key2 = now.strftime("%Y-%m-%dT%H")
+        slog[f"hourly_{hour_key2}"] = slog.get(f"hourly_{hour_key2}", 0) + max(posted_count, 1)
         save_store()
 
     except Exception as e:
-        add_log(f"❌ Scheduler fejl: {str(e)[:80]}", "error")
-
-
+        add_log(f"❌ Scheduler error: {str(e)[:80]}", "error")
 
 async def send_daily_reminders():
     """Send re-engagement emails to users who haven't logged in for 3+ days."""
@@ -580,7 +750,7 @@ async def run_scheduler():
                 cleaned += 1
         if cleaned:
             save_store()
-            add_log(f"🔄 {cleaned} opslag sat tilbage til scheduled ved opstart", "info")
+            add_log(f"🔄 Reset {cleaned} stuck posts to scheduled at startup", "info")
         reset_user_context(tokens)
 
     while True:
@@ -640,7 +810,7 @@ async def trigger_plan_week():
     schedule_days = auto.get("schedule_days", [1,2,3,4,5])
     products = store.get("manual_products", []) + store.get("shopify_products_cache", [])
     if not products:
-        return {"status": "ok", "planned": 0, "message": "Ingen produkter"}
+        return {"status": "ok", "planned": 0, "message": "No products"}
     store.setdefault("scheduler_log", {})
     store.setdefault("scheduled_posts", [])
     total_planned = 0
@@ -690,7 +860,7 @@ async def trigger_plan_month():
     schedule_days = auto.get("schedule_days", [1,2,3,4,5])
     products = store.get("manual_products", []) + store.get("shopify_products_cache", [])
     if not products:
-        return {"status": "ok", "planned": 0, "message": "Ingen produkter"}
+        return {"status": "ok", "planned": 0, "message": "No products"}
     store.setdefault("scheduler_log", {})
     store.setdefault("scheduled_posts", [])
     total_planned = 0
