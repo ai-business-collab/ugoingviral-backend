@@ -37,13 +37,14 @@ def get_user_by_id(user_id: str) -> dict | None:
     return None
 
 
-def create_user(email: str, password: str, name: str = "", company: str = "") -> dict:
+def create_user(email: str, password: str, name: str = "", company: str = "", niche: str = "") -> dict:
     data = load_users()
     user = {
         "id": str(uuid.uuid4()),
         "email": email.lower().strip(),
         "name": name.strip(),
         "company": company.strip(),
+        "niche": niche.strip(),
         "hashed_password": pwd_context.hash(password),
         "created_at": datetime.utcnow().isoformat(),
         "is_active": True,
