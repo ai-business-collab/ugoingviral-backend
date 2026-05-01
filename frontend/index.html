@@ -2746,6 +2746,23 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
 
+      <!-- CONTENT LANGUAGE -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">🌐 Content Language</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:14px">AI will generate all captions and hashtags in the selected language.</div>
+        <div class="fg">
+          <label class="fl">Language</label>
+          <select class="fi" id="content-lang-select" style="max-width:240px">
+            <option value="english">🇬🇧 English</option>
+            <option value="spanish">🇪🇸 Spanish</option>
+            <option value="french">🇫🇷 French</option>
+            <option value="german">🇩🇪 German</option>
+            <option value="portuguese">🇧🇷 Portuguese</option>
+          </select>
+        </div>
+        <button class="btn bp bsm" style="margin-top:12px" onclick="saveContentLanguage()">Save language</button>
+      </div>
+
       <!-- NOTIFICATION PREFS -->
       <div class="card" id="notif-prefs-card" style="margin-bottom:20px">
         <div class="ctitle">🔔 Notification Preferences</div>
@@ -4787,6 +4804,7 @@ function studioRender() {
 </div>`;
 
   studioCalcCost();
+  setTimeout(studioApplyEnhancements, 0);
 }
 
 function _escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -4826,6 +4844,7 @@ function studioResultHtml(result) {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div style="font-size:14px;font-weight:800;color:var(--ac3)">✅ Genereret!</div>
       <div style="font-size:11px;color:var(--tx3)">Used ${result.credits_used} cr · ${result.credits_left} cr tilbage</div>
+      <button class="btn bg bsm" onclick="studioRegenerate()" style="font-size:12px;padding:5px 14px">🔄 Regenerate</button>
     </div>
 
     ${hasAssembled ? `
@@ -5699,7 +5718,7 @@ function nav(p) {
   if (p === 'stats') { loadStats(); }
   if (p === 'billing') { loadBilling(); detectBillingCurrency(); loadAutoTopup(); }
   if (p === 'billing') { setTimeout(checkLowCredits, 800); }
-  if (p === 'settings') { loadSettingsPage(); loadReferralStats(); loadNotifPrefs(); }
+  if (p === 'settings') { loadSettingsPage(); loadReferralStats(); loadNotifPrefs(); loadContentLanguage(); }
   if (p === 'posting') { if (!allProducts.length) { loadProducts().then(function() { renderPostingProductGrid(); loadAutoGroups(); }); } else { renderPostingProductGrid(); loadAutoGroups(); } loadRecentPosts(); loadGroups(); }
   if (p === 'library') { loadLibFolders(); renderLibrary(libFiles); }
   if (p === 'content-library') { loadClib(); }
@@ -6452,13 +6471,28 @@ function _buildCalGrid(year, month, lastDay, startDow, todayStr) {
     var dayStyle = (hasPosts&&!isToday) ? "border-color:rgba(var(--ac2-rgb),.3);cursor:pointer" : "";
     var numColor = isToday ? "var(--ac)" : "var(--tx3)";
     var numWeight = isToday ? "700" : "500";
-    var dotsHtml = dayPosts.slice(0,2).map(function(p){ return '<div class="cal-dot" style="background:' + (colMap[p.platform]||'var(--ac2)') + '"></div>'; }).join('');
-    var moreHtml = dayPosts.length>2 ? '<div style="font-size:8px;color:var(--tx3)">+' + (dayPosts.length-2) + '</div>' : '';
+    var platIco = {instagram:'IG',tiktok:'TT',youtube:'YT',twitter:'X',facebook:'FB'};
+    var postsHtml = dayPosts.slice(0,3).map(function(p) {
+      var bg = colMap[p.platform]||'var(--ac2)';
+      var ico = platIco[p.platform]||'📤';
+      var timeStr = '';
+      try { var _t=new Date(p.scheduled_time); timeStr=('0'+_t.getHours()).slice(-2)+':'+('0'+_t.getMinutes()).slice(-2); } catch(e){}
+      var pid = (p.id||'').replace(/'/g,"\'");
+      return '<div draggable="true" data-postid="' + pid + '" data-origdate="' + dateStr + '" ondragstart="calDragStart(event,\'' + pid + '\')" '
+        + 'style="font-size:8px;color:#fff;background:' + bg + ';border-radius:2px;padding:1px 3px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;cursor:grab;line-height:1.4" '
+        + 'title="' + (p.content||'').replace(/"/g,"'").slice(0,60) + '">'
+        + ico + ' ' + timeStr
+        + '</div>';
+    }).join('');
+    var moreHtml = dayPosts.length>3 ? '<div style="font-size:8px;color:var(--tx3)">+' + (dayPosts.length-3) + '</div>' : '';
     var enterFn = hasPosts ? "showDayBubble(this," + d + ")" : "this.style.background='var(--s3)'";
     var leaveFn = hasPosts ? "hideDayBubble()" : "this.style.background=''";
-    html += '<div class="' + dayClass + '" style="' + dayStyle + '" onmouseenter="' + enterFn + '" onmouseleave="' + leaveFn + '" onclick="calDayClick(' + d + ',' + hasPosts + ')">'
+    html += '<div class="' + dayClass + '" style="' + dayStyle + '" '
+      + 'data-date="' + dateStr + '" '
+      + 'ondragover="calDragOver(event)" ondrop="calDrop(event,\'' + dateStr + '\')" '
+      + 'onmouseenter="' + enterFn + '" onmouseleave="' + leaveFn + '" onclick="calDayClick(' + d + ',' + hasPosts + ')">'
       + '<div class="cal-day-num" style="color:' + numColor + ';font-weight:' + numWeight + '">' + d + '</div>'
-      + dotsHtml + moreHtml
+      + postsHtml + moreHtml
       + '</div>';
   }
   grid.innerHTML = html;
@@ -11257,6 +11291,178 @@ function _renderAnBestPost(bp) {
     + (bp.date ? '<span>📅 ' + bp.date + '</span>' : '')
     + (bp.engagement ? '<span>❤️ ' + bp.engagement + ' engagement</span>' : '<span style="font-style:italic">Connect your accounts to track engagement</span>')
     + '</div>';
+}
+
+
+// ── Video Studio Enhancements ─────────────────────────────────────────────────
+var STUDIO_PRESETS = [
+  {key:'cinematic',    icon:'🎬', label:'Cinematic',    hint:'cinematic style, dramatic lighting, shallow depth of field, film grain, 4K quality'},
+  {key:'viral',        icon:'🔥', label:'Viral',        hint:'dynamic motion, high contrast vibrant colors, trending social media aesthetic, eye-catching'},
+  {key:'educational',  icon:'📚', label:'Educational',  hint:'clean and professional, informative, text overlays, whiteboard aesthetic, clear lighting'},
+  {key:'promotional',  icon:'🛍️', label:'Promotional',  hint:'product-focused, bright and vibrant, aspirational lifestyle, brand-forward, high energy'},
+];
+
+var STUDIO_DURATIONS = [
+  {secs:15,  label:'15s',  scenes:1, durPerScene:15},
+  {secs:30,  label:'30s',  scenes:2, durPerScene:15},
+  {secs:60,  label:'60s',  scenes:4, durPerScene:15},
+  {secs:90,  label:'90s',  scenes:6, durPerScene:15},
+];
+
+var _studioActiveDuration = null;
+
+function studioApplyEnhancements() {
+  _injectStudioPresets();
+  _injectStudioDuration();
+}
+
+function _injectStudioPresets() {
+  var calcEl = document.getElementById('studio-credit-calc');
+  if (!calcEl || document.getElementById('studio-presets-bar')) return;
+  var bar = document.createElement('div');
+  bar.id = 'studio-presets-bar';
+  bar.style.cssText = 'margin-bottom:14px';
+  bar.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:8px">✨ Style Preset</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'
+    + STUDIO_PRESETS.map(function(p) {
+        var active = _studio.scenes.every(function(s){return s.style_hint===p.hint;}) && _studio.seriesStyle===p.hint;
+        return '<button onclick="studioApplyPreset(\'' + p.key + '\')" style="background:' + (active?'rgba(0,229,255,.18)':'var(--glass)') + ';border:1px solid '+(active?'var(--ac)':'var(--border)')+';border-radius:8px;padding:7px 10px;cursor:pointer;font-size:11px;font-weight:600;color:var(--tx);text-align:left;transition:all .15s">'
+          + p.icon + ' ' + p.label + '</button>';
+      }).join('')
+    + '</div>';
+  calcEl.parentNode.insertBefore(bar, calcEl);
+}
+
+function _injectStudioDuration() {
+  var calcEl = document.getElementById('studio-credit-calc');
+  if (!calcEl || document.getElementById('studio-duration-bar')) return;
+  var bar = document.createElement('div');
+  bar.id = 'studio-duration-bar';
+  bar.style.cssText = 'margin-bottom:14px';
+  bar.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:8px">⏱️ Total Duration</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    + STUDIO_DURATIONS.map(function(d) {
+        var active = _studioActiveDuration===d.secs;
+        return '<button onclick="studioSetTotalDuration(' + d.secs + ')" style="background:' + (active?'rgba(0,229,255,.18)':'var(--glass)') + ';border:1px solid '+(active?'var(--ac)':'var(--border)')+';border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:700;color:var(--tx);transition:all .15s">'
+          + d.label + '</button>';
+      }).join('')
+    + '</div>';
+  calcEl.parentNode.insertBefore(bar, calcEl);
+}
+
+function studioApplyPreset(key) {
+  var preset = STUDIO_PRESETS.find(function(p){return p.key===key;});
+  if (!preset) return;
+  _studio.seriesStyle = preset.hint;
+  _studio.scenes.forEach(function(s){ s.style_hint = preset.hint; });
+  studioRender();
+  toast('Style preset: ' + preset.label, 'success');
+}
+
+function studioSetTotalDuration(secs) {
+  var dur = STUDIO_DURATIONS.find(function(d){return d.secs===secs;});
+  if (!dur) return;
+  _studioActiveDuration = secs;
+  if (dur.scenes === 1) {
+    _studio.mode = 'single';
+    _studio.scenes = [{prompt: _studio.scenes[0]?.prompt||'', duration: dur.durPerScene, style_hint: _studio.scenes[0]?.style_hint||'', transition:'cut'}];
+  } else {
+    _studio.mode = 'series';
+    var existing = _studio.scenes.slice();
+    _studio.scenes = Array.from({length: dur.scenes}, function(_, i) {
+      return {prompt: existing[i]?.prompt||'', duration: dur.durPerScene, style_hint: existing[0]?.style_hint||'', transition:'cut'};
+    });
+    _studio.maxScenes = Math.max(_studio.maxScenes, dur.scenes);
+  }
+  studioRender();
+  toast('Duration set to ' + dur.label, 'info');
+}
+
+function studioRegenerate() {
+  if (_studio.generating) return;
+  if (!confirm('Regenerate this video? This will use additional credits.')) return;
+  studioGenerate();
+}
+
+// ── Calendar Drag-to-Reschedule ───────────────────────────────────────────────
+var _calDragPostId = null;
+var _calDragOrigDate = null;
+
+function calDragStart(event, postId) {
+  _calDragPostId = postId;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', postId);
+}
+
+function calDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  var cell = event.currentTarget;
+  if (cell) cell.style.background = 'rgba(0,229,255,.12)';
+}
+
+function calDrop(event, dateStr) {
+  event.preventDefault();
+  var cell = event.currentTarget;
+  if (cell) cell.style.background = '';
+  var postId = _calDragPostId || event.dataTransfer.getData('text/plain');
+  if (!postId || !dateStr) return;
+  _calReschedule(postId, dateStr);
+  _calDragPostId = null;
+}
+
+async function _calReschedule(postId, newDateStr) {
+  var posts = _calPostsByDay;
+  var existingPost = null;
+  Object.values(posts).forEach(function(dayPosts) {
+    dayPosts.forEach(function(p) { if (p.id === postId) existingPost = p; });
+  });
+  var currentTime = '09:00';
+  if (existingPost && existingPost.scheduled_time) {
+    try {
+      var t = new Date(existingPost.scheduled_time);
+      currentTime = ('0'+t.getHours()).slice(-2) + ':' + ('0'+t.getMinutes()).slice(-2);
+    } catch(e) {}
+  }
+  var newScheduledTime = newDateStr + 'T' + currentTime + ':00';
+  try {
+    var r = await apiFetch('/api/posts/' + postId + '/reschedule', 'PATCH', {scheduled_time: newScheduledTime});
+    var d = await r.json();
+    if (d.ok) {
+      toast('Post rescheduled to ' + newDateStr, 'success');
+      renderCal();
+    } else {
+      toast('Could not reschedule post', 'error');
+    }
+  } catch(e) {
+    toast('Reschedule failed: ' + (e.message||''), 'error');
+  }
+}
+
+// Clear drag highlight on dragleave
+document.addEventListener('dragleave', function(e) {
+  var cell = e.target.closest?.('.cal-day');
+  if (cell) cell.style.background = '';
+});
+
+// ── Content Language ──────────────────────────────────────────────────────────
+async function loadContentLanguage() {
+  try {
+    var r = await apiFetch('/api/settings/content_language');
+    var d = await r.json();
+    var sel = document.getElementById('content-lang-select');
+    if (sel && d.language) sel.value = d.language;
+  } catch(e) {}
+}
+
+async function saveContentLanguage() {
+  var sel = document.getElementById('content-lang-select');
+  if (!sel) return;
+  var lang = sel.value;
+  try {
+    await apiFetch('/api/settings/content_language', 'POST', {language: lang});
+    toast('Content language saved: ' + lang.charAt(0).toUpperCase() + lang.slice(1), 'success');
+  } catch(e) { toast('Error saving language', 'error'); }
 }
 
 </script>

@@ -80,6 +80,24 @@ def get_connections():
     return conns
 
 # ── Automation settings ───────────────────────────────────────────────────────
+@router.get("/api/settings/content_language")
+def get_content_language():
+    return {"language": store["settings"].get("content_language", "english")}
+
+
+@router.post("/api/settings/content_language")
+async def save_content_language(request: Request):
+    from fastapi import Request as _R
+    body = await request.json()
+    lang = str(body.get("language", "english")).strip().lower()
+    SUPPORTED = {"english", "spanish", "french", "german", "portuguese"}
+    if lang not in SUPPORTED:
+        lang = "english"
+    store["settings"]["content_language"] = lang
+    save_store()
+    return {"ok": True, "language": lang}
+
+
 @router.get("/api/automation/settings")
 def get_auto(): return store["automation"]
 
