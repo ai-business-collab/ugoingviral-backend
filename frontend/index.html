@@ -1141,6 +1141,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" id="ni-studio" onclick="nav('studio')">🎬 <span>Video Studio</span> <span style="font-size:9px;background:linear-gradient(90deg,var(--ac),var(--ac2));color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NY</span></div>
       <div class="sub-item" id="ni-pipeline" onclick="nav('pipeline')">⚡ <span data-i18n="nav.pipeline">Pipeline</span></div>
       <div class="sub-item" id="ni-templates" onclick="nav('templates')">📝 <span>Templates</span> <span style="font-size:9px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">FREE</span></div>
+      <div class="sub-item" id="ni-brand-kit" onclick="nav('brand-kit')">🎨 <span>Brand Kit</span></div>
       <div class="sub-item" onclick="nav('history')">📚 <span data-i18n="nav.history">Historik</span></div>
       <div class="sub-item" onclick="nav('content-library')">🗂️ <span data-i18n="nav.library">Bibliotek</span></div>
       <div class="sub-item" onclick="nav('library')">📁 <span data-i18n="nav.mapper">Content Mapper</span></div>
@@ -1188,6 +1189,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="ni" id="ni-analytics" onclick="nav('analytics')"><span class="ico">📈</span><span>Analytics</span></div>
     <div class="ni" id="ni-growth-dash" onclick="nav('growth-dashboard')"><span class="ico">🌱</span><span>Growth Dashboard</span></div>
     <div class="ni" id="ni-stats" onclick="nav('stats')"><span class="ico">📊</span><span data-i18n="nav.stats">Statistik</span></div>
+    <div class="ni" id="ni-competitor" onclick="nav('competitor')"><span class="ico">🔍</span><span>Competitor Spy</span></div>
 
     <!-- ── SYSTEM ── -->
     <div class="nav-section" data-i18n="nav.system">System</div>
@@ -3407,7 +3409,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="display:flex;gap:10px">
             <button class="btn bp" style="flex:1" onclick="generatePostFromIdea()">Generate Full Post</button>
             <button class="btn bg" onclick="copyCeCaption()">Copy Caption</button>
+            <button class="btn bg bsm" onclick="runCeModalViralScore()" style="white-space:nowrap">🔮 Score</button>
           </div>
+          <div id="ce-modal-viral-score"></div>
         </div>
       </div>
     </div>
@@ -5698,6 +5702,8 @@ const titles = {
   history:'📚 Content Historik',
   subaccounts:'👥 Extra Profiles',
   studio:'🎬 Video Studio',
+  'brand-kit':'🎨 Brand Kit',
+  competitor:'🔍 Competitor Spy',
 };
 function nav(p) {
   // Aliases — redirect sub-items to parent page + tab
@@ -5752,6 +5758,8 @@ function nav(p) {
   if (p === 'media-upload') { loadMyUploads(); }
   if (p === 'templates') { loadTemplates(); }
   if (p === 'analytics') { loadAnalytics(); }
+  if (p === 'brand-kit') { loadBrandKit(); }
+  if (p === 'competitor') { /* ready */ }
   _currentPage = p;
 }
 function toggleSubMenu(id) {
@@ -8483,6 +8491,186 @@ function sendQueueToPost(id) {
   </div>
 
   <!-- UPLOAD MEDIA PAGE -->
+
+  <!-- ── BRAND KIT ──────────────────────────────────────────────────────── -->
+  <div id="page-brand-kit" class="page">
+    <div style="max-width:820px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+        <!-- Logo -->
+        <div class="card">
+          <div class="ctitle">🖼️ Brand Logo</div>
+          <div id="bk-logo-preview" onclick="document.getElementById('bk-logo-input').click()"
+               style="width:88px;height:88px;border-radius:14px;background:var(--s2);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;margin-bottom:12px">
+            <span style="font-size:32px">📷</span>
+          </div>
+          <input type="file" id="bk-logo-input" accept="image/*" style="display:none" onchange="brandKitUploadLogo(this)">
+          <button class="btn bg bsm" onclick="document.getElementById('bk-logo-input').click()">Upload Logo</button>
+          <div style="font-size:11px;color:var(--tx3);margin-top:8px">PNG, JPG or WebP. AI will reference your brand style when generating content.</div>
+        </div>
+        <!-- Colors -->
+        <div class="card">
+          <div class="ctitle">🎨 Brand Colors</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+              <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:5px">Primary Color</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="color" id="bk-primary" value="#00e5ff"
+                  style="width:40px;height:36px;border-radius:6px;border:1px solid var(--border);cursor:pointer;padding:2px;background:none"
+                  oninput="document.getElementById('bk-primary-hex').value=this.value;_updateBKPreview()">
+                <input id="bk-primary-hex" class="inp" style="flex:1;font-family:monospace" value="#00e5ff"
+                  oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value)){document.getElementById('bk-primary').value=this.value;_updateBKPreview();}">
+              </div>
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:5px">Secondary Color</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="color" id="bk-secondary" value="#a855f7"
+                  style="width:40px;height:36px;border-radius:6px;border:1px solid var(--border);cursor:pointer;padding:2px;background:none"
+                  oninput="document.getElementById('bk-secondary-hex').value=this.value;_updateBKPreview()">
+                <input id="bk-secondary-hex" class="inp" style="flex:1;font-family:monospace" value="#a855f7"
+                  oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value)){document.getElementById('bk-secondary').value=this.value;_updateBKPreview();}">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Font + Tagline -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="ctitle">✏️ Typography & Tagline</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:6px">Brand Font</label>
+            <select id="bk-font" class="inp" oninput="_updateBKPreview()">
+              <option value="Inter">Inter (Clean modern)</option>
+              <option value="Poppins">Poppins (Friendly rounded)</option>
+              <option value="Montserrat">Montserrat (Bold & strong)</option>
+              <option value="Playfair Display">Playfair Display (Elegant serif)</option>
+              <option value="Oswald">Oswald (Powerful display)</option>
+              <option value="Raleway">Raleway (Sleek & stylish)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:6px">Brand Tagline</label>
+            <input id="bk-tagline" class="inp" placeholder="e.g. Your brand, amplified" maxlength="80" oninput="_updateBKPreview()">
+          </div>
+        </div>
+      </div>
+      <!-- Preview -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="ctitle">👁️ Preview</div>
+        <div style="border-radius:12px;padding:20px;background:var(--bg);border:1px solid var(--border);position:relative;overflow:hidden">
+          <div id="bk-preview-bar" style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#00e5ff,#a855f7)"></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;margin-top:8px">
+            <div id="bk-preview-logo" style="width:44px;height:44px;border-radius:10px;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+              <span style="font-size:20px">🏷️</span>
+            </div>
+            <div>
+              <div id="bk-preview-name" style="font-size:13px;font-weight:700;color:var(--tx)">Your Brand</div>
+              <div style="font-size:11px;color:var(--tx3)">Just now</div>
+            </div>
+          </div>
+          <div id="bk-preview-caption" style="font-size:13px;color:var(--tx2);line-height:1.5;margin-bottom:10px">✨ AI-generated captions will reflect your brand colors and style. Save your brand kit and generate content to see it in action!</div>
+          <div id="bk-preview-tags" style="font-size:11px;color:var(--ac)">#yourbrand #content #viral</div>
+        </div>
+      </div>
+      <!-- Agency note -->
+      <div style="background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.18);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--tx2);margin-bottom:20px">
+        🏢 <strong>Agency users:</strong> Each sub-account has its own brand kit — switch sub-account in the top bar to edit their brand kit separately.
+      </div>
+      <button class="btn bp" onclick="saveBrandKit()" style="padding:11px 36px;font-size:14px">💾 Save Brand Kit</button>
+    </div>
+  </div>
+
+  <!-- ── COMPETITOR SPY ─────────────────────────────────────────────────── -->
+  <div id="page-competitor" class="page">
+    <div style="max-width:920px">
+      <!-- Input -->
+      <div class="card" style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="font-size:28px">🔍</div>
+          <div>
+            <div class="ctitle" style="margin:0">Competitor Spy</div>
+            <div style="font-size:12px;color:var(--tx3)">Uncover any competitor's content strategy — posting frequency, top hashtags, best times, and more</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:end">
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">HANDLE</label>
+            <input id="comp-handle" class="inp" placeholder="username (without @)" style="width:100%" onkeydown="if(event.key==='Enter')analyzeCompetitor()">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">PLATFORM</label>
+            <select id="comp-platform" class="inp">
+              <option value="instagram">Instagram</option>
+              <option value="tiktok">TikTok</option>
+              <option value="youtube">YouTube</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">NICHE</label>
+            <select id="comp-niche" class="inp">
+              <option value="creator">Creator</option>
+              <option value="ecommerce">E-commerce</option>
+              <option value="fitness">Fitness</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="agency">Agency</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <button class="btn bp" id="comp-btn" onclick="analyzeCompetitor()" style="white-space:nowrap;padding:10px 22px">Analyze 🔍</button>
+        </div>
+        <div id="comp-status" style="display:none;margin-top:10px;font-size:12px;color:var(--tx3)"></div>
+      </div>
+      <!-- Results -->
+      <div id="comp-results" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px" id="comp-kpis"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card">
+            <div class="ctitle" style="margin-bottom:14px">📊 Content Mix</div>
+            <div id="comp-content-types"></div>
+          </div>
+          <div class="card">
+            <div class="ctitle" style="margin-bottom:12px">🏷️ Top Hashtags</div>
+            <div id="comp-hashtags" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            <div style="margin-top:14px">
+              <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">BEST TIMES TO POST</div>
+              <div id="comp-times" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card">
+            <div class="ctitle" style="margin-bottom:10px">💡 Content Themes</div>
+            <div id="comp-themes"></div>
+            <div style="margin-top:14px">
+              <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">STRENGTHS</div>
+              <div id="comp-strengths"></div>
+            </div>
+            <div style="margin-top:12px">
+              <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">GAPS YOU CAN EXPLOIT</div>
+              <div id="comp-gaps"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ctitle" style="margin-bottom:10px">🔥 Top Posts Preview</div>
+            <div id="comp-top-posts"></div>
+          </div>
+        </div>
+        <!-- Generate similar -->
+        <div class="card" style="text-align:center;padding:24px;margin-bottom:16px">
+          <div style="font-size:26px;margin-bottom:8px">✨</div>
+          <div style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:6px">Generate Similar Content</div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:18px">Let AI craft posts inspired by this competitor's winning strategy</div>
+          <button class="btn bp" onclick="generateSimilarContent()" id="comp-gen-btn" style="padding:11px 32px">Generate 3 Post Ideas</button>
+        </div>
+        <div id="comp-similar" style="display:none">
+          <div class="ctitle" style="margin-bottom:14px">✨ Similar Content Ideas</div>
+          <div id="comp-similar-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="page-media-upload" class="page" style="display:none">
     <div style="max-width:760px">
       <div class="card" style="margin-bottom:20px">
@@ -11463,6 +11651,251 @@ async function saveContentLanguage() {
     await apiFetch('/api/settings/content_language', 'POST', {language: lang});
     toast('Content language saved: ' + lang.charAt(0).toUpperCase() + lang.slice(1), 'success');
   } catch(e) { toast('Error saving language', 'error'); }
+}
+
+
+// ── Brand Kit ─────────────────────────────────────────────────────────────────
+var _bkLogoUrl = '';
+
+async function loadBrandKit() {
+  try {
+    var r = await apiFetch('/api/brand-kit');
+    var kit = await r.json();
+    var p = function(id, v) { var el = document.getElementById(id); if (el && v) el.value = v; };
+    p('bk-primary', kit.primary_color);
+    p('bk-primary-hex', kit.primary_color);
+    p('bk-secondary', kit.secondary_color);
+    p('bk-secondary-hex', kit.secondary_color);
+    p('bk-font', kit.font);
+    p('bk-tagline', kit.tagline);
+    if (kit.logo_url) {
+      _bkLogoUrl = kit.logo_url;
+      _setBKLogoPreview(kit.logo_url);
+    }
+    _updateBKPreview();
+  } catch(e) {}
+}
+
+function _setBKLogoPreview(url) {
+  var img = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover">';
+  var el = document.getElementById('bk-logo-preview');
+  if (el) el.innerHTML = img;
+  var el2 = document.getElementById('bk-preview-logo');
+  if (el2) el2.innerHTML = img;
+}
+
+function _updateBKPreview() {
+  var primary   = document.getElementById('bk-primary')?.value || '#00e5ff';
+  var secondary = document.getElementById('bk-secondary')?.value || '#a855f7';
+  var tagline   = document.getElementById('bk-tagline')?.value;
+  var font      = document.getElementById('bk-font')?.value || 'Inter';
+  var bar = document.getElementById('bk-preview-bar');
+  if (bar) bar.style.background = 'linear-gradient(90deg,' + primary + ',' + secondary + ')';
+  var nameEl = document.getElementById('bk-preview-name');
+  if (nameEl) nameEl.style.fontFamily = font;
+  if (nameEl && tagline) nameEl.textContent = tagline;
+  var tagsEl = document.getElementById('bk-preview-tags');
+  if (tagsEl) tagsEl.style.color = primary;
+}
+
+async function brandKitUploadLogo(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var fd = new FormData();
+  fd.append('file', file);
+  try {
+    var r = await fetch(API + '/api/upload/image', { method: 'POST', body: fd });
+    var d = await r.json();
+    _bkLogoUrl = d.url;
+    _setBKLogoPreview(d.url);
+    toast('Logo uploaded!', 'success');
+  } catch(e) { toast('Upload failed', 'error'); }
+}
+
+async function saveBrandKit() {
+  var kit = {
+    primary_color:   document.getElementById('bk-primary')?.value  || '#00e5ff',
+    secondary_color: document.getElementById('bk-secondary')?.value || '#a855f7',
+    font:            document.getElementById('bk-font')?.value      || 'Inter',
+    tagline:         document.getElementById('bk-tagline')?.value   || '',
+    logo_url:        _bkLogoUrl,
+  };
+  try {
+    var r = await apiFetch('/api/brand-kit', 'POST', kit);
+    var d = await r.json();
+    if (d.ok) toast('Brand kit saved!', 'success');
+    else toast('Error saving brand kit', 'error');
+  } catch(e) { toast('Error: ' + (e.message||''), 'error'); }
+}
+
+// ── Competitor Spy ────────────────────────────────────────────────────────────
+var _compAnalysis = null;
+
+async function analyzeCompetitor() {
+  var handle   = (document.getElementById('comp-handle')?.value || '').trim().replace(/^@/, '');
+  var platform = document.getElementById('comp-platform')?.value || 'instagram';
+  var niche    = document.getElementById('comp-niche')?.value || 'creator';
+  if (!handle) { toast('Enter a competitor handle', 'error'); return; }
+
+  var btn    = document.getElementById('comp-btn');
+  var status = document.getElementById('comp-status');
+  if (btn)    { btn.disabled = true; btn.textContent = 'Analyzing…'; }
+  if (status) { status.style.display = 'block'; status.textContent = '🔍 Analyzing @' + handle + ' — this takes a few seconds…'; }
+
+  try {
+    var r = await apiFetch('/api/competitor/analyze', 'POST', {handle, platform, niche});
+    var d = await r.json();
+    if (d.ok) {
+      _compAnalysis = d.analysis;
+      _renderCompResults(d.analysis);
+      document.getElementById('comp-results').style.display = 'block';
+      document.getElementById('comp-similar').style.display = 'none';
+    } else {
+      toast('Analysis failed', 'error');
+    }
+  } catch(e) { toast('Error: ' + (e.message||''), 'error'); }
+  finally {
+    if (btn)    { btn.disabled = false; btn.textContent = 'Analyze 🔍'; }
+    if (status) status.style.display = 'none';
+  }
+}
+
+function _fmtN(n) { return n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'K' : String(n); }
+
+function _renderCompResults(a) {
+  document.getElementById('comp-kpis').innerHTML = [
+    {icon:'👥', label:'Est. Followers',   value: _fmtN(a.estimated_followers||0)},
+    {icon:'📅', label:'Posts / Week',     value: (a.posts_per_week||0) + 'x'},
+    {icon:'💬', label:'Avg Engagement',   value: (a.avg_engagement_rate||0) + '%'},
+  ].map(function(k) {
+    return '<div class="card" style="text-align:center;padding:16px 8px">'
+      + '<div style="font-size:22px;margin-bottom:4px">' + k.icon + '</div>'
+      + '<div style="font-size:22px;font-weight:900;color:var(--ac)">' + k.value + '</div>'
+      + '<div style="font-size:11px;color:var(--tx3);margin-top:2px">' + k.label + '</div>'
+      + '</div>';
+  }).join('');
+
+  var types = a.top_content_types || [];
+  document.getElementById('comp-content-types').innerHTML = types.map(function(t) {
+    return '<div style="margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:4px"><span>' + t.type + '</span><span style="color:var(--ac)">' + t.percentage + '%</span></div>'
+      + '<div style="background:var(--s2);border-radius:4px;height:6px"><div style="width:' + t.percentage + '%;background:var(--ac);border-radius:4px;height:6px;transition:width .4s"></div></div>'
+      + '</div>';
+  }).join('');
+
+  document.getElementById('comp-hashtags').innerHTML = (a.best_hashtags||[]).map(function(t) {
+    return '<span style="background:rgba(0,229,255,.12);color:var(--ac);border-radius:16px;padding:4px 10px;font-size:11px;font-weight:600">' + t + '</span>';
+  }).join('');
+
+  document.getElementById('comp-times').innerHTML = (a.best_posting_times||[]).map(function(t) {
+    return '<span style="background:var(--s2);color:var(--tx2);border-radius:8px;padding:3px 9px;font-size:11px">' + t + '</span>';
+  }).join('');
+
+  document.getElementById('comp-themes').innerHTML = (a.content_themes||[]).map(function(t) {
+    return '<div style="font-size:12px;color:var(--tx2);padding:5px 0;border-bottom:1px solid var(--border)">▸ ' + t + '</div>';
+  }).join('');
+
+  document.getElementById('comp-strengths').innerHTML = (a.strengths||[]).map(function(s) {
+    return '<div style="font-size:12px;color:#10b981;padding:2px 0">✓ ' + s + '</div>';
+  }).join('');
+
+  document.getElementById('comp-gaps').innerHTML = (a.gaps||[]).map(function(g) {
+    return '<div style="font-size:12px;color:#f59e0b;padding:2px 0">→ ' + g + '</div>';
+  }).join('');
+
+  var typeIco = {reel:'🎬', carousel:'🖼️', image:'📸'};
+  document.getElementById('comp-top-posts').innerHTML = (a.top_posts_preview||[]).map(function(p) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="font-size:22px;flex-shrink:0">' + (typeIco[p.content_type]||'📄') + '</div>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + p.description + '</div>'
+      + '<div style="font-size:11px;color:var(--tx3)">❤️ ' + (p.likes||0).toLocaleString() + ' likes</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function generateSimilarContent() {
+  if (!_compAnalysis) { toast('Run an analysis first', 'error'); return; }
+  var a = _compAnalysis;
+  var sorted = (a.top_content_types||[{type:'reel',percentage:100}]).slice().sort(function(x,y){return y.percentage-x.percentage;});
+  var topType = (sorted[0]?.type || 'reel').toLowerCase().replace('static posts','image').replace('carousels','carousel');
+
+  var btn = document.getElementById('comp-gen-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+  try {
+    var r = await apiFetch('/api/competitor/generate-similar', 'POST', {
+      handle: a.handle,
+      themes: a.content_themes || [],
+      hashtags: a.best_hashtags || [],
+      top_content_type: topType,
+      niche: document.getElementById('comp-niche')?.value || 'creator',
+    });
+    var d = await r.json();
+    if (d.ok && d.posts?.length) {
+      document.getElementById('comp-similar').style.display = 'block';
+      document.getElementById('comp-similar-grid').innerHTML = d.posts.map(function(p) {
+        var safeCap = (p.caption||'').replace(/'/g, "\\'");
+        return '<div class="card" style="padding:14px">'
+          + '<div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px">' + (p.title||'') + '</div>'
+          + '<div style="font-size:11px;color:var(--ac2);font-style:italic;margin-bottom:8px">"' + (p.hook||'') + '"</div>'
+          + '<div style="font-size:11px;color:var(--tx2);line-height:1.5;margin-bottom:10px">' + (p.caption||'') + '</div>'
+          + '<div style="font-size:10px;color:var(--ac);margin-bottom:10px">' + (p.hashtags||[]).slice(0,5).join(' ') + '</div>'
+          + '<button class="btn bg bsm" style="font-size:11px;width:100%" onclick="navigator.clipboard.writeText(\'' + safeCap + '\');toast(\'Copied!\',\'success\')">Copy Caption</button>'
+          + '</div>';
+      }).join('');
+      toast('3 similar post ideas generated!', 'success');
+    } else {
+      toast(d.detail || 'Generation failed — add an AI key in Settings', 'error');
+    }
+  } catch(e) { toast('Error: ' + (e.message||''), 'error'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Generate 3 Post Ideas'; } }
+}
+
+// ── Viral Score Predictor ─────────────────────────────────────────────────────
+var _vsCache = {};
+
+async function checkViralScore(caption, hashtags, platform, postTime, targetEl) {
+  if (!caption || caption.length < 20) { if (targetEl) targetEl.innerHTML = ''; return; }
+  var key = caption.slice(0, 80) + platform;
+  if (_vsCache[key]) { _renderViralScore(_vsCache[key], targetEl); return; }
+  if (targetEl) targetEl.innerHTML = '<div style="font-size:11px;color:var(--tx3);padding:10px 0">Calculating viral score…</div>';
+  try {
+    var r = await apiFetch('/api/viral-score', 'POST', {
+      caption: caption,
+      hashtags: Array.isArray(hashtags) ? hashtags : [],
+      niche: document.getElementById('ce-niche')?.value || 'other',
+      platform: platform || 'instagram',
+      post_time: postTime || '',
+    });
+    var d = await r.json();
+    if (d.ok) { _vsCache[key] = d; _renderViralScore(d, targetEl); }
+  } catch(e) { if (targetEl) targetEl.innerHTML = ''; }
+}
+
+function _renderViralScore(d, targetEl) {
+  if (!targetEl) return;
+  var tipsHtml = (d.tips||[]).slice(0,3).map(function(t) {
+    return '<div style="font-size:11px;color:var(--tx2);padding:4px 0 4px 10px;border-left:2px solid rgba(255,255,255,.12)">💡 ' + t + '</div>';
+  }).join('');
+  targetEl.innerHTML = '<div style="margin-top:12px;padding:12px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">'
+    + '<div style="display:flex;align-items:center;gap:12px' + (tipsHtml ? ';margin-bottom:10px' : '') + '">'
+    + '<div style="text-align:center;background:' + d.color + '22;border-radius:10px;padding:8px 14px;min-width:62px;flex-shrink:0">'
+    + '<div style="font-size:26px;font-weight:900;color:' + d.color + ';line-height:1">' + d.score + '</div>'
+    + '<div style="font-size:9px;font-weight:800;color:' + d.color + ';margin-top:2px">GRADE ' + d.grade + '</div>'
+    + '</div>'
+    + '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:2px">🔮 Viral Score</div>'
+    + '<div style="font-size:11px;color:var(--tx2)">' + d.verdict + '</div>'
+    + (d.best_feature ? '<div style="font-size:10px;color:var(--ac);margin-top:3px">✓ ' + d.best_feature + '</div>' : '')
+    + '</div></div>'
+    + (tipsHtml ? '<div style="display:flex;flex-direction:column;gap:3px">' + tipsHtml + '</div>' : '')
+    + '</div>';
+}
+
+function runCeModalViralScore() {
+  var caption  = document.getElementById('ce-modal-caption')?.textContent || '';
+  var tagsText = document.getElementById('ce-modal-hashtags')?.textContent || '';
+  var hashtags = (tagsText.match(/#\w+/g) || []);
+  checkViralScore(caption, hashtags, 'instagram', '', document.getElementById('ce-modal-viral-score'));
 }
 
 </script>
