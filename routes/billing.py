@@ -8,42 +8,42 @@ router = APIRouter()
 
 PLANS = {
     "free": {
-        "name": "Free", "price": 0, "credits": 50,
+        "name": "Free", "price": 0, "credits": 10,
         "sub_accounts": 0, "video": False, "live_support": False,
-        "features": ["50 credits/mo", "1 platform", "AI text content", "Content history"],
+        "features": ["10 videos lifetime", "1 platform", "AI text content", "Content history"],
     },
     "starter": {
-        "name": "Starter", "price": 299, "credits": 300,
+        "name": "Starter", "price": 40, "credits": 200,
         "sub_accounts": 0, "video": False, "live_support": False,
-        "features": ["Everything in Free +", "300 credits/mo", "All platforms", "Auto-post & scheduling", "Content Pipeline (text)", "1 main account"],
+        "features": ["Everything in Free +", "200 credits/mo", "All platforms", "Auto-post & scheduling", "Content Pipeline (text)", "1 main account"],
     },
     "growth": {
-        "name": "Growth", "price": 399, "credits": 400,
+        "name": "Growth", "price": 57, "credits": 500,
         "sub_accounts": 1, "video": False, "live_support": False,
-        "features": ["Everything in Starter +", "400 credits/mo", "1 growth account", "Auto DM replies", "Auto comment replies"],
+        "features": ["Everything in Starter +", "500 credits/mo", "1 growth account", "Auto DM replies", "Auto comment replies"],
     },
     "basic": {
-        "name": "Basic", "price": 499, "credits": 650,
+        "name": "Basic", "price": 70, "credits": 1000,
         "sub_accounts": 2, "video": False, "live_support": False,
-        "features": ["Everything in Growth +", "650 credits/mo", "2 sub-accounts", "Media library", "Content Mapper", "Basic analytics"],
+        "features": ["Everything in Growth +", "1,000 credits/mo", "2 sub-accounts", "Media library", "Content Mapper", "Basic analytics"],
     },
     "pro": {
-        "name": "Pro", "price": 999, "credits": 1500,
+        "name": "Pro", "price": 140, "credits": 2000,
         "sub_accounts": 5, "video": True, "live_support": True,
-        "features": ["Everything in Basic +", "1,500 credits/mo", "5 sub-accounts", "AI video generation", "AI voiceover", "Auto DM replies", "Live chat support"],
+        "features": ["Everything in Basic +", "2,000 credits/mo", "5 sub-accounts", "AI video generation", "AI voiceover", "Auto DM replies", "Live chat support"],
     },
     "elite": {
-        "name": "Elite", "price": 1499, "credits": 2800,
+        "name": "Elite", "price": 210, "credits": 5000,
         "sub_accounts": 10, "video": True, "live_support": True,
-        "features": ["Everything in Pro +", "2,800 credits/mo", "10 sub-accounts", "Priority video rendering", "Growth automation", "Anti-ban pro system"],
+        "features": ["Everything in Pro +", "5,000 credits/mo", "10 sub-accounts", "Priority video rendering", "Growth automation", "Anti-ban pro system"],
     },
     "personal": {
-        "name": "Personal", "price": 2499, "credits": 5000,
+        "name": "Personal", "price": 350, "credits": 999999,
         "sub_accounts": 999, "video": True, "live_support": True,
-        "features": ["Everything in Elite +", "5,000 credits/mo", "Unlimited sub-accounts", "Dedicated AI assistant", "Priority support", "White-label option"],
+        "features": ["Everything in Elite +", "Unlimited credits/mo", "Unlimited sub-accounts", "Dedicated AI assistant", "Priority support", "White-label option"],
     },
     "agency": {
-        "name": "Agency", "price": 1393, "credits": 2000,
+        "name": "Agency", "price": 199, "credits": 2000,
         "sub_accounts": 10, "video": True, "live_support": True,
         "features": ["Everything in Pro +", "2,000 credits/mo", "10 client accounts", "Agency dashboard", "Per-client content settings", "Priority support"],
     },
@@ -61,10 +61,9 @@ BASE_URL = "https://ugoingviral.com"
 
 # Topup er dyrere per credit end plan-abonnement — incentiverer planopgradering
 TOPUP_PACKAGES = {
-    100:  {"price": 49,  "name": "100 Credits",    "note": "Hurtig genopfyldning"},
-    350:  {"price": 149, "name": "350 Credits",    "note": "Til en mini-serie"},
-    700:  {"price": 249, "name": "700 Credits",    "note": "Populær valg"},
-    1500: {"price": 449, "name": "1.500 Credits",  "note": "Bedste pris per credit"},
+    100:  {"price": 29,  "name": "100 Credits",  "note": "Quick top-up"},
+    500:  {"price": 99,  "name": "500 Credits",  "note": "Popular choice"},
+    1500: {"price": 249, "name": "1500 Credits", "note": "Best price per credit"},
 }
 
 # Studio video pakker — engangskøb med credits til specifikke workflows
@@ -132,9 +131,8 @@ STUDIO_PACKAGES = {
 
 # Tilkøb — ekstra under-konto slots (engangskøb, permanent)
 ADDON_PACKAGES = {
-    "extra_sub_1": {"name": "1 ekstra under-konto", "price": 79,  "sub_slots": 1, "icon": "👥", "description": "Tilføj 1 permanent ekstra under-konto-slot"},
-    "extra_sub_3": {"name": "3 ekstra under-konti",  "price": 189, "sub_slots": 3, "icon": "👥👥", "description": "Tilføj 3 permanente ekstra under-konto-slots"},
-    "extra_sub_5": {"name": "5 ekstra under-konti",  "price": 279, "sub_slots": 5, "icon": "👥👥👥", "description": "Bedste pris — 5 slots til én pris"},
+    "extra_profile_starter": {"name": "Extra Profile (Starter/Growth)", "price": 7,  "sub_slots": 1, "icon": "👥", "description": "Add 1 extra profile — $7/mo (Starter & Growth plans)", "monthly": True},
+    "extra_profile_pro":     {"name": "Extra Profile (Basic/Pro/Elite)", "price": 14, "sub_slots": 1, "icon": "👥", "description": "Add 1 extra profile — $14/mo (Basic, Pro & Elite plans)", "monthly": True},
 }
 
 
@@ -192,20 +190,20 @@ def get_topup_packages(current_user: dict = Depends(get_current_user)):
 
 @router.post("/api/billing/create_custom_topup")
 async def create_custom_topup(body: dict, current_user: dict = Depends(get_current_user)):
-    """Brugerdefineret credit topup — brugeren angiver beløb i DKK."""
+    """Custom credit top-up — user specifies amount in USD."""
     import stripe
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
     if not stripe.api_key:
-        raise HTTPException(status_code=503, detail="Stripe ikke konfigureret")
+        raise HTTPException(status_code=503, detail="Stripe not configured")
 
-    amount_dkk = int(body.get("amount_dkk", 0))
-    if amount_dkk < 25:
-        raise HTTPException(status_code=400, detail="Minimum 25 DKK")
-    if amount_dkk > 5000:
-        raise HTTPException(status_code=400, detail="Maximum 5.000 DKK")
+    amount_usd = int(body.get("amount_usd", body.get("amount_dkk", 0)))
+    if amount_usd < 5:
+        raise HTTPException(status_code=400, detail="Minimum $5")
+    if amount_usd > 1000:
+        raise HTTPException(status_code=400, detail="Maximum $1000")
 
-    # Rate: 2.0 cr/DKK flat — altid lidt under faste pakker, incentiverer pakkekøb
-    credits = int(amount_dkk * 2.0)
+    # Rate: 3 cr/USD — slightly above fixed packages to incentivize package purchases
+    credits = int(amount_usd * 3)
     uid = current_user["id"]
 
     session = stripe.checkout.Session.create(
@@ -213,12 +211,12 @@ async def create_custom_topup(body: dict, current_user: dict = Depends(get_curre
         mode="payment",
         line_items=[{
             "price_data": {
-                "currency": "dkk",
+                "currency": "usd",
                 "product_data": {
                     "name": f"UgoingViral {credits} Credits",
-                    "description": f"Engangskøb af {credits} credits ({amount_dkk} DKK)",
+                    "description": f"One-time purchase of {credits} credits (${amount_usd})",
                 },
-                "unit_amount": amount_dkk * 100,
+                "unit_amount": amount_usd * 100,
             },
             "quantity": 1,
         }],
@@ -227,7 +225,6 @@ async def create_custom_topup(body: dict, current_user: dict = Depends(get_curre
         success_url=f"{BASE_URL}/app?payment=success&credits={credits}&custom=1",
         cancel_url=f"{BASE_URL}/app?payment=cancelled",
         metadata={"type": "custom_topup", "credits": str(credits), "user_id": uid},
-        locale="da",
     )
     return {"url": session.url, "credits": credits}
 

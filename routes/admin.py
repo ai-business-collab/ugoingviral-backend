@@ -16,12 +16,14 @@ security = HTTPBearer(auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 PLANS = {
-    "free":     {"name": "Gratis",   "price": 0,    "credits": 50},
-    "starter":  {"name": "Starter",  "price": 299,  "credits": 300},
-    "basic":    {"name": "Basic",    "price": 499,  "credits": 650},
-    "pro":      {"name": "Pro",      "price": 999,  "credits": 1500},
-    "elite":    {"name": "Elite",    "price": 1499, "credits": 2800},
-    "personal": {"name": "Personal", "price": 2499, "credits": 5000},
+    "free":     {"name": "Free",     "price": 0,   "credits": 10},
+    "starter":  {"name": "Starter",  "price": 40,  "credits": 200},
+    "growth":   {"name": "Growth",   "price": 57,  "credits": 500},
+    "basic":    {"name": "Basic",    "price": 70,  "credits": 1000},
+    "pro":      {"name": "Pro",      "price": 140, "credits": 2000},
+    "elite":    {"name": "Elite",    "price": 210, "credits": 5000},
+    "personal": {"name": "Personal", "price": 350, "credits": 999999},
+    "agency":   {"name": "Agency",   "price": 199, "credits": 2000},
 }
 
 ADMIN_EMAIL = "admin@ugoingviral.com"
