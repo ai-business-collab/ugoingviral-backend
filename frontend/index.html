@@ -1140,6 +1140,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" id="ni-content-engine" onclick="nav('content-engine')">📅 <span>Content Engine</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NEW</span></div>
       <div class="sub-item" id="ni-studio" onclick="nav('studio')">🎬 <span>Video Studio</span> <span style="font-size:9px;background:linear-gradient(90deg,var(--ac),var(--ac2));color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NY</span></div>
       <div class="sub-item" id="ni-pipeline" onclick="nav('pipeline')">⚡ <span data-i18n="nav.pipeline">Pipeline</span></div>
+      <div class="sub-item" id="ni-templates" onclick="nav('templates')">📝 <span>Templates</span> <span style="font-size:9px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">FREE</span></div>
       <div class="sub-item" onclick="nav('history')">📚 <span data-i18n="nav.history">Historik</span></div>
       <div class="sub-item" onclick="nav('content-library')">🗂️ <span data-i18n="nav.library">Bibliotek</span></div>
       <div class="sub-item" onclick="nav('library')">📁 <span data-i18n="nav.mapper">Content Mapper</span></div>
@@ -1184,6 +1185,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
     <!-- ── STATISTIK ── -->
     <div class="nav-section" data-i18n="nav.analytics">Analyse</div>
+    <div class="ni" id="ni-analytics" onclick="nav('analytics')"><span class="ico">📈</span><span>Analytics</span></div>
     <div class="ni" id="ni-growth-dash" onclick="nav('growth-dashboard')"><span class="ico">🌱</span><span>Growth Dashboard</span></div>
     <div class="ni" id="ni-stats" onclick="nav('stats')"><span class="ico">📊</span><span data-i18n="nav.stats">Statistik</span></div>
 
@@ -1246,6 +1248,19 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <span style="color:var(--border-b)">|</span>
         <span style="color:var(--tx2)">Credits:</span>
         <span id="billing-credits" style="color:var(--tx);font-weight:700">–</span>
+      </div>
+      <div id="notif-bell-wrap" style="position:relative">
+        <button class="btn bg bsm" onclick="toggleNotifPanel(event)" title="Notifications" style="padding:6px 11px;position:relative;font-size:15px">🔔<span id="notif-badge" style="display:none;position:absolute;top:-5px;right:-5px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;align-items:center;justify-content:center;padding:0 3px">0</span></button>
+        <div id="notif-panel" style="display:none;position:absolute;right:0;top:calc(100% + 8px);width:340px;max-height:500px;background:var(--bg);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:9999;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div style="font-size:14px;font-weight:700">Notifications</div>
+            <button class="btn bg bsm" onclick="markAllNotifRead()" style="font-size:11px;padding:3px 10px">Mark all read</button>
+          </div>
+          <div id="notif-list" style="max-height:360px;overflow-y:auto"></div>
+          <div style="padding:10px 16px;border-top:1px solid var(--border)">
+            <button class="btn bg bsm" onclick="nav('settings');toggleNotifPanel();setTimeout(function(){document.getElementById('notif-prefs-card')?.scrollIntoView({behavior:'smooth'})},350)" style="font-size:11px;width:100%;text-align:center">Notification preferences →</button>
+          </div>
+        </div>
       </div>
       <div id="clock">00:00:00</div>
       <button class="btn bg bsm" onclick="toggleTheme()" id="theme-btn">☀️ Lyst</button>
@@ -2729,6 +2744,14 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <button class="btn bg bsm" onclick="shareRefLinkedIn()">Share on LinkedIn</button>
           <a href="/affiliate" target="_blank" style="font-size:12px;color:var(--ac);text-decoration:none;display:flex;align-items:center;margin-left:auto">Become an affiliate →</a>
         </div>
+      </div>
+
+      <!-- NOTIFICATION PREFS -->
+      <div class="card" id="notif-prefs-card" style="margin-bottom:20px">
+        <div class="ctitle">🔔 Notification Preferences</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Choose which in-app notifications you receive.</div>
+        <div id="notif-prefs-list"><div style="color:var(--tx3);font-size:13px">Loading…</div></div>
+        <button class="btn bp bsm" style="margin-top:14px" onclick="saveNotifPrefs()">Save preferences</button>
       </div>
 
       <!-- DANGER ZONE -->
@@ -5649,6 +5672,8 @@ const titles = {
   'growth-accounts':'📈 Growth Konti',
   pipeline:'🎬 Content Pipeline',
   stats:'📊 Statistik',
+  templates:'📝 Templates',
+  analytics:'📈 Analytics',
   reels:'📝 Script Generator',
   'content-library':'🗂️ Content Bibliotek',
   history:'📚 Content Historik',
@@ -5674,7 +5699,7 @@ function nav(p) {
   if (p === 'stats') { loadStats(); }
   if (p === 'billing') { loadBilling(); detectBillingCurrency(); loadAutoTopup(); }
   if (p === 'billing') { setTimeout(checkLowCredits, 800); }
-  if (p === 'settings') { loadSettingsPage(); loadReferralStats(); }
+  if (p === 'settings') { loadSettingsPage(); loadReferralStats(); loadNotifPrefs(); }
   if (p === 'posting') { if (!allProducts.length) { loadProducts().then(function() { renderPostingProductGrid(); loadAutoGroups(); }); } else { renderPostingProductGrid(); loadAutoGroups(); } loadRecentPosts(); loadGroups(); }
   if (p === 'library') { loadLibFolders(); renderLibrary(libFiles); }
   if (p === 'content-library') { loadClib(); }
@@ -5706,6 +5731,8 @@ function nav(p) {
   if (p === 'agency-dashboard') { loadAgencyDashboard(); }
   if (p === 'telegram-settings') { loadTelegramStatus(); }
   if (p === 'media-upload') { loadMyUploads(); }
+  if (p === 'templates') { loadTemplates(); }
+  if (p === 'analytics') { loadAnalytics(); }
   _currentPage = p;
 }
 function toggleSubMenu(id) {
@@ -8366,6 +8393,61 @@ function sendQueueToPost(id) {
 </script>
 
 
+  <!-- TEMPLATES PAGE -->
+  <div id="page-templates" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:20px;font-weight:800">📝 Template Library</div>
+        <div style="font-size:13px;color:var(--tx3);margin-top:4px">Free caption templates for every niche — click "Use" to load directly into Content Engine</div>
+      </div>
+      <select class="fi" id="tmpl-filter-cat" style="max-width:180px;padding:6px 12px;font-size:13px" onchange="loadTemplates()">
+        <option value="">All categories</option>
+        <option value="ecommerce">🛒 E-commerce</option>
+        <option value="creator">✨ Creator</option>
+        <option value="agency">🏢 Agency</option>
+        <option value="restaurant">🍽️ Restaurant</option>
+        <option value="fitness">💪 Fitness</option>
+        <option value="motivation">🌟 Motivation</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input class="fi" id="tmpl-search" placeholder="Search templates…" style="flex:1;padding:7px 12px;font-size:13px" oninput="loadTemplates()">
+    </div>
+    <div id="tmpl-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+      <div style="color:var(--tx3);text-align:center;padding:40px;grid-column:1/-1;font-size:13px">Loading templates…</div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS PAGE -->
+  <div id="page-analytics" class="page">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      <div class="stat-kpi"><div class="stat-kpi-val" id="an-posts">–</div><div class="stat-kpi-lbl">Posts (30 days)</div></div>
+      <div class="stat-kpi"><div class="stat-kpi-val" id="an-platform">–</div><div class="stat-kpi-lbl">Top platform</div></div>
+      <div class="stat-kpi"><div class="stat-kpi-val" id="an-hour">–</div><div class="stat-kpi-lbl">Best posting time</div></div>
+      <div class="stat-kpi"><div class="stat-kpi-val" id="an-content">–</div><div class="stat-kpi-lbl">Content generated</div></div>
+    </div>
+    <div class="g2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="ctitle">📅 Posts per day — last 30 days</div>
+        <div class="stat-bar-wrap" id="an-posts-chart" style="margin-top:10px;min-height:60px"></div>
+      </div>
+      <div class="card">
+        <div class="ctitle">📊 Platform breakdown</div>
+        <div id="an-platform-chart" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <div class="g2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="ctitle">⏰ Best posting hours</div>
+        <div class="stat-bar-wrap" id="an-heatmap" style="margin-top:10px;min-height:60px"></div>
+      </div>
+      <div class="card">
+        <div class="ctitle">🏆 Best performing post</div>
+        <div id="an-best-post" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- UPLOAD MEDIA PAGE -->
   <div id="page-media-upload" class="page" style="display:none">
     <div style="max-width:760px">
@@ -10872,6 +10954,309 @@ async function saveAutoTopup() {
     await apiFetch('/api/billing/auto_topup', {method:'POST', body:JSON.stringify({enabled:_atuEnabled, threshold:threshold, amount:amount})});
     if(typeof showToast==='function' && _atuEnabled) showToast('Auto top-up saved');
   } catch(e) {}
+}
+
+
+// ── Notification Center ──────────────────────────────────────────────────
+var _notifOpen = false;
+
+function toggleNotifPanel(e) {
+  if (e) e.stopPropagation();
+  var panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  _notifOpen = !_notifOpen;
+  panel.style.display = _notifOpen ? '' : 'none';
+  if (_notifOpen) loadNotifications();
+}
+
+document.addEventListener('click', function(e) {
+  if (_notifOpen) {
+    var wrap = document.getElementById('notif-bell-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      _notifOpen = false;
+      var p2 = document.getElementById('notif-panel');
+      if (p2) p2.style.display = 'none';
+    }
+  }
+});
+
+async function loadNotifications() {
+  var list = document.getElementById('notif-list');
+  if (list) list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tx3);font-size:13px">Loading…</div>';
+  try {
+    var r = await apiFetch('/api/notifications');
+    var d = await r.json();
+    _renderNotifs(d.notifications || []);
+    _setNotifBadge(d.unread || 0);
+  } catch(e) {
+    if (list) list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tx3);font-size:13px">Not available</div>';
+  }
+}
+
+function _renderNotifs(notifs) {
+  var list = document.getElementById('notif-list');
+  if (!list) return;
+  if (!notifs.length) {
+    list.innerHTML = '<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">No notifications yet</div>';
+    return;
+  }
+  list.innerHTML = notifs.map(function(n) {
+    var ago = _nTimeAgo(n.created_at);
+    var unreadBg = n.read ? '' : 'background:rgba(0,229,255,.04);';
+    var fw = n.read ? '400' : '600';
+    return '<div onclick="markNotifRead(\'' + n.id + '\',this)" style="display:flex;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border);' + unreadBg + (n.read ? 'opacity:.6' : '') + '">'
+      + '<div style="font-size:20px;flex-shrink:0;line-height:1.5">' + (n.icon || 'ℹ️') + '</div>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:13px;font-weight:' + fw + ';color:var(--tx)">' + n.title + '</div>'
+      + '<div style="font-size:12px;color:var(--tx2);margin-top:2px;line-height:1.4">' + n.message + '</div>'
+      + '<div style="font-size:10px;color:var(--tx3);margin-top:4px">' + ago + '</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function markNotifRead(id, el) {
+  if (el) { el.style.opacity = '.55'; el.style.background = ''; }
+  try {
+    var r = await apiFetch('/api/notifications/read/' + id, 'POST');
+    var d = await r.json();
+    _setNotifBadge(d.unread || 0);
+  } catch(e) {}
+}
+
+async function markAllNotifRead() {
+  try {
+    await apiFetch('/api/notifications/read_all', 'POST');
+    _setNotifBadge(0);
+    loadNotifications();
+  } catch(e) {}
+}
+
+function _setNotifBadge(count) {
+  var b = document.getElementById('notif-badge');
+  if (!b) return;
+  if (count > 0) { b.textContent = count > 99 ? '99+' : count; b.style.display = 'flex'; }
+  else { b.style.display = 'none'; }
+}
+
+function _nTimeAgo(iso) {
+  if (!iso) return '';
+  try {
+    var s = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+  } catch(e) { return ''; }
+}
+
+async function loadNotifPrefs() {
+  try {
+    var r = await apiFetch('/api/notifications/prefs');
+    var d = await r.json();
+    var list = document.getElementById('notif-prefs-list');
+    if (!list) return;
+    var items = [
+      {key:'follower_milestone', label:'Follower milestones', desc:'When you reach 100, 500, 1k+ followers'},
+      {key:'credits_low',        label:'Low credits warning', desc:'When you have fewer than 20 credits left'},
+      {key:'autopilot_posted',   label:'Auto Pilot posted', desc:'Each time Auto Pilot publishes content'},
+      {key:'referral_upgraded',  label:'Referral upgrades', desc:'When someone you referred upgrades to a paid plan'},
+    ];
+    list.innerHTML = items.map(function(it) {
+      var on = d[it.key] !== false;
+      return '<div class="trow" style="border-color:rgba(255,255,255,.05)">'
+        + '<div><div class="tname">' + it.label + '</div><div class="tdesc">' + it.desc + '</div></div>'
+        + '<div class="tog' + (on ? ' on' : '') + '" id="notif-pref-' + it.key + '" onclick="togIt(this)"></div>'
+        + '</div>';
+    }).join('');
+  } catch(e) {}
+}
+
+async function saveNotifPrefs() {
+  var prefs = {};
+  ['follower_milestone','credits_low','autopilot_posted','referral_upgraded'].forEach(function(k) {
+    var el = document.getElementById('notif-pref-' + k);
+    prefs[k] = el ? el.classList.contains('on') : true;
+  });
+  try {
+    await apiFetch('/api/notifications/prefs', 'POST', prefs);
+    toast('Notification preferences saved', 'success');
+  } catch(e) { toast('Error saving preferences', 'error'); }
+}
+
+// Poll unread badge every 2 min after load
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    function _pollNotif() {
+      apiFetch('/api/notifications').then(function(r){return r.json();}).then(function(d){ _setNotifBadge(d.unread||0); }).catch(function(){});
+    }
+    _pollNotif();
+    setInterval(_pollNotif, 120000);
+  }, 3000);
+});
+
+// ── Template Library ──────────────────────────────────────────────────────
+var _CAT_COLORS = {ecommerce:'#f59e0b',creator:'#a78bfa',agency:'#00e5ff',restaurant:'#ef4444',fitness:'#22c55e',motivation:'#3b82f6',other:'#6b7280'};
+var _CAT_ICONS  = {ecommerce:'🛒',creator:'✨',agency:'🏢',restaurant:'🍽️',fitness:'💪',motivation:'🌟',other:'📝'};
+
+async function loadTemplates() {
+  var grid = document.getElementById('tmpl-grid');
+  if (!grid) return;
+  var cat = document.getElementById('tmpl-filter-cat')?.value || '';
+  var q = document.getElementById('tmpl-search')?.value || '';
+  var params = new URLSearchParams();
+  if (cat) params.set('category', cat);
+  if (q) params.set('q', q);
+  grid.innerHTML = '<div style="color:var(--tx3);text-align:center;padding:40px;grid-column:1/-1;font-size:13px">Loading…</div>';
+  try {
+    var url = '/api/templates' + (params.toString() ? '?' + params : '');
+    var r = await apiFetch(url);
+    var d = await r.json();
+    _renderTemplateGrid(d.templates || []);
+  } catch(e) {
+    grid.innerHTML = '<div style="color:var(--tx3);text-align:center;padding:40px;grid-column:1/-1;font-size:13px">Failed to load templates</div>';
+  }
+}
+
+function _renderTemplateGrid(templates) {
+  var grid = document.getElementById('tmpl-grid');
+  if (!grid) return;
+  if (!templates.length) {
+    grid.innerHTML = '<div style="color:var(--tx3);text-align:center;padding:40px;grid-column:1/-1;font-size:13px">No templates found for this filter.</div>';
+    return;
+  }
+  grid.innerHTML = templates.map(function(t) {
+    var cat = t.category || 'other';
+    var nc = _CAT_COLORS[cat] || '#6b7280';
+    var ico = _CAT_ICONS[cat] || '📝';
+    var preview = t.caption.length > 130 ? t.caption.slice(0,130) + '…' : t.caption;
+    var tags = t.hashtags ? '<div style="font-size:10px;color:var(--ac);margin-top:6px;line-height:1.5;word-break:break-word">' + t.hashtags + '</div>' : '';
+    return '<div class="card" style="display:flex;flex-direction:column;gap:10px;padding:16px">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
+      + '<div style="font-size:14px;font-weight:700;color:var(--tx);line-height:1.3">' + t.title + '</div>'
+      + '<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;background:' + nc + '22;color:' + nc + ';white-space:nowrap;text-transform:capitalize;flex-shrink:0">' + ico + ' ' + cat + '</span>'
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--tx2);line-height:1.6;flex:1">' + preview + '</div>'
+      + tags
+      + '<div style="display:flex;gap:6px;margin-top:4px">'
+      + '<button class="btn bp bsm" style="flex:1;font-size:12px" onclick="useTemplate(\'' + t.id + '\')">Use in Content Engine →</button>'
+      + '<button class="btn bg bsm" style="font-size:12px" title="Copy caption" onclick="copyTemplateCap(\'' + t.id.replace(/'/g,"\\'") + '\')">Copy</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  window._tmplData = templates;
+}
+
+async function useTemplate(id) {
+  try {
+    var r = await apiFetch('/api/templates/use/' + id, 'POST');
+    var d = await r.json();
+    if (!d.ok) return;
+    var tpl = d.template;
+    var fullText = tpl.caption + (tpl.hashtags ? '\n\n' + tpl.hashtags : '');
+    nav('content-engine');
+    setTimeout(function() {
+      var ta = document.getElementById('ce-caption-input') || document.querySelector('#page-content-engine textarea');
+      if (ta) { ta.value = fullText; ta.dispatchEvent(new Event('input')); }
+      toast('Template loaded into Content Engine!', 'success');
+    }, 350);
+  } catch(e) { toast('Error loading template', 'error'); }
+}
+
+function copyTemplateCap(id) {
+  var tpl = (window._tmplData || []).find(function(t) { return t.id === id; });
+  if (!tpl) return;
+  var text = tpl.caption + (tpl.hashtags ? '\n\n' + tpl.hashtags : '');
+  navigator.clipboard.writeText(text).then(function() {
+    toast('Caption copied!', 'success');
+  }).catch(function() {
+    toast('Could not copy', 'error');
+  });
+}
+
+// ── Analytics ──────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    var r = await apiFetch('/api/analytics/dashboard');
+    var d = await r.json();
+    var el = function(id) { return document.getElementById(id); };
+    var k = d.kpis || {};
+    if (el('an-posts')) el('an-posts').textContent = k.total_posts_30d ?? 0;
+    if (el('an-platform')) el('an-platform').textContent = k.top_platform || '–';
+    if (el('an-hour')) el('an-hour').textContent = k.best_hour || '–';
+    if (el('an-content')) el('an-content').textContent = k.content_generated_30d ?? 0;
+    _renderAnPostsChart(d.day_labels || [], d.posts_per_day || {});
+    _renderAnPlatformChart(d.platform_breakdown || {});
+    _renderAnHeatmap(d.hour_heatmap || {});
+    _renderAnBestPost(d.best_post);
+  } catch(e) {
+    ['an-posts','an-platform','an-hour','an-content'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.textContent = '–';
+    });
+  }
+}
+
+function _renderAnPostsChart(labels, perDay) {
+  var wrap = document.getElementById('an-posts-chart');
+  if (!wrap) return;
+  var vals = labels.map(function(d2) { return perDay[d2] || 0; });
+  var maxV = Math.max.apply(null, vals) || 1;
+  wrap.innerHTML = '<div style="display:flex;align-items:flex-end;gap:2px;height:80px">'
+    + vals.map(function(v, i) {
+      var pct = Math.round((v / maxV) * 100);
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0" title="' + labels[i] + ': ' + v + ' posts">'
+        + '<div style="width:100%;background:linear-gradient(0deg,var(--ac),var(--ac2));border-radius:2px 2px 0 0;height:' + pct + '%;min-height:' + (v>0?'3':'0') + 'px;transition:height .3s"></div>'
+        + (i % 5 === 0 ? '<div style="font-size:8px;color:var(--tx3);transform:rotate(-45deg);white-space:nowrap;overflow:hidden;width:20px">' + labels[i].slice(5) + '</div>' : '<div style="height:12px"></div>')
+        + '</div>';
+    }).join('') + '</div>';
+}
+
+function _renderAnPlatformChart(breakdown) {
+  var wrap = document.getElementById('an-platform-chart');
+  if (!wrap) return;
+  var entries = Object.entries(breakdown);
+  if (!entries.length) { wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0">No posts yet. Start posting to see your platform breakdown.</div>'; return; }
+  var total = entries.reduce(function(s, e) { return s + e[1]; }, 0) || 1;
+  var colors = ['#00e5ff','#7c3aed','#f59e0b','#22c55e','#ef4444','#3b82f6'];
+  wrap.innerHTML = entries.map(function(e, i) {
+    var pct = Math.round((e[1]/total)*100);
+    return '<div style="margin-bottom:12px">'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'
+      + '<span style="color:var(--tx2)">' + e[0] + '</span>'
+      + '<span style="color:var(--tx3)">' + e[1] + ' (' + pct + '%)</span></div>'
+      + '<div style="height:7px;background:var(--border);border-radius:4px"><div style="height:100%;width:' + pct + '%;background:' + (colors[i%colors.length]) + ';border-radius:4px;transition:width .5s"></div></div>'
+      + '</div>';
+  }).join('');
+}
+
+function _renderAnHeatmap(heatmap) {
+  var wrap = document.getElementById('an-heatmap');
+  if (!wrap) return;
+  var vals = Array.from({length:24}, function(_, i) { return heatmap[String(i)] || 0; });
+  var maxV = Math.max.apply(null, vals) || 1;
+  wrap.innerHTML = '<div style="display:flex;align-items:flex-end;gap:2px;height:70px">'
+    + vals.map(function(v, h) {
+      var pct = Math.round((v/maxV)*100);
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0" title="' + h + ':00 — ' + v + ' posts">'
+        + '<div style="width:100%;background:linear-gradient(0deg,#f59e0b,#fbbf24);border-radius:2px 2px 0 0;height:' + pct + '%;min-height:' + (v>0?'3':'0') + 'px"></div>'
+        + (h % 6 === 0 ? '<div style="font-size:8px;color:var(--tx3)">' + h + 'h</div>' : '<div style="height:12px"></div>')
+        + '</div>';
+    }).join('') + '</div>'
+    + '<div style="font-size:11px;color:var(--tx3);margin-top:8px">Hover over bars to see exact post counts per hour</div>';
+}
+
+function _renderAnBestPost(bp) {
+  var wrap = document.getElementById('an-best-post');
+  if (!wrap) return;
+  if (!bp || !bp.caption) {
+    wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0">No posts yet. Start posting to see your best performer here.</div>';
+    return;
+  }
+  wrap.innerHTML = '<div style="font-size:12px;color:var(--tx2);line-height:1.6;padding:12px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.12);border-radius:8px;margin-bottom:10px">' + bp.caption + '</div>'
+    + '<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--tx3)">'
+    + (bp.platform ? '<span>📱 ' + bp.platform + '</span>' : '')
+    + (bp.date ? '<span>📅 ' + bp.date + '</span>' : '')
+    + (bp.engagement ? '<span>❤️ ' + bp.engagement + ' engagement</span>' : '<span style="font-style:italic">Connect your accounts to track engagement</span>')
+    + '</div>';
 }
 
 </script>

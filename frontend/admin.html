@@ -323,6 +323,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="sec-tab hidden" onclick="showSection('api_usage')" id="tab-api">📊 API Forbrug</button>
       <button class="sec-tab hidden" onclick="showSection('automation_log')" id="tab-automation-log">📋 Automation Log</button>
       <button class="sec-tab hidden" onclick="showSection('qa')" id="tab-qa">🧪 QA</button>
+      <button class="sec-tab hidden" onclick="showSection('templates')" id="tab-templates">📝 Templates</button>
     </div>
 
     <!-- STATS (owner + support) -->
@@ -466,6 +467,59 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
         <div id="qa-results-wrap" style="padding:0 16px 16px">
           <div style="color:var(--tx3);font-size:13px;padding:20px 0">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-templates" class="hidden">
+      <div class="table-card">
+        <div class="table-header" style="flex-wrap:wrap;gap:12px">
+          <div class="table-title">📝 Template Library</div>
+          <button class="action-btn" onclick="loadAdminTemplates()">↻ Refresh</button>
+        </div>
+        <div id="admin-tmpl-list" style="padding:0 16px 16px">
+          <div style="color:var(--tx3);font-size:13px;padding:20px 0">Loading…</div>
+        </div>
+      </div>
+      <div class="table-card" style="margin-top:16px">
+        <div class="table-header"><div class="table-title">＋ Add Template</div></div>
+        <div style="padding:0 16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px" id="admin-tmpl-form">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:12px;color:var(--tx3)">Title *</label>
+            <input class="admin-input" id="at-title" placeholder="e.g. Product Launch Hook">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:12px;color:var(--tx3)">Category *</label>
+            <select class="admin-input" id="at-category">
+              <option value="ecommerce">E-commerce</option>
+              <option value="creator">Creator</option>
+              <option value="agency">Agency</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="fitness">Fitness</option>
+              <option value="motivation">Motivation</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:12px;color:var(--tx3)">Content type</label>
+            <select class="admin-input" id="at-type">
+              <option value="caption">Caption</option>
+              <option value="hook">Hook</option>
+              <option value="cta">CTA</option>
+              <option value="script">Script</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:12px;color:var(--tx3)">Hashtags</label>
+            <input class="admin-input" id="at-hashtags" placeholder="#tag1 #tag2 #tag3">
+          </div>
+          <div style="grid-column:1/-1;display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:12px;color:var(--tx3)">Caption / template *</label>
+            <textarea class="admin-input" id="at-caption" rows="4" placeholder="Write the template. Use [brackets] for placeholders like [product], [brand]." style="resize:vertical"></textarea>
+          </div>
+          <div style="grid-column:1/-1">
+            <button class="action-btn" onclick="addAdminTemplate()">＋ Add Template</button>
+          </div>
         </div>
       </div>
     </div>
@@ -726,6 +780,7 @@ async function showApp(info) {
     document.getElementById('tab-api').classList.remove('hidden');
       document.getElementById('tab-automation-log').classList.remove('hidden');
     document.getElementById('tab-qa').classList.remove('hidden');
+    document.getElementById('tab-templates').classList.remove('hidden');
     settingsBtn.classList.add('hidden');
     document.getElementById('emp-profile-header').classList.add('hidden');
   } else if (role === 'support') {
@@ -801,6 +856,7 @@ function showSection(sec) {
   if (sec === 'guidelines' && !guidelinesData) loadGuidelines();
   if (sec === 'revenue') loadRevenue();
   if (sec === 'qa') loadQAResults();
+  if (sec === 'templates') loadAdminTemplates();
   if (sec === 'api_usage') loadApiUsage();
   if (sec === 'automation_log') { populateLogUserSelect(); loadAutomationLog(); }
 }
@@ -2085,6 +2141,93 @@ async function runQANow() {
       .catch(function() {});
   });
 })();
+
+
+// ── Admin Template Library ────────────────────────────────────────────────
+var ADMIN_TOKEN = localStorage.getItem('ugv_admin_token') || '';
+
+async function loadAdminTemplates() {
+  var wrap = document.getElementById('admin-tmpl-list');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:20px 0">Loading…</div>';
+  try {
+    var r = await fetch('/api/templates?category=&q=', {
+      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ugv_token') || '') }
+    });
+    var d = await r.json();
+    var templates = d.templates || [];
+    if (!templates.length) {
+      wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:20px 0">No templates yet.</div>';
+      return;
+    }
+    var catColors = {ecommerce:'#f59e0b',creator:'#a78bfa',agency:'#00e5ff',restaurant:'#ef4444',fitness:'#22c55e',motivation:'#3b82f6',other:'#6b7280'};
+    wrap.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      + '<tr style="color:var(--tx3);border-bottom:1px solid var(--border)">'
+      + '<th style="text-align:left;padding:6px 8px">Title</th>'
+      + '<th style="text-align:left;padding:6px 8px">Category</th>'
+      + '<th style="text-align:left;padding:6px 8px">Type</th>'
+      + '<th style="text-align:right;padding:6px 8px">Uses</th>'
+      + '<th style="padding:6px 8px"></th></tr>'
+      + templates.map(function(t) {
+        var nc = catColors[t.category] || '#6b7280';
+        return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
+          + '<td style="padding:7px 8px;color:var(--tx2);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + t.caption.replace(/"/g,'&quot;') + '">' + t.title + '</td>'
+          + '<td style="padding:7px 8px"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:' + nc + '22;color:' + nc + '">' + t.category + '</span></td>'
+          + '<td style="padding:7px 8px;color:var(--tx3)">' + (t.content_type || 'caption') + '</td>'
+          + '<td style="text-align:right;padding:7px 8px;color:var(--tx3)">' + (t.usage_count || 0) + '</td>'
+          + '<td style="text-align:right;padding:7px 8px"><button onclick="deleteAdminTemplate(\'' + t.id + '\')" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-size:10px;padding:3px 8px;border-radius:6px;cursor:pointer">Delete</button></td>'
+          + '</tr>';
+      }).join('')
+      + '</table>';
+  } catch(e) {
+    wrap.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px 0">Failed to load templates</div>';
+  }
+}
+
+async function addAdminTemplate() {
+  var title = document.getElementById('at-title')?.value?.trim();
+  var category = document.getElementById('at-category')?.value;
+  var type = document.getElementById('at-type')?.value || 'caption';
+  var caption = document.getElementById('at-caption')?.value?.trim();
+  var hashtags = document.getElementById('at-hashtags')?.value?.trim() || '';
+  if (!title || !caption) { alert('Title and caption are required'); return; }
+  var adminToken = localStorage.getItem('ugv_admin_token') || document.getElementById('admin-key-stored') || '';
+  try {
+    var r = await fetch('/api/admin/templates', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Token': adminToken,
+        'Authorization': 'Bearer ' + (localStorage.getItem('ugv_token') || '')
+      },
+      body: JSON.stringify({title, category, content_type: type, caption, hashtags})
+    });
+    var d = await r.json();
+    if (d.ok) {
+      document.getElementById('at-title').value = '';
+      document.getElementById('at-caption').value = '';
+      document.getElementById('at-hashtags').value = '';
+      loadAdminTemplates();
+    } else {
+      alert('Error: ' + (d.detail || 'Unknown error'));
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function deleteAdminTemplate(id) {
+  if (!confirm('Delete this template?')) return;
+  var adminToken = localStorage.getItem('ugv_admin_token') || '';
+  try {
+    await fetch('/api/admin/templates/' + id, {
+      method: 'DELETE',
+      headers: {
+        'X-Admin-Token': adminToken,
+        'Authorization': 'Bearer ' + (localStorage.getItem('ugv_token') || '')
+      }
+    });
+    loadAdminTemplates();
+  } catch(e) { alert('Error: ' + e.message); }
+}
 
 </script>
 

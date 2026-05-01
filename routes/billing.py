@@ -698,6 +698,15 @@ async def stripe_webhook(request: Request):
                             _save_user_store(referred_by, ref_store)
                             user_store["referral_bonus_paid"] = True
                             _save_user_store(user_id, user_store)
+                            try:
+                                from routes.notifications import push_notification
+                                push_notification(
+                                    referred_by, "referral_upgraded",
+                                    "Referral upgraded!",
+                                    f"Someone you referred just upgraded to a paid plan. You earned 50 bonus credits!"
+                                )
+                            except Exception:
+                                pass
                 except Exception:
                     pass
 

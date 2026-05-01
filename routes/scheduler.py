@@ -645,6 +645,17 @@ async def _run_for_user(force: bool = False):
         hour_key2 = now.strftime("%Y-%m-%dT%H")
         slog[f"hourly_{hour_key2}"] = slog.get(f"hourly_{hour_key2}", 0) + max(posted_count, 1)
         save_store()
+        if posted_count > 0:
+            try:
+                from services.store import _uid_ctx
+                _uid = _uid_ctx.get(None)
+                if _uid:
+                    from routes.notifications import push_notification
+                    _prod_lbl = product["title"][:40] if product else f"AI content ({niche})" if niche else "AI content"
+                    push_notification(_uid, "autopilot_posted", "Auto Pilot posted",
+                                      f"Posted to {posted_count} platform(s): {_prod_lbl}")
+            except Exception:
+                pass
 
     except Exception as e:
         add_log(f"❌ Scheduler error: {str(e)[:80]}", "error")
