@@ -2702,6 +2702,35 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div id="settings-plan-features"><div style="color:var(--tx3);font-size:13px;padding:8px 0">Loading...</div></div>
       </div>
 
+      <!-- REFERRAL -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">🎁 Refer a Friend</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Earn <strong style="color:var(--ac)">50 bonus credits</strong> every time someone you invite upgrades to a paid plan.</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px" id="ref-stats-grid">
+          <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:22px;font-weight:700;color:var(--ac)" id="ref-invited">–</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Invited</div>
+          </div>
+          <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:22px;font-weight:700;color:#22c55e" id="ref-upgraded">–</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Upgraded</div>
+          </div>
+          <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:22px;font-weight:700;color:#f59e0b" id="ref-credits">–</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Credits Earned</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <input class="fi" id="ref-link-input" readonly style="font-size:12px;font-family:monospace;flex:1;cursor:pointer" onclick="this.select()" value="Loading...">
+          <button class="btn bg bsm" onclick="copyRefLink()">Copy</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn bg bsm" onclick="shareRefTwitter()">Share on X</button>
+          <button class="btn bg bsm" onclick="shareRefLinkedIn()">Share on LinkedIn</button>
+          <a href="/affiliate" target="_blank" style="font-size:12px;color:var(--ac);text-decoration:none;display:flex;align-items:center;margin-left:auto">Become an affiliate →</a>
+        </div>
+      </div>
+
       <!-- DANGER ZONE -->
       <div class="card" style="margin-bottom:20px;border-color:rgba(239,68,68,.18)">
         <div class="ctitle" style="color:#ef4444">⚠️ Danger Zone</div>
@@ -5439,6 +5468,39 @@ function toggleLang() {
 
 
 // ── Settings page ─────────────────────────────────────────────────────────────
+async function loadReferralStats() {
+  try {
+    const r = await apiFetch('/api/billing/referral_stats');
+    const d = await r.json();
+    const el = (id) => document.getElementById(id);
+    if (el('ref-invited')) el('ref-invited').textContent = d.invited_count ?? 0;
+    if (el('ref-upgraded')) el('ref-upgraded').textContent = d.upgraded_count ?? 0;
+    if (el('ref-credits')) el('ref-credits').textContent = d.credits_earned ?? 0;
+    if (el('ref-link-input')) el('ref-link-input').value = d.ref_url || '';
+    window._refUrl = d.ref_url || '';
+  } catch(e) {}
+}
+
+function copyRefLink() {
+  const inp = document.getElementById('ref-link-input');
+  if (!inp) return;
+  navigator.clipboard.writeText(inp.value).then(function() {
+    const btn = inp.nextElementSibling;
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(function() { btn.textContent = 'Copy'; }, 1800); }
+  }).catch(function() { inp.select(); document.execCommand('copy'); });
+}
+
+function shareRefTwitter() {
+  const url = window._refUrl || document.getElementById('ref-link-input')?.value || 'https://ugoingviral.com';
+  const text = encodeURIComponent('I use UgoingViral to automate my social media — check it out: ' + url);
+  window.open('https://twitter.com/intent/tweet?text=' + text, '_blank');
+}
+
+function shareRefLinkedIn() {
+  const url = encodeURIComponent(window._refUrl || document.getElementById('ref-link-input')?.value || 'https://ugoingviral.com');
+  window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + url, '_blank');
+}
+
 async function loadSettingsPage() {
   // Set UI language dropdown
   const langSel = document.getElementById('set-ui-lang');
@@ -5612,7 +5674,7 @@ function nav(p) {
   if (p === 'stats') { loadStats(); }
   if (p === 'billing') { loadBilling(); detectBillingCurrency(); loadAutoTopup(); }
   if (p === 'billing') { setTimeout(checkLowCredits, 800); }
-  if (p === 'settings') { loadSettingsPage(); }
+  if (p === 'settings') { loadSettingsPage(); loadReferralStats(); }
   if (p === 'posting') { if (!allProducts.length) { loadProducts().then(function() { renderPostingProductGrid(); loadAutoGroups(); }); } else { renderPostingProductGrid(); loadAutoGroups(); } loadRecentPosts(); loadGroups(); }
   if (p === 'library') { loadLibFolders(); renderLibrary(libFiles); }
   if (p === 'content-library') { loadClib(); }

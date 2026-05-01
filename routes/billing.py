@@ -681,6 +681,25 @@ async def stripe_webhook(request: Request):
                         _auto_assign_personal(user_id)
                     except Exception:
                         pass
+                # Award referral bonus to referrer on first paid upgrade
+                try:
+                    referred_by = user_store.get("referred_by", "")
+                    if referred_by and not user_store.get("referral_bonus_paid"):
+                        ref_store = _load_user_store(referred_by)
+                        if ref_store:
+                            ref_billing = ref_store.setdefault("billing", {})
+                            ref_plan = PLANS.get(ref_billing.get("plan", "free"), PLANS["free"])
+                            ref_billing["credits"] = ref_billing.get("credits", ref_plan["credits"]) + BONUS_CREDITS["invite_friend"]
+                            ref_store["billing"] = ref_billing
+                            upgraded = ref_store.setdefault("upgraded_referrals", [])
+                            if user_id not in upgraded:
+                                upgraded.append(user_id)
+                            ref_store["upgraded_referrals"] = upgraded
+                            _save_user_store(referred_by, ref_store)
+                            user_store["referral_bonus_paid"] = True
+                            _save_user_store(user_id, user_store)
+                except Exception:
+                    pass
 
     elif event["type"] == "customer.subscription.deleted":
         # Subscription cancelled — revert to free plan
@@ -794,7 +813,8 @@ def get_founding_status(current_user: dict = Depends(get_current_user)):
 
 @router.post("/api/billing/referral_signup")
 def referral_signup(body: dict):
-    """Called internally when a new user registers with a ref code."""
+    """Called internally when a new user registers with a ref code.
+    Records referred_by in new user's store; bonus credited on first paid upgrade."""
     ref_code = body.get("ref_code", "")
     new_user_id = body.get("user_id", "")
     if not ref_code or not new_user_id:
@@ -810,21 +830,38 @@ def referral_signup(body: dict):
     for u in all_users:
         uid = u.get("id", "")
         if hashlib.sha256(uid.encode()).hexdigest()[:10] == ref_code:
+            # Track in referrer's store
             ustore = _load_user_store(uid)
             invited = ustore.setdefault("invited_users", [])
             if new_user_id not in invited:
                 invited.append(new_user_id)
                 ustore["invited_users"] = invited
                 _save_user_store(uid, ustore)
-                # Award bonus to referrer via _try_auto_bonus won't work for multiple invites
-                # so we add credits directly
-                billing = ustore.setdefault("billing", {})
-                plan_info = PLANS.get(billing.get("plan", "free"), PLANS["free"])
-                billing["credits"] = billing.get("credits", plan_info["credits"]) + BONUS_CREDITS["invite_friend"]
-                ustore["billing"] = billing
-                _save_user_store(uid, ustore)
+            # Record referrer in new user's store (bonus paid on upgrade)
+            new_store = _load_user_store(new_user_id)
+            if not new_store.get("referred_by"):
+                new_store["referred_by"] = uid
+                _save_user_store(new_user_id, new_store)
             return {"ok": True}
     return {"ok": False}
+
+
+@router.get("/api/billing/referral_stats")
+def referral_stats(current_user: dict = Depends(get_current_user)):
+    import hashlib
+    uid = current_user["id"]
+    code = hashlib.sha256(uid.encode()).hexdigest()[:10]
+    ustore = _load_user_store(uid)
+    invited_count = len(ustore.get("invited_users", []))
+    upgraded_count = len(ustore.get("upgraded_referrals", []))
+    credits_earned = upgraded_count * BONUS_CREDITS.get("invite_friend", 50)
+    return {
+        "ref_code": code,
+        "ref_url": f"https://ugoingviral.com/?ref={code}",
+        "invited_count": invited_count,
+        "upgraded_count": upgraded_count,
+        "credits_earned": credits_earned,
+    }
 
 
 # ── Auto Top-Up ───────────────────────────────────────────────────────────────
