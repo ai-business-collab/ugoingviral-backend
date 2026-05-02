@@ -220,5 +220,301 @@
         "note": ""
       }
     ]
+  },
+  {
+    "run_id": "20260502T040002Z",
+    "timestamp": "2026-05-02T04:00:02.225439Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "pass": true,
+        "status_code": 400,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 277,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 6,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 6,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "run_id": "20260502T100002Z",
+    "timestamp": "2026-05-02T10:00:02.005230Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "pass": true,
+        "status_code": 400,
+        "elapsed_ms": 2,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 271,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 6,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 7,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "run_id": "20260502T160001Z",
+    "timestamp": "2026-05-02T16:00:01.786395Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "pass": true,
+        "status_code": 400,
+        "elapsed_ms": 2,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 271,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 3,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 6,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 6,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "run_id": "20260502T160245Z",
+    "timestamp": "2026-05-02T16:02:45.499015Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "pass": true,
+        "status_code": 400,
+        "elapsed_ms": 2,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 267,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 3,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 3,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "pass": true,
+        "status_code": 200,
+        "elapsed_ms": 4,
+        "error": null,
+        "note": ""
+      }
+    ]
   }
 ]
