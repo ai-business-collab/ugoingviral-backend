@@ -1,0 +1,20 @@
+[
+  {
+    "event": "user.signup",
+    "timestamp": "2026-05-01T02:13:11.653957Z",
+    "platform": "ugoingviral",
+    "data": {
+      "email": "test@example.com",
+      "plan": "free"
+    }
+  },
+  {
+    "event": "payment.received",
+    "timestamp": "2026-05-01T02:13:11.689990Z",
+    "platform": "ugoingviral",
+    "data": {
+      "amount": 40,
+      "plan": "starter"
+    }
+  }
+]

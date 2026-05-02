@@ -1,0 +1,302 @@
+[
+  {
+    "id": "ec-1",
+    "title": "New Product Launch",
+    "category": "ecommerce",
+    "content_type": "caption",
+    "caption": "\ud83d\ude80 Introducing [Product Name]! Finally here \u2014 tap the link in bio to shop before it sells out. Limited stock, no code needed. #newproduct #shopnow #[brand]",
+    "hashtags": "#newproduct #shopnow #ecommerce #musthave #limitedstock",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ec-2",
+    "title": "Flash Sale Urgency",
+    "category": "ecommerce",
+    "content_type": "caption",
+    "caption": "\u26a1 FLASH SALE \u2014 24 hours only! Up to [X]% off everything. Clock is ticking \u23f0 Shop the link in bio. No code needed.",
+    "hashtags": "#flashsale #sale #discount #limitedtime #deal",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ec-3",
+    "title": "Customer Review Highlight",
+    "category": "ecommerce",
+    "content_type": "caption",
+    "caption": "\u2b50\u2b50\u2b50\u2b50\u2b50 '[Customer quote here]' \u2014 [Customer Name]\n\nThis is why we do what we do. Thank you! Shop the link in bio.",
+    "hashtags": "#customerlove #review #happycustomer #testimonial #[brand]",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ec-4",
+    "title": "Bundle Deal Offer",
+    "category": "ecommerce",
+    "content_type": "caption",
+    "caption": "\ud83d\udc8e Get more, save more! Our [Bundle Name] includes everything you need at [X]% off. Perfect gift or treat yourself \u2014 link in bio!",
+    "hashtags": "#bundle #deal #gifting #[brand] #sale",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ec-5",
+    "title": "Restock Announcement",
+    "category": "ecommerce",
+    "content_type": "caption",
+    "caption": "\ud83d\ude4c IT'S BACK! [Product] is restocked and ready to ship. You asked, we listened \u2014 grab yours before it's gone again. Link in bio!",
+    "hashtags": "#restock #backbydemand #[brand] #shopnow #limitedstock",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "cr-1",
+    "title": "Behind the Scenes",
+    "category": "creator",
+    "content_type": "caption",
+    "caption": "A peek behind the curtain \ud83d\udc40 This is what goes into every piece of content you see. Real work, real passion. What do you want to see next? Drop it below \u2b07\ufe0f",
+    "hashtags": "#behindthescenes #contentcreator #dayinmylife #process #creator",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "cr-2",
+    "title": "Story Time Hook",
+    "category": "creator",
+    "content_type": "hook",
+    "caption": "Nobody ever told me that [relatable struggle]. But after [timeframe] of [action], here's what actually changed everything \ud83d\udc47 Save this post if you needed to hear it.",
+    "hashtags": "#storytime #reallife #creator #motivation #contentcreator",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "cr-3",
+    "title": "New Video / Post Teaser",
+    "category": "creator",
+    "content_type": "caption",
+    "caption": "New video just dropped! \ud83c\udfac [What it's about in one sentence]. This one is different \u2014 watch till the end. Link in bio!",
+    "hashtags": "#newvideo #contentcreator #youtuber #[niche] #newpost",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "cr-4",
+    "title": "Collab Announcement",
+    "category": "creator",
+    "content_type": "caption",
+    "caption": "Big news! I'm teaming up with @[partner] for something special \ud83c\udf89 Stay tuned \u2014 you don't want to miss this. Comment \ud83d\udd25 if you're excited!",
+    "hashtags": "#collab #collaboration #partnership #[niche] #exciting",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "cr-5",
+    "title": "Follower Milestone Thank You",
+    "category": "creator",
+    "content_type": "caption",
+    "caption": "WE HIT [X] FOLLOWERS! \ud83c\udf89 I genuinely cannot believe this. Thank you to every single one of you. To celebrate, I'm doing [giveaway/special post/Q&A] \u2014 details below!",
+    "hashtags": "#milestone #thankyou #community #[niche] #blessed",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ag-1",
+    "title": "Client Win Showcase",
+    "category": "agency",
+    "content_type": "caption",
+    "caption": "Another win for our client! \ud83c\udf89 [Client/brand] went from [X] to [Y] in just [timeframe] working with us. DM us 'GROW' to find out how we can do the same for your brand.",
+    "hashtags": "#clientresults #digitalmarketing #agencylife #results #growth",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ag-2",
+    "title": "Service Offering Post",
+    "category": "agency",
+    "content_type": "caption",
+    "caption": "Struggling with [pain point]? That's exactly what we fix. Our [service] has helped [X] businesses [achieve result]. Book a free call \u2014 link in bio.",
+    "hashtags": "#digitalmarketing #agency #socialmedia #marketing #freelancer",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ag-3",
+    "title": "Industry Tip Post",
+    "category": "agency",
+    "content_type": "caption",
+    "caption": "Most brands are making THIS mistake on [platform] \ud83d\udc47\n\n[Tip 1]\n[Tip 2]\n[Tip 3]\n\nSave this and share it with someone who needs it. Follow for more weekly tips!",
+    "hashtags": "#marketingtips #socialmediatips #growthhacks #agency #business",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ag-4",
+    "title": "Case Study Teaser",
+    "category": "agency",
+    "content_type": "caption",
+    "caption": "\ud83d\udcca CASE STUDY: How we grew @[client] by [X]% in [timeframe]\n\nWhat we did:\n\u2705 [Strategy 1]\n\u2705 [Strategy 2]\n\u2705 [Strategy 3]\n\nWant the same? DM us today.",
+    "hashtags": "#casestudy #marketing #results #digitalmarketing #socialmedia",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ag-5",
+    "title": "Team Intro / Culture Post",
+    "category": "agency",
+    "content_type": "caption",
+    "caption": "Meet the team behind [Agency Name]! \ud83d\udc4b We are [X] passionate people obsessed with helping brands grow online. Fun fact about us: [something unique]. Say hi in the comments!",
+    "hashtags": "#teamwork #agencylife #behindthescenes #ourteam #digitalagency",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "rs-1",
+    "title": "Daily Special Announcement",
+    "category": "restaurant",
+    "content_type": "caption",
+    "caption": "Today's special: [Dish Name] \ud83c\udf7d\ufe0f Made fresh this morning with [key ingredient]. Available while supplies last \u2014 come in or order via link in bio!",
+    "hashtags": "#dailyspecial #foodie #freshfood #[cuisine] #restaurant",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "rs-2",
+    "title": "Weekend Brunch Promo",
+    "category": "restaurant",
+    "content_type": "caption",
+    "caption": "Weekend brunch is BACK \ud83e\udd5e\u2600\ufe0f Join us Saturday & Sunday [time] for [dish highlights]. Book your table \u2192 link in bio. Limited spots available!",
+    "hashtags": "#brunch #weekend #foodie #[location] #[cuisine]",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "rs-3",
+    "title": "New Menu Item Drop",
+    "category": "restaurant",
+    "content_type": "caption",
+    "caption": "NEW on our menu \ud83c\udf1f Say hello to [New Dish]! [Short description of flavors]. Available starting [date]. Who's coming to try it first? Tag your food buddy \u2b07\ufe0f",
+    "hashtags": "#newmenu #foodstagram #newdish #[cuisine] #restaurant",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "rs-4",
+    "title": "Chef's Story Post",
+    "category": "restaurant",
+    "content_type": "caption",
+    "caption": "Every dish tells a story \ud83e\uddd1\u200d\ud83c\udf73 Our [dish] is inspired by [origin/story]. Made with love and [key ingredient] sourced from [local/origin]. Come taste the difference \u2014 reservations via link in bio.",
+    "hashtags": "#chefstory #localfood #[cuisine] #homemade #foodlover",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "rs-5",
+    "title": "Happy Hour Promo",
+    "category": "restaurant",
+    "content_type": "caption",
+    "caption": "Happy Hour starts NOW \ud83c\udf79 [Time - Time], [days]. Get [offer] on [drinks/food]. Perfect way to end your day \u2014 see you here! #[location]",
+    "hashtags": "#happyhour #drinks #afterwork #restaurant #[location]",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ft-1",
+    "title": "Transformation Tuesday",
+    "category": "fitness",
+    "content_type": "caption",
+    "caption": "Transformation Tuesday \ud83d\udd04 Left: [timeframe] ago. Right: today. The only thing that changed was consistency. What's your goal? Drop it below \ud83d\udc47",
+    "hashtags": "#transformationtuesday #fitness #progress #bodygoals #nevergiveup",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ft-2",
+    "title": "Workout of the Day",
+    "category": "fitness",
+    "content_type": "caption",
+    "caption": "Today's workout \ud83d\udd25 [Exercise 1] \u2014 [reps/sets]\n[Exercise 2] \u2014 [reps/sets]\n[Exercise 3] \u2014 [reps/sets]\n\nNo excuses! Save this for later and tag someone who needs to do this with you \ud83d\udcaa",
+    "hashtags": "#workout #wod #fitness #gymlife #fitnessmotivation",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ft-3",
+    "title": "Morning Motivation",
+    "category": "fitness",
+    "content_type": "caption",
+    "caption": "Your only competition is yesterday's version of you \ud83d\udcaa Show up today. Give everything. Trust the process. Tag someone who needs to hear this!",
+    "hashtags": "#morningmotivation #fitness #mindset #neverstop #dailygrind",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ft-4",
+    "title": "Nutrition Tip",
+    "category": "fitness",
+    "content_type": "caption",
+    "caption": "\ud83e\udd57 Nutrition tip of the week: [Tip]. Most people overlook this but it makes a huge difference for [result]. Save this and try it for one week \u2014 let me know how it goes!",
+    "hashtags": "#nutritiontip #healthyeating #fitness #wellness #diet",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ft-5",
+    "title": "Client Success Story",
+    "category": "fitness",
+    "content_type": "caption",
+    "caption": "Meet [Client Name] \ud83d\ude4c [X] weeks ago [he/she] started training with me. Today [result]. Hard work ALWAYS pays off. DM me 'READY' to start your journey!",
+    "hashtags": "#clientresults #personaltrainer #fitness #transformation #fitcoach",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "mt-1",
+    "title": "Monday Mindset",
+    "category": "motivation",
+    "content_type": "caption",
+    "caption": "This week, choose progress over perfection. Choose action over overthinking. Choose YOU \ud83d\ude4c What's your one goal for this week? Drop it below \u2014 I'll cheer you on!",
+    "hashtags": "#mondaymotivation #mindset #growth #goals #positivity",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "mt-2",
+    "title": "Reminder Post",
+    "category": "motivation",
+    "content_type": "caption",
+    "caption": "Friendly reminder: You don't need to have it all figured out. You just need to take the next step. That's it. Share this with someone who needs it today \u2764\ufe0f",
+    "hashtags": "#reminder #motivation #selfcare #mentalhealth #growth",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "mt-3",
+    "title": "Quote of the Week",
+    "category": "motivation",
+    "content_type": "caption",
+    "caption": "\"[Insert powerful quote here]\"\n\n\u2014 [Author]\n\nThis one hit different. Save it for when you need it most. \ud83d\udd16 Tag someone who needs this today.",
+    "hashtags": "#quoteoftheday #motivation #inspiration #quotes #mindset",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "mt-4",
+    "title": "Failure is Not Final",
+    "category": "motivation",
+    "content_type": "caption",
+    "caption": "Every successful person has a story of failure. What separates them? They kept going anyway. Your setback is setting you up for a comeback \ud83d\udca5 Believe it.",
+    "hashtags": "#nevergiveup #resilience #motivation #success #growth",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "mt-5",
+    "title": "Weekend Reflection",
+    "category": "motivation",
+    "content_type": "caption",
+    "caption": "Take a moment this weekend to ask yourself: What am I proud of this week? What will I do differently next week? Growth starts with reflection \ud83c\udf31 Share one win from your week below!",
+    "hashtags": "#weekend #reflection #growth #mindset #gratitude",
+    "usage_count": 0,
+    "created_at": "2026-01-01T00:00:00Z"
+  }
+]
