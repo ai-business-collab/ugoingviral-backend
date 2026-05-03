@@ -52,12 +52,12 @@ async def youtube_oauth_callback(code: str = "", error: str = "", state: str = "
         except Exception:
             pass
 
-        store["settings"]["youtube_api_connected"]  = True
-        store["settings"]["youtube_access_token"]   = access_token
-        store["settings"]["youtube_refresh_token"]  = refresh_token
-        store["settings"]["youtube_expires_at"]     = expires_at
-        store["settings"]["youtube_channel_id"]     = channel_id
-        store["settings"]["youtube_channel_name"]   = channel_name
+        store.get("settings", {})["youtube_api_connected"]  = True
+        store.get("settings", {})["youtube_access_token"]   = access_token
+        store.get("settings", {})["youtube_refresh_token"]  = refresh_token
+        store.get("settings", {})["youtube_expires_at"]     = expires_at
+        store.get("settings", {})["youtube_channel_id"]     = channel_id
+        store.get("settings", {})["youtube_channel_name"]   = channel_name
         conns = store.setdefault("connections", {})
         conns["youtube"] = {"username": channel_name, "connected": True}
         store["connections"] = conns
@@ -72,7 +72,7 @@ async def youtube_oauth_callback(code: str = "", error: str = "", state: str = "
 
 @router.get("/api/youtube/status")
 async def youtube_status():
-    s = store["settings"]
+    s = store.get("settings", {})
     return {
         "connected":    s.get("youtube_api_connected", False),
         "channel_name": s.get("youtube_channel_name", ""),
@@ -85,7 +85,7 @@ async def youtube_status():
 async def youtube_disconnect():
     for key in ("youtube_api_connected", "youtube_access_token", "youtube_refresh_token",
                 "youtube_expires_at", "youtube_channel_id", "youtube_channel_name"):
-        store["settings"].pop(key, None)
+        store.get("settings", {}).pop(key, None)
     store.get("connections", {}).pop("youtube", None)
     save_store()
     add_log("YouTube API forbindelse fjernet", "info")
@@ -103,7 +103,7 @@ async def youtube_post(req: Request):
     privacy     = d.get("privacy_status", "public")
     tags        = d.get("tags", [])
 
-    s = store["settings"]
+    s = store.get("settings", {})
     token   = s.get("youtube_access_token")
     refresh = s.get("youtube_refresh_token", "")
     exp     = s.get("youtube_expires_at")

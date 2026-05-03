@@ -84,11 +84,11 @@ async def twitter_callback(code: str = "", error: str = "", state: str = ""):
         username = user_data.get("username", "")
         name = user_data.get("name", "Twitter bruger")
 
-        store["settings"]["twitter_api_connected"] = True
-        store["settings"]["twitter_access_token"] = access_token
-        store["settings"]["twitter_refresh_token"] = refresh_token
-        store["settings"]["twitter_username"] = username
-        store["connections"]["twitter"] = {"username": username, "connected": True}
+        store.get("settings", {})["twitter_api_connected"] = True
+        store.get("settings", {})["twitter_access_token"] = access_token
+        store.get("settings", {})["twitter_refresh_token"] = refresh_token
+        store.get("settings", {})["twitter_username"] = username
+        store.get("connections", {})["twitter"] = {"username": username, "connected": True}
         save_store()
         add_log(f"✅ Twitter/X API forbundet: @{username}", "success")
         return RedirectResponse(url="/app?twitter=connected")
@@ -98,7 +98,7 @@ async def twitter_callback(code: str = "", error: str = "", state: str = ""):
 
 @router.get("/api/twitter/status")
 async def twitter_status():
-    s = store["settings"]
+    s = store.get("settings", {})
     return {
         "connected": s.get("twitter_api_connected", False),
         "username": s.get("twitter_username", ""),

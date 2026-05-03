@@ -16,7 +16,7 @@ def health():
 # ── Settings ──────────────────────────────────────────────────────────────────
 @router.get("/api/settings")
 def get_settings():
-    s = store["settings"].copy()
+    s = store.get("settings", {}).copy()
     for k in ["shopify_token", "instagram_pass", "tiktok_pass", "facebook_pass",
               "twitter_pass", "youtube_pass", "anthropic_key", "openai_key"]:
         if s.get(k): s[k] = s[k][:4] + "••••"
@@ -27,11 +27,11 @@ def save_settings(settings: Settings):
     d = settings.dict()
     for k, v in d.items():
         if v is not None and not str(v).endswith("••••"):
-            store["settings"][k] = v
+            store.get("settings", {})[k] = v
     # Auto bonus: first social media connection
     try:
-        ig = d.get("instagram_user") or store["settings"].get("instagram_user")
-        tt = d.get("tiktok_user") or store["settings"].get("tiktok_user")
+        ig = d.get("instagram_user") or store.get("settings", {}).get("instagram_user")
+        tt = d.get("tiktok_user") or store.get("settings", {}).get("tiktok_user")
         if ig or tt:
             from routes.billing import _try_auto_bonus
             _try_auto_bonus("connect_social")
@@ -42,7 +42,7 @@ def save_settings(settings: Settings):
 
 @router.post("/api/settings/toggle")
 def toggle_api(t: ApiToggle):
-    store["settings"]["api_enabled"][t.platform] = t.enabled
+    store.get("settings", {})["api_enabled"][t.platform] = t.enabled
     save_store()
     return {"status": "ok"}
 
@@ -58,13 +58,13 @@ def delete_connection(platform: str):
         "ai": ["anthropic_key", "openai_key"],
     }
     for key in mapping.get(platform, []):
-        store["settings"][key] = ""
+        store.get("settings", {})[key] = ""
     save_store()
     return {"status": "deleted"}
 
 @router.get("/api/settings/connections")
 def get_connections():
-    s = store["settings"]
+    s = store.get("settings", {})
     conns = {
         "shopify": bool(s.get("shopify_store") and s.get("shopify_token")),
         "ai": bool(s.get("anthropic_key") or s.get("openai_key")),
@@ -82,7 +82,7 @@ def get_connections():
 # ── Automation settings ───────────────────────────────────────────────────────
 @router.get("/api/settings/content_language")
 def get_content_language():
-    return {"language": store["settings"].get("content_language", "english")}
+    return {"language": store.get("settings", {}).get("content_language", "english")}
 
 
 @router.post("/api/settings/content_language")
@@ -93,47 +93,47 @@ async def save_content_language(request: Request):
     SUPPORTED = {"english", "spanish", "french", "german", "portuguese"}
     if lang not in SUPPORTED:
         lang = "english"
-    store["settings"]["content_language"] = lang
+    store.get("settings", {})["content_language"] = lang
     save_store()
     return {"ok": True, "language": lang}
 
 
 @router.get("/api/automation/settings")
-def get_auto(): return store["automation"]
+def get_auto(): return store.get("automation", {})
 
 @router.post("/api/automation/settings")
 def save_auto(s: AutomationSettings):
     for k, v in s.dict().items():
-        if v is not None: store["automation"][k] = v
+        if v is not None: store.get("automation", {})[k] = v
     save_store()
-    return {"status": "saved", "settings": store["automation"]}
+    return {"status": "saved", "settings": store.get("automation", {})}
 
 @router.post("/api/automation/platform")
 def set_platform_automation(p: PlatformAutomation):
-    if "platforms" not in store["automation"]:
-        store["automation"]["platforms"] = {}
-    if p.platform not in store["automation"]["platforms"]:
-        store["automation"]["platforms"][p.platform] = {"active": False, "auto_post": False, "auto_dm": False, "auto_comments": False}
+    if "platforms" not in store.get("automation", {}):
+        store.get("automation", {})["platforms"] = {}
+    if p.platform not in store.get("automation", {})["platforms"]:
+        store.get("automation", {})["platforms"][p.platform] = {"active": False, "auto_post": False, "auto_dm": False, "auto_comments": False}
     # Fix: platforms kan være liste eller dict
-    if not isinstance(store["automation"]["platforms"], dict):
-        store["automation"]["platforms"] = {}
-    if p.platform not in store["automation"]["platforms"]:
-        store["automation"]["platforms"][p.platform] = {}
-    if p.active is not None: store["automation"]["platforms"][p.platform]["active"] = p.active
-    if p.auto_post is not None: store["automation"]["platforms"][p.platform]["auto_post"] = p.auto_post
-    if p.auto_dm is not None: store["automation"]["platforms"][p.platform]["auto_dm"] = p.auto_dm
-    if p.auto_comments is not None: store["automation"]["platforms"][p.platform]["auto_comments"] = p.auto_comments
+    if not isinstance(store.get("automation", {})["platforms"], dict):
+        store.get("automation", {})["platforms"] = {}
+    if p.platform not in store.get("automation", {})["platforms"]:
+        store.get("automation", {})["platforms"][p.platform] = {}
+    if p.active is not None: store.get("automation", {})["platforms"][p.platform]["active"] = p.active
+    if p.auto_post is not None: store.get("automation", {})["platforms"][p.platform]["auto_post"] = p.auto_post
+    if p.auto_dm is not None: store.get("automation", {})["platforms"][p.platform]["auto_dm"] = p.auto_dm
+    if p.auto_comments is not None: store.get("automation", {})["platforms"][p.platform]["auto_comments"] = p.auto_comments
     save_store()
     return {"status": "saved"}
 
 # ── DM settings ───────────────────────────────────────────────────────────────
 @router.get("/api/dm/settings")
-def get_dm(): return store["dm_settings"]
+def get_dm(): return store.get("dm_settings", {})
 
 @router.post("/api/dm/settings")
 def save_dm(s: DMSettings):
     for k, v in s.dict().items():
-        if v is not None: store["dm_settings"][k] = v
+        if v is not None: store.get("dm_settings", {})[k] = v
     save_store()
     return {"status": "saved"}
 
@@ -174,11 +174,11 @@ def save_creator(c: Creator):
         "active": c.active if c.active is not None else True,
         "created": datetime.now().isoformat(),
     }
-    existing = [x for x in store["creators"] if x["id"] == creator["id"]]
+    existing = [x for x in store.get("creators", {}) if x["id"] == creator["id"]]
     if existing:
-        store["creators"] = [creator if x["id"] == creator["id"] else x for x in store["creators"]]
+        store["creators"] = [creator if x["id"] == creator["id"] else x for x in store.get("creators", {})]
     else:
-        store["creators"].insert(0, creator)
+        store.get("creators", {}).insert(0, creator)
     save_store()
     return {"status": "saved", "creator": creator}
 

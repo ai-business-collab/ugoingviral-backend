@@ -19,7 +19,7 @@ async def check_playwright():
 
 @router.post("/api/automation/playwright/post")
 async def playwright_post(req: PlaywrightPost, background_tasks: BackgroundTasks):
-    s = store["settings"]
+    s = store.get("settings", {})
 
     # Niveau 1 — brug officiel Instagram API hvis forbundet
     if req.platform == "instagram" and s.get("instagram_api_connected"):

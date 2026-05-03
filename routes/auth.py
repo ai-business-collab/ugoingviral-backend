@@ -102,7 +102,7 @@ async def register(req: RegisterRequest):
 async def login(req: LoginRequest):
     user = get_user_by_email(req.email)
     if not user or not verify_password(req.password, user["hashed_password"]):
-        raise HTTPException(status_code=401, detail="Forkert email eller adgangskode")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
     token = _create_token(user["id"], user["email"])
     # Auto daily login bonus — requires user store context
     from services.store import _load_user_store, _save_user_store
@@ -151,7 +151,7 @@ async def update_profile(req: UpdateProfileRequest, current_user: dict = Depends
 @router.get("/api/auth/google/login")
 def google_login():
     if not GOOGLE_CLIENT_ID:
-        raise HTTPException(status_code=503, detail="Google login ikke konfigureret")
+        raise HTTPException(status_code=503, detail="Google login not configured")
     import urllib.parse
     params = {
         "client_id": GOOGLE_CLIENT_ID,

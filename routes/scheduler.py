@@ -242,7 +242,7 @@ async def _run_for_user(force: bool = False):
                         pick = _rnd.choice(candidates)
                         for plat in (platforms or ["instagram"]):
                             stime = (now_check + timedelta(hours=2)).isoformat()
-                            store["scheduled_posts"].insert(0, {
+                            store.get("scheduled_posts", {}).insert(0, {
                                 "id": now_check.isoformat() + f"_repost_{plat}",
                                 "platform": plat,
                                 "content": pick.get("content", ""),
@@ -576,7 +576,7 @@ async def _run_for_user(force: bool = False):
                         exp     = sd.get("tiktok_expires_at")
                         new_token, new_ref, new_exp = await tt_refresh(token, refresh, exp)
                         if new_exp:
-                            store["settings"]["tiktok_access_token"] = new_token
+                            store.get("settings", {})["tiktok_access_token"] = new_token
                             save_store()
                             token = new_token
                         vid_url = iu if isinstance(iu, str) and iu.endswith(('.mp4', '.mov')) else None
@@ -810,7 +810,7 @@ async def trigger_plan_tomorrow():
     today = datetime.now().strftime("%Y-%m-%d")
     plan_key = f"plan_{today}"
     if plan_key in store.get("scheduler_log", {}):
-        del store["scheduler_log"][plan_key]
+        del store.get("scheduler_log", {})[plan_key]
     await plan_next_day()
     tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
     planned = [p for p in store.get("scheduled_posts", []) if p.get("scheduled_time","").startswith(tomorrow)]
@@ -837,7 +837,7 @@ async def trigger_plan_week():
         date_str = day.strftime("%Y-%m-%d")
         for t in post_times:
             post_key = f"{date_str}_{t}"
-            if post_key in store["scheduler_log"]:
+            if post_key in store.get("scheduler_log", {}):
                 continue
             try:
                 dt = datetime.strptime(f"{date_str} {t}", "%Y-%m-%d %H:%M")
@@ -850,7 +850,7 @@ async def trigger_plan_week():
             plats = auto.get("platforms", {})
             active_plats = [p for p,cfg in plats.items() if isinstance(cfg, dict) and cfg.get("active") and cfg.get("auto_post")]
             platform = active_plats[0] if active_plats else "instagram"
-            store["scheduled_posts"].append({
+            store.get("scheduled_posts", {}).append({
                 "id": f"auto_{date_str}_{t}_{random.randint(1000,9999)}",
                 "platform": platform,
                 "content": f"Tjek vores {prod['title']} 🔥",
@@ -861,7 +861,7 @@ async def trigger_plan_week():
                 "status": "scheduled",
                 "source": "auto_plan"
             })
-            store["scheduler_log"][post_key] = True
+            store.get("scheduler_log", {})[post_key] = True
             total_planned += 1
     save_store()
     return {"status": "ok", "planned": total_planned}
@@ -887,7 +887,7 @@ async def trigger_plan_month():
         date_str = day.strftime("%Y-%m-%d")
         for t in post_times:
             post_key = f"{date_str}_{t}"
-            if post_key in store["scheduler_log"]:
+            if post_key in store.get("scheduler_log", {}):
                 continue
             try:
                 dt = datetime.strptime(f"{date_str} {t}", "%Y-%m-%d %H:%M")
@@ -897,7 +897,7 @@ async def trigger_plan_month():
             imgs = prod.get("images", [])
             if not imgs and prod.get("image"):
                 imgs = [prod["image"]]
-            store["scheduled_posts"].append({
+            store.get("scheduled_posts", {}).append({
                 "id": f"auto_{date_str}_{t}_{random.randint(1000,9999)}",
                 "platform": list(auto.get("platforms", {}).keys())[0] if auto.get("platforms") else "instagram",
                 "content": f"Tjek vores {prod['title']} 🔥",
@@ -908,7 +908,7 @@ async def trigger_plan_month():
                 "status": "scheduled",
                 "source": "auto_plan"
             })
-            store["scheduler_log"][post_key] = True
+            store.get("scheduler_log", {})[post_key] = True
             total_planned += 1
     save_store()
     return {"status": "ok", "planned": total_planned}
@@ -964,7 +964,7 @@ async def add_time_slot(req: Request):
                 "status": "scheduled", "mode": "ui", "source": "auto_plan"
             })
             added += 1
-    store["scheduled_posts"].extend(new_posts)
+    store.get("scheduled_posts", {}).extend(new_posts)
     save_store()
     add_log(f"⏰ Ny tid {new_time} tilføjet — {added} opslag planlagt fremadrettet", "success")
     return {"status": "ok", "added": added}

@@ -51,13 +51,13 @@ async def tiktok_oauth_callback(code: str = "", error: str = "", state: str = ""
 
         username = user_info.get("display_name", "") or user_info.get("username", open_id)
 
-        store["settings"]["tiktok_api_connected"]    = True
-        store["settings"]["tiktok_access_token"]     = access_token
-        store["settings"]["tiktok_refresh_token"]    = refresh_token
-        store["settings"]["tiktok_open_id"]          = open_id
-        store["settings"]["tiktok_expires_at"]       = expires_at
-        store["settings"]["tiktok_refresh_expires"]  = refresh_exp
-        store["settings"]["tiktok_username"]         = username
+        store.get("settings", {})["tiktok_api_connected"]    = True
+        store.get("settings", {})["tiktok_access_token"]     = access_token
+        store.get("settings", {})["tiktok_refresh_token"]    = refresh_token
+        store.get("settings", {})["tiktok_open_id"]          = open_id
+        store.get("settings", {})["tiktok_expires_at"]       = expires_at
+        store.get("settings", {})["tiktok_refresh_expires"]  = refresh_exp
+        store.get("settings", {})["tiktok_username"]         = username
         # Spejl til connections dict så UI viser det som forbundet
         conns = store.setdefault("connections", {})
         conns["tiktok"] = {"username": username, "connected": True}
@@ -73,9 +73,9 @@ async def tiktok_oauth_callback(code: str = "", error: str = "", state: str = ""
 
 @router.get("/api/tiktok/status")
 async def tiktok_status():
-    connected = store["settings"].get("tiktok_api_connected", False)
-    username  = store["settings"].get("tiktok_username", "")
-    expires   = store["settings"].get("tiktok_expires_at", "")
+    connected = store.get("settings", {}).get("tiktok_api_connected", False)
+    username  = store.get("settings", {}).get("tiktok_username", "")
+    expires   = store.get("settings", {}).get("tiktok_expires_at", "")
     return {"connected": connected, "username": username, "expires_at": expires}
 
 
@@ -83,7 +83,7 @@ async def tiktok_status():
 async def tiktok_disconnect():
     for key in ("tiktok_api_connected", "tiktok_access_token", "tiktok_refresh_token",
                 "tiktok_open_id", "tiktok_expires_at", "tiktok_refresh_expires", "tiktok_username"):
-        store["settings"].pop(key, None)
+        store.get("settings", {}).pop(key, None)
     conns = store.get("connections", {})
     conns.pop("tiktok", None)
     save_store()
@@ -100,7 +100,7 @@ async def tiktok_post(req: Request):
     image_url = d.get("image_url")
     privacy   = d.get("privacy_level", "SELF_ONLY")
 
-    s = store["settings"]
+    s = store.get("settings", {})
     token   = s.get("tiktok_access_token")
     refresh = s.get("tiktok_refresh_token", "")
     exp     = s.get("tiktok_expires_at")

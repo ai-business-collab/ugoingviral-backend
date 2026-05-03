@@ -54,11 +54,11 @@ async def instagram_oauth_callback(code: str = "", state: str = "", error: str =
         # Hent konto info
         info = await get_account_info(ig_id, long_token)
         # Gem i store
-        store["settings"]["instagram_api_token"] = long_token
-        store["settings"]["instagram_api_expires"] = expires_at
-        store["settings"]["instagram_ig_id"] = ig_id
-        store["settings"]["instagram_username"] = info.get("username", "")
-        store["settings"]["instagram_api_connected"] = True
+        store.get("settings", {})["instagram_api_token"] = long_token
+        store.get("settings", {})["instagram_api_expires"] = expires_at
+        store.get("settings", {})["instagram_ig_id"] = ig_id
+        store.get("settings", {})["instagram_username"] = info.get("username", "")
+        store.get("settings", {})["instagram_api_connected"] = True
         save_store()
         add_log(f"✅ Instagram API forbundet: @{info.get('username', ig_id)}", "success")
         # Redirect til app
@@ -71,10 +71,10 @@ async def instagram_oauth_callback(code: str = "", state: str = "", error: str =
 @router.get("/api/instagram/status")
 async def instagram_api_status():
     """Tjek om Instagram API er forbundet"""
-    connected = store["settings"].get("instagram_api_connected", False)
-    username = store["settings"].get("instagram_username", "")
-    ig_id = store["settings"].get("instagram_ig_id", "")
-    expires = store["settings"].get("instagram_api_expires", "")
+    connected = store.get("settings", {}).get("instagram_api_connected", False)
+    username = store.get("settings", {}).get("instagram_username", "")
+    ig_id = store.get("settings", {}).get("instagram_ig_id", "")
+    expires = store.get("settings", {}).get("instagram_api_expires", "")
     return {
         "connected": connected,
         "username": username,
@@ -93,8 +93,8 @@ async def instagram_api_post(req: Request):
     video_url = d.get("video_url")
     media_type = d.get("media_type", "IMAGE")
 
-    token = store["settings"].get("instagram_api_token")
-    ig_id = store["settings"].get("instagram_ig_id")
+    token = store.get("settings", {}).get("instagram_api_token")
+    ig_id = store.get("settings", {}).get("instagram_ig_id")
 
     if not token or not ig_id:
         return {"status": "error", "message": "Instagram API ikke forbundet — gå til Connect"}
@@ -102,11 +102,11 @@ async def instagram_api_post(req: Request):
     try:
         from instagram_api import post_to_instagram, refresh_token_if_needed
         # Forny token hvis nødvendigt
-        expires_at = store["settings"].get("instagram_api_expires")
+        expires_at = store.get("settings", {}).get("instagram_api_expires")
         token, new_expires = await refresh_token_if_needed(token, expires_at)
         if new_expires:
-            store["settings"]["instagram_api_expires"] = new_expires
-            store["settings"]["instagram_api_token"] = token
+            store.get("settings", {})["instagram_api_expires"] = new_expires
+            store.get("settings", {})["instagram_api_token"] = token
             save_store()
 
         result = await post_to_instagram(
@@ -128,7 +128,7 @@ async def instagram_api_post(req: Request):
 @router.get("/api/instagram/insights/{post_id}")
 async def instagram_post_insights(post_id: str):
     """Hent metrics for et opslag"""
-    token = store["settings"].get("instagram_api_token")
+    token = store.get("settings", {}).get("instagram_api_token")
     if not token:
         return {"status": "error", "message": "Instagram API ikke forbundet"}
     from instagram_api import get_post_insights
@@ -137,8 +137,8 @@ async def instagram_post_insights(post_id: str):
 @router.get("/api/instagram/account/insights")
 async def instagram_account_insights():
     """Hent konto metrics"""
-    token = store["settings"].get("instagram_api_token")
-    ig_id = store["settings"].get("instagram_ig_id")
+    token = store.get("settings", {}).get("instagram_api_token")
+    ig_id = store.get("settings", {}).get("instagram_ig_id")
     if not token or not ig_id:
         return {"status": "error", "message": "Instagram API ikke forbundet"}
     from instagram_api import get_account_insights
@@ -148,9 +148,9 @@ async def instagram_account_insights():
 # SCHEDULER — kører automatisk i bagg@router.post("/api/instagram/post/test")
 async def instagram_post_test(current_user: dict = Depends(get_current_user)):
     """Test Instagram API connection — verifies token is valid"""
-    ig_token = store["settings"].get("instagram_api_token")
-    ig_id = store["settings"].get("instagram_ig_id")
-    connected = store["settings"].get("instagram_api_connected", False)
+    ig_token = store.get("settings", {}).get("instagram_api_token")
+    ig_id = store.get("settings", {}).get("instagram_ig_id")
+    connected = store.get("settings", {}).get("instagram_api_connected", False)
 
     if not ig_token or not ig_id or not connected:
         return {
@@ -162,11 +162,11 @@ async def instagram_post_test(current_user: dict = Depends(get_current_user)):
 
     try:
         from instagram_api import refresh_token_if_needed
-        expires_at = store["settings"].get("instagram_api_expires")
+        expires_at = store.get("settings", {}).get("instagram_api_expires")
         ig_token, new_expires = await refresh_token_if_needed(ig_token, expires_at)
         if new_expires:
-            store["settings"]["instagram_api_expires"] = new_expires
-            store["settings"]["instagram_api_token"] = ig_token
+            store.get("settings", {})["instagram_api_expires"] = new_expires
+            store.get("settings", {})["instagram_api_token"] = ig_token
             save_store()
 
         async with httpx.AsyncClient() as c:
@@ -179,7 +179,7 @@ async def instagram_post_test(current_user: dict = Depends(get_current_user)):
 
         if "error" in data:
             err = data["error"]
-            store["settings"]["instagram_api_connected"] = False
+            store.get("settings", {})["instagram_api_connected"] = False
             save_store()
             return {
                 "status": "error",
@@ -204,9 +204,9 @@ async def instagram_post_test(req: Request):
     """Test Instagram connection by posting a test caption (no media — text-only test)"""
     from routes.auth import get_current_user
     from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-    token_store = store["settings"].get("instagram_api_token")
-    ig_id = store["settings"].get("instagram_ig_id")
-    connected = store["settings"].get("instagram_api_connected", False)
+    token_store = store.get("settings", {}).get("instagram_api_token")
+    ig_id = store.get("settings", {}).get("instagram_ig_id")
+    connected = store.get("settings", {}).get("instagram_api_connected", False)
 
     if not token_store or not ig_id or not connected:
         return {
@@ -218,11 +218,11 @@ async def instagram_post_test(req: Request):
 
     try:
         from instagram_api import refresh_token_if_needed
-        expires_at = store["settings"].get("instagram_api_expires")
+        expires_at = store.get("settings", {}).get("instagram_api_expires")
         token, new_expires = await refresh_token_if_needed(token, expires_at)
         if new_expires:
-            store["settings"]["instagram_api_expires"] = new_expires
-            store["settings"]["instagram_api_token"] = token
+            store.get("settings", {})["instagram_api_expires"] = new_expires
+            store.get("settings", {})["instagram_api_token"] = token
             save_store()
 
         async with httpx.AsyncClient() as c:
@@ -235,7 +235,7 @@ async def instagram_post_test(req: Request):
 
         if "error" in data:
             err = data["error"]
-            store["settings"]["instagram_api_connected"] = False
+            store.get("settings", {})["instagram_api_connected"] = False
             save_store()
             return {
                 "status": "error",

@@ -25,9 +25,9 @@ async def refresh_shopify_token() -> str:
             if r.status_code == 200:
                 token = r.json().get("access_token", "")
                 if token:
-                    store["settings"]["shopify_token"] = token
+                    store.get("settings", {})["shopify_token"] = token
                     import time
-                    store["settings"]["shopify_token_time"] = time.time()
+                    store.get("settings", {})["shopify_token_time"] = time.time()
                     save_store()
                     add_log("✅ Shopify token fornyet automatisk", "success")
                     return token
@@ -49,9 +49,9 @@ def get_next_image(product_id: str, images: list) -> str:
     if not images: return ""
     if len(images) == 1: return images[0]
     if "image_rotation" not in store: store["image_rotation"] = {}
-    current_idx = store["image_rotation"].get(product_id, 0)
+    current_idx = store.get("image_rotation", {}).get(product_id, 0)
     image = images[current_idx % len(images)]
-    store["image_rotation"][product_id] = (current_idx + 1) % len(images)
+    store.get("image_rotation", {})[product_id] = (current_idx + 1) % len(images)
     save_store()
     return image
 
@@ -62,7 +62,7 @@ def get_next_image(product_id: str, images: list) -> str:
 def get_manual():
     prods = store.get("manual_products", [])
     for p in prods:
-        p["content_count"] = len(store["product_content"].get(str(p["id"]), []) or store["product_content"].get(p["id"], []))
+        p["content_count"] = len(store.get("product_content", {}).get(str(p["id"]), []) or store.get("product_content", {}).get(p["id"], []))
     return {"products": prods}
 
 @router.post("/api/products/manual")
@@ -76,11 +76,11 @@ def add_manual(p: ManualProduct):
         "group": p.group or "Alle", "created": datetime.now().isoformat(),
     }
     if "manual_products" not in store: store["manual_products"] = []
-    existing = [x for x in store["manual_products"] if x["id"] == prod["id"]]
+    existing = [x for x in store.get("manual_products", {}) if x["id"] == prod["id"]]
     if existing:
-        store["manual_products"] = [prod if x["id"] == prod["id"] else x for x in store["manual_products"]]
+        store["manual_products"] = [prod if x["id"] == prod["id"] else x for x in store.get("manual_products", {})]
     else:
-        store["manual_products"].insert(0, prod)
+        store.get("manual_products", {}).insert(0, prod)
     save_store()
     return {"status": "saved", "product": prod}
 
@@ -90,7 +90,7 @@ async def check_discontinued():
     raw_token = await get_shopify_token()
     if not raw_token:
         return {"discontinued": []}
-    s = store["settings"]
+    s = store.get("settings", {})
     store_url = s.get("shopify_store","").replace("https://","").replace("http://","").strip("/")
     if not store_url:
         return {"discontinued": []}
@@ -117,8 +117,8 @@ def archive_product(pid: str):
     prod["archived_at"] = datetime.now().isoformat()
     if "archived_products" not in store:
         store["archived_products"] = []
-    if not any(p["id"] == pid for p in store["archived_products"]):
-        store["archived_products"].append(prod)
+    if not any(p["id"] == pid for p in store.get("archived_products", {})):
+        store.get("archived_products", {}).append(prod)
     store["shopify_products_cache"] = [p for p in store.get("shopify_products_cache",[]) if p["id"] != pid]
     save_store()
     return {"status": "archived"}
@@ -144,24 +144,24 @@ def get_groups():
 def create_group(group_name: str):
     if "groups" not in store:
         store["groups"] = []
-    if group_name not in store["groups"]:
-        store["groups"].append(group_name)
+    if group_name not in store.get("groups", {}):
+        store.get("groups", {}).append(group_name)
         save_store()
     return {"status": "ok", "group": group_name}
 
 @router.delete("/api/products/groups/{group_name}")
 def delete_group(group_name: str):
-    if "groups" in store and group_name in store["groups"]:
-        store["groups"].remove(group_name)
+    if "groups" in store and group_name in store.get("groups", {}):
+        store.get("groups", {}).remove(group_name)
         save_store()
     return {"status": "ok"}
 
 @router.get("/api/shopify/products")
 async def get_products():
-    s = store["settings"]
+    s = store.get("settings", {})
     manual = store.get("manual_products", [])
     for p in manual:
-        p["content_count"] = len(store["product_content"].get(str(p["id"]), []) or store["product_content"].get(p["id"], []))
+        p["content_count"] = len(store.get("product_content", {}).get(str(p["id"]), []) or store.get("product_content", {}).get(p["id"], []))
     if not s.get("shopify_store"):
         return {"products": manual if manual else _demo_products(), "source": "manual" if manual else "demo"}
     # Hent gyldig token — fornyer automatisk hvis udløbet
@@ -191,13 +191,13 @@ async def get_products():
                     "image": imgs[0].get("src", "") if imgs else "",
                     "status": p.get("status", "active"), "source": "shopify",
                     "group": "Alle",
-                    "content_count": len(store["product_content"].get(str(p["id"]), [])),
+                    "content_count": len(store.get("product_content", {}).get(str(p["id"]), [])),
                 })
             return {"products": manual + products, "source": "shopify"}
         except Exception:
             cached = store.get("shopify_products_cache", [])
             for p in cached:
-                p["content_count"] = len(store["product_content"].get(str(p["id"]), []))
+                p["content_count"] = len(store.get("product_content", {}).get(str(p["id"]), []))
             return {"products": manual + cached, "source": "cache"}
 
 def _demo_products():
@@ -205,20 +205,20 @@ def _demo_products():
             ("demo3","Hoodie Grå","449"), ("demo4","Cap Navy","199")]
     return [{"id": i, "title": t, "description": f"Flot {t.lower()}", "price": p,
              "images": [], "image": "", "status": "active", "source": "demo",
-             "group": "Alle", "content_count": len(store["product_content"].get(i, []))} for i, t, p in data]
+             "group": "Alle", "content_count": len(store.get("product_content", {}).get(i, []))} for i, t, p in data]
 
 @router.get("/api/products/{pid}/content")
 def get_product_content(pid: str):
     # Prøv begge ID formater — Shopify bruger integer, manuelle bruger string
     content_list = (
-        store["product_content"].get(str(pid)) or
-        store["product_content"].get(pid) or
+        store.get("product_content", {}).get(str(pid)) or
+        store.get("product_content", {}).get(pid) or
         []
     )
     return {"content": content_list}
 
 @router.delete("/api/products/{pid}/content/{cid}")
 def del_product_content(pid: str, cid: str):
-    store["product_content"][pid] = [i for i in store["product_content"].get(pid, []) if i["id"] != cid]
+    store.get("product_content", {})[pid] = [i for i in store.get("product_content", {}).get(pid, []) if i["id"] != cid]
     save_store()
     return {"status": "deleted"}

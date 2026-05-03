@@ -708,7 +708,7 @@ def admin_delete_subaccount(user_id: str, sub_id: str, admin=Depends(require_own
     subs = ustore.get("sub_accounts", [])
     before = len(subs)
     ustore["sub_accounts"] = [s for s in subs if s["id"] != sub_id]
-    if len(ustore["sub_accounts"]) == before:
+    if len(ustore.get("sub_accounts", {})) == before:
         raise HTTPException(status_code=404, detail="Sub-konto ikke fundet")
     _save_user_store(user_id, ustore)
     # Slet sub-konto data

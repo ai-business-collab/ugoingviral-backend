@@ -15,7 +15,7 @@ def schedule_post(post: PostRequest):
             "image_url": post.image_url, "scheduled_time": post.scheduled_time or datetime.now().isoformat(),
             "product_id": post.product_id, "creator_id": post.creator_id,
             "status": "scheduled", "mode": post.mode or "ui"}
-    store["scheduled_posts"].insert(0, item)
+    store.get("scheduled_posts", {}).insert(0, item)
     # Auto bonus: first post ever
     try:
         from routes.billing import _try_auto_bonus
@@ -26,7 +26,7 @@ def schedule_post(post: PostRequest):
     return {"status": "scheduled", "id": item["id"]}
 
 @router.get("/api/posts/scheduled")
-def get_scheduled(): return {"posts": store["scheduled_posts"]}
+def get_scheduled(): return {"posts": store.get("scheduled_posts", {})}
 
 @router.delete("/api/posts/all")
 def delete_all_posts():
@@ -38,13 +38,13 @@ def delete_all_posts():
 
 @router.delete("/api/posts/day/{date_str}")
 def delete_day(date_str: str):
-    before = len(store["scheduled_posts"])
-    store["scheduled_posts"] = [p for p in store["scheduled_posts"] if not p.get("scheduled_time","").startswith(date_str)]
+    before = len(store.get("scheduled_posts", {}))
+    store["scheduled_posts"] = [p for p in store.get("scheduled_posts", {}) if not p.get("scheduled_time","").startswith(date_str)]
     log = store.get("scheduler_log", {})
     keys_to_del = [k for k in log if k.startswith(date_str)]
     for k in keys_to_del: del log[k]
     save_store()
-    return {"status": "deleted", "count": before - len(store["scheduled_posts"])}
+    return {"status": "deleted", "count": before - len(store.get("scheduled_posts", {}))}
 
 @router.delete("/api/posts/range/{start}/{end}")
 def delete_range(start: str, end: str):
@@ -54,13 +54,13 @@ def delete_range(start: str, end: str):
         end_dt = datetime.fromisoformat(end)
     except:
         return {"status": "error", "message": "Ugyldig dato"}
-    before = len(store["scheduled_posts"])
+    before = len(store.get("scheduled_posts", {}))
     def in_range(p):
         try:
             t = datetime.fromisoformat(p.get("scheduled_time",""))
             return start_dt <= t <= end_dt
         except: return False
-    store["scheduled_posts"] = [p for p in store["scheduled_posts"] if not in_range(p)]
+    store["scheduled_posts"] = [p for p in store.get("scheduled_posts", {}) if not in_range(p)]
     log = store.get("scheduler_log", {})
     cur = start_dt
     while cur <= end_dt:
@@ -68,7 +68,7 @@ def delete_range(start: str, end: str):
         for k in [k for k in log if k.startswith(ds)]: del log[k]
         cur += timedelta(days=1)
     save_store()
-    return {"status": "deleted", "count": before - len(store["scheduled_posts"])}
+    return {"status": "deleted", "count": before - len(store.get("scheduled_posts", {}))}
 
 @router.patch("/api/posts/{pid}/reschedule")
 async def reschedule_post(pid: str, request: Request):
@@ -91,7 +91,7 @@ async def reschedule_post(pid: str, request: Request):
 
 @router.delete("/api/posts/{pid}")
 def delete_post(pid: str):
-    store["scheduled_posts"] = [p for p in store["scheduled_posts"] if p["id"] != pid]
+    store["scheduled_posts"] = [p for p in store.get("scheduled_posts", {}) if p["id"] != pid]
     save_store(); return {"status": "deleted"}
 
 
@@ -114,7 +114,7 @@ async def save_repost_settings(req: Request):
         "platforms": d.get("platforms", []),
     }
     save_store()
-    return {"status": "saved", "settings": store["repost_settings"]}
+    return {"status": "saved", "settings": store.get("repost_settings", {})}
 
 
 @router.post("/api/posts/repost")
@@ -137,7 +137,7 @@ async def create_repost(req: Request):
         "status": "scheduled",
         "mode": "repost",
     }
-    store["scheduled_posts"].insert(0, item)
+    store.get("scheduled_posts", {}).insert(0, item)
     save_store()
     add_log(f"♻️ Genopslag planlagt til {platform} kl. {scheduled_time[11:16]}", "info")
     return {"status": "scheduled", "id": item["id"]}

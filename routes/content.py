@@ -57,7 +57,7 @@ class PipelineRequest(BaseModel):
 
 # ── AI ────────────────────────────────────────────────────────────────────────
 def _build_prompt(req: ContentRequest) -> str:
-    lang = {"da": "Skriv KUN på dansk.", "en": "Write ONLY in English.", "both": "Dansk først, derefter engelsk."}.get(req.language, "Skriv på dansk.")
+    lang = {"da": "Skriv KUN på dansk.", "en": "Write ONLY in English.", "both": "Write in both Danish and English."}.get(req.language, "Write ONLY in English.")
     ptips = {"instagram": "emojis, max 2200 tegn, stærk åbning", "tiktok": "ultra kort, hook i 2 sek",
              "facebook": "info, CTA", "twitter": "max 280 tegn, direkte og fængende"}.get(req.platform, "")
     tmap = {
@@ -97,32 +97,39 @@ Kundens besked: "{message}"
 Svar direkte og naturligt."""
 
 async def _call_ai(prompt: str) -> str:
-    s = store["settings"]
-    if s.get("anthropic_key") and "••••" not in s["anthropic_key"]:
+    import os
+    s = store.get("settings", {})
+    
+    # Try Anthropic (user key first, then env)
+    anthropic_key = (s.get("anthropic_key","") if s.get("anthropic_key") and "••••" not in s.get("anthropic_key","") else "") or os.getenv("ANTHROPIC_API_KEY","")
+    if anthropic_key:
         try:
             async with httpx.AsyncClient() as c:
                 r = await c.post("https://api.anthropic.com/v1/messages",
-                    headers={"x-api-key": s["anthropic_key"], "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                    json={"model": "claude-opus-4-5", "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
+                    headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                    json={"model": "claude-haiku-4-5", "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
                     timeout=30)
                 r.raise_for_status()
                 return r.json()["content"][0]["text"]
         except: pass
-    if s.get("openai_key") and "••••" not in s["openai_key"]:
+    
+    # Try OpenAI (user key first, then env)
+    openai_key = (s.get("openai_key","") if s.get("openai_key") and "••••" not in s.get("openai_key","") else "") or os.getenv("OPENAI_API_KEY","")
+    if openai_key:
         try:
             async with httpx.AsyncClient() as c:
                 r = await c.post("https://api.openai.com/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {s['openai_key']}", "content-type": "application/json"},
-                    json={"model": "gpt-4o", "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
+                    headers={"Authorization": f"Bearer {openai_key}", "content-type": "application/json"},
+                    json={"model": "gpt-4o-mini", "max_tokens": 800, "messages": [{"role": "system", "content": "You are a social media content expert. Always respond in English only. Never use any other language."}, {"role": "user", "content": "You must respond in English only. Do not use any other language.\n\n" + prompt}]},
                     timeout=30)
                 r.raise_for_status()
                 return r.json()["choices"][0]["message"]["content"]
         except: pass
     demos = {
-        "caption": "🔥 Dit næste favoritprodukt er HER!\n\nNoget specielt til dig. Link i bio! ❤️\n\n#trending #nyt #musthave",
+        "caption": "🔥 Transform your body this week!\n\nConsistency is the key to results. Start today! 💪\n\n#fitness #motivation #health #gym #workout",
         "hook": "⚡ Stop — dette SKAL du se!",
         "reel_script": "[HOOK 0-2s] Vidste du dette?! 🤯\n[PROBLEM 2-5s] Du spilder tid\n[LØSNING 5-20s] Vi gjort det nemt 👇\n[CTA 20-30s] Link i bio — gratis fragt!",
-        "hashtags": "#trending #viral #dansk #shopping #nyt #mode #musthave #fyp #foryoupage #lifestyle #fashion #online #kvalitet #tilbud #webshop #danskdesign #nyhed #explore #instagood #tiktokdk",
+        "hashtags": "#trending #viral #fitness #health #gym #workout #motivation #lifestyle #wellness #fitnessmotivation #fyp #foryoupage #explore #instagood #reels",
         "tweet": "⚡ Nyt produkt der er ved at sælge ud — se det nu! Link i bio 🔥 #trending #nyt",
     }
     for k in demos:
@@ -136,12 +143,12 @@ async def generate_content(req: ContentRequest):
     item = {"id": datetime.now().isoformat(), "type": req.content_type, "platform": req.platform,
             "product_id": req.product_id, "product": req.product_title,
             "creator_id": req.creator_id, "content": result, "created": datetime.now().isoformat()}
-    store["content_history"].insert(0, item)
-    if len(store["content_history"]) > 200: store["content_history"] = store["content_history"][:200]
+    store.get("content_history", {}).insert(0, item)
+    if len(store.get("content_history", {})) > 200: store["content_history"] = store.get("content_history", {})[:200]
     if req.product_id:
         pid_str = str(req.product_id)
-        if pid_str not in store["product_content"]: store["product_content"][pid_str] = []
-        store["product_content"][pid_str].insert(0, item)
+        if pid_str not in store.get("product_content", {}): store.get("product_content", {})[pid_str] = []
+        store.get("product_content", {})[pid_str].insert(0, item)
     save_store()
     return {"content": result, "id": item["id"]}
 
@@ -156,16 +163,16 @@ async def generate_all(req: ContentRequest):
         item = {"id": f"{datetime.now().isoformat()}-{ctype}", "type": ctype, "platform": req.platform,
                 "product_id": req.product_id, "product": req.product_title,
                 "content": results[ctype], "created": datetime.now().isoformat()}
-        store["content_history"].insert(0, item)
+        store.get("content_history", {}).insert(0, item)
         if req.product_id:
             pid_str = str(req.product_id)
-            if pid_str not in store["product_content"]: store["product_content"][pid_str] = []
-            store["product_content"][pid_str].insert(0, item)
+            if pid_str not in store.get("product_content", {}): store.get("product_content", {})[pid_str] = []
+            store.get("product_content", {})[pid_str].insert(0, item)
     save_store()
     return results
 
 @router.get("/api/content/history")
-def get_history(): return {"history": store["content_history"]}
+def get_history(): return {"history": store.get("content_history", {})}
 
 @router.delete("/api/content/history")
 def clear_history():
@@ -174,7 +181,7 @@ def clear_history():
 # ── DM Reply ──────────────────────────────────────────────────────────────────
 @router.post("/api/dm/reply")
 async def dm_reply(req: DMReplyRequest):
-    dm = store["dm_settings"]
+    dm = store.get("dm_settings", {})
     reply = await _call_ai(_ghost_prompt(req.message, req.sender_name, dm))
     return {"reply": reply, "ghost_mode": dm.get("ghost_mode", True)}
 
@@ -210,7 +217,7 @@ Skriv på dansk. Svar KUN med JSON."""
 
 
 async def _call_pipeline_api(prompt: str) -> dict:
-    api_key = store["settings"].get("anthropic_key", "") or os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = store.get("settings", {}).get("anthropic_key", "") or os.getenv("ANTHROPIC_API_KEY", "")
     if not api_key or "••••" in api_key:
         raise HTTPException(status_code=400, detail="Anthropic API nøgle mangler — tilføj den under Indstillinger.")
     async with httpx.AsyncClient() as c:
@@ -237,7 +244,7 @@ async def generate_pipeline(req: PipelineRequest):
     results = {}
     for platform in platforms:
         data = await _call_pipeline_api(_pipeline_prompt(req, platform))
-        store["content_pipeline"][platform] = {
+        store.get("content_pipeline", {})[platform] = {
             **data,
             "product_title":   req.product_title,
             "target_audience": req.target_audience,
@@ -278,7 +285,7 @@ class VideoGenerateRequest(BaseModel):
 
 
 async def _runway_create_and_poll(shotlist: str, image_url: str, duration: int, ratio: str) -> tuple:
-    api_key = store["settings"].get("runway_key", "") or os.getenv("RUNWAY_API_KEY", "")
+    api_key = store.get("settings", {}).get("runway_key", "") or os.getenv("RUNWAY_API_KEY", "")
     if not api_key or "••••" in api_key:
         raise HTTPException(status_code=400, detail="Runway API nøgle mangler — tilføj den under Indstillinger.")
 
@@ -335,7 +342,7 @@ async def generate_video(req: VideoGenerateRequest):
 
     # Gem i brugerens pipeline data under platform → videos
     store.setdefault("content_pipeline", {})
-    plat_data = store["content_pipeline"].setdefault(req.platform, {})
+    plat_data = store.get("content_pipeline", {}).setdefault(req.platform, {})
     videos = plat_data.setdefault("videos", [])
     videos.insert(0, {
         "task_id":      task_id,
@@ -452,7 +459,7 @@ async def generate_voice(req: VoiceGenerateRequest):
 
     # Gem i brugerens pipeline data under platform → voices
     store.setdefault("content_pipeline", {})
-    plat_data = store["content_pipeline"].setdefault(req.platform, {})
+    plat_data = store.get("content_pipeline", {}).setdefault(req.platform, {})
     voices = plat_data.setdefault("voices", [])
     voices.insert(0, {
         "url":          audio_url,
@@ -567,7 +574,7 @@ async def assemble_video(req: AssembleRequest):
 
     # Gem i brugerens pipeline data
     store.setdefault("content_pipeline", {})
-    plat_data = store["content_pipeline"].setdefault(req.platform, {})
+    plat_data = store.get("content_pipeline", {}).setdefault(req.platform, {})
     finals    = plat_data.setdefault("finals", [])
     finals.insert(0, {
         "url":          final_url,
@@ -672,7 +679,7 @@ async def add_captions(req: CaptionRequest):
     captioned_url = f"/uploads/final/{out_filename}"
     if req.platform:
         store.setdefault("content_pipeline", {})
-        plat_data = store["content_pipeline"].setdefault(req.platform, {})
+        plat_data = store.get("content_pipeline", {}).setdefault(req.platform, {})
         finals = plat_data.setdefault("finals", [])
         finals.insert(0, {"url": captioned_url, "generated_at": datetime.now().isoformat(), "type": "captioned"})
         plat_data["finals"] = finals[:10]

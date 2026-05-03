@@ -10,15 +10,15 @@ router = APIRouter()
 
 # ── Automation ────────────────────────────────────────────────────────────────
 @router.get("/api/automation/log")
-def get_log(): return {"log": store["automation_log"]}
+def get_log(): return {"log": store.get("automation_log", {})}
 
 # ── Twitter + YouTube API nøgler ─────────────────────────────────────────────
 @router.post("/api/settings/twitter_api")
 async def save_twitter_api(req: Request):
     d = await req.json()
     for k in ["twitter_api_key","twitter_api_secret","twitter_bearer_token","twitter_access_token","twitter_access_secret"]:
-        if d.get(k): store["settings"][k] = d[k]
-    store["settings"]["twitter_api_connected"] = bool(d.get("twitter_api_key"))
+        if d.get(k): store.get("settings", {})[k] = d[k]
+    store.get("settings", {})["twitter_api_connected"] = bool(d.get("twitter_api_key"))
     save_store(store)
     return {"status": "ok"}
 
@@ -26,7 +26,7 @@ async def save_twitter_api(req: Request):
 async def save_youtube_api(req: Request):
     d = await req.json()
     for k in ["youtube_client_id","youtube_client_secret"]:
-        if d.get(k): store["settings"][k] = d[k]
+        if d.get(k): store.get("settings", {})[k] = d[k]
     save_store(store)
     return {"status": "ok"}
 
@@ -41,10 +41,10 @@ async def create_lib_folder(req: Request):
     name = d.get("name","").strip()
     if not name: return {"status":"error"}
     if "lib_folders" not in store: store["lib_folders"] = []
-    if name not in store["lib_folders"]:
-        store["lib_folders"].append(name)
+    if name not in store.get("lib_folders", {}):
+        store.get("lib_folders", {}).append(name)
         save_store()
-    return {"status":"ok", "folders": store["lib_folders"]}
+    return {"status":"ok", "folders": store.get("lib_folders", {})}
 
 @router.delete("/api/library/folders/{name}")
 def delete_lib_folder(name: str):
@@ -58,14 +58,14 @@ def clear_log():
 
 @router.post("/api/automation/generate_batch")
 async def generate_batch():
-    auto = store["automation"]
+    auto = store.get("automation", {})
     add_log("🚀 Starter batch generation...", "info")
     # Hent alle produkter — manual + Shopify cache
     all_prods = store.get("manual_products", []) + store.get("shopify_products_cache", [])
     if not all_prods:
         all_prods = _demo_products()
     # Filtrer kun produkter UDEN content
-    has_content = set(str(k) for k in store.get("product_content", {}).keys() if store["product_content"].get(str(k)))
+    has_content = set(str(k) for k in store.get("product_content", {}).keys() if store.get("product_content", {}).get(str(k)))
     products_without = [p for p in all_prods if str(p["id"]) not in has_content]
     if not products_without:
         add_log("✅ Alle produkter har allerede content", "info")

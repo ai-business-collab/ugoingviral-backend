@@ -34,8 +34,8 @@ async def save_email_settings(req: Request):
         store["email_settings"] = {}
     for k, v in d.items():
         if v and "••••" not in str(v):
-            store["email_settings"][k] = v
-    store["email_settings"]["active"] = d.get("active", False)
+            store.get("email_settings", {})[k] = v
+    store.get("email_settings", {})["active"] = d.get("active", False)
     save_store()
     return {"status": "ok"}
 
@@ -255,7 +255,7 @@ async def save_template(req: Request):
     if "email_templates" not in store:
         store["email_templates"] = _default_templates()
     # Tilføj eller opdater
-    templates = store["email_templates"]
+    templates = store.get("email_templates", {})
     existing = next((t for t in templates if t["id"] == d.get("id")), None)
     if existing:
         existing.update(d)
@@ -559,7 +559,7 @@ async def toggle_auto_reply(req: Request):
     d = await req.json()
     if "email_settings" not in store:
         store["email_settings"] = {}
-    store["email_settings"]["auto_reply_active"] = d.get("active", False)
+    store.get("email_settings", {})["auto_reply_active"] = d.get("active", False)
     save_store()
     status = "aktiveret" if d.get("active") else "deaktiveret"
     add_log(f"📧 Auto email svar {status}", "info")

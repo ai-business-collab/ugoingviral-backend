@@ -62,7 +62,7 @@ async def toggle_autopilot(req: Request, current_user: dict = Depends(get_curren
     active = bool(d.get("active", False))
     if "automation" not in store:
         store["automation"] = {}
-    store["automation"]["active"] = active
+    store.get("automation", {})["active"] = active
     save_store()
     status = "enabled" if active else "disabled"
     add_log(f"Auto Pilot {status}", "info")
