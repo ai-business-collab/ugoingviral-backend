@@ -1197,7 +1197,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
     <!-- ── SYSTEM ── -->
     <div class="nav-section" data-i18n="nav.system">System</div>
-    <div class="ni" onclick="nav('telegram-settings')"><span class="ico">✈️</span><span>Telegram Bot</span></div>
     <div class="ni" id="ni-connect" onclick="nav('connect')"><span class="ico">🔗</span><span data-i18n="nav.connect">Connect</span></div>
     <div class="ni has-sub" id="ni-settings" onclick="toggleSubMenu('settings-sub')"><span class="ico">⚙️</span><span data-i18n="nav.settings">Indstillinger</span><span class="chevron">›</span></div>
     <div class="submenu" id="settings-sub">
@@ -2525,6 +2524,38 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
 
 
+        <div class="concard" id="con-telegram">
+          <div class="concard-top" onclick="toggleCon('telegram')">
+            <div class="conico">✈️</div>
+            <div class="coninfo"><div class="conname">Telegram Bot</div><div class="constatus no" id="cs-telegram">Not connected</div></div>
+            <button class="btn bg bsm">▾</button>
+          </div>
+          <div class="conbody">
+            <div id="tg-conn-status" style="margin-bottom:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-size:12px;color:var(--tx3)">Checking bot status...</div>
+            <div style="margin-bottom:14px">
+              <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:6px">Step 1 — Get bot token</div>
+              <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Create a bot at <a href="https://t.me/BotFather" target="_blank" style="color:var(--ac)">@BotFather</a> and add the token to your server <code style="background:var(--bg);padding:1px 4px;border-radius:3px">.env</code>:</div>
+              <div style="font-family:monospace;font-size:11px;background:var(--bg);padding:8px 10px;border-radius:6px;border:1px solid var(--border);color:var(--tx2)">TELEGRAM_BOT_TOKEN=1234567890:ABCdef...</div>
+            </div>
+            <div style="margin-bottom:14px">
+              <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:6px">Step 2 — Register Webhook</div>
+              <button class="btn bp bsm" onclick="registerTelegramWebhook()">Register Webhook</button>
+              <div id="tg-conn-webhook-result" style="margin-top:6px;font-size:11px;color:var(--tx3)"></div>
+            </div>
+            <div style="margin-bottom:14px">
+              <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:6px">Step 3 — Link your account</div>
+              <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">Generate a token and send <code style="background:var(--bg);padding:1px 4px;border-radius:3px">/link TOKEN</code> to your bot:</div>
+              <button class="btn bg bsm" onclick="generateTelegramLinkToken()">Generate Link Token</button>
+              <div id="tg-conn-link-result" style="margin-top:10px;display:none;padding:10px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+                <div style="font-size:10px;color:var(--tx3);margin-bottom:3px">Send this to your Telegram bot:</div>
+                <div id="tg-conn-link-cmd" style="font-family:monospace;font-size:12px;font-weight:700;color:var(--ac)"></div>
+                <div id="tg-conn-bot-link" style="margin-top:6px;font-size:11px;color:var(--tx3)"></div>
+              </div>
+            </div>
+            <div style="padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--tx3)">Commands: /start /stats /credits /autopilot /help</div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="ctitle"><span>🔍 Forbindelsesstatus</span><button class="btn bg bsm" onclick="loadConnections()">↻</button></div>
           <div class="trow"><div><div class="tname">🛍️ Shopify</div><div class="tdesc" id="ov-shop">–</div></div><span class="sdot off" id="ovd-shop"></span></div>
@@ -2533,7 +2564,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="trow"><div><div class="tname">📘 Facebook</div><div class="tdesc" id="ov-fb">–</div></div><span class="sdot off" id="ovd-fb"></span></div>
           <div class="trow"><div><div class="tname">🐦 X / Twitter</div><div class="tdesc" id="ov-tw">–</div></div><span class="sdot off" id="ovd-tw"></span></div>
           <div class="trow"><div><div class="tname">▶️ YouTube</div><div class="tdesc" id="ov-yt">–</div></div><span class="sdot off" id="ovd-yt"></span></div>
-          
+          <div class="trow"><div><div class="tname">✈️ Telegram</div><div class="tdesc" id="ov-tg">–</div></div><span class="sdot off" id="ovd-tg"></span></div>
         </div>
       </div>
     </div>
@@ -4545,12 +4576,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (_token) {
       fetch('/api/billing/paypal_capture', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({order_id:_token, ref:_ref})})
         .then(r => r.json()).then(d => {
-          toast(d.message || '🎉 PayPal payment completed!', 'success');
-          loadBilling();
+          launchConfetti();
+          showPaymentSuccess(d.message || 'PayPal payment completed!');
         }).catch(() => toast('⚠️ PayPal capture fejlede — kontakt support', 'error'));
     } else {
-      toast('🎉 PayPal payment completed!', 'success');
-      loadBilling();
+      launchConfetti();
+      showPaymentSuccess('PayPal payment completed!');
     }
   } else if (_urlp.get('payment') === 'success') {
     const _plan      = _urlp.get('plan') || '';
@@ -4561,17 +4592,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const pkgScenes  = {serie_3:3, serie_6:6, serie_10:10};
     window.history.replaceState({}, '', '/app');
     if (_addon && _subSlots > 0) {
-      // Apply sub-account slots locally and navigate to sub-accounts
       toast(`✅ ${_subSlots} extra profile slot${_subSlots>1?'s':''} added!`, 'success');
       nav('subaccounts');
       setTimeout(loadSubAccounts, 500);
     } else if (_goStudio && pkgScenes[_pkg]) {
-      toast('🎉 Payment completed — studio ready!', 'success');
-      studioStartPackage(pkgScenes[_pkg]);
-      nav('studio');
+      launchConfetti();
+      showPaymentSuccess('Studio package activated — ready to create! 🎬');
+      setTimeout(function(){ studioStartPackage(pkgScenes[_pkg]); nav('studio'); }, 2000);
     } else {
-      toast('🎉 Payment completed! ' + (_plan ? 'Plan: ' + _plan : _pkg ? 'Package: ' + _pkg : ''), 'success');
-      nav('billing');
+      var psMsg = _plan ? 'Your <strong>' + _plan.charAt(0).toUpperCase()+_plan.slice(1) + ' plan</strong> is now active. Enjoy your credits!' : _pkg ? 'Package <strong>'+_pkg+'</strong> added to your account.' : 'Your purchase is confirmed and credits have been added.';
+      launchConfetti();
+      showPaymentSuccess(psMsg);
     }
   } else if (_urlp.get('payment') === 'cancelled') {
     toast('Betaling annulleret', 'info');
@@ -5767,7 +5798,7 @@ function nav(p) {
   if (p === 'autopilot') { loadAutoPilot(); }
   if (p === 'growth-dashboard') { loadGrowthDashboard(); }
   if (p === 'agency-dashboard') { loadAgencyDashboard(); }
-  if (p === 'telegram-settings') { loadTelegramStatus(); }
+  if (p === 'connect') { loadTelegramStatus(); }
   if (p === 'media-upload') { loadMyUploads(); }
   if (p === 'templates') { loadTemplates(); }
   if (p === 'analytics') { loadAnalytics(); }
@@ -10367,6 +10398,7 @@ function renderPipeContent() {
 #agent-panel.ag-closing { animation:agslide-out .18s ease forwards; }
 @keyframes agslide     { from{opacity:0;transform:translateY(20px) scale(.96)} to{opacity:1;transform:none} }
 @keyframes agslide-out { to{opacity:0;transform:translateY(16px) scale(.97)} }
+@keyframes confettiFall { 0%{opacity:1;transform:translateY(0) rotate(0)} 100%{opacity:0;transform:translateY(100vh) rotate(720deg)} }
 
 /* ── Header ── */
 #ag-header {
@@ -10475,6 +10507,16 @@ function renderPipeContent() {
 #ag-mic { background:#111d35; border:1px solid rgba(255,255,255,.1); color:var(--tx2); }
 #ag-mic.listening { background:rgba(239,68,68,.2); border-color:#ef4444; color:#ef4444; }
 </style>
+
+<!-- Payment success modal -->
+<div id="payment-success-modal" style="display:none;position:fixed;inset:0;z-index:19999;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:center;justify-content:center">
+  <div style="background:#0d1526;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:48px 40px;max-width:440px;width:90%;text-align:center;animation:agslide .3s ease">
+    <div style="font-size:64px;margin-bottom:16px">🎉</div>
+    <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:10px">Payment Successful!</div>
+    <div id="ps-msg" style="font-size:14px;color:var(--tx3);margin-bottom:28px;line-height:1.6"></div>
+    <button class="btn bp" style="width:100%;padding:14px;font-size:15px;font-weight:700" onclick="closePaymentSuccess()">Go to Billing →</button>
+  </div>
+</div>
 
 <!-- FAB — draggable -->
 <button id="agent-fab" title="AI Assistant">
@@ -10631,8 +10673,15 @@ function agDetectLang(text) {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function agInit() {
-  // Restore saved agent name
+  // Load agent name from backend, fall back to localStorage
   var savedName = localStorage.getItem('ag_agent_name');
+  try {
+    var nr = await apiFetch('/api/agent/name');
+    if (nr.name) {
+      savedName = nr.name;
+      localStorage.setItem('ag_agent_name', savedName);
+    }
+  } catch(e) {}
   if (savedName) document.getElementById('ag-hname').textContent = savedName;
 
   // Load plan info for badge
@@ -10667,6 +10716,20 @@ async function agInit() {
     extra.className = 'ag-chip'; extra.textContent = '🧑 Contact support';
     extra.onclick = function() { agChip('I need help from a staff member'); };
     sg.appendChild(extra);
+  }
+
+  // First login: auto-open panel and ask for agent name
+  if (!localStorage.getItem('ag_name_asked') && !savedName) {
+    setTimeout(function() {
+      agPositionPanel();
+      var panel = document.getElementById('agent-panel');
+      panel.classList.add('ag-open');
+      _ag.open = true;
+      document.getElementById('ag-fab-ico').textContent = '✕';
+      _ag.awaitingName = true;
+      localStorage.setItem('ag_name_asked', '1');
+      agAddMsg('bot', 'Hi! I\'m your personal AI assistant on UgoingViral. 👋\n\nWhat would you like to call me? Type a name (e.g. **"Aria"**, **"Max"**, **"Nova"**) or say **"you choose"** and I\'ll pick one!');
+    }, 2000);
   }
 }
 
@@ -10757,13 +10820,13 @@ async function agSend(fromVoice) {
   // Detect language from user input
   agDetectLang(text);
 
-  // First-time name prompt
+  // First-time name prompt (fallback: if panel opened manually before agInit auto-prompt)
   if (!localStorage.getItem('ag_name_asked') && !_ag.awaitingName) {
     localStorage.setItem('ag_name_asked', '1');
     _ag.pendingFirstMsg = text;
     _ag.awaitingName = true;
     agAddMsg('user', text);
-    agAddMsg('bot', 'Hi! Before we start — would you like to give me a name? I\'ll use it every time we talk. 😊\n\nJust type a name (e.g. "Aria", "Max") or say "skip" to continue.');
+    agAddMsg('bot', 'Hi! I\'m your personal AI assistant on UgoingViral. 👋\n\nWhat would you like to call me? Type a name (e.g. **"Aria"**, **"Max"**, **"Nova"**) or say **"you choose"** and I\'ll pick one!');
     return;
   }
 
@@ -10772,13 +10835,21 @@ async function agSend(fromVoice) {
     _ag.awaitingName = false;
     var lower = text.toLowerCase().trim();
     agAddMsg('user', text);
-    if (lower !== 'skip' && lower !== 'no' && lower !== 'none' && text.length > 0 && text.length < 30) {
-      var agentName = text.trim();
+    var agentName;
+    var _agNames = ['Aria','Nova','Sage','Max','Luna','Zoe','Eli','Kai','Scout','Mira'];
+    if (lower === 'you choose' || lower === 'you pick' || lower === 'surprise me' || lower === 'pick one' || lower === 'choose') {
+      agentName = _agNames[Math.floor(Math.random() * _agNames.length)];
+      agAddMsg('bot', 'Great choice! I\'ll go by **' + agentName + '**! 🎉\n\nNice to meet you! How can I help you today?');
+    } else if (lower !== 'skip' && lower !== 'no' && lower !== 'none' && text.length > 0 && text.length < 30) {
+      agentName = text.trim();
+      agAddMsg('bot', 'Perfect! I\'ll be **' + agentName + '** from now on. 🎉\n\nHow can I help you today?');
+    } else {
+      agAddMsg('bot', 'No problem! You can rename me anytime. What can I help with?');
+    }
+    if (agentName) {
       localStorage.setItem('ag_agent_name', agentName);
       document.getElementById('ag-hname').textContent = agentName;
-      agAddMsg('bot', 'Nice to meet you! I\'ll go by **' + agentName + '** from now on. 🎉\n\nHow can I help you?');
-    } else {
-      agAddMsg('bot', 'No problem! You can rename me anytime in settings. What can I help with?');
+      apiFetch('/api/agent/name', 'PATCH', {name: agentName}).catch(function(){});
     }
     if (_ag.pendingFirstMsg) {
       var pending = _ag.pendingFirstMsg;
@@ -10946,6 +11017,37 @@ async function agClearHistory() {
   _ag.history = []; _ag.workflow.active = false;
   document.getElementById('ag-msgs').innerHTML = '';
   agAddMsg('bot', '🗑️ Conversation history cleared. What can I help you with?');
+}
+
+// ── Confetti & payment success ────────────────────────────────────────────────
+function launchConfetti() {
+  var colors = ['#00e5ff','#7c3aed','#f59e0b','#10b981','#ef4444','#3b82f6','#ec4899','#a3e635'];
+  for (var i = 0; i < 90; i++) {
+    (function(i) {
+      setTimeout(function() {
+        var c = document.createElement('div');
+        var size = Math.random() * 10 + 5;
+        c.style.cssText = 'position:fixed;top:' + (Math.random() * 30 - 10) + 'vh;left:' + (Math.random() * 100) + 'vw;width:' + size + 'px;height:' + size + 'px;background:' + colors[Math.floor(Math.random()*colors.length)] + ';border-radius:' + (Math.random()>.5?'50%':'3px') + ';z-index:19998;pointer-events:none;animation:confettiFall ' + (Math.random()*2+2.5) + 's ease forwards';
+        document.body.appendChild(c);
+        setTimeout(function(){c.remove();}, 5000);
+      }, i * 25);
+    })(i);
+  }
+}
+
+function showPaymentSuccess(msg) {
+  var modal = document.getElementById('payment-success-modal');
+  var msgEl = document.getElementById('ps-msg');
+  if (modal) { modal.style.display='flex'; }
+  if (msgEl) { msgEl.innerHTML = msg || 'Your payment was processed successfully.'; }
+  nav('billing');
+  setTimeout(loadBilling, 600);
+}
+
+function closePaymentSuccess() {
+  var modal = document.getElementById('payment-success-modal');
+  if (modal) modal.style.display='none';
+  nav('billing');
 }
 
 // ── Init on load ──────────────────────────────────────────────────────────────
@@ -11123,8 +11225,14 @@ async function toggleApPlatform(p){
 async function toggleAutoPilot(){
   _apActive=!_apActive; renderApToggle(_apActive);
   try{
-    await apiFetch('/api/autopilot/toggle',{method:'POST',body:JSON.stringify({active:_apActive})});
-    if(typeof showToast==='function') showToast(_apActive?'Auto Pilot ON':'Auto Pilot OFF');
+    var d = await apiFetch('/api/autopilot/toggle', 'POST', {active:_apActive});
+    if(!d.ok && d.error==='insufficient_credits'){
+      _apActive=false; renderApToggle(false);
+      toast('You need at least 50 credits to run Auto Pilot. Redirecting to billing…', 'error');
+      setTimeout(function(){ nav('billing'); }, 1800);
+      return;
+    }
+    toast(_apActive?'Auto Pilot ON ✓':'Auto Pilot OFF', _apActive?'success':'info');
     loadAutoPilot();
   }catch(e){ _apActive=!_apActive; renderApToggle(_apActive); }
 }
@@ -11375,58 +11483,81 @@ function renderAgencyClientGrid(subs, limit) {
 }
 
 // ===== TELEGRAM SETTINGS =====
+function _tgSetBox(box, type, html) {
+  if (!box) return;
+  var colors = {ok:'rgba(16,185,129,.06)',warn:'rgba(245,158,11,.06)',err:'rgba(239,68,68,.06)'};
+  var borders = {ok:'rgba(16,185,129,.2)',warn:'rgba(245,158,11,.2)',err:'rgba(239,68,68,.2)'};
+  var texts = {ok:'#34d399',warn:'#fbbf24',err:'#f87171'};
+  box.style.background = colors[type]||'';
+  box.style.borderColor = borders[type]||'var(--border)';
+  box.style.color = texts[type]||'var(--tx3)';
+  box.innerHTML = html;
+}
+
 async function loadTelegramStatus() {
-  var box = document.getElementById('tg-status-box'); if (!box) return;
+  var box = document.getElementById('tg-conn-status');
+  var legacyBox = document.getElementById('tg-status-box');
+  var statusEl = document.getElementById('cs-telegram');
   try {
     var d = await apiFetch('/api/telegram/status');
+    var msgHtml, type;
     if (!d.configured) {
-      box.style.background = 'rgba(239,68,68,.06)';
-      box.style.borderColor = 'rgba(239,68,68,.2)';
-      box.style.color = '#f87171';
-      box.textContent = 'Bot not configured - add TELEGRAM_BOT_TOKEN to .env';
+      type='err'; msgHtml='Bot not configured — add TELEGRAM_BOT_TOKEN to .env';
+      if(statusEl){statusEl.textContent='Not configured';statusEl.className='constatus no';}
     } else if (!d.ok) {
-      box.style.background = 'rgba(245,158,11,.06)';
-      box.style.borderColor = 'rgba(245,158,11,.2)';
-      box.style.color = '#fbbf24';
-      box.textContent = 'Bot token invalid - check TELEGRAM_BOT_TOKEN in .env';
+      type='warn'; msgHtml='Bot token invalid — check TELEGRAM_BOT_TOKEN in .env';
+      if(statusEl){statusEl.textContent='Token invalid';statusEl.className='constatus no';}
     } else {
-      var linked = d.linked ? ' | Account linked' : ' | Account not linked yet';
-      var webhook = d.webhook_url ? ' | Webhook active' : ' | Webhook not set';
-      box.style.background = 'rgba(16,185,129,.06)';
-      box.style.borderColor = 'rgba(16,185,129,.2)';
-      box.style.color = '#34d399';
-      box.innerHTML = 'Bot active: <strong>@' + (d.bot_username||'unknown') + '</strong>' + webhook + linked;
+      var linked = d.linked ? ' · Account linked ✓' : ' · Account not linked yet';
+      var webhook = d.webhook_url ? ' · Webhook active' : ' · No webhook';
+      type='ok'; msgHtml='Bot active: <strong>@'+(d.bot_username||'unknown')+'</strong>'+webhook+linked;
+      if(statusEl){statusEl.textContent=d.linked?'Connected':'Bot active, link account';statusEl.className='constatus'+(d.linked?' on':' no');}
     }
+    _tgSetBox(box, type, msgHtml);
+    _tgSetBox(legacyBox, type, msgHtml);
   } catch(e) {
-    box.textContent = 'Could not check bot status';
+    if(box) box.textContent = 'Could not check bot status';
+    if(legacyBox) legacyBox.textContent = 'Could not check bot status';
   }
 }
 
 async function registerTelegramWebhook() {
-  var el = document.getElementById('tg-webhook-result'); if(el) el.textContent = 'Registering...';
+  var el = document.getElementById('tg-conn-webhook-result');
+  var legEl = document.getElementById('tg-webhook-result');
+  var setText = function(msg, col) {
+    if(el){el.style.color=col;el.textContent=msg;}
+    if(legEl){legEl.style.color=col;legEl.textContent=msg;}
+  };
+  setText('Registering...', 'var(--tx3)');
   try {
     var d = await apiFetch('/api/telegram/setup');
     if (d.ok) {
-      if(el) el.style.color='#10b981'; if(el) el.textContent='Webhook registered successfully!';
+      setText('Webhook registered successfully!', '#10b981');
       loadTelegramStatus();
     } else {
-      if(el) el.style.color='var(--red)'; if(el) el.textContent='Error: ' + (d.description || d.error || 'Failed');
+      setText('Error: ' + (d.description || d.error || 'Failed'), 'var(--red)');
     }
-  } catch(e) { if(el) el.textContent='Error: ' + e.message; }
+  } catch(e) { setText('Error: ' + e.message, 'var(--red)'); }
 }
 
 async function generateTelegramLinkToken() {
   try {
-    var d = await apiFetch('/api/telegram/generate-link-token', {method:'POST', body:JSON.stringify({})});
-    var res = document.getElementById('tg-link-result');
-    var cmd = document.getElementById('tg-link-cmd');
-    var botLink = document.getElementById('tg-bot-link');
+    var d = await apiFetch('/api/telegram/generate-link-token', 'POST', {});
+    // Update Connect page elements
+    var res = document.getElementById('tg-conn-link-result');
+    var cmd = document.getElementById('tg-conn-link-cmd');
+    var bl  = document.getElementById('tg-conn-bot-link');
     if (res) res.style.display = 'block';
     if (cmd) cmd.textContent = d.link_command;
-    if (botLink && d.bot_url) {
-      botLink.innerHTML = 'Open bot: <a href="' + d.bot_url + '" target="_blank" style="color:var(--ac)">' + d.bot_url + '</a>';
-    }
-  } catch(e) { if(typeof showToast==='function') showToast('Error: '+e.message); }
+    if (bl && d.bot_url) bl.innerHTML = 'Open bot: <a href="'+d.bot_url+'" target="_blank" style="color:var(--ac)">'+d.bot_url+'</a>';
+    // Also update legacy page elements if present
+    var res2 = document.getElementById('tg-link-result');
+    var cmd2 = document.getElementById('tg-link-cmd');
+    var bl2  = document.getElementById('tg-bot-link');
+    if (res2) res2.style.display = 'block';
+    if (cmd2) cmd2.textContent = d.link_command;
+    if (bl2 && d.bot_url) bl2.innerHTML = 'Open bot: <a href="'+d.bot_url+'" target="_blank" style="color:var(--ac)">'+d.bot_url+'</a>';
+  } catch(e) { toast('Error: '+e.message, 'error'); }
 }
 
 // ===== AUTO TOP-UP =====

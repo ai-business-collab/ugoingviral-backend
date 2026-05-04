@@ -6,7 +6,7 @@ POST /api/autopilot/toggle  → enable/disable auto pilot
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request
 from routes.auth import get_current_user
-from services.store import store, save_store, add_log
+from services.store import store, save_store, add_log, _load_user_store
 
 router = APIRouter()
 
@@ -60,6 +60,19 @@ def autopilot_status(current_user: dict = Depends(get_current_user)):
 async def toggle_autopilot(req: Request, current_user: dict = Depends(get_current_user)):
     d = await req.json()
     active = bool(d.get("active", False))
+
+    if active:
+        uid = current_user["id"]
+        ustore = _load_user_store(uid)
+        billing = ustore.get("billing", {})
+        credits = billing.get("credits", 0)
+        if credits < 50:
+            return {
+                "ok": False, "active": False,
+                "error": "insufficient_credits",
+                "credits": credits, "minimum": 50,
+            }
+
     if "automation" not in store:
         store["automation"] = {}
     store.get("automation", {})["active"] = active

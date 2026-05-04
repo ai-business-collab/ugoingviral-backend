@@ -87,7 +87,7 @@ def _build_context(user_id: str, current_page: str = "") -> str:
     return ctx
 
 
-def _build_system(plan: str, ctx: str) -> str:
+def _build_system(plan: str, ctx: str, agent_name: str = "") -> str:
     role_desc = {
         "free":     "You are the UgoingViral AI assistant — friendly, helpful FAQ bot.",
         "starter":  "You are the UgoingViral AI assistant — friendly, helpful FAQ bot.",
@@ -97,7 +97,9 @@ def _build_system(plan: str, ctx: str) -> str:
         "personal": "You are the user's dedicated Personal AI assistant on UgoingViral. Be highly personalized.",
     }.get(plan, "You are the UgoingViral AI assistant.")
 
-    return f"""{role_desc}
+    name_line = f"\nYour name is {agent_name}. Use your name naturally in conversation when it feels appropriate." if agent_name else ""
+
+    return f"""{role_desc}{name_line}
 
 {ctx}
 
@@ -107,7 +109,7 @@ PLATFORM FEATURES:
 - Post & Schedule: calendar scheduling to multiple platforms simultaneously
 - Automation: auto-like, auto-follow, auto-comment, engagement rules
 - Billing: credits system, plans Free→Personal (0–2499 kr/mo)
-- Connect: link social accounts (Instagram, TikTok, YouTube, Facebook, X)
+- Connect: link social accounts (Instagram, TikTok, YouTube, Facebook, X, Telegram)
 - Statistics: follower growth, views, likes, comments
 
 CREDIT COSTS: Script 5cr · Image 8cr · Video 5s 20cr · Video 15s 40cr · Video 30s 80cr · Voice 15cr · Assembly 2cr · Post 1cr
@@ -278,8 +280,9 @@ async def agent_chat(req: AgentRequest, current_user: dict = Depends(get_current
     billing = ustore.get("billing", store.get("billing", {}))
     plan = billing.get("plan", "free")
 
+    agent_name = ustore.get("agent_name", "")
     ctx = _build_context(uid, req.context)
-    system = _build_system(plan, ctx)
+    system = _build_system(plan, ctx, agent_name)
 
     # Build message list — use stored history + request history
     stored = _load_history(uid)
@@ -372,3 +375,19 @@ def set_auto_permission(req: AutoPermRequest, current_user: dict = Depends(get_c
 def get_auto_permission(current_user: dict = Depends(get_current_user)):
     ustore = _load_user_store(current_user["id"])
     return {"enabled": ustore.get("agent_auto_permission", False)}
+
+
+@router.get("/api/agent/name")
+def get_agent_name(current_user: dict = Depends(get_current_user)):
+    ustore = _load_user_store(current_user["id"])
+    return {"name": ustore.get("agent_name", "")}
+
+
+@router.patch("/api/agent/name")
+async def set_agent_name(req: Request, current_user: dict = Depends(get_current_user)):
+    d = await req.json()
+    name = (d.get("name") or "").strip()[:30]
+    ustore = _load_user_store(current_user["id"])
+    ustore["agent_name"] = name
+    _save_user_store(current_user["id"], ustore)
+    return {"ok": True, "name": name}
