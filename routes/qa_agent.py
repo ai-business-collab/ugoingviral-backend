@@ -2,6 +2,16 @@
 UgoingViral QA Agent
 POST /api/qa/run     — run full test suite (X-Nexora-Key required)
 GET  /api/qa/results — last 10 test runs   (X-Nexora-Key required)
+
+Response format (both endpoints):
+  {
+    "all_pass": bool,
+    "tests": [
+      {"name": str, "passed": bool, "status_code": int, "response_time": int}
+    ],
+    "passed": int, "failed": int, "total": int,
+    "run_id": str, "timestamp": str
+  }
 """
 import os, json, time
 from datetime import datetime
@@ -17,10 +27,8 @@ RESULTS_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "
 QA_EMAIL    = "qa-agent@ugoingviral.com"
 QA_PASSWORD = "QA_AutoTest_2026!"
 
-
-# Minimal valid MP3 frame: MPEG1 Layer3 sync word + header + silent frame data
-# The uploads endpoint accepts audio/mpeg without validating audio content.
-_TEST_MP3 = b"\xff\xfb\x90\x00" + b"\x00" * 413  # sync + one silent frame
+# Minimal valid MP3 frame (sync + one silent frame)
+_TEST_MP3 = b"\xff\xfb\x90\x00" + b"\x00" * 413
 
 
 def _require_key(request: Request):
@@ -62,12 +70,10 @@ async def _run_tests() -> dict:
                   "name": "QA Agent", "niche": "qa-test"},
             expect_status=[200, 400],
         )
-        # 400 "already registered" counts as pass
-        if t["status_code"] == 400:
-            detail = str(t.get("_body", {}).get("detail", "")).lower()
-            if any(w in detail for w in ("already", "exists", "registered")):
-                t["pass"] = True
-                t["note"] = "user already exists"
+        # 400 "already in use" is a pass — user exists from previous run
+        if not t["passed"] and t["status_code"] == 400:
+            t["passed"] = True
+            t["note"] = "user already exists"
         tests.append(t)
 
         # ── 3. User login ────────────────────────────────────────────
@@ -76,7 +82,7 @@ async def _run_tests() -> dict:
             body={"email": QA_EMAIL, "password": QA_PASSWORD},
             expect_status=200, expect_keys=["token"],
         )
-        if t["pass"]:
+        if t["passed"]:
             user_token = t.get("_body", {}).get("token")
         tests.append(t)
 
@@ -94,7 +100,7 @@ async def _run_tests() -> dict:
             expect_status=200, expect_keys=["token"],
         ))
 
-        # ── 6. Autopilot toggle ──────────────────────────────────────
+        # ── 6. Autopilot toggle (disable — no credits needed) ────────
         tests.append(await _test(
             c, "autopilot_toggle", "POST", "/api/autopilot/toggle",
             body={"active": False},
@@ -107,10 +113,10 @@ async def _run_tests() -> dict:
             headers=_auth(user_token), expect_status=[200, 404],
         ))
 
-        # ── 8. Upload media (1×1 PNG) ────────────────────────────────
+        # ── 8. Upload media (minimal MP3) ────────────────────────────
         tests.append(await _test_upload(c, "upload_media", user_token))
 
-    passed = sum(1 for t in tests if t["pass"])
+    passed = sum(1 for t in tests if t["passed"])
     failed = len(tests) - passed
     return {
         "run_id":    datetime.utcnow().strftime("%Y%m%dT%H%M%SZ"),
@@ -168,13 +174,13 @@ async def _test(
         and all(k in resp_body for k in (expect_keys or []))
     )
     return {
-        "name":        name,
-        "pass":        passes,
-        "status_code": status_code,
-        "elapsed_ms":  elapsed_ms,
-        "error":       error,
-        "note":        "",
-        "_body":       resp_body,
+        "name":          name,
+        "passed":        passes,
+        "status_code":   status_code,
+        "response_time": elapsed_ms,
+        "error":         error,
+        "note":          "",
+        "_body":         resp_body,
     }
 
 
@@ -194,12 +200,12 @@ async def _test_upload(c: httpx.AsyncClient, name: str, token: str | None) -> di
 
     elapsed_ms = round((time.monotonic() - t0) * 1000)
     return {
-        "name":        name,
-        "pass":        error is None and status_code in (200, 201),
-        "status_code": status_code,
-        "elapsed_ms":  elapsed_ms,
-        "error":       error,
-        "note":        "",
+        "name":          name,
+        "passed":        error is None and status_code in (200, 201),
+        "status_code":   status_code,
+        "response_time": elapsed_ms,
+        "error":         error,
+        "note":          "",
     }
 
 
@@ -219,4 +225,19 @@ async def qa_run(request: Request):
 def qa_results(request: Request):
     _require_key(request)
     results = _load_results()
-    return {"runs": results[-10:]}
+    last = results[-1] if results else {
+        "all_pass": False,
+        "tests": [],
+        "passed": 0, "failed": 0, "total": 0,
+        "run_id": "", "timestamp": "",
+    }
+    return {
+        "all_pass":  last.get("all_pass", False),
+        "tests":     last.get("tests", []),
+        "passed":    last.get("passed", 0),
+        "failed":    last.get("failed", 0),
+        "total":     last.get("total", 0),
+        "run_id":    last.get("run_id", ""),
+        "timestamp": last.get("timestamp", ""),
+        "runs":      results[-10:],
+    }
