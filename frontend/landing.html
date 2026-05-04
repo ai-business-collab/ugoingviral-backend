@@ -955,7 +955,7 @@ footer p { font-size: 13px; color: var(--text2); }
     </div>
     <div class="price-card">
       <div class="price-name">Starter</div>
-      <div class="price-amount" data-usd="40">$40<span>/mo</span></div>
+      <div class="price-amount" data-usd="49">$49<span>/mo</span></div>
       <div class="price-credits">200 credits</div>
       <ul class="price-features">
         <li class="plus">Everything in Free +</li>
@@ -974,7 +974,7 @@ footer p { font-size: 13px; color: var(--text2); }
     <div class="price-card price-card-growth">
       <div class="price-tag" style="color:#22c55e">Engagement</div>
       <div class="price-name">Growth</div>
-      <div class="price-amount" data-usd="57">$57<span>/mo</span></div>
+      <div class="price-amount" data-usd="89">$89<span>/mo</span></div>
       <div class="price-credits" style="color:#22c55e">500 credits + automation</div>
       <ul class="price-features">
         <li class="plus" style="color:#22c55e">Everything in Starter +</li>
@@ -992,7 +992,7 @@ footer p { font-size: 13px; color: var(--text2); }
     </div>
     <div class="price-card">
       <div class="price-name">Basic</div>
-      <div class="price-amount" data-usd="70">$70<span>/mo</span></div>
+      <div class="price-amount" data-usd="79">$79<span>/mo</span></div>
       <div class="price-credits">1,000 credits</div>
       <ul class="price-features">
         <li class="plus">Everything in Growth +</li>
@@ -1011,7 +1011,7 @@ footer p { font-size: 13px; color: var(--text2); }
     <div class="price-card featured">
       <div class="price-tag">Most popular</div>
       <div class="price-name">Pro</div>
-      <div class="price-amount" data-usd="140">$140<span>/mo</span></div>
+      <div class="price-amount" data-usd="149">$149<span>/mo</span></div>
       <div class="price-credits">2,000 credits</div>
       <ul class="price-features">
         <li class="plus">Everything in Basic +</li>
@@ -1029,7 +1029,7 @@ footer p { font-size: 13px; color: var(--text2); }
     </div>
     <div class="price-card">
       <div class="price-name">Elite</div>
-      <div class="price-amount" data-usd="210">$210<span>/mo</span></div>
+      <div class="price-amount" data-usd="229">$229<span>/mo</span></div>
       <div class="price-credits">Unlimited credits</div>
       <ul class="price-features">
         <li class="plus">Everything in Pro +</li>
@@ -1047,7 +1047,7 @@ footer p { font-size: 13px; color: var(--text2); }
     </div>
     <div class="price-card">
       <div class="price-name">Personal</div>
-      <div class="price-amount" data-usd="350">$350<span>/mo</span></div>
+      <div class="price-amount" data-usd="459">$459<span>/mo</span></div>
       <div class="price-credits">Unlimited credits</div>
       <ul class="price-features">
         <li class="plus">Everything in Elite +</li>
@@ -1507,7 +1507,7 @@ if (new URLSearchParams(window.location.search).get('login') === '1') {
 var CURRENCY_RATES  = { USD:1, EUR:0.92 };
 var EU_CC = ['AT','BE','BG','HR','CY','CZ','EE','FI','FR','DE','GR','HU','IE',
              'IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
-var _currency = localStorage.getItem('ugv_currency') || 'USD';
+var _currency = (localStorage.getItem('ugv_currency') === 'DKK' ? 'USD' : (localStorage.getItem('ugv_currency') || 'USD'));
 
 function fmtPrice(usd) {
   var rate = CURRENCY_RATES[_currency] || 1;

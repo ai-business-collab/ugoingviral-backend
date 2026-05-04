@@ -342,7 +342,7 @@ body.light::before {
 
 /* Submenu */
 .submenu { overflow: hidden; max-height: 0; transition: max-height .35s var(--ease); }
-.submenu.open { max-height: 200px; }
+.submenu.open { max-height: 600px; }
 .sub-item {
   display: flex; align-items: center; gap: 8px;
   padding: 7px 12px 7px 36px;
@@ -1164,11 +1164,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
     <!-- ── ACCOUNT GROWTH ── -->
     <div class="nav-section" data-i18n="nav.growth">Account Growth</div>
-    <div class="ni has-sub" id="ni-growth" onclick="toggleSubMenu('growth-sub')">
-      <span class="ico">📈</span><span data-i18n="nav.growth">Account Growth</span><span class="chevron">›</span>
-    </div>
-    <div class="submenu" id="growth-sub">
-      <div class="sub-item" onclick="nav('growth-accounts')">🔗 <span data-i18n="nav.accounts">Accounts</span></div>
+    <div class="ni" id="ni-growth" onclick="nav('growth-dashboard')">
+      <span class="ico">📈</span><span data-i18n="nav.growth">Account Growth</span>
     </div>
 
     <!-- ── SOCIALE MEDIER ── -->
@@ -1201,7 +1198,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="ni has-sub" id="ni-settings" onclick="toggleSubMenu('settings-sub')"><span class="ico">⚙️</span><span data-i18n="nav.settings">Indstillinger</span><span class="chevron">›</span></div>
     <div class="submenu" id="settings-sub">
       <div class="sub-item" onclick="nav('settings')">⚙️ <span data-i18n="nav.settings">Indstillinger</span></div>
-      <div class="sub-item" onclick="nav('agency-dashboard')">🏢 <span>Agency Dashboard</span></div>
+      <div class="sub-item" id="ni-agency-dash-sub" style="display:none" onclick="nav('agency-dashboard')">🏢 <span>Agency Dashboard</span></div>
       <div class="sub-item" onclick="nav('subaccounts')">👥 <span>Extra Profile</span></div>
       <div class="sub-item" style="color:var(--red)" onclick="logout()">🚪 <span data-i18n="nav.logout">Log ud</span></div>
     </div>
@@ -3119,16 +3116,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <button class="btn bp bsm" style="margin-top:16px" onclick="nav('connect')">🔗 Forbind konto →</button>
     </div>
 
-    <!-- Provider API Usage -->
-    <div style="margin-top:20px">
-      <div style="font-size:16px;font-weight:800;color:var(--tx);margin-bottom:14px">🔌 API Provider Forbrug</div>
-      <div id="provider-stats-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
-        <div style="color:var(--tx3);font-size:13px;padding:20px;text-align:center">Loading provider data...</div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:10px">
-        <div style="font-size:12px;color:var(--tx3)">Total API udgift: <span id="provider-total-cost" style="font-weight:700;color:var(--or)">–</span></div>
-      </div>
-    </div>
   </div>
 
   <!-- ══ VIDEO STUDIO ═══════════════════════════════════════════════════════ -->
@@ -3241,7 +3228,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   </div>
 
 
-  <div id="page-growth-dashboard" class="page" style="display:none">
+  <div id="page-growth-dashboard" class="page">
     <div style="max-width:960px">
 
       <!-- Header -->
@@ -3310,7 +3297,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   </div>
 
 
-  <div id="page-autopilot" class="page" style="display:none">
+  <div id="page-autopilot" class="page">
     <div style="max-width:760px">
       <div class="card" style="margin-bottom:16px;padding:24px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -4059,12 +4046,15 @@ async function loadBilling() {
     // billing page
     renderBillingPage(d);
     loadInvite();
+    // Show Agency Dashboard only for agency plan users
+    const agencyItem = document.getElementById('ni-agency-dash-sub');
+    if (agencyItem) agencyItem.style.display = d.plan === 'agency' ? '' : 'none';
   } catch(e) {}
 }
 
 
 // ── Currency ──────────────────────────────────────────────────────────────────
-var PLAN_USD = {free:0, starter:40, growth:57, basic:70, pro:140, elite:210, personal:350};
+var PLAN_USD = {free:0, starter:49, growth:89, basic:79, pro:149, elite:229, personal:459, agency:199};
 var _CURR_RATES = { USD:1, EUR:0.92, DKK:7.0 };
 var _EU_CC = ['AT','BE','BG','HR','CY','CZ','EE','FI','FR','DE','GR','HU','IE',
               'IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
@@ -4148,7 +4138,7 @@ function renderBillingPage(d) {
   if (!el) return;
   const plans = d.plans || {};
   const current = d.plan;
-  const ORDER = ['free','starter','basic','pro','elite','personal'];
+  const ORDER = ['free','starter','basic','growth','pro','elite','personal','agency'];
   el.innerHTML = ORDER.filter(k => plans[k]).map(key => {
     const p = plans[key];
     const active = key === current;
@@ -4196,7 +4186,7 @@ function showBonusPopup(bonusKey, amount) {
     connect_social: 'Social account connected!',
     first_video: 'First AI video generated!',
     first_post: 'First post published!',
-    daily_login: 'Welcome back bonus!',
+    daily_login: 'First login bonus!',
     invite_friend: 'Friend joined!'
   };
   const label = labels[bonusKey] || 'Bonus earned!';
@@ -11821,8 +11811,7 @@ function copyTemplateCap(id) {
 // ── Analytics ──────────────────────────────────────────────────────────────
 async function loadAnalytics() {
   try {
-    var r = await apiFetch('/api/analytics/dashboard');
-    var d = await r.json();
+    var d = await apiFetch('/api/analytics/dashboard');
     var el = function(id) { return document.getElementById(id); };
     var k = d.kpis || {};
     if (el('an-posts')) el('an-posts').textContent = k.total_posts_30d ?? 0;

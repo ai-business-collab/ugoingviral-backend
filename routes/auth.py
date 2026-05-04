@@ -110,14 +110,14 @@ async def login(req: LoginRequest):
     try:
         ustore = _load_user_store(user["id"])
         billing = ustore.setdefault("billing", {})
-        today = _dt.date.today().isoformat()
-        if billing.get("last_daily_bonus") != today:
-            billing["last_daily_bonus"] = today
-            claimed = billing.setdefault("claimed_bonuses", [])
+        claimed = billing.setdefault("claimed_bonuses", [])
+        if "daily_login" not in claimed:
+            claimed.append("daily_login")
             plan_key = billing.get("plan", "free")
             from routes.billing import PLANS, BONUS_CREDITS
             plan_info = PLANS.get(plan_key, PLANS["free"])
             billing["credits"] = billing.get("credits", plan_info["credits"]) + BONUS_CREDITS["daily_login"]
+            billing["claimed_bonuses"] = claimed
             ustore["billing"] = billing
             _save_user_store(user["id"], ustore)
     except Exception:
