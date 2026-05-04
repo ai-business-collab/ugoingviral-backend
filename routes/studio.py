@@ -9,6 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFi
 from pydantic import BaseModel
 from routes.auth import get_current_user
 from services.store import store, save_store, _load_user_store, _save_user_store
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..'))
+from credit_costs import VIDEO_GENERATION, VIDEO_EDITING, VOICE_OVER
 
 router = APIRouter()
 
@@ -22,16 +25,16 @@ UPLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "up
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 STUDIO_COSTS = {
-    "video_5s":         20,
-    "video_10s":        35,
-    "video_15s":        40,
-    "video_30s":        80,
-    "extra_scene":      15,   # per scene beyond the first
-    "clip_cut":          5,   # per output clip
-    "format_convert":    2,   # per additional format export
-    "product_overlay":   5,   # per video with product blend
-    "voice_over":       15,   # full voice-over
-    "script_enhance":    3,   # AI scene-prompt enhancement
+    "video_5s":         VIDEO_GENERATION["image_to_video_10s"] // 2,  # 125
+    "video_10s":        VIDEO_GENERATION["image_to_video_10s"],        # 250
+    "video_15s":        VIDEO_GENERATION["image_to_video_10s"] + VIDEO_GENERATION["extended_per_10s"],   # 300
+    "video_30s":        VIDEO_GENERATION["image_to_video_10s"] + VIDEO_GENERATION["extended_per_10s"] * 2,  # 350
+    "extra_scene":      VIDEO_GENERATION["extended_per_10s"],          # 50
+    "clip_cut":          5,
+    "format_convert":    2,
+    "product_overlay":   5,
+    "voice_over":       VOICE_OVER["per_30s"],                         # 10
+    "script_enhance":    3,
 }
 
 PROVIDERS = {
@@ -125,7 +128,28 @@ def _calc_cost(req: StudioRequest) -> int:
     return cost
 
 
-def _deduct(amount: int):
+def _deduct(amount: int, uid: str = None, pack_scene: bool = False):
+    """Deduct credits. If pack_scene=True, scene cost = 0 (covered by studio pack)."""
+    from routes.billing import PLANS
+    from services.store import _load_user_store, _save_user_store
+
+    # Studio pack: scene generation is free if user has active pack with scenes remaining
+    if pack_scene and uid:
+        ustore = _load_user_store(uid)
+        pack = ustore.get("studio_pack", {})
+        used = pack.get("scenes_used", 0)
+        total = pack.get("scenes_total", 0)
+        if total > 0 and used < total:
+            pack["scenes_used"] = used + 1
+            ustore["studio_pack"] = pack
+            _save_user_store(uid, ustore)
+            # Still log the action but 0 credits
+            log = store.setdefault("api_usage", [])
+            log.append({"action": "studio_generate_pack", "credits": 0, "ts": datetime.now().isoformat()})
+            store["api_usage"] = log[-200:]
+            save_store()
+            return store.get("billing", {}).get("credits", 0)
+
     from routes.billing import PLANS
     billing = store.setdefault("billing", {})
     plan_key = billing.get("plan", "free")
@@ -133,7 +157,7 @@ def _deduct(amount: int):
     current = billing.get("credits", max_cr)
     if current < amount:
         raise HTTPException(status_code=402,
-            detail=f"Ikke nok credits — kræver {amount} cr, du har {current} cr.")
+            detail="Insufficient credits. Please top up to continue.")
     billing["credits"] = current - amount
     store["billing"] = billing
     log = store.setdefault("api_usage", [])
@@ -508,7 +532,10 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
             raise HTTPException(status_code=503, detail="Ingen AI video provider er konfigureret. Tilføj RUNWAY_API_KEY, LUMA_API_KEY eller REPLICATE_API_KEY i .env")
 
     cost = _calc_cost(req)
-    credits_left = _deduct(cost)
+    uid = current_user["id"]
+    # Check if this is pack-covered (single scene from studio pack)
+    pack_scene = len(req.scenes) == 1
+    credits_left = _deduct(cost, uid=uid, pack_scene=pack_scene)
 
     # Enhance prompts if multi-scene and enabled
     scene_prompts = [s.prompt for s in req.scenes]
@@ -577,7 +604,6 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
         voice_url = await _generate_voiceover(req.voice_script)
 
     # Save to history
-    uid = current_user["id"]
     ustore = _load_user_store(uid)
     history = ustore.setdefault("studio_history", [])
     history.insert(0, {
@@ -691,3 +717,40 @@ def get_studio_history(current_user: dict = Depends(get_current_user)):
     uid = current_user["id"]
     ustore = _load_user_store(uid)
     return {"history": ustore.get("studio_history", [])[:30]}
+
+
+@router.post("/api/studio/activate_pack")
+async def activate_studio_pack(body: dict, current_user: dict = Depends(get_current_user)):
+    """Activate a studio pack after purchase. Sets scenes_used=0, scenes_total=N."""
+    pack_key = body.get("pack_key", "")  # scenes_3, scenes_6, scenes_10
+    pack_map = {"scenes_3": 3, "scenes_6": 6, "scenes_10": 10}
+    scenes = pack_map.get(pack_key)
+    if not scenes:
+        raise HTTPException(status_code=400, detail=f"Unknown pack: {pack_key}")
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    existing = ustore.get("studio_pack", {})
+    # Add to remaining scenes instead of resetting
+    ustore["studio_pack"] = {
+        "pack_key": pack_key,
+        "scenes_total": existing.get("scenes_total", 0) - existing.get("scenes_used", 0) + scenes,
+        "scenes_used": 0,
+        "activated_at": datetime.now().isoformat(),
+    }
+    _save_user_store(uid, ustore)
+    return {"ok": True, "scenes_total": ustore["studio_pack"]["scenes_total"]}
+
+
+@router.get("/api/studio/pack_status")
+def studio_pack_status(current_user: dict = Depends(get_current_user)):
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    pack = ustore.get("studio_pack", {})
+    used = pack.get("scenes_used", 0)
+    total = pack.get("scenes_total", 0)
+    return {
+        "has_pack": total > used,
+        "scenes_remaining": max(0, total - used),
+        "scenes_used": used,
+        "scenes_total": total,
+    }

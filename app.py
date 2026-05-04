@@ -242,3 +242,4 @@ async def serve_affiliate():
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(scheduler.run_scheduler())
+    asyncio.create_task(autopilot.run_autopilot_credit_checker())

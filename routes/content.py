@@ -12,15 +12,20 @@ PIPELINE_MODEL = "claude-sonnet-4-6"
 PIPELINE_PLATFORMS = ("instagram", "tiktok", "youtube")
 
 # Credit costs per action
+import sys as _sys
+import os as _os
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".."))
+from credit_costs import VIDEO_GENERATION, VIDEO_EDITING, VOICE_OVER
+
 CREDIT_COSTS = {
-    "generate_pipeline": 5,
-    "generate_video":    20,
-    "generate_video_15": 40,
-    "generate_video_30": 80,
-    "generate_voice":    15,
-    "assemble_video":    2,
-    "add_captions":      2,
-    "auto_post":         1,
+    "generate_pipeline":  5,
+    "generate_video":     VIDEO_GENERATION["image_to_video_10s"],   # 250
+    "generate_video_15":  VIDEO_GENERATION["image_to_video_10s"] + VIDEO_GENERATION["extended_per_10s"],  # 300
+    "generate_video_30":  VIDEO_GENERATION["image_to_video_10s"] + VIDEO_GENERATION["extended_per_10s"] * 2,  # 350
+    "generate_voice":     VOICE_OVER["per_30s"],                    # 10
+    "assemble_video":     VIDEO_EDITING["upload_and_edit"],         # 50
+    "add_captions":       VIDEO_EDITING["effects_filter"],          # 25
+    "auto_post":          1,
 }
 
 
@@ -35,7 +40,7 @@ def _deduct_credits(action: str) -> int:
     if current < amount:
         raise HTTPException(
             status_code=402,
-            detail=f"Ikke nok credits — kræver {amount}, du har {current}. Opgradér din plan under 💳 Plan & Credits."
+            detail="Insufficient credits. Please top up to continue."
         )
     billing["credits"] = current - amount
     store["billing"] = billing

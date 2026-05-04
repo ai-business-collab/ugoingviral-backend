@@ -66,11 +66,12 @@ async def toggle_autopilot(req: Request, current_user: dict = Depends(get_curren
         ustore = _load_user_store(uid)
         billing = ustore.get("billing", {})
         credits = billing.get("credits", 0)
-        if credits < 50:
+        if credits < 300:
             return {
                 "ok": False, "active": False,
                 "error": "insufficient_credits",
-                "credits": credits, "minimum": 50,
+                "message": "Insufficient credits. Minimum 300 credits required to activate autopilot.",
+                "credits": credits, "minimum": 300,
             }
 
     if "automation" not in store:
@@ -114,3 +115,57 @@ async def autopilot_run_now(current_user: dict = Depends(get_current_user)):
         return {"ok": True, "message": "Auto Pilot triggered successfully"}
     except Exception as e:
         return {"ok": False, "message": str(e)[:200]}
+
+
+async def run_autopilot_credit_checker():
+    """Hourly background task: pause autopilot and alert users whose credits fall below 50."""
+    import asyncio
+    import os
+    import httpx
+    from services.store import _load_user_store, _save_user_store
+    from services.users import load_users
+
+    BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TG_API = "https://api.telegram.org/bot"
+
+    async def _send_tg(chat_id, text: str):
+        if not BOT_TOKEN or not chat_id:
+            return
+        try:
+            async with httpx.AsyncClient() as c:
+                await c.post(
+                    f"{TG_API}{BOT_TOKEN}/sendMessage",
+                    json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
+                    timeout=10,
+                )
+        except Exception:
+            pass
+
+    while True:
+        await asyncio.sleep(3600)  # run every hour
+        try:
+            users_data = load_users()
+            for u in users_data.get("users", []):
+                uid = u.get("id")
+                if not uid:
+                    continue
+                try:
+                    ustore = _load_user_store(uid)
+                    auto = ustore.get("automation", {})
+                    if not auto.get("active", False):
+                        continue
+                    credits = ustore.get("billing", {}).get("credits", 0)
+                    if credits < 50:
+                        auto["active"] = False
+                        ustore["automation"] = auto
+                        _save_user_store(uid, ustore)
+                        tg_id = u.get("telegram_id")
+                        await _send_tg(
+                            tg_id,
+                            "⚠️ UgoingViral: Your autopilot has been paused. "
+                            "Balance below 50 credits. Top up to resume.",
+                        )
+                except Exception:
+                    pass
+        except Exception:
+            pass

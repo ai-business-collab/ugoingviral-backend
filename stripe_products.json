@@ -1,27 +1,27 @@
 {
   "topup": {
     "100": {
-      "price_id": "price_1TTV9M5i1szYGmpZlvnYx9YC",
-      "price": 9.0,
+      "price_id": "price_1TTWHv5i1szYGmpZraRUCExx",
+      "price": 8.0,
       "name": "100 Credits",
       "credits": 100
     },
     "350": {
-      "price_id": "price_1TTV9M5i1szYGmpZwFrgVADW",
-      "price": 29.0,
+      "price_id": "price_1TTWHv5i1szYGmpZvJpxn2D3",
+      "price": 24.0,
       "name": "350 Credits",
       "credits": 350
     },
     "700": {
-      "price_id": "price_1TTV9N5i1szYGmpZ9QzJS4J6",
-      "price": 49.0,
+      "price_id": "price_1TTWHw5i1szYGmpZW6PxPC6H",
+      "price": 44.0,
       "name": "700 Credits",
       "credits": 700
     },
     "1500": {
-      "price_id": "price_1TTV9O5i1szYGmpZUF5e1MK1",
-      "price": 89.0,
-      "name": "1500 Credits",
+      "price_id": "price_1TTWHw5i1szYGmpZCE7jZfpb",
+      "price": 79.0,
+      "name": "1,500 Credits",
       "credits": 1500
     }
   },

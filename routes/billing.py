@@ -70,10 +70,10 @@ BONUS_CREDITS = {
 BASE_URL = "https://ugoingviral.com"
 
 TOPUP_PACKAGES = {
-    100:  {"price": 9,  "name": "100 Credits",   "note": "Quick refill",         "stripe_price_id": "price_1TTV9M5i1szYGmpZlvnYx9YC"},
-    350:  {"price": 29, "name": "350 Credits",   "note": "Good value",            "stripe_price_id": "price_1TTV9M5i1szYGmpZwFrgVADW"},
-    700:  {"price": 49, "name": "700 Credits",   "note": "Most popular",          "stripe_price_id": "price_1TTV9N5i1szYGmpZ9QzJS4J6"},
-    1500: {"price": 89, "name": "1,500 Credits", "note": "Best price per credit", "stripe_price_id": "price_1TTV9O5i1szYGmpZUF5e1MK1"},
+    100:  {"price": 8,  "name": "100 Credits",   "note": "Quick refill",         "stripe_price_id": "price_1TTWHv5i1szYGmpZraRUCExx"},
+    350:  {"price": 24, "name": "350 Credits",   "note": "Good value",            "stripe_price_id": "price_1TTWHv5i1szYGmpZvJpxn2D3"},
+    700:  {"price": 44, "name": "700 Credits",   "note": "Most popular",          "stripe_price_id": "price_1TTWHw5i1szYGmpZW6PxPC6H"},
+    1500: {"price": 79, "name": "1,500 Credits", "note": "Best price per credit", "stripe_price_id": "price_1TTWHw5i1szYGmpZCE7jZfpb"},
 }
 
 STUDIO_PACKAGES = {
@@ -216,17 +216,17 @@ def get_topup_packages(current_user: dict = Depends(get_current_user)):
 
 @router.post("/api/billing/create_custom_topup")
 async def create_custom_topup(body: dict, current_user: dict = Depends(get_current_user)):
-    """Custom credit top-up via Checkout Session. Rate: $0.059/credit. Min $10, no max."""
+    """Custom credit top-up via Checkout Session. Rate: $0.053/credit. Min $79, no max."""
     import stripe
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
     if not stripe.api_key:
         raise HTTPException(status_code=503, detail="Stripe not configured")
 
-    amount_usd = int(float(body.get("amount_usd", 0)))
-    if amount_usd < 10:
-        raise HTTPException(status_code=400, detail="Minimum $10")
+    amount_usd = float(body.get("amount_usd", 0))
+    if amount_usd < 79:
+        raise HTTPException(status_code=400, detail="Minimum $79")
 
-    credits = int(amount_usd / 0.059)
+    credits = int(amount_usd / 0.053)
     uid = current_user["id"]
 
     session = stripe.checkout.Session.create(
@@ -237,7 +237,7 @@ async def create_custom_topup(body: dict, current_user: dict = Depends(get_curre
                 "currency": "usd",
                 "product_data": {
                     "name": f"UgoingViral {credits:,} Credits",
-                    "description": f"Custom top-up: {credits:,} credits at $0.059/credit",
+                    "description": f"Custom top-up: {credits:,} credits at $0.053/credit",
                 },
                 "unit_amount": amount_usd * 100,
             },
@@ -256,8 +256,8 @@ async def create_custom_topup(body: dict, current_user: dict = Depends(get_curre
 @router.post("/api/billing/custom-topup")
 async def custom_topup_intent(body: dict, current_user: dict = Depends(get_current_user)):
     """PaymentIntent-based custom top-up. Returns client_secret for Stripe Elements.
-    Rate: $0.059/credit fixed. Min $10, no max.
-    Example: $200 -> 3389 credits | $50 -> 847 credits
+    Rate: $0.053/credit fixed. Min $79, no max.
+    Example: $200 -> 3773 credits | $100 -> 1886 credits
     """
     import stripe
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
@@ -265,11 +265,11 @@ async def custom_topup_intent(body: dict, current_user: dict = Depends(get_curre
         raise HTTPException(status_code=503, detail="Stripe not configured")
 
     amount_usd = float(body.get("amount_usd", 0))
-    if amount_usd < 10:
-        raise HTTPException(status_code=400, detail="Minimum $10")
+    if amount_usd < 79:
+        raise HTTPException(status_code=400, detail="Minimum $79")
 
     amount_cents = int(round(amount_usd * 100))
-    credits = int(amount_usd / 0.059)
+    credits = int(amount_usd / 0.053)
     uid = current_user["id"]
 
     intent = stripe.PaymentIntent.create(
@@ -277,7 +277,7 @@ async def custom_topup_intent(body: dict, current_user: dict = Depends(get_curre
         currency="usd",
         automatic_payment_methods={"enabled": True},
         metadata={"type": "custom_topup", "credits": str(credits), "user_id": uid},
-        description=f"UgoingViral {credits:,} credits @ $0.059/credit",
+        description=f"UgoingViral {credits:,} credits @ $0.053/credit",
     )
     return {
         "client_secret": intent.client_secret,
