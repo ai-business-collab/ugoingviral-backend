@@ -8,131 +8,156 @@ router = APIRouter()
 
 PLANS = {
     "free": {
-        "name": "Free", "price": 0, "credits": 10,
-        "sub_accounts": 0, "video": False, "live_support": False,
-        "features": ["10 videos lifetime", "1 platform", "AI text content", "Content history"],
+        "name": "Free", "price": 0, "credits": 50,
+        "growth_accounts": 0, "sub_accounts": 0, "video": False, "live_support": False, "free_videos": 10,
+        "features": ["50 credits/mo", "10 free videos", "1 platform", "AI text content", "Basic scheduling"],
     },
     "starter": {
-        "name": "Starter", "price": 40, "credits": 200,
-        "sub_accounts": 0, "video": False, "live_support": False,
-        "features": ["Everything in Free +", "200 credits/mo", "All platforms", "Auto-post & scheduling", "Content Pipeline (text)", "1 main account"],
-    },
-    "growth": {
-        "name": "Growth", "price": 57, "credits": 500,
-        "sub_accounts": 1, "video": False, "live_support": False,
-        "features": ["Everything in Starter +", "500 credits/mo", "1 growth account", "Auto DM replies", "Auto comment replies"],
+        "name": "Starter", "price": 49, "credits": 300,
+        "growth_accounts": 0, "sub_accounts": 0, "video": False, "live_support": False, "free_videos": 10,
+        "features": ["Everything in Free +", "300 credits/mo", "All platforms", "Auto-post & scheduling", "Content Pipeline", "1 main account"],
     },
     "basic": {
-        "name": "Basic", "price": 70, "credits": 1000,
-        "sub_accounts": 2, "video": False, "live_support": False,
-        "features": ["Everything in Growth +", "1,000 credits/mo", "2 sub-accounts", "Media library", "Content Mapper", "Basic analytics"],
+        "name": "Basic", "price": 79, "credits": 700,
+        "growth_accounts": 0, "sub_accounts": 0, "video": False, "live_support": False, "free_videos": 10,
+        "features": ["Everything in Starter +", "700 credits/mo", "Media library", "Content Mapper", "Analytics", "Priority queue"],
     },
     "pro": {
-        "name": "Pro", "price": 140, "credits": 2000,
-        "sub_accounts": 5, "video": True, "live_support": True,
-        "features": ["Everything in Basic +", "2,000 credits/mo", "5 sub-accounts", "AI video generation", "AI voiceover", "Auto DM replies", "Live chat support"],
+        "name": "Pro", "price": 149, "credits": 1600,
+        "growth_accounts": 1, "sub_accounts": 0, "video": True, "live_support": True, "free_videos": 10,
+        "features": ["Everything in Basic +", "1,600 credits/mo", "1 growth account", "AI video generation", "AI voiceover", "Advanced analytics", "Live chat support"],
     },
     "elite": {
-        "name": "Elite", "price": 210, "credits": 5000,
-        "sub_accounts": 10, "video": True, "live_support": True,
-        "features": ["Everything in Pro +", "5,000 credits/mo", "10 sub-accounts", "Priority video rendering", "Growth automation", "Anti-ban pro system"],
+        "name": "Elite", "price": 229, "credits": 2500,
+        "growth_accounts": 3, "sub_accounts": 0, "video": True, "live_support": True, "free_videos": 10,
+        "features": ["Everything in Pro +", "2,500 credits/mo", "3 growth accounts", "Priority video rendering", "Bulk scheduling", "Dedicated support"],
     },
     "personal": {
-        "name": "Personal", "price": 350, "credits": 999999,
-        "sub_accounts": 999, "video": True, "live_support": True,
-        "features": ["Everything in Elite +", "Unlimited credits/mo", "Unlimited sub-accounts", "Dedicated AI assistant", "Priority support", "White-label option"],
+        "name": "Personal", "price": 459, "credits": 5000,
+        "growth_accounts": 5, "sub_accounts": 999, "video": True, "live_support": True, "free_videos": 10,
+        "features": ["Everything in Elite +", "5,000 credits/mo", "5 growth accounts", "Dedicated AI assistant", "White-label", "Custom integrations", "SLA"],
+    },
+    "growth": {
+        "name": "Growth", "price": 89, "credits": 500,
+        "growth_accounts": 2, "sub_accounts": 0, "video": False, "live_support": False, "free_videos": 10,
+        "features": ["Everything in Starter +", "500 credits/mo", "2 growth accounts", "Auto DM replies", "Auto comment replies", "Engagement targeting", "Follower growth", "Anti-ban system"],
     },
     "agency": {
         "name": "Agency", "price": 199, "credits": 2000,
-        "sub_accounts": 10, "video": True, "live_support": True,
-        "features": ["Everything in Pro +", "2,000 credits/mo", "10 client accounts", "Agency dashboard", "Per-client content settings", "Priority support"],
+        "growth_accounts": 0, "sub_accounts": 10, "video": True, "live_support": True, "free_videos": 10,
+        "features": ["Everything in Pro +", "2,000 credits/mo", "10 client accounts", "Agency dashboard", "Per-client content settings", "White-label", "Bulk scheduling"],
     },
+}
+
+PLAN_PRICES = {
+    "starter":  os.getenv("STRIPE_PRICE_STARTER", ""),
+    "growth":   os.getenv("STRIPE_PRICE_GROWTH", ""),
+    "basic":    os.getenv("STRIPE_PRICE_BASIC", ""),
+    "pro":      os.getenv("STRIPE_PRICE_PRO", ""),
+    "elite":    os.getenv("STRIPE_PRICE_ELITE", ""),
+    "personal": os.getenv("STRIPE_PRICE_PERSONAL", ""),
+    "agency":   os.getenv("STRIPE_PRICE_AGENCY", ""),
 }
 
 BONUS_CREDITS = {
     "connect_social":  10,
     "first_video":     20,
     "first_post":      15,
-    "daily_login":    100,
+    "daily_login":      5,
     "invite_friend":   50,
 }
 
 BASE_URL = "https://ugoingviral.com"
 
-# Topup er dyrere per credit end plan-abonnement — incentiverer planopgradering
 TOPUP_PACKAGES = {
-    100:  {"price": 29,  "name": "100 Credits",  "note": "Quick top-up"},
-    500:  {"price": 99,  "name": "500 Credits",  "note": "Popular choice"},
-    1500: {"price": 249, "name": "1500 Credits", "note": "Best price per credit"},
+    100:  {"price": 9,  "name": "100 Credits",   "note": "Quick refill"},
+    350:  {"price": 29, "name": "350 Credits",   "note": "Good value"},
+    700:  {"price": 49, "name": "700 Credits",   "note": "Most popular"},
+    1500: {"price": 89, "name": "1,500 Credits", "note": "Best price per credit"},
 }
 
-# Studio video pakker — engangskøb med credits til specifikke workflows
 STUDIO_PACKAGES = {
     "serie_3": {
-        "name": "3-Scene Serie",
-        "price": 149,
-        "credits": 450,
+        "name": "3-Scene Series",
+        "price": 29,
+        "credits": 0,
         "icon": "🎬",
         "color": "#00e5ff",
-        "description": "Perfekt til en kort produkt- eller brand-serie",
+        "description": "Perfect for a short product or brand series",
         "features": [
-            "450 credits inkluderet (0,33 kr/cr)",
-            "Op til 3 scener per serie",
-            "Smart Clip Cutter — 6 klip",
-            "2 output formater (9:16 + 16:9)",
-            "ElevenLabs voice-over inkluderet",
-            "AI prompt-optimering via Claude",
-            "Auto-upload til valgt platform",
+            "Up to 3 scenes per series",
+            "Smart Clip Cutter — 6 clips",
+            "2 output formats (9:16 + 16:9)",
+            "ElevenLabs voiceover included",
+            "AI prompt optimization via Claude",
+            "Auto-upload to selected platform",
+            "Uses credits from your balance",
         ],
         "scenes": 3, "clip_count": 6, "formats": 2,
     },
     "serie_6": {
-        "name": "6-Scene Serie",
-        "price": 299,
-        "credits": 950,
+        "name": "6-Scene Series",
+        "price": 59,
+        "credits": 0,
         "icon": "🎞️",
         "color": "#7c3aed",
-        "description": "Fortæl en hel historie — ideel til kampagner",
+        "description": "Tell a full story — ideal for campaigns",
         "features": [
-            "950 credits inkluderet (0,32 kr/cr)",
-            "Op til 6 scener per serie",
-            "Smart Clip Cutter — op til 10 klip",
-            "Alle 4 formater (9:16, 16:9, 1:1, 4:5)",
-            "ElevenLabs voice-over inkluderet",
-            "AI prompt-optimering + stil-konsistens",
-            "Produkt-blend i alle scener",
-            "Auto-upload til alle platforme",
+            "Up to 6 scenes per series",
+            "Smart Clip Cutter — up to 10 clips",
+            "All 4 formats (9:16, 16:9, 1:1, 4:5)",
+            "ElevenLabs voiceover included",
+            "AI prompt optimization + style consistency",
+            "Product blend in all scenes",
+            "Auto-upload to all platforms",
+            "Uses credits from your balance",
         ],
         "scenes": 6, "clip_count": 10, "formats": 4,
     },
     "serie_10": {
         "name": "10-Scene Studio",
-        "price": 549,
-        "credits": 1800,
+        "price": 99,
+        "credits": 0,
         "icon": "🏆",
         "color": "#f59e0b",
-        "description": "Professionel mini-serie — brandsæt eller content kampagne",
+        "description": "Professional mini-series — brand set or content campaign",
         "features": [
-            "1.800 credits inkluderet (0,31 kr/cr)",
-            "Op til 10 scener per serie",
-            "Smart Clip Cutter — op til 12 klip",
-            "Alle 4 formater inkl. 4:5",
-            "ElevenLabs voice-over inkluderet",
-            "AI prompt-optimering (Claude Sonnet)",
-            "Produkt-blend i alle scener",
+            "Up to 10 scenes per series",
+            "Smart Clip Cutter — up to 12 clips",
+            "All 4 formats including 4:5",
+            "ElevenLabs voiceover included",
+            "AI prompt optimization (Claude Sonnet)",
+            "Product blend in all scenes",
             "Multi-provider: Runway + Luma + Replicate",
-            "Prioriteret rendering",
-            "Auto-upload til alle platforme",
+            "Priority rendering",
+            "Auto-upload to all platforms",
+            "Uses credits from your balance",
         ],
         "scenes": 10, "clip_count": 12, "formats": 4,
     },
 }
 
-
-# Tilkøb — ekstra under-konto slots (engangskøb, permanent)
 ADDON_PACKAGES = {
-    "extra_profile_starter": {"name": "Extra Profile (Starter/Growth)", "price": 7,  "sub_slots": 1, "icon": "👥", "description": "Add 1 extra profile — $7/mo (Starter & Growth plans)", "monthly": True},
-    "extra_profile_pro":     {"name": "Extra Profile (Basic/Pro/Elite)", "price": 14, "sub_slots": 1, "icon": "👥", "description": "Add 1 extra profile — $14/mo (Basic, Pro & Elite plans)", "monthly": True},
+    "extra_profile_starter": {"name": "Extra Profile (Starter)", "price": 7,  "sub_slots": 1, "icon": "👥", "description": "Add 1 extra profile — $7/mo (Starter plan)"},
+    "extra_profile_pro":     {"name": "Extra Profile (Basic+)",  "price": 14, "sub_slots": 1, "icon": "👥", "description": "Add 1 extra profile — $14/mo (Basic plan and above)"},
+}
+
+# Growth account add-on packs
+GROWTH_ACCOUNT_PACKS = {
+    "growth_1":  {"name": "1 Growth Account",   "price": 15,  "slots": 1,  "icon": "📈"},
+    "growth_5":  {"name": "5 Growth Accounts",  "price": 59,  "slots": 5,  "icon": "📈📈"},
+    "growth_10": {"name": "10 Growth Accounts", "price": 99,  "slots": 10, "icon": "📈📈📈"},
+    "growth_25": {"name": "25 Growth Accounts", "price": 199, "slots": 25, "icon": "📈✕25"},
+    "growth_50": {"name": "50 Growth Accounts", "price": 349, "slots": 50, "icon": "📈✕50"},
+}
+
+# Agency extra client-account packs
+AGENCY_CLIENT_PACKS = {
+    "agency_client_1":  {"name": "1 Extra Client Account",   "price": 10,  "slots": 1},
+    "agency_client_5":  {"name": "5 Extra Client Accounts",  "price": 39,  "slots": 5},
+    "agency_client_10": {"name": "10 Extra Client Accounts", "price": 69,  "slots": 10},
+    "agency_client_25": {"name": "25 Extra Client Accounts", "price": 149, "slots": 25},
+    "agency_client_50": {"name": "50 Extra Client Accounts", "price": 249, "slots": 50},
 }
 
 
@@ -151,11 +176,11 @@ async def create_studio_checkout(body: dict, current_user: dict = Depends(get_cu
     import stripe
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
     if not stripe.api_key:
-        raise HTTPException(status_code=503, detail="Stripe ikke konfigureret")
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
 
     pkg_key = body.get("package", "")
     if pkg_key not in STUDIO_PACKAGES:
-        raise HTTPException(status_code=400, detail="Ukendt studio-pakke")
+        raise HTTPException(status_code=400, detail="Unknown studio package")
 
     pkg = STUDIO_PACKAGES[pkg_key]
     session = stripe.checkout.Session.create(
@@ -163,7 +188,7 @@ async def create_studio_checkout(body: dict, current_user: dict = Depends(get_cu
         mode="payment",
         line_items=[{
             "price_data": {
-                "currency": "dkk",
+                "currency": "usd",
                 "product_data": {
                     "name": f"UgoingViral {pkg['name']}",
                     "description": pkg["description"],
@@ -178,7 +203,7 @@ async def create_studio_checkout(body: dict, current_user: dict = Depends(get_cu
         cancel_url=f"{BASE_URL}/app?payment=cancelled",
         metadata={"type": "studio_package", "package": pkg_key,
                   "credits": str(pkg["credits"]), "user_id": current_user["id"]},
-        locale="da",
+        locale="en",
     )
     return {"url": session.url}
 
@@ -196,14 +221,22 @@ async def create_custom_topup(body: dict, current_user: dict = Depends(get_curre
     if not stripe.api_key:
         raise HTTPException(status_code=503, detail="Stripe not configured")
 
-    amount_usd = int(body.get("amount_usd", body.get("amount_dkk", 0)))
+    amount_usd = int(body.get("amount_usd", 0))
     if amount_usd < 5:
         raise HTTPException(status_code=400, detail="Minimum $5")
-    if amount_usd > 1000:
-        raise HTTPException(status_code=400, detail="Maximum $1000")
+    if amount_usd > 500:
+        raise HTTPException(status_code=400, detail="Maximum $500")
 
-    # Rate: 3 cr/USD — slightly above fixed packages to incentivize package purchases
-    credits = int(amount_usd * 3)
+    # Rate based on closest tier: 100cr/$9, 350cr/$29, 700cr/$49, 1500cr/$89
+    if amount_usd < 29:
+        rate = 100 / 9        # ~11.11 cr/$
+    elif amount_usd < 49:
+        rate = 350 / 29       # ~12.07 cr/$
+    elif amount_usd < 89:
+        rate = 700 / 49       # ~14.29 cr/$
+    else:
+        rate = 1500 / 89      # ~16.85 cr/$
+    credits = int(amount_usd * rate)
     uid = current_user["id"]
 
     session = stripe.checkout.Session.create(
@@ -225,13 +258,13 @@ async def create_custom_topup(body: dict, current_user: dict = Depends(get_curre
         success_url=f"{BASE_URL}/app?payment=success&credits={credits}&custom=1",
         cancel_url=f"{BASE_URL}/app?payment=cancelled",
         metadata={"type": "custom_topup", "credits": str(credits), "user_id": uid},
+        locale="en",
     )
     return {"url": session.url, "credits": credits}
 
 
 @router.get("/api/billing/addons")
 def get_addons(current_user: dict = Depends(get_current_user)):
-    """Hent tilkøbspakker og brugerens nuværende tilkøb."""
     billing = store.get("billing", {})
     return {
         "packages": ADDON_PACKAGES,
@@ -240,17 +273,40 @@ def get_addons(current_user: dict = Depends(get_current_user)):
     }
 
 
+@router.get("/api/billing/growth_packs")
+def get_growth_packs(current_user: dict = Depends(get_current_user)):
+    billing = store.get("billing", {})
+    return {
+        "packs": GROWTH_ACCOUNT_PACKS,
+        "extra_growth_slots": billing.get("extra_growth_slots", 0),
+    }
+
+
+@router.get("/api/billing/agency_client_packs")
+def get_agency_client_packs(current_user: dict = Depends(get_current_user)):
+    billing = store.get("billing", {})
+    plan_key = billing.get("plan", "free")
+    plan_info = PLANS.get(plan_key, PLANS["free"])
+    base_slots = plan_info.get("sub_accounts", 0)
+    extra_slots = billing.get("extra_agency_client_slots", 0)
+    return {
+        "packs": AGENCY_CLIENT_PACKS,
+        "base_slots": base_slots,
+        "extra_slots": extra_slots,
+        "total_slots": base_slots + extra_slots,
+    }
+
+
 @router.post("/api/billing/create_addon_checkout")
 async def create_addon_checkout(body: dict, current_user: dict = Depends(get_current_user)):
-    """Stripe checkout for tilkøbspakker (ekstra under-konto slots)."""
     import stripe
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
     if not stripe.api_key:
-        raise HTTPException(status_code=503, detail="Stripe ikke konfigureret")
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
 
     pkg_key = body.get("package", "")
     if pkg_key not in ADDON_PACKAGES:
-        raise HTTPException(status_code=400, detail="Ukendt tilkøbspakke")
+        raise HTTPException(status_code=400, detail="Unknown add-on package")
 
     pkg = ADDON_PACKAGES[pkg_key]
     uid = current_user["id"]
@@ -260,7 +316,7 @@ async def create_addon_checkout(body: dict, current_user: dict = Depends(get_cur
         mode="payment",
         line_items=[{
             "price_data": {
-                "currency": "dkk",
+                "currency": "usd",
                 "product_data": {
                     "name": f"UgoingViral {pkg['name']}",
                     "description": pkg["description"],
@@ -274,7 +330,7 @@ async def create_addon_checkout(body: dict, current_user: dict = Depends(get_cur
         success_url=f"{BASE_URL}/app?payment=success&addon={pkg_key}&sub_slots={pkg['sub_slots']}",
         cancel_url=f"{BASE_URL}/app?payment=cancelled",
         metadata={"type": "addon", "addon": pkg_key, "sub_slots": str(pkg["sub_slots"]), "user_id": uid},
-        locale="da",
+        locale="en",
     )
     return {"url": session.url}
 
@@ -322,31 +378,30 @@ def get_usage(current_user: dict = Depends(get_current_user)):
 @router.post("/api/billing/use_credits")
 def use_credits(req: UseCreditsRequest, current_user: dict = Depends(get_current_user)):
     if req.amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount skal være positiv")
+        raise HTTPException(status_code=400, detail="Amount must be positive")
     billing = store.setdefault("billing", {})
     plan_key = billing.get("plan", "free")
     plan_info = PLANS.get(plan_key, PLANS["free"])
     current = billing.get("credits", plan_info["credits"])
     if current < req.amount:
-        raise HTTPException(status_code=402, detail="Ikke nok credits")
+        raise HTTPException(status_code=402, detail="Not enough credits")
     billing["credits"] = current - req.amount
     store["billing"] = billing
     save_store()
     return {"credits": billing["credits"], "used": req.amount}
 
 
-def _try_auto_bonus(bonus_key: str) -> int:
+def _try_auto_bonus(bonus_key: str, user_id: str = "") -> int:
     """Award bonus silently. Returns credits awarded (0 if already claimed)."""
-    import datetime as _dt
     if bonus_key not in BONUS_CREDITS:
         return 0
     billing = store.setdefault("billing", {})
     claimed = billing.setdefault("claimed_bonuses", [])
-    if bonus_key == "daily_login":
-        today = _dt.date.today().isoformat()
-        if billing.get("last_daily_bonus") == today:
+    if bonus_key == "invite_friend":
+        invite_count = billing.get("invite_bonus_count", 0)
+        if invite_count >= 10:
             return 0
-        billing["last_daily_bonus"] = today
+        billing["invite_bonus_count"] = invite_count + 1
     elif bonus_key in claimed:
         return 0
     else:
@@ -365,18 +420,16 @@ def _try_auto_bonus(bonus_key: str) -> int:
 def claim_bonus(body: dict, current_user: dict = Depends(get_current_user)):
     bonus_key = body.get("bonus", "")
     if bonus_key not in BONUS_CREDITS:
-        raise HTTPException(status_code=400, detail="Ukendt bonus")
+        raise HTTPException(status_code=400, detail="Unknown bonus")
     billing = store.setdefault("billing", {})
     claimed = billing.setdefault("claimed_bonuses", [])
-    if bonus_key == "daily_login":
-        import datetime
-        today = datetime.date.today().isoformat()
-        last = billing.get("last_daily_bonus", "")
-        if last == today:
-            raise HTTPException(status_code=409, detail="Daglig bonus allerede hentet i dag")
-        billing["last_daily_bonus"] = today
+    if bonus_key == "invite_friend":
+        invite_count = billing.get("invite_bonus_count", 0)
+        if invite_count >= 10:
+            raise HTTPException(status_code=409, detail="Maximum invite bonuses reached")
+        billing["invite_bonus_count"] = invite_count + 1
     elif bonus_key in claimed:
-        raise HTTPException(status_code=409, detail="Bonus allerede hentet")
+        raise HTTPException(status_code=409, detail="Bonus already claimed")
     else:
         claimed.append(bonus_key)
     amount = BONUS_CREDITS[bonus_key]
@@ -393,7 +446,7 @@ def claim_bonus(body: dict, current_user: dict = Depends(get_current_user)):
 def set_plan(body: dict, current_user: dict = Depends(get_current_user)):
     plan_key = body.get("plan", "starter")
     if plan_key not in PLANS:
-        raise HTTPException(status_code=400, detail="Ukendt plan")
+        raise HTTPException(status_code=400, detail="Unknown plan")
     plan_info = PLANS[plan_key]
     billing = store.setdefault("billing", {})
     billing["plan"] = plan_key
@@ -409,10 +462,9 @@ async def create_paypal_checkout(body: dict, current_user: dict = Depends(get_cu
     paypal_client_id     = os.getenv("PAYPAL_CLIENT_ID", "")
     paypal_client_secret = os.getenv("PAYPAL_CLIENT_SECRET", "")
     if not paypal_client_id or not paypal_client_secret:
-        raise HTTPException(status_code=503, detail="PayPal ikke konfigureret — tilføj PAYPAL_CLIENT_ID + PAYPAL_CLIENT_SECRET i .env")
+        raise HTTPException(status_code=503, detail="PayPal not configured — add PAYPAL_CLIENT_ID + PAYPAL_CLIENT_SECRET to .env")
 
     import httpx as _httpx
-    # Hent access token
     async with _httpx.AsyncClient() as c:
         token_r = await c.post(
             "https://api-m.paypal.com/v1/oauth2/token",
@@ -421,7 +473,7 @@ async def create_paypal_checkout(body: dict, current_user: dict = Depends(get_cu
             data={"grant_type": "client_credentials"},
         )
         if token_r.status_code != 200:
-            raise HTTPException(status_code=503, detail="PayPal token fejl")
+            raise HTTPException(status_code=503, detail="PayPal token error")
         access_token = token_r.json()["access_token"]
 
     payment_type = body.get("type", "plan")
@@ -430,18 +482,18 @@ async def create_paypal_checkout(body: dict, current_user: dict = Depends(get_cu
     if payment_type == "credits":
         credits = int(body.get("credits", 0))
         if credits not in TOPUP_PACKAGES:
-            raise HTTPException(status_code=400, detail="Ugyldigt credits-pakke")
+            raise HTTPException(status_code=400, detail="Invalid credits package")
         pkg = TOPUP_PACKAGES[credits]
-        amount_dkk = str(pkg["price"])
+        amount_usd = str(pkg["price"])
         description = f"UgoingViral {pkg['name']} — {credits} credits"
         custom_id = f"credits_{credits}_{uid}"
     else:
         plan_key = body.get("plan", "")
         if plan_key not in PLANS or PLANS[plan_key]["price"] == 0:
-            raise HTTPException(status_code=400, detail="Ugyldig plan")
+            raise HTTPException(status_code=400, detail="Invalid plan")
         plan_info = PLANS[plan_key]
-        amount_dkk = str(plan_info["price"])
-        description = f"UgoingViral {plan_info['name']} — {plan_info['credits']} credits/md"
+        amount_usd = str(plan_info["price"])
+        description = f"UgoingViral {plan_info['name']} — {plan_info['credits']} credits/mo"
         custom_id = f"plan_{plan_key}_{uid}"
 
     async with _httpx.AsyncClient() as c:
@@ -453,23 +505,23 @@ async def create_paypal_checkout(body: dict, current_user: dict = Depends(get_cu
                 "purchase_units": [{
                     "description": description,
                     "custom_id": custom_id,
-                    "amount": {"currency_code": "DKK", "value": amount_dkk},
+                    "amount": {"currency_code": "USD", "value": amount_usd},
                 }],
                 "application_context": {
                     "brand_name": "UgoingViral",
-                    "locale": "da-DK",
+                    "locale": "en-US",
                     "return_url": f"{BASE_URL}/app?payment=success&provider=paypal&type={payment_type}&ref={custom_id}",
                     "cancel_url": f"{BASE_URL}/app?payment=cancelled",
                 },
             },
         )
         if order_r.status_code not in (200, 201):
-            raise HTTPException(status_code=503, detail=f"PayPal ordre fejl: {order_r.text[:200]}")
+            raise HTTPException(status_code=503, detail=f"PayPal order error: {order_r.text[:200]}")
         order = order_r.json()
 
     approve_url = next((l["href"] for l in order.get("links", []) if l["rel"] == "approve"), None)
     if not approve_url:
-        raise HTTPException(status_code=503, detail="PayPal returnerede ingen godkendelses-URL")
+        raise HTTPException(status_code=503, detail="PayPal returned no approval URL")
     return {"url": approve_url, "order_id": order["id"]}
 
 
@@ -481,7 +533,7 @@ async def paypal_capture(body: dict, current_user: dict = Depends(get_current_us
     order_id = body.get("order_id", "")
     custom_id = body.get("custom_id", "")
     if not order_id:
-        raise HTTPException(status_code=400, detail="Mangler order_id")
+        raise HTTPException(status_code=400, detail="Missing order_id")
 
     import httpx as _httpx
     async with _httpx.AsyncClient() as c:
@@ -498,14 +550,13 @@ async def paypal_capture(body: dict, current_user: dict = Depends(get_current_us
             json={},
         )
         if cap_r.status_code not in (200, 201):
-            raise HTTPException(status_code=400, detail="PayPal capture fejl")
+            raise HTTPException(status_code=400, detail="PayPal capture failed")
         cap_data = cap_r.json()
 
     status = cap_data.get("status", "")
     if status != "COMPLETED":
-        raise HTTPException(status_code=400, detail=f"Betaling ikke gennemført: {status}")
+        raise HTTPException(status_code=400, detail=f"Payment not completed: {status}")
 
-    # Parse custom_id: "credits_350_userid" or "plan_pro_userid"
     uid = current_user["id"]
     parts = (custom_id or "").split("_")
     user_store = _load_user_store(uid)
@@ -530,7 +581,7 @@ async def paypal_capture(body: dict, current_user: dict = Depends(get_current_us
             _save_user_store(uid, user_store)
             return {"status": "ok", "plan": plan_key, "credits": plan_info["credits"]}
 
-    raise HTTPException(status_code=400, detail="Ukendt PayPal betaling")
+    raise HTTPException(status_code=400, detail="Unknown PayPal payment")
 
 
 @router.post("/api/billing/create_checkout")
@@ -538,7 +589,7 @@ async def create_checkout(body: dict, current_user: dict = Depends(get_current_u
     import stripe
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
     if not stripe.api_key:
-        raise HTTPException(status_code=503, detail="Stripe ikke konfigureret — tilføj STRIPE_SECRET_KEY i .env")
+        raise HTTPException(status_code=503, detail="Stripe is not configured — add STRIPE_SECRET_KEY to .env")
 
     payment_type = body.get("type", "plan")
 
@@ -546,17 +597,17 @@ async def create_checkout(body: dict, current_user: dict = Depends(get_current_u
     if payment_type == "credits":
         credits = int(body.get("credits", 0))
         if credits not in TOPUP_PACKAGES:
-            raise HTTPException(status_code=400, detail="Ugyldigt credits-pakke")
+            raise HTTPException(status_code=400, detail="Invalid credits package")
         pkg = TOPUP_PACKAGES[credits]
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             mode="payment",
             line_items=[{
                 "price_data": {
-                    "currency": "dkk",
+                    "currency": "usd",
                     "product_data": {
                         "name": f"UgoingViral {pkg['name']}",
-                        "description": f"Engangskøb af {credits} credits",
+                        "description": f"One-time purchase of {credits} credits",
                     },
                     "unit_amount": pkg["price"] * 100,
                 },
@@ -567,39 +618,70 @@ async def create_checkout(body: dict, current_user: dict = Depends(get_current_u
             success_url=f"{BASE_URL}/app?payment=success&credits={credits}",
             cancel_url=f"{BASE_URL}/app?payment=cancelled",
             metadata={"type": "credits", "credits": str(credits), "user_id": current_user["id"]},
-            locale="da",
+            locale="en",
+        )
+        return {"url": session.url}
+
+    # ── Growth account pack (one-time) ──────────────────────────────────────
+    if payment_type == "growth_pack":
+        pack_key = body.get("pack", "")
+        if pack_key not in GROWTH_ACCOUNT_PACKS:
+            raise HTTPException(status_code=400, detail="Unknown growth pack")
+        pack = GROWTH_ACCOUNT_PACKS[pack_key]
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="payment",
+            line_items=[{"price_data": {"currency": "usd", "product_data": {"name": f"UgoingViral {pack['name']}"}, "unit_amount": pack["price"] * 100}, "quantity": 1}],
+            client_reference_id=current_user["id"],
+            customer_email=current_user["email"],
+            success_url=f"{BASE_URL}/app?payment=success&pack={pack_key}",
+            cancel_url=f"{BASE_URL}/app?payment=cancelled",
+            metadata={"type": "growth_pack", "pack": pack_key, "slots": str(pack["slots"]), "user_id": current_user["id"]},
+            locale="en",
+        )
+        return {"url": session.url}
+
+    # ── Agency client account pack (one-time) ────────────────────────────────
+    if payment_type == "agency_client_pack":
+        pack_key = body.get("pack", "")
+        if pack_key not in AGENCY_CLIENT_PACKS:
+            raise HTTPException(status_code=400, detail="Unknown agency client pack")
+        pack = AGENCY_CLIENT_PACKS[pack_key]
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="payment",
+            line_items=[{"price_data": {"currency": "usd", "product_data": {"name": f"UgoingViral {pack['name']}"}, "unit_amount": pack["price"] * 100}, "quantity": 1}],
+            client_reference_id=current_user["id"],
+            customer_email=current_user["email"],
+            success_url=f"{BASE_URL}/app?payment=success&pack={pack_key}",
+            cancel_url=f"{BASE_URL}/app?payment=cancelled",
+            metadata={"type": "agency_client_pack", "pack": pack_key, "slots": str(pack["slots"]), "user_id": current_user["id"]},
+            locale="en",
         )
         return {"url": session.url}
 
     # ── Subscription plan ────────────────────────────────────────────────────
     plan_key = body.get("plan", "")
     if plan_key not in PLANS:
-        raise HTTPException(status_code=400, detail="Ukendt plan")
+        raise HTTPException(status_code=400, detail="Unknown plan")
     if PLANS[plan_key]["price"] == 0:
-        raise HTTPException(status_code=400, detail="Gratis plan kræver ikke betaling")
+        raise HTTPException(status_code=400, detail="Free plan does not require payment")
 
-    plan_info = PLANS[plan_key]
+    price_id = PLAN_PRICES.get(plan_key, "")
+    if not price_id:
+        raise HTTPException(status_code=503, detail=f"No Stripe price ID configured for plan '{plan_key}'")
+
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         mode="subscription",
-        line_items=[{
-            "price_data": {
-                "currency": "dkk",
-                "product_data": {
-                    "name": f"UgoingViral {plan_info['name']}",
-                    "description": f"{plan_info['credits']} credits per month",
-                },
-                "unit_amount": plan_info["price"] * 100,
-                "recurring": {"interval": "month"},
-            },
-            "quantity": 1,
-        }],
+        line_items=[{"price": price_id, "quantity": 1}],
         client_reference_id=current_user["id"],
         customer_email=current_user["email"],
         success_url=f"{BASE_URL}/app?payment=success&plan={plan_key}",
         cancel_url=f"{BASE_URL}/app?payment=cancelled",
         metadata={"type": "plan", "plan": plan_key, "user_id": current_user["id"]},
-        locale="da",
+        subscription_data={"metadata": {"plan": plan_key, "user_id": current_user["id"]}},
+        locale="en",
     )
     return {"url": session.url}
 
@@ -616,9 +698,9 @@ async def stripe_webhook(request: Request):
     try:
         event = stripe.Webhook.construct_event(payload, sig, webhook_secret)
     except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Ugyldig webhook signatur")
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
     except Exception:
-        raise HTTPException(status_code=400, detail="Webhook fejl")
+        raise HTTPException(status_code=400, detail="Webhook error")
 
     if event["type"] == "checkout.session.completed":
         obj = event["data"]["object"]
@@ -636,6 +718,24 @@ async def stripe_webhook(request: Request):
                 user_store["billing"] = billing
                 _save_user_store(user_id, user_store)
 
+        elif user_id and payment_type == "growth_pack":
+            slots = int(meta.get("slots", 0))
+            if slots > 0:
+                user_store = _load_user_store(user_id)
+                billing = user_store.setdefault("billing", {})
+                billing["extra_growth_slots"] = billing.get("extra_growth_slots", 0) + slots
+                user_store["billing"] = billing
+                _save_user_store(user_id, user_store)
+
+        elif user_id and payment_type == "agency_client_pack":
+            slots = int(meta.get("slots", 0))
+            if slots > 0:
+                user_store = _load_user_store(user_id)
+                billing = user_store.setdefault("billing", {})
+                billing["extra_agency_client_slots"] = billing.get("extra_agency_client_slots", 0) + slots
+                user_store["billing"] = billing
+                _save_user_store(user_id, user_store)
+
         elif user_id and payment_type in ("credits", "studio_package", "custom_topup"):
             credits = int(meta.get("credits", 0))
             if credits > 0:
@@ -644,7 +744,6 @@ async def stripe_webhook(request: Request):
                 plan_key = billing.get("plan", "free")
                 plan_info = PLANS.get(plan_key, PLANS["free"])
                 billing["credits"] = billing.get("credits", plan_info["credits"]) + credits
-                # Track purchased packages
                 if payment_type == "studio_package":
                     pkg_key = meta.get("package", "")
                     pkgs = billing.setdefault("studio_packages", [])
@@ -659,14 +758,12 @@ async def stripe_webhook(request: Request):
                 plan_info = PLANS[plan_key]
                 user_store = _load_user_store(user_id)
                 billing = user_store.setdefault("billing", {})
-                # Founding members keep their locked plan — skip downgrade
                 if not billing.get("founding_member"):
                     billing["plan"] = plan_key
                 billing["credits"] = plan_info["credits"]
                 billing["stripe_customer_email"] = obj.get("customer_email", "")
                 user_store["billing"] = billing
                 _save_user_store(user_id, user_store)
-                # Send confirmation email
                 try:
                     from services.users import get_user_by_id
                     from routes.email import send_payment_confirmation_email
@@ -681,7 +778,6 @@ async def stripe_webhook(request: Request):
                         _auto_assign_personal(user_id)
                     except Exception:
                         pass
-                # Award referral bonus to referrer on first paid upgrade
                 try:
                     referred_by = user_store.get("referred_by", "")
                     if referred_by and not user_store.get("referral_bonus_paid"):
@@ -689,29 +785,31 @@ async def stripe_webhook(request: Request):
                         if ref_store:
                             ref_billing = ref_store.setdefault("billing", {})
                             ref_plan = PLANS.get(ref_billing.get("plan", "free"), PLANS["free"])
-                            ref_billing["credits"] = ref_billing.get("credits", ref_plan["credits"]) + BONUS_CREDITS["invite_friend"]
-                            ref_store["billing"] = ref_billing
-                            upgraded = ref_store.setdefault("upgraded_referrals", [])
-                            if user_id not in upgraded:
-                                upgraded.append(user_id)
-                            ref_store["upgraded_referrals"] = upgraded
-                            _save_user_store(referred_by, ref_store)
-                            user_store["referral_bonus_paid"] = True
-                            _save_user_store(user_id, user_store)
-                            try:
-                                from routes.notifications import push_notification
-                                push_notification(
-                                    referred_by, "referral_upgraded",
-                                    "Referral upgraded!",
-                                    f"Someone you referred just upgraded to a paid plan. You earned 50 bonus credits!"
-                                )
-                            except Exception:
-                                pass
+                            ref_invite_count = ref_billing.get("invite_bonus_count", 0)
+                            if ref_invite_count < 10:
+                                ref_billing["credits"] = ref_billing.get("credits", ref_plan["credits"]) + BONUS_CREDITS["invite_friend"]
+                                ref_billing["invite_bonus_count"] = ref_invite_count + 1
+                                ref_store["billing"] = ref_billing
+                                upgraded = ref_store.setdefault("upgraded_referrals", [])
+                                if user_id not in upgraded:
+                                    upgraded.append(user_id)
+                                ref_store["upgraded_referrals"] = upgraded
+                                _save_user_store(referred_by, ref_store)
+                                user_store["referral_bonus_paid"] = True
+                                _save_user_store(user_id, user_store)
+                                try:
+                                    from routes.notifications import push_notification
+                                    push_notification(
+                                        referred_by, "referral_upgraded",
+                                        "Referral upgraded!",
+                                        "Someone you referred just upgraded to a paid plan. You earned 50 bonus credits!"
+                                    )
+                                except Exception:
+                                    pass
                 except Exception:
                     pass
 
     elif event["type"] == "customer.subscription.deleted":
-        # Subscription cancelled — revert to free plan
         obj = event["data"]["object"]
         meta = obj.get("metadata") or {}
         user_id = meta.get("user_id")
@@ -758,7 +856,6 @@ async def stripe_webhook(request: Request):
                 pass
 
     elif event["type"] == "invoice.payment_succeeded":
-        # Recurring subscription renewal — top up credits
         obj = event["data"]["object"]
         meta = obj.get("metadata") or {}
         user_id = obj.get("client_reference_id") or meta.get("user_id")
@@ -805,8 +902,6 @@ def get_invite(current_user: dict = Depends(get_current_user)):
     }
 
 
-
-
 # ── Founding Member ───────────────────────────────────────────────────────────
 
 @router.get("/api/billing/founding_status")
@@ -820,10 +915,10 @@ def get_founding_status(current_user: dict = Depends(get_current_user)):
         "locked_price": billing.get("locked_price", 0),
     }
 
+
 @router.post("/api/billing/referral_signup")
 def referral_signup(body: dict):
-    """Called internally when a new user registers with a ref code.
-    Records referred_by in new user's store; bonus credited on first paid upgrade."""
+    """Called internally when a new user registers with a ref code."""
     ref_code = body.get("ref_code", "")
     new_user_id = body.get("user_id", "")
     if not ref_code or not new_user_id:
@@ -839,19 +934,24 @@ def referral_signup(body: dict):
     for u in all_users:
         uid = u.get("id", "")
         if hashlib.sha256(uid.encode()).hexdigest()[:10] == ref_code:
-            # Track in referrer's store
             ustore = _load_user_store(uid)
             invited = ustore.setdefault("invited_users", [])
             if new_user_id not in invited:
                 invited.append(new_user_id)
                 ustore["invited_users"] = invited
                 _save_user_store(uid, ustore)
-            # Record referrer in new user's store (bonus paid on upgrade)
             new_store = _load_user_store(new_user_id)
             if not new_store.get("referred_by"):
                 new_store["referred_by"] = uid
                 _save_user_store(new_user_id, new_store)
             return {"ok": True}
+
+    # Max 10 invite bonuses enforced in webhook
+    billing = store.get("billing", {})
+    invite_count = billing.get("invite_bonus_count", 0)
+    if invite_count >= 10:
+        return {"ok": False, "reason": "invite_limit_reached"}
+
     return {"ok": False}
 
 
@@ -879,9 +979,9 @@ def referral_stats(current_user: dict = Depends(get_current_user)):
 def get_auto_topup(current_user: dict = Depends(get_current_user)):
     billing = store.get("billing", {})
     return {
-        "enabled":   billing.get("auto_topup_enabled", False),
+        "enabled":    billing.get("auto_topup_enabled", False),
         "threshold":  billing.get("auto_topup_threshold", 50),
-        "amount":    billing.get("auto_topup_amount", 100),
+        "amount":     billing.get("auto_topup_amount", 100),
         "last_topup": billing.get("auto_topup_last", None),
     }
 
@@ -890,12 +990,12 @@ def get_auto_topup(current_user: dict = Depends(get_current_user)):
 async def save_auto_topup(req: Request, current_user: dict = Depends(get_current_user)):
     d = await req.json()
     billing = store.setdefault("billing", {})
-    billing["auto_topup_enabled"]   = bool(d.get("enabled", False))
-    billing["auto_topup_threshold"]  = max(10, min(500, int(d.get("threshold", 50))))
-    billing["auto_topup_amount"]    = int(d.get("amount", 100))
+    billing["auto_topup_enabled"]  = bool(d.get("enabled", False))
+    billing["auto_topup_threshold"] = max(10, min(500, int(d.get("threshold", 50))))
+    billing["auto_topup_amount"]   = int(d.get("amount", 100))
     save_store()
     return {"ok": True, "auto_topup": {
-        "enabled":  billing["auto_topup_enabled"],
+        "enabled":   billing["auto_topup_enabled"],
         "threshold": billing["auto_topup_threshold"],
-        "amount":   billing["auto_topup_amount"],
+        "amount":    billing["auto_topup_amount"],
     }}
