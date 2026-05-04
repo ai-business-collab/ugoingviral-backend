@@ -1,0 +1,121 @@
+{
+  "topup": {
+    "100": {
+      "price_id": "price_1TTV9M5i1szYGmpZlvnYx9YC",
+      "price": 9.0,
+      "name": "100 Credits",
+      "credits": 100
+    },
+    "350": {
+      "price_id": "price_1TTV9M5i1szYGmpZwFrgVADW",
+      "price": 29.0,
+      "name": "350 Credits",
+      "credits": 350
+    },
+    "700": {
+      "price_id": "price_1TTV9N5i1szYGmpZ9QzJS4J6",
+      "price": 49.0,
+      "name": "700 Credits",
+      "credits": 700
+    },
+    "1500": {
+      "price_id": "price_1TTV9O5i1szYGmpZUF5e1MK1",
+      "price": 89.0,
+      "name": "1500 Credits",
+      "credits": 1500
+    }
+  },
+  "studio": {
+    "serie_3": {
+      "price_id": "price_1TTV9O5i1szYGmpZykAu6fnE",
+      "price": 29.0,
+      "name": "3-Scene Series",
+      "scenes": 3
+    },
+    "serie_6": {
+      "price_id": "price_1TTV9P5i1szYGmpZkRov7W8y",
+      "price": 59.0,
+      "name": "6-Scene Series",
+      "scenes": 6
+    },
+    "serie_10": {
+      "price_id": "price_1TTV9P5i1szYGmpZ26QlbwKu",
+      "price": 99.0,
+      "name": "10-Scene Studio",
+      "scenes": 10
+    }
+  },
+  "growth_packs": {
+    "growth_1": {
+      "price_id": "price_1TTV9Q5i1szYGmpZ3RYAj2u7",
+      "price": 19.0,
+      "name": "1 Growth Account",
+      "slots": 1
+    },
+    "growth_5": {
+      "price_id": "price_1TTV9R5i1szYGmpZt4qutkls",
+      "price": 79.0,
+      "name": "5 Growth Accounts",
+      "slots": 5
+    },
+    "growth_10": {
+      "price_id": "price_1TTV9R5i1szYGmpZaQi3seMi",
+      "price": 139.0,
+      "name": "10 Growth Accounts",
+      "slots": 10
+    },
+    "growth_25": {
+      "price_id": "price_1TTV9S5i1szYGmpZBjqE8XkU",
+      "price": 299.0,
+      "name": "25 Growth Accounts",
+      "slots": 25
+    },
+    "growth_50": {
+      "price_id": "price_1TTV9S5i1szYGmpZWCZxU8vF",
+      "price": 499.0,
+      "name": "50 Growth Accounts",
+      "slots": 50
+    }
+  },
+  "agency_client_packs": {
+    "agency_client_1": {
+      "price_id": "price_1TTV9T5i1szYGmpZikha98Mo",
+      "price": 19.0,
+      "name": "1 Extra Client Account",
+      "slots": 1
+    },
+    "agency_client_5": {
+      "price_id": "price_1TTV9U5i1szYGmpZeFKSpaqF",
+      "price": 79.0,
+      "name": "5 Extra Client Accounts",
+      "slots": 5
+    },
+    "agency_client_10": {
+      "price_id": "price_1TTV9U5i1szYGmpZWalOXZAk",
+      "price": 139.0,
+      "name": "10 Extra Client Accounts",
+      "slots": 10
+    },
+    "agency_client_25": {
+      "price_id": "price_1TTV9V5i1szYGmpZ7IOzRNz6",
+      "price": 299.0,
+      "name": "25 Extra Client Accounts",
+      "slots": 25
+    },
+    "agency_client_50": {
+      "price_id": "price_1TTV9V5i1szYGmpZsB9XJdD3",
+      "price": 499.0,
+      "name": "50 Extra Client Accounts",
+      "slots": 50
+    }
+  },
+  "addons": {
+    "extra_profile": {
+      "price_id": "price_1TTV9W5i1szYGmpZh9FxAaH8",
+      "price": 19.0,
+      "name": "Extra Profile",
+      "sub_slots": 1,
+      "description": "Add 1 extra profile slot ($19, all plans)"
+    }
+  }
+}

@@ -3044,8 +3044,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:10px">🎛️ Custom amount</div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <div style="flex:1;min-width:140px">
-              <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">Amount (25–5,000 DKK)</div>
-              <input class="fi" type="number" id="custom-topup-amount" min="25" max="5000" placeholder="fx 200" oninput="updateCustomTopupPreview()" style="width:100%">
+              <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">Amount USD (min $10)</div>
+              <input class="fi" type="number" id="custom-topup-amount" min="10" placeholder="e.g. 200" oninput="updateCustomTopupPreview()" style="width:100%">
             </div>
             <div style="flex:1;min-width:140px;text-align:center">
               <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">You get</div>
@@ -3057,7 +3057,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyCustomTopup('paypal')">🅿️ PayPal →</button>
             </div>
           </div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:8px">Rate scales with amount — more spent = cheaper per credit. Billed in USD.</div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:8px">Fixed rate: $0.059 per credit. No maximum. Example: $200 = 3,389 credits | $50 = 847 credits.</div>
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-top:10px;padding:8px 12px;background:rgba(0,229,255,.05);border-radius:8px;border:1px solid rgba(0,229,255,.1)">
           💡 <strong>Tip:</strong> Fixed packages give the best price per credit. Custom amounts use the same tier rates — more spent means cheaper per credit. A plan subscription is always the most cost-effective for daily use.
@@ -4320,31 +4320,28 @@ async function startStudioWithCredits(pkgKey, sceneCount, requiredCredits) {
 }
 
 function updateCustomTopupPreview() {
-  const amt = parseInt(document.getElementById('custom-topup-amount')?.value || '0', 10);
+  const amt = parseFloat(document.getElementById('custom-topup-amount')?.value || '0');
   const el = document.getElementById('custom-topup-credits');
   if (!el) return;
-  if (amt < 25 || amt > 5000) { el.textContent = '–'; return; }
-  let credits;
-  if (amt < 99)       credits = Math.floor(amt / 0.29);
-  else if (amt < 249) credits = Math.floor(amt / 0.198);
-  else                credits = Math.floor(amt / 0.166);
-  el.textContent = credits.toLocaleString('da-DK');
+  if (amt < 10) { el.textContent = '–'; return; }
+  const credits = Math.floor(amt / 0.059);
+  el.textContent = credits.toLocaleString('en-US');
 }
 
 async function buyCustomTopup(provider) {
-  const amt = parseInt(document.getElementById('custom-topup-amount')?.value || '0', 10);
-  if (amt < 25 || amt > 5000) { toast('Enter an amount between 25 and 5,000 DKK', 'error'); return; }
+  const amt = parseFloat(document.getElementById('custom-topup-amount')?.value || '0');
+  if (amt < 10) { toast('Minimum $10 for custom top-up', 'error'); return; }
   try {
-    toast('Opretter betaling...', 'info');
+    toast('Creating payment...', 'info');
     let d;
     if (provider === 'paypal') {
-      d = await apiFetch('/api/billing/create_paypal_checkout', 'POST', {type:'custom', amount_dkk: amt}, true);
+      d = await apiFetch('/api/billing/create_paypal_checkout', 'POST', {type:'custom', amount_usd: amt}, true);
     } else {
-      d = await apiFetch('/api/billing/create_custom_topup', 'POST', {amount_dkk: amt}, true);
+      d = await apiFetch('/api/billing/create_custom_topup', 'POST', {amount_usd: amt}, true);
     }
     if (d.url) window.location.href = d.url;
-    else toast('Fejl: ingen betalings-URL', 'error');
-  } catch(e) { toast('Fejl: ' + (e.message||'Ukendt'), 'error'); }
+    else toast('Error: no payment URL', 'error');
+  } catch(e) { toast('Error: ' + (e.message||'Unknown'), 'error'); }
 }
 
 function studioStartPackage(sceneCount) {

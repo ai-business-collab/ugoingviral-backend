@@ -70,10 +70,10 @@ BONUS_CREDITS = {
 BASE_URL = "https://ugoingviral.com"
 
 TOPUP_PACKAGES = {
-    100:  {"price": 9,  "name": "100 Credits",   "note": "Quick refill"},
-    350:  {"price": 29, "name": "350 Credits",   "note": "Good value"},
-    700:  {"price": 49, "name": "700 Credits",   "note": "Most popular"},
-    1500: {"price": 89, "name": "1,500 Credits", "note": "Best price per credit"},
+    100:  {"price": 9,  "name": "100 Credits",   "note": "Quick refill",         "stripe_price_id": "price_1TTV9M5i1szYGmpZlvnYx9YC"},
+    350:  {"price": 29, "name": "350 Credits",   "note": "Good value",            "stripe_price_id": "price_1TTV9M5i1szYGmpZwFrgVADW"},
+    700:  {"price": 49, "name": "700 Credits",   "note": "Most popular",          "stripe_price_id": "price_1TTV9N5i1szYGmpZ9QzJS4J6"},
+    1500: {"price": 89, "name": "1,500 Credits", "note": "Best price per credit", "stripe_price_id": "price_1TTV9O5i1szYGmpZUF5e1MK1"},
 }
 
 STUDIO_PACKAGES = {
@@ -138,26 +138,27 @@ STUDIO_PACKAGES = {
 }
 
 ADDON_PACKAGES = {
-    "extra_profile_starter": {"name": "Extra Profile (Starter)", "price": 7,  "sub_slots": 1, "icon": "👥", "description": "Add 1 extra profile — $7/mo (Starter plan)"},
-    "extra_profile_pro":     {"name": "Extra Profile (Basic+)",  "price": 14, "sub_slots": 1, "icon": "👥", "description": "Add 1 extra profile — $14/mo (Basic plan and above)"},
+    "extra_profile": {"name": "Extra Profile", "price": 19, "sub_slots": 1, "icon": "👥",
+                      "description": "Add 1 extra profile slot — $19 (all plans)",
+                      "stripe_price_id": "price_1TTV9W5i1szYGmpZh9FxAaH8"},
 }
 
 # Growth account add-on packs
 GROWTH_ACCOUNT_PACKS = {
-    "growth_1":  {"name": "1 Growth Account",   "price": 15,  "slots": 1,  "icon": "📈"},
-    "growth_5":  {"name": "5 Growth Accounts",  "price": 59,  "slots": 5,  "icon": "📈📈"},
-    "growth_10": {"name": "10 Growth Accounts", "price": 99,  "slots": 10, "icon": "📈📈📈"},
-    "growth_25": {"name": "25 Growth Accounts", "price": 199, "slots": 25, "icon": "📈✕25"},
-    "growth_50": {"name": "50 Growth Accounts", "price": 349, "slots": 50, "icon": "📈✕50"},
+    "growth_1":  {"name": "1 Growth Account",   "price": 19,  "slots": 1,  "icon": "📈",    "stripe_price_id": "price_1TTV9Q5i1szYGmpZ3RYAj2u7"},
+    "growth_5":  {"name": "5 Growth Accounts",  "price": 79,  "slots": 5,  "icon": "📈📈",  "stripe_price_id": "price_1TTV9R5i1szYGmpZt4qutkls"},
+    "growth_10": {"name": "10 Growth Accounts", "price": 139, "slots": 10, "icon": "📈📈📈", "stripe_price_id": "price_1TTV9R5i1szYGmpZaQi3seMi"},
+    "growth_25": {"name": "25 Growth Accounts", "price": 299, "slots": 25, "icon": "📈x25", "stripe_price_id": "price_1TTV9S5i1szYGmpZBjqE8XkU"},
+    "growth_50": {"name": "50 Growth Accounts", "price": 499, "slots": 50, "icon": "📈x50", "stripe_price_id": "price_1TTV9S5i1szYGmpZWCZxU8vF"},
 }
 
 # Agency extra client-account packs
 AGENCY_CLIENT_PACKS = {
-    "agency_client_1":  {"name": "1 Extra Client Account",   "price": 10,  "slots": 1},
-    "agency_client_5":  {"name": "5 Extra Client Accounts",  "price": 39,  "slots": 5},
-    "agency_client_10": {"name": "10 Extra Client Accounts", "price": 69,  "slots": 10},
-    "agency_client_25": {"name": "25 Extra Client Accounts", "price": 149, "slots": 25},
-    "agency_client_50": {"name": "50 Extra Client Accounts", "price": 249, "slots": 50},
+    "agency_client_1":  {"name": "1 Extra Client Account",   "price": 19,  "slots": 1,  "stripe_price_id": "price_1TTV9T5i1szYGmpZikha98Mo"},
+    "agency_client_5":  {"name": "5 Extra Client Accounts",  "price": 79,  "slots": 5,  "stripe_price_id": "price_1TTV9U5i1szYGmpZeFKSpaqF"},
+    "agency_client_10": {"name": "10 Extra Client Accounts", "price": 139, "slots": 10, "stripe_price_id": "price_1TTV9U5i1szYGmpZWalOXZAk"},
+    "agency_client_25": {"name": "25 Extra Client Accounts", "price": 299, "slots": 25, "stripe_price_id": "price_1TTV9V5i1szYGmpZ7IOzRNz6"},
+    "agency_client_50": {"name": "50 Extra Client Accounts", "price": 499, "slots": 50, "stripe_price_id": "price_1TTV9V5i1szYGmpZsB9XJdD3"},
 }
 
 
@@ -215,28 +216,17 @@ def get_topup_packages(current_user: dict = Depends(get_current_user)):
 
 @router.post("/api/billing/create_custom_topup")
 async def create_custom_topup(body: dict, current_user: dict = Depends(get_current_user)):
-    """Custom credit top-up — user specifies amount in USD."""
+    """Custom credit top-up via Checkout Session. Rate: $0.059/credit. Min $10, no max."""
     import stripe
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
     if not stripe.api_key:
         raise HTTPException(status_code=503, detail="Stripe not configured")
 
-    amount_usd = int(body.get("amount_usd", 0))
-    if amount_usd < 5:
-        raise HTTPException(status_code=400, detail="Minimum $5")
-    if amount_usd > 500:
-        raise HTTPException(status_code=400, detail="Maximum $500")
+    amount_usd = int(float(body.get("amount_usd", 0)))
+    if amount_usd < 10:
+        raise HTTPException(status_code=400, detail="Minimum $10")
 
-    # Rate based on closest tier: 100cr/$9, 350cr/$29, 700cr/$49, 1500cr/$89
-    if amount_usd < 29:
-        rate = 100 / 9        # ~11.11 cr/$
-    elif amount_usd < 49:
-        rate = 350 / 29       # ~12.07 cr/$
-    elif amount_usd < 89:
-        rate = 700 / 49       # ~14.29 cr/$
-    else:
-        rate = 1500 / 89      # ~16.85 cr/$
-    credits = int(amount_usd * rate)
+    credits = int(amount_usd / 0.059)
     uid = current_user["id"]
 
     session = stripe.checkout.Session.create(
@@ -246,8 +236,8 @@ async def create_custom_topup(body: dict, current_user: dict = Depends(get_curre
             "price_data": {
                 "currency": "usd",
                 "product_data": {
-                    "name": f"UgoingViral {credits} Credits",
-                    "description": f"One-time purchase of {credits} credits (${amount_usd})",
+                    "name": f"UgoingViral {credits:,} Credits",
+                    "description": f"Custom top-up: {credits:,} credits at $0.059/credit",
                 },
                 "unit_amount": amount_usd * 100,
             },
@@ -261,6 +251,40 @@ async def create_custom_topup(body: dict, current_user: dict = Depends(get_curre
         locale="en",
     )
     return {"url": session.url, "credits": credits}
+
+
+@router.post("/api/billing/custom-topup")
+async def custom_topup_intent(body: dict, current_user: dict = Depends(get_current_user)):
+    """PaymentIntent-based custom top-up. Returns client_secret for Stripe Elements.
+    Rate: $0.059/credit fixed. Min $10, no max.
+    Example: $200 -> 3389 credits | $50 -> 847 credits
+    """
+    import stripe
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+    if not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+
+    amount_usd = float(body.get("amount_usd", 0))
+    if amount_usd < 10:
+        raise HTTPException(status_code=400, detail="Minimum $10")
+
+    amount_cents = int(round(amount_usd * 100))
+    credits = int(amount_usd / 0.059)
+    uid = current_user["id"]
+
+    intent = stripe.PaymentIntent.create(
+        amount=amount_cents,
+        currency="usd",
+        automatic_payment_methods={"enabled": True},
+        metadata={"type": "custom_topup", "credits": str(credits), "user_id": uid},
+        description=f"UgoingViral {credits:,} credits @ $0.059/credit",
+    )
+    return {
+        "client_secret": intent.client_secret,
+        "credits": credits,
+        "amount_usd": amount_usd,
+        "amount_cents": amount_cents,
+    }
 
 
 @router.get("/api/billing/addons")
@@ -305,26 +329,29 @@ async def create_addon_checkout(body: dict, current_user: dict = Depends(get_cur
         raise HTTPException(status_code=503, detail="Stripe is not configured")
 
     pkg_key = body.get("package", "")
+    # Support legacy keys -> unified extra_profile
+    if pkg_key in ("extra_profile_starter", "extra_profile_pro"):
+        pkg_key = "extra_profile"
     if pkg_key not in ADDON_PACKAGES:
         raise HTTPException(status_code=400, detail="Unknown add-on package")
 
     pkg = ADDON_PACKAGES[pkg_key]
     uid = current_user["id"]
+    stripe_pid = pkg.get("stripe_price_id", "")
+
+    if stripe_pid:
+        line_items = [{"price": stripe_pid, "quantity": 1}]
+    else:
+        line_items = [{"price_data": {
+            "currency": "usd",
+            "product_data": {"name": f"UgoingViral {pkg['name']}", "description": pkg["description"]},
+            "unit_amount": pkg["price"] * 100,
+        }, "quantity": 1}]
 
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         mode="payment",
-        line_items=[{
-            "price_data": {
-                "currency": "usd",
-                "product_data": {
-                    "name": f"UgoingViral {pkg['name']}",
-                    "description": pkg["description"],
-                },
-                "unit_amount": pkg["price"] * 100,
-            },
-            "quantity": 1,
-        }],
+        line_items=line_items,
         client_reference_id=uid,
         customer_email=current_user["email"],
         success_url=f"{BASE_URL}/app?payment=success&addon={pkg_key}&sub_slots={pkg['sub_slots']}",
@@ -593,31 +620,31 @@ async def create_checkout(body: dict, current_user: dict = Depends(get_current_u
 
     payment_type = body.get("type", "plan")
 
-    # ── One-time credit top-up ───────────────────────────────────────────────
+    # ── One-time credit top-up ───────────────────────────────────────────────────────────────────────
     if payment_type == "credits":
         credits = int(body.get("credits", 0))
         if credits not in TOPUP_PACKAGES:
             raise HTTPException(status_code=400, detail="Invalid credits package")
         pkg = TOPUP_PACKAGES[credits]
+        uid = current_user["id"]
+        stripe_pid = pkg.get("stripe_price_id", "")
+        if stripe_pid:
+            line_items = [{"price": stripe_pid, "quantity": 1}]
+        else:
+            line_items = [{"price_data": {
+                "currency": "usd",
+                "product_data": {"name": f"UgoingViral {pkg['name']}", "description": f"One-time purchase of {credits} credits"},
+                "unit_amount": pkg["price"] * 100,
+            }, "quantity": 1}]
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             mode="payment",
-            line_items=[{
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {
-                        "name": f"UgoingViral {pkg['name']}",
-                        "description": f"One-time purchase of {credits} credits",
-                    },
-                    "unit_amount": pkg["price"] * 100,
-                },
-                "quantity": 1,
-            }],
-            client_reference_id=current_user["id"],
+            line_items=line_items,
+            client_reference_id=uid,
             customer_email=current_user["email"],
             success_url=f"{BASE_URL}/app?payment=success&credits={credits}",
             cancel_url=f"{BASE_URL}/app?payment=cancelled",
-            metadata={"type": "credits", "credits": str(credits), "user_id": current_user["id"]},
+            metadata={"type": "credits", "credits": str(credits), "user_id": uid},
             locale="en",
         )
         return {"url": session.url}
