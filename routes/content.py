@@ -691,3 +691,168 @@ async def add_captions(req: CaptionRequest):
         save_store()
 
     return {"captioned_url": captioned_url}
+
+
+# ── Content Plan ──────────────────────────────────────────────────────────────
+from fastapi import Depends
+from routes.auth import get_current_user
+
+CONTENT_PLAN_COST = 10
+AUTOPILOT_MIN_CREDITS = 300
+
+class ContentPlanRequest(BaseModel):
+    niche: str
+    goal: str
+    posts_per_day: int = 2
+    platforms: list = []
+
+@router.post("/api/content/create-plan")
+async def create_content_plan(req: ContentPlanRequest, current_user: dict = Depends(get_current_user)):
+    from routes.billing import PLANS
+    billing = store.get("billing", {})
+    plan_key = billing.get("plan", "free")
+
+    if plan_key == "free":
+        raise HTTPException(status_code=403, detail="Content Plan requires a paid plan. Please upgrade.")
+
+    plan_info = PLANS.get(plan_key, PLANS["free"])
+    current_credits = billing.get("credits", plan_info["credits"])
+    if current_credits < CONTENT_PLAN_COST:
+        raise HTTPException(status_code=402, detail=f"Not enough credits. Need {CONTENT_PLAN_COST} to generate a plan.")
+
+    billing["credits"] = current_credits - CONTENT_PLAN_COST
+    store["billing"] = billing
+    log = store.setdefault("api_usage", [])
+    log.append({"action": "content_plan", "credits": CONTENT_PLAN_COST, "ts": datetime.now().isoformat()})
+    store["api_usage"] = log[-200:]
+    save_store()
+
+    platforms_str = ", ".join(req.platforms) if req.platforms else "Instagram, TikTok"
+    start_date = datetime.now()
+
+    # Build day entries for the prompt
+    days_info = []
+    for i in range(7):
+        from datetime import timedelta
+        d = start_date + timedelta(days=i)
+        days_info.append(f"Day {i+1}: {d.strftime('%Y-%m-%d')}")
+    days_block = "\n".join(days_info)
+
+    prompt = f"""You are a professional social media strategist. Create a 7-day content plan.
+
+Client info:
+- Niche/Industry: {req.niche}
+- Primary Goal: {req.goal}
+- Posts per day: {req.posts_per_day}
+- Platforms: {platforms_str}
+
+Dates:
+{days_block}
+
+Return ONLY valid JSON — no markdown fences, no explanation. Use this exact structure:
+{{
+  "summary": "One sentence strategy overview",
+  "total_credits_estimate": <integer, sum of all post credit estimates>,
+  "days": [
+    {{
+      "day": 1,
+      "date": "YYYY-MM-DD",
+      "posts": [
+        {{
+          "post_type": "video|image|text|story",
+          "platform": "{(req.platforms[0] if req.platforms else 'instagram')}",
+          "best_time": "HH:MM",
+          "caption_style": "Brief style description",
+          "caption_example": "Ready-to-use caption with emojis and CTA",
+          "hashtag_strategy": "Brief strategy note",
+          "hashtags": ["#tag1","#tag2","#tag3","#tag4","#tag5"],
+          "credits_estimate": <2 for text/story, 3 for image, 5 for video>
+        }}
+      ]
+    }}
+  ]
+}}
+
+Rules:
+- Exactly 7 days
+- Each day has exactly {req.posts_per_day} post(s)
+- Distribute across platforms: {platforms_str}
+- Vary post types strategically for {req.goal}
+- Use realistic posting times for each platform
+- total_credits_estimate must equal the exact sum of all credits_estimate values"""
+
+    # Use direct AI call with higher token limit for the full 7-day plan
+    ai_text = ""
+    s = store.get("settings", {})
+    openai_key = (s.get("openai_key","") if s.get("openai_key") and "••••" not in s.get("openai_key","") else "") or os.getenv("OPENAI_API_KEY","")
+    anthropic_key = (s.get("anthropic_key","") if s.get("anthropic_key") and "••••" not in s.get("anthropic_key","") else "") or os.getenv("ANTHROPIC_API_KEY","")
+    if anthropic_key:
+        try:
+            async with httpx.AsyncClient() as c:
+                r = await c.post("https://api.anthropic.com/v1/messages",
+                    headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                    json={"model": "claude-haiku-4-5", "max_tokens": 4000, "messages": [{"role": "user", "content": prompt}]},
+                    timeout=60)
+                r.raise_for_status()
+                ai_text = r.json()["content"][0]["text"]
+        except Exception:
+            pass
+    if not ai_text and openai_key:
+        try:
+            async with httpx.AsyncClient() as c:
+                r = await c.post("https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {openai_key}", "content-type": "application/json"},
+                    json={"model": "gpt-4o-mini", "max_tokens": 4000,
+                          "messages": [{"role": "system", "content": "You are a social media content strategist. Return ONLY valid JSON, no markdown."},
+                                       {"role": "user", "content": prompt}]},
+                    timeout=60)
+                r.raise_for_status()
+                ai_text = r.json()["choices"][0]["message"]["content"]
+        except Exception:
+            pass
+    if not ai_text:
+        raise HTTPException(status_code=503, detail="AI service unavailable. Please try again.")
+
+    import re
+    # Try direct parse first, then extract JSON block
+    plan_data = None
+    for attempt in [ai_text.strip(), None]:
+        if attempt is not None:
+            try:
+                plan_data = json.loads(attempt)
+                break
+            except Exception:
+                pass
+        if plan_data is None:
+            m = re.search(r'\{[\s\S]*\}', ai_text)
+            if m:
+                try:
+                    plan_data = json.loads(m.group())
+                    break
+                except Exception:
+                    pass
+    if not plan_data:
+        raise HTTPException(status_code=500, detail="AI did not return a valid plan. Please try again.")
+
+    plan_id = uuid.uuid4().hex[:8]
+    full_plan = {
+        "plan_id": plan_id,
+        "created_at": datetime.now().isoformat(),
+        "niche": req.niche,
+        "goal": req.goal,
+        "posts_per_day": req.posts_per_day,
+        "platforms": req.platforms,
+        **plan_data,
+    }
+
+    plans = store.setdefault("content_plans", [])
+    plans.insert(0, full_plan)
+    store["content_plans"] = plans[:10]
+    save_store()
+
+    return full_plan
+
+
+@router.get("/api/content/plans")
+def get_content_plans(current_user: dict = Depends(get_current_user)):
+    return {"plans": store.get("content_plans", [])}

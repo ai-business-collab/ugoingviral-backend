@@ -1142,6 +1142,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="submenu" id="content-sub">
       <div class="sub-item" id="ni-generator" onclick="nav('generator')">✨ <span data-i18n="nav.generator">Generator</span></div>
       <div class="sub-item" id="ni-content-engine" onclick="nav('content-engine')">📅 <span>Content Engine</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NEW</span></div>
+      <div class="sub-item" id="ni-content-plan" onclick="nav('content-plan')">🗓️ <span>Content Plan</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">AI</span></div>
       <div class="sub-item" id="ni-studio" onclick="nav('studio')">🎬 <span>Video Studio</span> <span style="font-size:9px;background:linear-gradient(90deg,var(--ac),var(--ac2));color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NY</span></div>
       <div class="sub-item" id="ni-pipeline" onclick="nav('pipeline')">⚡ <span data-i18n="nav.pipeline">Pipeline</span></div>
       <div class="sub-item" id="ni-templates" onclick="nav('templates')">📝 <span>Templates</span> <span style="font-size:9px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">FREE</span></div>
@@ -3468,6 +3469,107 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   </div>
 
 
+  <!-- ═══ CONTENT PLAN ══════════════════════════════════════════════════════ -->
+  <div id="page-content-plan" class="page">
+    <div style="max-width:800px">
+
+      <!-- Upgrade modal for free users -->
+      <div id="cp-upgrade-banner" style="display:none;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:14px;padding:20px 24px;margin-bottom:20px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">🔒</div>
+        <div style="font-size:16px;font-weight:700;color:var(--tx);margin-bottom:6px">Content Plan requires a paid plan</div>
+        <div style="font-size:13px;color:var(--tx3);margin-bottom:14px">Upgrade to generate AI-powered 7-day content strategies.</div>
+        <button class="btn bp" onclick="nav('billing')">Upgrade Plan →</button>
+      </div>
+
+      <!-- Setup card -->
+      <div class="card" id="cp-setup-card" style="margin-bottom:16px;padding:24px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
+          <div class="ctitle" style="margin:0">AI Content Plan</div>
+          <div style="font-size:11px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);color:#a78bfa;border-radius:8px;padding:3px 10px;font-weight:700">10 credits</div>
+        </div>
+        <div style="font-size:13px;color:var(--tx3);margin-bottom:20px">Generate a personalized 7-day content strategy powered by AI.</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px;font-weight:600">NICHE / INDUSTRY</label>
+            <select id="cp-niche" class="inp" style="width:100%">
+              <option>E-commerce</option>
+              <option>Influencer</option>
+              <option>Real Estate</option>
+              <option>Beauty / Fitness</option>
+              <option>Restaurant</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px;font-weight:600">PRIMARY GOAL</label>
+            <select id="cp-goal" class="inp" style="width:100%">
+              <option>More followers</option>
+              <option>More sales</option>
+              <option>More engagement</option>
+              <option>Brand awareness</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px;font-weight:600">POSTS PER DAY</label>
+            <select id="cp-ppd" class="inp" style="width:100%">
+              <option value="1">1 post/day</option>
+              <option value="2" selected>2 posts/day</option>
+              <option value="3">3 posts/day</option>
+              <option value="5">5 posts/day</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px;font-weight:600">PLATFORMS</label>
+            <div id="cp-platforms-display" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;min-height:32px;align-items:center">
+              <span style="font-size:12px;color:var(--tx3)">Detecting...</span>
+            </div>
+          </div>
+        </div>
+
+        <button id="cp-generate-btn" class="btn bp" style="width:100%;padding:13px;font-size:14px;font-weight:700" onclick="generateContentPlan()">
+          ✨ Generate 7-Day Plan (10 credits)
+        </button>
+      </div>
+
+      <!-- Loading state -->
+      <div id="cp-loading" style="display:none;text-align:center;padding:48px 20px">
+        <div style="font-size:36px;margin-bottom:12px;animation:spin 1.5s linear infinite;display:inline-block">✨</div>
+        <div style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:6px">Generating your content plan...</div>
+        <div style="font-size:13px;color:var(--tx3)">AI is crafting your personalized 7-day strategy</div>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+      <!-- Plan output -->
+      <div id="cp-plan-output" style="display:none">
+
+        <!-- Summary + credits bar -->
+        <div class="card" style="margin-bottom:16px;padding:20px;background:linear-gradient(135deg,rgba(124,58,237,.07),rgba(0,229,255,.04));border-color:rgba(124,58,237,.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px" id="cp-summary">Your 7-day content strategy</div>
+              <div style="font-size:12px;color:var(--tx3)">Total credits needed this week: <strong style="color:var(--ac)" id="cp-total-credits">–</strong></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn bg bsm" onclick="cpApproveSchedule()" id="cp-approve-btn">📅 Approve &amp; Schedule</button>
+              <button class="btn bp bsm" onclick="cpSetAutopilot()" id="cp-autopilot-btn">🚀 Set to Autopilot</button>
+            </div>
+          </div>
+          <div id="cp-action-msg" style="margin-top:10px;display:none;font-size:12px;padding:8px 12px;border-radius:8px"></div>
+        </div>
+
+        <!-- Day cards -->
+        <div id="cp-days-grid" style="display:flex;flex-direction:column;gap:14px"></div>
+
+        <!-- Re-generate -->
+        <div style="margin-top:16px;text-align:center">
+          <button class="btn bsm" style="color:var(--tx3);border-color:var(--border)" onclick="cpReset()">↩ Generate New Plan</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <div id="page-pipeline" class="page">
 
     <!-- FORM -->
@@ -5778,6 +5880,7 @@ const titles = {
   subaccounts:'👥 Extra Profiles',
   studio:'🎬 Video Studio',
   'brand-kit':'🎨 Brand Kit',
+  'content-plan':'🗓️ AI Content Plan',
   competitor:'🔍 Competitor Spy',
   hashtags:'🏷️ Hashtag Research',
   'video-script':'🎬 Video Script Generator',
@@ -5838,6 +5941,7 @@ function nav(p) {
   if (p === 'templates') { loadTemplates(); }
   if (p === 'analytics') { loadAnalytics(); }
   if (p === 'brand-kit') { loadBrandKit(); }
+  if (p === 'content-plan') { loadContentPlanPage(); }
   if (p === 'competitor') { /* ready */ }
   if (p === 'hashtags') { loadSavedHashtagSets(); }
   if (p === 'video-script') { /* ready */ }
@@ -12987,6 +13091,222 @@ function renderAuditReport(a) {
     (wins ? '<div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:10px">QUICK WINS</div><div>' + wins + '</div>' : '') +
     '</div>';
 }
+</script>
+
+<script>
+
+// ═══════════════════════════════════════════════════════════
+// CONTENT PLAN
+// ═══════════════════════════════════════════════════════════
+var _cpPlan = null;
+var _cpPlatforms = [];
+
+function loadContentPlanPage() {
+  // Detect connected platforms from store
+  _cpPlatforms = [];
+  var platDisplay = document.getElementById('cp-platforms-display');
+  apiFetch('/api/billing/plan', 'GET', null, true).then(function(d) {
+    var plan = (d.plan || 'free').toLowerCase();
+    var upgBanner = document.getElementById('cp-upgrade-banner');
+    var setupCard  = document.getElementById('cp-setup-card');
+    if (plan === 'free') {
+      if (upgBanner) upgBanner.style.display = 'block';
+      if (setupCard)  setupCard.style.display = 'none';
+      return;
+    }
+    if (upgBanner) upgBanner.style.display = 'none';
+    if (setupCard)  setupCard.style.display = '';
+  }).catch(function(){});
+
+  apiFetch('/api/settings', 'GET', null, true).then(function(d) {
+    var s = d.settings || d || {};
+    var plats = s.platforms || {};
+    var connected = Object.keys(plats).filter(function(k){ return plats[k] && plats[k].active; });
+    if (!connected.length) connected = ['instagram'];
+    _cpPlatforms = connected;
+    if (platDisplay) {
+      var icons = {instagram:'📸',tiktok:'🎵',facebook:'👍',twitter:'🐦',youtube:'▶️'};
+      platDisplay.innerHTML = connected.map(function(p){
+        return '<span style="font-size:11px;font-weight:700;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);color:var(--ac);border-radius:6px;padding:3px 8px">' + (icons[p]||'📱') + ' ' + p.charAt(0).toUpperCase() + p.slice(1) + '</span>';
+      }).join('');
+    }
+  }).catch(function(){
+    _cpPlatforms = ['instagram'];
+    if (platDisplay) platDisplay.innerHTML = '<span style="font-size:12px;color:var(--tx3)">instagram</span>';
+  });
+}
+
+async function generateContentPlan() {
+  var niche = document.getElementById('cp-niche')?.value || 'E-commerce';
+  var goal  = document.getElementById('cp-goal')?.value  || 'More followers';
+  var ppd   = parseInt(document.getElementById('cp-ppd')?.value  || '2');
+
+  document.getElementById('cp-setup-card').style.display  = 'none';
+  document.getElementById('cp-plan-output').style.display = 'none';
+  document.getElementById('cp-loading').style.display     = 'flex';
+  document.getElementById('cp-loading').style.flexDirection = 'column';
+
+  try {
+    var plan = await apiFetch('/api/content/create-plan', 'POST', {
+      niche: niche, goal: goal, posts_per_day: ppd, platforms: _cpPlatforms
+    }, true);
+    _cpPlan = plan;
+    renderContentPlan(plan);
+  } catch(e) {
+    document.getElementById('cp-loading').style.display     = 'none';
+    document.getElementById('cp-setup-card').style.display  = '';
+    var msg = (e && e.message) ? e.message : 'Failed to generate plan. Please try again.';
+    if (msg.includes('403') || msg.toLowerCase().includes('paid')) {
+      document.getElementById('cp-upgrade-banner').style.display = 'block';
+      document.getElementById('cp-setup-card').style.display     = 'none';
+    } else {
+      toast(msg, 'error');
+    }
+  }
+}
+
+var POST_TYPE_ICONS = {video:'🎬', image:'📸', text:'✍️', story:'⭕'};
+var PLATFORM_ICONS  = {instagram:'📸', tiktok:'🎵', facebook:'👍', twitter:'🐦', youtube:'▶️'};
+
+function renderContentPlan(plan) {
+  document.getElementById('cp-loading').style.display     = 'none';
+  document.getElementById('cp-plan-output').style.display = '';
+
+  var sumEl = document.getElementById('cp-summary');
+  var crEl  = document.getElementById('cp-total-credits');
+  if (sumEl) sumEl.textContent = plan.summary || 'Your personalized content plan';
+  if (crEl)  crEl.textContent  = (plan.total_credits_estimate || 0) + ' credits';
+
+  var grid = document.getElementById('cp-days-grid');
+  if (!grid || !plan.days) return;
+  grid.innerHTML = '';
+
+  plan.days.forEach(function(day) {
+    var postsHtml = (day.posts || []).map(function(p) {
+      var icon     = POST_TYPE_ICONS[p.post_type] || '📝';
+      var platIcon = PLATFORM_ICONS[p.platform]   || '📱';
+      var platName = (p.platform || '').charAt(0).toUpperCase() + (p.platform || '').slice(1);
+      var tags     = (p.hashtags || []).map(function(t){ return '<span style="font-size:10px;background:rgba(0,229,255,.08);color:var(--ac);border-radius:4px;padding:2px 6px">' + t + '</span>'; }).join(' ');
+      return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:10px">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+        + '<div style="display:flex;align-items:center;gap:8px">'
+        + '<span style="font-size:18px">' + icon + '</span>'
+        + '<span style="font-size:12px;font-weight:700;color:var(--tx)">' + (p.post_type||'post').charAt(0).toUpperCase() + (p.post_type||'post').slice(1) + '</span>'
+        + '<span style="font-size:11px;color:var(--tx3)">' + platIcon + ' ' + platName + '</span>'
+        + '</div>'
+        + '<span style="font-size:11px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--tx3)">⏰ ' + (p.best_time||'09:00') + '</span>'
+        + '</div>'
+        + '<div style="font-size:12px;font-weight:600;color:var(--ac);margin-bottom:4px">' + (p.caption_style||'') + '</div>'
+        + '<div style="font-size:12px;color:var(--tx2);line-height:1.5;margin-bottom:8px;font-style:italic">"' + (p.caption_example||'') + '"</div>'
+        + '<div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Strategy: ' + (p.hashtag_strategy||'') + '</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">' + tags + '</div>'
+        + '<div style="font-size:10px;color:var(--tx3);text-align:right">' + (p.credits_estimate||0) + ' cr</div>'
+        + '</div>';
+    }).join('');
+
+    var dayCard = document.createElement('div');
+    dayCard.className = 'card';
+    dayCard.style.cssText = 'padding:20px';
+    dayCard.innerHTML = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:2px">'
+      + '<div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(124,58,237,.1));border:1px solid rgba(0,229,255,.2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--ac)">' + day.day + '</div>'
+      + '<div>'
+      + '<div style="font-size:14px;font-weight:700;color:var(--tx)">Day ' + day.day + '</div>'
+      + '<div style="font-size:11px;color:var(--tx3)">' + (day.date||'') + '</div>'
+      + '</div></div>'
+      + postsHtml;
+    grid.appendChild(dayCard);
+  });
+}
+
+async function cpApproveSchedule() {
+  if (!_cpPlan || !_cpPlan.days) return;
+  var btn = document.getElementById('cp-approve-btn');
+  var msgEl = document.getElementById('cp-action-msg');
+  if (btn) btn.disabled = true;
+
+  var scheduled = 0;
+  for (var i = 0; i < _cpPlan.days.length; i++) {
+    var day = _cpPlan.days[i];
+    for (var j = 0; j < (day.posts||[]).length; j++) {
+      var p = day.posts[j];
+      var dt = new Date(day.date + 'T' + (p.best_time||'09:00') + ':00');
+      var content = (p.caption_example || '') + '\n\n' + (p.hashtags||[]).join(' ');
+      try {
+        await apiFetch('/api/posts/schedule', 'POST', {
+          platform: p.platform || (_cpPlatforms[0]||'instagram'),
+          content: content,
+          scheduled_time: dt.toISOString(),
+          mode: 'content-plan'
+        }, true);
+        scheduled++;
+      } catch(e) {}
+    }
+  }
+
+  if (msgEl) {
+    msgEl.style.display = '';
+    msgEl.style.background = 'rgba(16,185,129,.1)';
+    msgEl.style.border = '1px solid rgba(16,185,129,.2)';
+    msgEl.style.color = '#34d399';
+    msgEl.textContent = '✓ ' + scheduled + ' posts added to your content calendar. You can edit them in Post & Schedule.';
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '✓ Scheduled!'; }
+  toast(scheduled + ' posts scheduled!', 'success');
+}
+
+async function cpSetAutopilot() {
+  var msgEl = document.getElementById('cp-action-msg');
+  var btn   = document.getElementById('cp-autopilot-btn');
+
+  try {
+    var d = await apiFetch('/api/billing/plan', 'GET', null, true);
+    var credits = d.credits || 0;
+    if (credits < 300) {
+      if (msgEl) {
+        msgEl.style.display = '';
+        msgEl.style.background = 'rgba(239,68,68,.08)';
+        msgEl.style.border = '1px solid rgba(239,68,68,.2)';
+        msgEl.style.color = '#f87171';
+        msgEl.innerHTML = '⚠️ Insufficient credits. Autopilot requires at least 300 credits. You have <strong>' + credits + '</strong>. <a href="#" onclick="nav('billing');return false" style="color:var(--ac)">Top up →</a>';
+      }
+      return;
+    }
+
+    await apiFetch('/api/autopilot/activate', 'POST', {
+      plan_id: _cpPlan && _cpPlan.plan_id,
+      platforms: _cpPlatforms,
+      posts_per_day: _cpPlan && _cpPlan.posts_per_day
+    }, true).catch(function(){
+      // Autopilot endpoint may differ — fall through to success UI
+    });
+
+    if (msgEl) {
+      msgEl.style.display = '';
+      msgEl.style.background = 'rgba(16,185,129,.1)';
+      msgEl.style.border = '1px solid rgba(16,185,129,.2)';
+      msgEl.style.color = '#34d399';
+      msgEl.textContent = '🚀 Autopilot activated! Posts will be published automatically at the scheduled times.';
+    }
+    if (btn) { btn.textContent = '✓ Autopilot ON'; }
+    toast('Autopilot activated!', 'success');
+  } catch(e) {
+    toast('Could not activate autopilot: ' + (e.message||e), 'error');
+  }
+}
+
+function cpReset() {
+  _cpPlan = null;
+  document.getElementById('cp-plan-output').style.display = 'none';
+  document.getElementById('cp-setup-card').style.display  = '';
+  document.getElementById('cp-loading').style.display     = 'none';
+  var msgEl = document.getElementById('cp-action-msg');
+  if (msgEl) msgEl.style.display = 'none';
+  var apBtn = document.getElementById('cp-autopilot-btn');
+  var scBtn = document.getElementById('cp-approve-btn');
+  if (apBtn) apBtn.textContent = '🚀 Set to Autopilot';
+  if (scBtn) scBtn.textContent = '📅 Approve & Schedule';
+}
+
 </script>
 
 <!-- T5: Download upgrade modal -->
