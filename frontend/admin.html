@@ -1708,41 +1708,119 @@ function apiUsageNextMonth() { if (_apiMonthOffset < 0) { _apiMonthOffset++; upd
 
 function renderApiUsage(d) {
   const wrap = document.getElementById('api-usage-wrap');
-  const total = d.total_credits || 0;
-  const services = d.by_service || {};
-  const actions = d.by_action || {};
-  const serviceOrder = ['Anthropic','ElevenLabs','Runway','Platforms','Internal','Other'];
-  const serviceIcons = {Anthropic:'🤖', ElevenLabs:'🎙️', Runway:'🎬', Platforms:'📲', Internal:'⚙️', Other:'📦'};
-  const serviceRows = serviceOrder.filter(s => services[s] > 0).map(s => {
-    const cr = services[s] || 0;
-    const pct = total > 0 ? Math.round(cr / total * 100) : 0;
-    return `
-    <div class="service-row">
-      <div style="min-width:110px;font-weight:600">${serviceIcons[s]||''} ${s}</div>
+  const summary = d.summary || {};
+  const services = d.services || {};
+  const legacyCredits = d.total_credits || 0;
+  const todayCost = summary.total_cost_today || 0;
+  const monthCost = summary.total_cost_month || 0;
+  const costPerUser = summary.cost_per_user_month || 0;
+  const mostExpensive = summary.most_expensive_feature || '—';
+  const uniqueUsers = summary.unique_users_month || 0;
+
+  // Summary cards
+  const summaryCards = `
+  <div class="rev-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:24px">
+    <div class="rev-card">
+      <div class="rev-card-label">API Cost Today</div>
+      <div class="rev-card-val">$${todayCost.toFixed(2)}</div>
+      <div class="rev-card-sub">Real API spend</div>
+    </div>
+    <div class="rev-card">
+      <div class="rev-card-label">API Cost This Month</div>
+      <div class="rev-card-val">$${monthCost.toFixed(2)}</div>
+      <div class="rev-card-sub">${uniqueUsers} active users</div>
+    </div>
+    <div class="rev-card">
+      <div class="rev-card-label">Cost per User/Month</div>
+      <div class="rev-card-val">$${costPerUser.toFixed(3)}</div>
+      <div class="rev-card-sub">Average</div>
+    </div>
+    <div class="rev-card">
+      <div class="rev-card-label">Most Expensive Feature</div>
+      <div class="rev-card-val" style="font-size:14px">${mostExpensive}</div>
+      <div class="rev-card-sub">${legacyCredits.toLocaleString()} total credits</div>
+    </div>
+  </div>`;
+
+  // Per-service breakdown table
+  const svcOrder = ['openai','anthropic','runway','elevenlabs','replicate','sendgrid'];
+  const svcRows = svcOrder.map(key => {
+    const s = services[key];
+    if (!s) return '';
+    let usageToday = '', usageMonth = '';
+    if (key === 'openai' || key === 'anthropic') {
+      usageToday = (s.today_tokens||0).toLocaleString() + ' tokens';
+      usageMonth = (s.month_tokens||0).toLocaleString() + ' tokens';
+    } else if (key === 'runway') {
+      usageToday = (s.today_seconds||0).toFixed(0) + 's video';
+      usageMonth = (s.month_seconds||0).toFixed(0) + 's video';
+    } else if (key === 'elevenlabs') {
+      usageToday = (s.today_chars||0).toLocaleString() + ' chars';
+      usageMonth = (s.month_chars||0).toLocaleString() + ' chars';
+    } else if (key === 'replicate') {
+      usageToday = (s.today_predictions||0) + ' predictions';
+      usageMonth = (s.month_predictions||0) + ' predictions';
+    } else if (key === 'sendgrid') {
+      usageToday = (s.today_emails||0) + ' emails';
+      usageMonth = (s.month_emails||0) + ' emails';
+    }
+    const todayCostSvc = (s.today_cost||0).toFixed(4);
+    const monthCostSvc = (s.month_cost||0).toFixed(4);
+    return `<tr>
+      <td style="padding:10px 16px;font-weight:600">${s.icon||''} ${s.name||key}</td>
+      <td style="padding:10px 16px;color:var(--tx2)">${usageToday}</td>
+      <td style="padding:10px 16px;color:var(--ac)">$${todayCostSvc}</td>
+      <td style="padding:10px 16px;color:var(--tx2)">${usageMonth}</td>
+      <td style="padding:10px 16px;color:var(--ac)">$${monthCostSvc}</td>
+      <td style="padding:10px 16px;font-size:11px;color:var(--tx3)">${s.rate||''}</td>
+    </tr>`;
+  }).join('');
+
+  const svcTable = `
+  <div style="margin:0 0 24px;background:var(--glass-b);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px">API Cost Breakdown</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);color:var(--tx3)">
+            <th style="padding:8px 16px;text-align:left;font-weight:600">Service</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">Today Usage</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">Today Cost</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">Month Usage</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">Month Cost</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">Rate</th>
+          </tr>
+        </thead>
+        <tbody>${svcRows || '<tr><td colspan="6" style="padding:24px;color:var(--tx3);text-align:center">No API usage tracked yet</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>`;
+
+  // Legacy credits breakdown
+  const legacyServices = d.by_service || {};
+  const legacyTotal = d.total_credits || 0;
+  const legacyOrder = ['Anthropic','ElevenLabs','Runway','Platforms','Internal','Other'];
+  const legacyRows = legacyOrder.filter(s => legacyServices[s] > 0).map(s => {
+    const cr = legacyServices[s] || 0;
+    const pct = legacyTotal > 0 ? Math.round(cr / legacyTotal * 100) : 0;
+    const icons = {Anthropic:'🧠', ElevenLabs:'🎙️', Runway:'🎬', Platforms:'📲', Internal:'⚙️', Other:'📦'};
+    return `<div class="service-row">
+      <div style="min-width:110px;font-weight:600">${icons[s]||''} ${s}</div>
       <div class="service-bar-wrap">
         <div class="service-bar"><div class="service-bar-fill" style="width:${pct}%"></div></div>
         <span style="font-size:12px;color:var(--tx2);min-width:36px">${pct}%</span>
       </div>
       <div class="service-credits">${cr.toLocaleString()} cr</div>
     </div>`;
-  }).join('') || '<div style="padding:24px;color:var(--tx3);font-size:13px">Ingen data endnu</div>';
-  wrap.innerHTML = `
-    <div class="rev-grid" style="grid-template-columns:repeat(2,1fr);max-width:400px">
-      <div class="rev-card">
-        <div class="rev-card-label">Credits brugt i alt</div>
-        <div class="rev-card-val">${total.toLocaleString()}</div>
-        <div class="rev-card-sub">Alle brugere</div>
-      </div>
-      <div class="rev-card">
-        <div class="rev-card-label">Services aktive</div>
-        <div class="rev-card-val">${Object.keys(services).length}</div>
-        <div class="rev-card-sub">Med forbrug</div>
-      </div>
-    </div>
-    <div style="margin:0 24px 24px;background:var(--glass-b);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-      <div style="padding:14px 24px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px">Fordeling per service</div>
-      ${serviceRows}
-    </div>`;
+  }).join('') || '<div style="padding:24px;color:var(--tx3);font-size:13px;text-align:center">No credit usage data yet</div>';
+
+  const legacyTable = `
+  <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px">Credit Usage by Service (all-time)</div>
+    ${legacyRows}
+  </div>`;
+
+  wrap.innerHTML = summaryCards + svcTable + legacyTable;
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────

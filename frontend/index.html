@@ -2811,6 +2811,85 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <button class="btn bp bsm" style="margin-top:14px" onclick="saveNotifPrefs()">Save preferences</button>
       </div>
 
+      <!-- TELEGRAM CONNECT -->
+      <div class="card" id="tg-settings-card" style="margin-bottom:20px">
+        <div class="ctitle">🤖 Telegram Agent</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Connect your personal Telegram to control UgoingViral with commands and receive daily reports.</div>
+
+        <!-- Status -->
+        <div id="tg-user-status" style="margin-bottom:16px;padding:12px 14px;border-radius:10px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.12);font-size:13px;color:var(--tx3)">
+          <div style="display:flex;align-items:center;gap:8px"><div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Checking...</div>
+        </div>
+
+        <!-- Connect panel (shown when NOT connected) -->
+        <div id="tg-connect-panel">
+          <div style="font-size:13px;color:var(--tx2);margin-bottom:12px">Click the button below to open the bot in Telegram — your account will link automatically.</div>
+          <button class="btn bp" id="tg-connect-btn" onclick="connectUserTelegram()" style="margin-bottom:12px">
+            🤖 Connect Telegram
+          </button>
+          <div id="tg-deeplink-box" style="display:none;margin-top:10px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px">
+            <div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Open this link in your phone — Telegram will link your account automatically:</div>
+            <a id="tg-deeplink-url" href="#" target="_blank" class="btn bp" style="display:inline-block;margin-bottom:8px;text-decoration:none">📱 Open in Telegram</a>
+            <div style="font-size:11px;color:var(--tx3);margin-top:6px">Or send this to the bot manually: <code id="tg-deeplink-cmd" style="background:rgba(0,0,0,.2);padding:2px 6px;border-radius:4px;color:var(--ac)"></code></div>
+          </div>
+        </div>
+
+        <!-- Settings panel (shown when connected) -->
+        <div id="tg-prefs-panel" style="display:none">
+          <div style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:16px">
+            <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:10px">Daily Report Settings</div>
+            <div class="fg" style="margin-bottom:8px">
+              <label class="fl">Send daily report at (UTC hour)</label>
+              <select class="fs" id="tg-report-hour" style="max-width:180px">
+                <option value="6">06:00 UTC (early morning)</option>
+                <option value="7">07:00 UTC</option>
+                <option value="8" selected>08:00 UTC (default)</option>
+                <option value="9">09:00 UTC</option>
+                <option value="10">10:00 UTC</option>
+                <option value="12">12:00 UTC (noon)</option>
+                <option value="18">18:00 UTC (evening)</option>
+                <option value="20">20:00 UTC</option>
+              </select>
+            </div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:10px">Notifications</div>
+          <div class="trow" style="padding:8px 0">
+            <div><div class="tname" style="font-size:13px">Daily summary</div><div class="tdesc">Posts, credits, today's schedule</div></div>
+            <div class="tog on" id="tog-tg-daily" onclick="togIt(this)"></div>
+          </div>
+          <div class="trow" style="padding:8px 0">
+            <div><div class="tname" style="font-size:13px">Low credit alert</div><div class="tdesc">Alert when credits drop below 100</div></div>
+            <div class="tog on" id="tog-tg-low-cr" onclick="togIt(this)"></div>
+          </div>
+          <div class="trow" style="padding:8px 0">
+            <div><div class="tname" style="font-size:13px">Post success</div><div class="tdesc">Notify when a post is published</div></div>
+            <div class="tog" id="tog-tg-post-ok" onclick="togIt(this)"></div>
+          </div>
+          <div class="trow" style="padding:8px 0">
+            <div><div class="tname" style="font-size:13px">Post failure</div><div class="tdesc">Notify when a post fails to publish</div></div>
+            <div class="tog on" id="tog-tg-post-fail" onclick="togIt(this)"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+            <button class="btn bp bsm" onclick="saveTelegramPrefs()">Save Settings</button>
+            <button class="btn bsm" style="color:#f87171;border-color:rgba(239,68,68,.3)" onclick="disconnectUserTelegram()">Disconnect Telegram</button>
+          </div>
+        </div>
+
+        <!-- Bot commands reference -->
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Bot Commands</div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px">
+            <code style="color:var(--ac)">/status</code><span style="color:var(--tx3)">Account overview, plan, credits, autopilot</span>
+            <code style="color:var(--ac)">/stats</code><span style="color:var(--tx3)">Last 7 days: posts, engagement, credits used</span>
+            <code style="color:var(--ac)">/plan</code><span style="color:var(--tx3)">Your current content plan</span>
+            <code style="color:var(--ac)">/credits</code><span style="color:var(--tx3)">Credit balance with top-up link</span>
+            <code style="color:var(--ac)">/pause</code><span style="color:var(--tx3)">Pause autopilot</span>
+            <code style="color:var(--ac)">/resume</code><span style="color:var(--tx3)">Resume autopilot</span>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--tx3);font-style:italic">Natural language: "post my latest product tomorrow at 9am"</div>
+        </div>
+      </div>
+
       <!-- DANGER ZONE -->
       <div class="card" style="margin-bottom:20px;border-color:rgba(239,68,68,.18)">
         <div class="ctitle" style="color:#ef4444">⚠️ Danger Zone</div>
@@ -5931,7 +6010,7 @@ function nav(p) {
   if (p === 'stats') { loadStats(); }
   if (p === 'billing') { loadBilling(); detectBillingCurrency(); loadAutoTopup(); }
   if (p === 'billing') { setTimeout(checkLowCredits, 800); }
-  if (p === 'settings') { loadSettingsPage(); loadReferralStats(); loadNotifPrefs(); loadContentLanguage(); }
+  if (p === 'settings') { loadUserTelegramStatus(); loadSettingsPage(); loadReferralStats(); loadNotifPrefs(); loadContentLanguage(); }
   if (p === 'posting') { if (!allProducts.length) { loadProducts().then(function() { renderPostingProductGrid(); loadAutoGroups(); }); } else { renderPostingProductGrid(); loadAutoGroups(); } loadRecentPosts(); loadGroups(); }
   if (p === 'library') { loadLibFolders(); renderLibrary(libFiles); }
   if (p === 'content-library') { loadClib(); }
@@ -11666,6 +11745,110 @@ function _tgSetBox(box, type, html) {
   box.style.borderColor = borders[type]||'var(--border)';
   box.style.color = texts[type]||'var(--tx3)';
   box.innerHTML = html;
+}
+
+async function loadUserTelegramStatus() {
+  var statusEl = document.getElementById('tg-user-status');
+  var connectPanel = document.getElementById('tg-connect-panel');
+  var prefsPanel = document.getElementById('tg-prefs-panel');
+  try {
+    var d = await apiFetch('/api/telegram/status', 'GET', null, true);
+    if (d.linked) {
+      var username = d.linked_username ? '@' + d.linked_username : 'connected';
+      if (statusEl) statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#34d399"><span style="font-size:18px">✅</span><span style="font-weight:700">Telegram Connected</span><span style="font-size:12px;color:var(--tx3)">(' + username + ')</span></div>';
+      if (connectPanel) connectPanel.style.display = 'none';
+      if (prefsPanel) prefsPanel.style.display = '';
+      // Load prefs
+      try {
+        var prefs = await apiFetch('/api/telegram/daily-report-settings', 'GET', null, true);
+        var hourSel = document.getElementById('tg-report-hour');
+        if (hourSel) hourSel.value = String(prefs.daily_report_hour || 8);
+        setTogState('tog-tg-daily', prefs.notify_daily_summary !== false);
+        setTogState('tog-tg-low-cr', prefs.notify_low_credits !== false);
+        setTogState('tog-tg-post-ok', prefs.notify_post_success === true);
+        setTogState('tog-tg-post-fail', prefs.notify_post_failure !== false);
+      } catch(e) {}
+    } else {
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--tx3)">Not connected — connect below to get daily reports and bot commands.</span>';
+      if (connectPanel) connectPanel.style.display = '';
+      if (prefsPanel) prefsPanel.style.display = 'none';
+    }
+  } catch(e) {
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--tx3)">Could not check status</span>';
+  }
+}
+
+function setTogState(id, on) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  if (on) { el.classList.add('on'); } else { el.classList.remove('on'); }
+}
+
+async function connectUserTelegram() {
+  var box = document.getElementById('tg-deeplink-box');
+  var btn = document.getElementById('tg-connect-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating...'; }
+  try {
+    var d = await apiFetch('/api/telegram/generate-link-token', 'POST', {}, true);
+    var token = d.token;
+    var botUser = d.bot_username;
+    if (box) {
+      box.style.display = '';
+      var linkEl = document.getElementById('tg-deeplink-url');
+      var cmdEl  = document.getElementById('tg-deeplink-cmd');
+      var deepUrl = botUser ? 'https://t.me/' + botUser + '?start=' + token : d.bot_url || '#';
+      if (linkEl) { linkEl.href = deepUrl; linkEl.textContent = '📱 Open in Telegram (' + (botUser ? '@' + botUser : 'bot') + ')'; }
+      if (cmdEl) cmdEl.textContent = '/link ' + token;
+    }
+    // Poll for connection
+    var polls = 0;
+    var poll = setInterval(async function() {
+      polls++;
+      if (polls > 30) { clearInterval(poll); return; }
+      try {
+        var s = await apiFetch('/api/telegram/status', 'GET', null, true);
+        if (s.linked) {
+          clearInterval(poll);
+          loadUserTelegramStatus();
+          toast('Telegram connected!', 'success');
+        }
+      } catch(e) {}
+    }, 3000);
+  } catch(e) {
+    toast('Error generating link: ' + (e.message || e), 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🤖 Connect Telegram'; }
+}
+
+async function saveTelegramPrefs() {
+  var hour = parseInt(document.getElementById('tg-report-hour')?.value || '8');
+  var daily = document.getElementById('tog-tg-daily')?.classList.contains('on');
+  var lowCr = document.getElementById('tog-tg-low-cr')?.classList.contains('on');
+  var postOk = document.getElementById('tog-tg-post-ok')?.classList.contains('on');
+  var postFail = document.getElementById('tog-tg-post-fail')?.classList.contains('on');
+  try {
+    await apiFetch('/api/telegram/daily-report-settings', 'POST', {
+      daily_report_hour: hour,
+      notify_daily_summary: daily,
+      notify_low_credits: lowCr,
+      notify_post_success: postOk,
+      notify_post_failure: postFail,
+    }, true);
+    toast('Telegram settings saved!', 'success');
+  } catch(e) {
+    toast('Error saving: ' + (e.message || e), 'error');
+  }
+}
+
+async function disconnectUserTelegram() {
+  if (!confirm('Disconnect Telegram? You will stop receiving reports and bot commands.')) return;
+  try {
+    await apiFetch('/api/telegram/unlink', 'DELETE', null, true);
+    loadUserTelegramStatus();
+    toast('Telegram disconnected', 'success');
+  } catch(e) {
+    toast('Error: ' + (e.message || e), 'error');
+  }
 }
 
 async function loadTelegramStatus() {

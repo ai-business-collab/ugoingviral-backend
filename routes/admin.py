@@ -644,8 +644,11 @@ _ACTION_SERVICE = {
 
 
 @router.get("/api/admin/api_usage")
-def admin_api_usage(admin=Depends(require_owner)):
+def admin_api_usage(month: str = None, admin=Depends(require_owner)):
     from services.users import load_users as _lu
+    from services import api_tracker
+
+    # Legacy credit-based stats (per-user store)
     service_totals: dict = {}
     action_totals: dict = {}
     total_credits = 0
@@ -653,15 +656,20 @@ def admin_api_usage(admin=Depends(require_owner)):
         ustore = _load_user_store(user["id"])
         for entry in ustore.get("api_usage", []):
             action = entry.get("action", "unknown")
-            credits = entry.get("credits", 0)
+            credits_val = entry.get("credits", 0)
             service = _ACTION_SERVICE.get(action, "Other")
-            service_totals[service] = service_totals.get(service, 0) + credits
-            action_totals[action]   = action_totals.get(action, 0) + credits
-            total_credits += credits
+            service_totals[service] = service_totals.get(service, 0) + credits_val
+            action_totals[action]   = action_totals.get(action, 0) + credits_val
+            total_credits += credits_val
+
+    # Real API cost stats from global tracker
+    cost_stats = api_tracker.get_stats(month)
+
     return {
         "total_credits": total_credits,
         "by_service": service_totals,
         "by_action": action_totals,
+        **cost_stats,
     }
 
 

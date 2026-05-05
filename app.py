@@ -243,6 +243,7 @@ async def serve_affiliate():
 async def startup_event():
     asyncio.create_task(scheduler.run_scheduler())
     asyncio.create_task(autopilot.run_autopilot_credit_checker())
+    asyncio.create_task(telegram.run_daily_reports())
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon_ico():
