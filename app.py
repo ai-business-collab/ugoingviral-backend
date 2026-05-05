@@ -243,20 +243,22 @@ async def serve_affiliate():
 async def startup_event():
     asyncio.create_task(scheduler.run_scheduler())
     asyncio.create_task(autopilot.run_autopilot_credit_checker())
-@app.get(/favicon.ico, include_in_schema=False)
+
+@app.get("/favicon.ico", include_in_schema=False)
 def favicon_ico():
-    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), frontend, favicon.ico), media_type=image/x-icon)
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "favicon.ico"), media_type="image/x-icon")
 
-@app.get(/favicon.svg, include_in_schema=False)
+@app.get("/favicon.svg", include_in_schema=False)
 def favicon_svg():
-    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), frontend, favicon.svg), media_type=image/svg+xml)
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "favicon.svg"), media_type="image/svg+xml")
 
-@app.get(/apple-touch-icon.png, include_in_schema=False)
+@app.get("/apple-touch-icon.png", include_in_schema=False)
 def apple_touch_icon():
-    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), frontend, apple-touch-icon.png), media_type=image/png)
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "apple-touch-icon.png"), media_type="image/png")
 
-@app.get(/favicon-192.png, include_in_schema=False)
+@app.get("/favicon-192.png", include_in_schema=False)
 def favicon_192():
-    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), frontend, favicon-192.png), media_type=image/png)
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "favicon-192.png"), media_type="image/png")
+
 
 
