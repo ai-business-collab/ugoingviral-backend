@@ -1094,72 +1094,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 .stat-kpi-val{font-size:28px;font-weight:800;color:var(--ac);letter-spacing:-1px}
 .stat-kpi-lbl{font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
 
-/* === MOBILE RESPONSIVE === */
-@media (max-width: 768px) {
-  .app { grid-template-columns: 1fr; }
-  .sb {
-    position: fixed; left: -260px; top: 0;
-    height: 100vh; width: 260px; z-index: 500;
-    transition: left 0.3s ease; overflow-y: auto;
-  }
-  .sb.sb-open { left: 0; box-shadow: 4px 0 40px rgba(0,0,0,.85); }
-  #sb-backdrop {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.6); z-index: 499; cursor: pointer;
-  }
-  #sb-backdrop.active { display: block; }
-  #hamburger {
-    display: flex !important; align-items: center; justify-content: center;
-    background: none; border: 1px solid var(--border); border-radius: 8px;
-    color: var(--tx); cursor: pointer; padding: 6px 10px; font-size: 18px;
-    flex-shrink: 0; min-height: 36px; margin-right: 4px; transition: all .2s;
-  }
-  #hamburger:hover { background: var(--glass-b); }
-  .topbar { padding: 10px 12px; gap: 6px; }
-  .ptitle { font-size: 15px; }
-  #clock { display: none !important; }
-  #theme-btn { display: none !important; }
-  #lang-btn { display: none !important; }
-  .topbar-right { gap: 5px; flex-wrap: nowrap; }
-  #billing-badge { padding: 4px 8px; font-size: 11px; gap: 3px; }
-  .acct-name { display: none; }
-  .wrap { padding: 14px 12px; }
-  .g2, .g3 { grid-template-columns: 1fr !important; }
-  .g4 { grid-template-columns: 1fr 1fr !important; }
-  .obf-steps { grid-template-columns: 1fr 1fr !important; }
-  .obf-cards { flex-direction: column !important; }
-  .auto-plat-grid { grid-template-columns: 1fr 1fr !important; }
-  .ac-grid { grid-template-columns: 1fr 1fr !important; }
-  .pipe-form-grid { grid-template-columns: 1fr !important; }
-  .page [style*="grid-template-columns: repeat(4"],
-  .page [style*="grid-template-columns:repeat(4"],
-  .page [style*="grid-template-columns: repeat(3"],
-  .page [style*="grid-template-columns:repeat(3"],
-  .page [style*="grid-template-columns: 1fr 1fr 1fr"],
-  .page [style*="grid-template-columns:1fr 1fr 1fr"],
-  .page [style*="grid-template-columns: 2fr 1fr"],
-  .page [style*="grid-template-columns:2fr 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
-  .page [style*="grid-template-columns: 1fr 1fr"],
-  .page [style*="grid-template-columns:1fr 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
-  .modal-overlay { align-items: flex-end; }
-  .modal-box {
-    width: 100% !important; max-width: 100% !important;
-    border-radius: 20px 20px 0 0; padding: 20px 16px; max-height: 88vh;
-  }
-  .btn { min-height: 40px; }
-  .bsm { min-height: 34px; padding: 6px 12px; }
-  input.fi, textarea.fta, select.fs { font-size: 16px !important; }
-  .card { overflow-x: auto; }
-  .card table { min-width: 480px; display: block; overflow-x: auto; }
-  #notif-panel { width: calc(100vw - 28px) !important; right: -60px !important; }
-  .card { padding: 14px; border-radius: 14px; }
-  .main { overflow-x: hidden; }
-  .wrap > * { max-width: 100%; }
-}
 
 </style>
 <style>.curr-btn.curr-active{background:rgba(255,255,255,.14)!important;color:#fff!important}</style>
@@ -1170,8 +1104,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 <div class="app">
 
 <!-- ═══════════ SIDEBAR ═══════════════════════════════════════════════════ -->
-<!-- Mobile sidebar backdrop -->
-<div id="sb-backdrop" onclick="toggleSidebar()"></div>
 <aside class="sb">
   <div class="logo">
     <img src="/uploads/logo.jpg" alt="UgoingViral" style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
@@ -1292,7 +1224,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 <!-- ═══════════ MAIN ═══════════════════════════════════════════════════════ -->
 <main class="main">
   <div class="topbar">
-    <button id="hamburger" onclick="toggleSidebar()" style="display:none">&#9776;</button>
     <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0">
       <div class="ptitle" id="ptitle">🏠 Dashboard</div>
       <!-- Account switcher -->
