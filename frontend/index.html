@@ -13261,13 +13261,13 @@ async function cpSetAutopilot() {
   try {
     var d = await apiFetch('/api/billing/plan', 'GET', null, true);
     var credits = d.credits || 0;
-    if (credits < 300) {
+    if (credits < 200) {
       if (msgEl) {
         msgEl.style.display = '';
         msgEl.style.background = 'rgba(239,68,68,.08)';
         msgEl.style.border = '1px solid rgba(239,68,68,.2)';
         msgEl.style.color = '#f87171';
-        msgEl.innerHTML = '⚠️ Insufficient credits. Autopilot requires at least 300 credits. You have <strong>' + credits + '</strong>. <a href="#" onclick="nav('billing');return false" style="color:var(--ac)">Top up →</a>';
+        msgEl.innerHTML = '⚠️ Insufficient credits. Autopilot requires at least 200 credits. You have <strong>' + credits + '</strong>. <a href="#" onclick="nav('billing');return false" style="color:var(--ac)">Top up →</a>';
       }
       return;
     }

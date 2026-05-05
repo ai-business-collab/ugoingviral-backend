@@ -698,7 +698,7 @@ from fastapi import Depends
 from routes.auth import get_current_user
 
 CONTENT_PLAN_COST = 10
-AUTOPILOT_MIN_CREDITS = 300
+AUTOPILOT_MIN_CREDITS = 200
 
 class ContentPlanRequest(BaseModel):
     niche: str

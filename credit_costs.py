@@ -17,7 +17,7 @@ VOICE_OVER = {
 }
 
 AUTOPILOT = {
-    "minimum_credits_to_activate": 300,
+    "minimum_credits_to_activate": 200,
     "pause_threshold": 50,  # pause and alert when below this
     "per_day_1_platform": 20,
     "per_day_3_platforms": 50,
