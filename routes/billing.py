@@ -9,8 +9,9 @@ router = APIRouter()
 PLANS = {
     "free": {
         "name": "Free", "price": 0, "credits": 50,
-        "growth_accounts": 0, "sub_accounts": 0, "video": False, "live_support": False, "free_videos": 10,
-        "features": ["50 credits/mo", "10 free videos", "1 platform", "AI text content", "Basic scheduling"],
+        "growth_accounts": 0, "sub_accounts": 0, "video": False, "live_support": False,
+        "free_videos": 3, "download": False, "auto_post_days": 7, "max_platforms": 1,
+        "features": ["50 credits/mo", "3 free AI videos", "7-day auto-post per video", "1 platform", "AI text (5 cr each)"],
     },
     "starter": {
         "name": "Starter", "price": 49, "credits": 300,
