@@ -3007,45 +3007,57 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </button>
           <span style="font-size:11px;color:var(--tx2);font-weight:600">Yearly <span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;margin-left:2px">Save 20%</span></span>
         </div>
+        <!-- LOCKED PRICES — DO NOT CHANGE WITHOUT MICHAEL'S APPROVAL -->
         <div id="billing-plans-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px"></div>
 
       <!-- ADD-ONS -->
       <div style="margin-top:28px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <!-- LOCKED PRICES — DO NOT CHANGE WITHOUT MICHAEL'S APPROVAL -->
           <div class="ctitle" style="margin:0">⚡ Ekstra Credits</div>
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-bottom:14px">Running low mid-month? Buy extra credits. A subscription always gives the most credits for your money.</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
           <div class="card" style="padding:18px;text-align:center;position:relative">
             <div style="font-size:24px;font-weight:900;color:var(--ac)">100</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="4" data-rate-cr="100" style="font-size:9px">($0.04/cr)</span></div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Quick top-up</div>
-            <div data-credit-usd="4" style="font-size:22px;font-weight:800;margin-bottom:12px">$4</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="8" data-rate-cr="100" style="font-size:9px">($0.08/cr)</span></div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Quick refill</div>
+            <div data-credit-usd="8" style="font-size:22px;font-weight:800;margin-bottom:12px">$8</div>
             <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(100,29)">💳 Secure Payment →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(100,29,'paypal')">🅿️ PayPal →</button>
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(100,8)">💳 Secure Payment →</button>
+              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(100,8,'paypal')">🅿️ PayPal →</button>
+            </div>
+          </div>
+          <div class="card" style="padding:18px;text-align:center;position:relative">
+            <div style="font-size:24px;font-weight:900;color:var(--ac)">350</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="24" data-rate-cr="350" style="font-size:9px">($0.069/cr)</span></div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Good value</div>
+            <div data-credit-usd="24" style="font-size:22px;font-weight:800;margin-bottom:12px">$24</div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(350,24)">💳 Secure Payment →</button>
+              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(350,24,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
           <div class="card" style="padding:18px;text-align:center;border-color:var(--border-ac);position:relative">
             <div style="position:absolute;top:10px;right:10px;background:var(--ac);color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px">POPULAR</div>
-            <div style="font-size:24px;font-weight:900;color:var(--ac)">500</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="14" data-rate-cr="500" style="font-size:9px">($0.028/cr)</span></div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Best value</div>
-            <div data-credit-usd="14" style="font-size:22px;font-weight:800;margin-bottom:12px">$14</div>
+            <div style="font-size:24px;font-weight:900;color:var(--ac)">700</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="44" data-rate-cr="700" style="font-size:9px">($0.063/cr)</span></div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Most popular</div>
+            <div data-credit-usd="44" style="font-size:22px;font-weight:800;margin-bottom:12px">$44</div>
             <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(500,99)">💳 Secure Payment →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(500,99,'paypal')">🅿️ PayPal →</button>
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(700,44)">💳 Secure Payment →</button>
+              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(700,44,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
           <div class="card" style="padding:18px;text-align:center;position:relative">
             <div style="position:absolute;top:10px;right:10px;background:var(--ac3);color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px">BEST</div>
             <div style="font-size:24px;font-weight:900;color:var(--ac)">1,500</div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="36" data-rate-cr="1500" style="font-size:9px">($0.024/cr)</span></div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">credits <span data-rate-usd="79" data-rate-cr="1500" style="font-size:9px">($0.053/cr)</span></div>
             <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Best price per credit</div>
-            <div data-credit-usd="36" style="font-size:22px;font-weight:800;margin-bottom:12px">$36</div>
+            <div data-credit-usd="79" style="font-size:22px;font-weight:800;margin-bottom:12px">$79</div>
             <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(1500,249)">💳 Secure Payment →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(1500,249,'paypal')">🅿️ PayPal →</button>
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(1500,79)">💳 Secure Payment →</button>
+              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(1500,79,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
         </div>
@@ -3055,8 +3067,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:10px">🎛️ Custom amount</div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <div style="flex:1;min-width:140px">
-              <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">Amount USD (min $10)</div>
-              <input class="fi" type="number" id="custom-topup-amount" min="10" placeholder="e.g. 200" oninput="updateCustomTopupPreview()" style="width:100%">
+              <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">Amount USD (min $79)</div>
+              <input class="fi" type="number" id="custom-topup-amount" min="79" placeholder="e.g. 200" oninput="updateCustomTopupPreview()" style="width:100%">
             </div>
             <div style="flex:1;min-width:140px;text-align:center">
               <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">You get</div>
@@ -3068,7 +3080,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyCustomTopup('paypal')">🅿️ PayPal →</button>
             </div>
           </div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:8px">Fixed rate: $0.059 per credit. No maximum. Example: $200 = 3,389 credits | $50 = 847 credits.</div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:8px">Fixed rate: $0.053 per credit. Minimum $79. Example: $200 = 3,773 credits | $79 = 1,490 credits.</div>
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-top:10px;padding:8px 12px;background:rgba(0,229,255,.05);border-radius:8px;border:1px solid rgba(0,229,255,.1)">
           💡 <strong>Tip:</strong> Fixed packages give the best price per credit. Custom amounts use the same tier rates — more spent means cheaper per credit. A plan subscription is always the most cost-effective for daily use.
@@ -4067,7 +4079,7 @@ async function loadBilling() {
 
 // ── Currency ──────────────────────────────────────────────────────────────────
 var PLAN_USD = {free:0, starter:49, growth:89, basic:79, pro:149, elite:229, personal:459, agency:199};
-var _CURR_RATES = { USD:1, EUR:0.92, DKK:7.0 };
+var _CURR_RATES = { USD:1, EUR:0.92, DKK:6.9 };
 var _EU_CC = ['AT','BE','BG','HR','CY','CZ','EE','FI','FR','DE','GR','HU','IE',
               'IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
 var _currency = localStorage.getItem('ugv_currency') || 'USD';
@@ -4359,8 +4371,8 @@ function updateCustomTopupPreview() {
   const amt = parseFloat(document.getElementById('custom-topup-amount')?.value || '0');
   const el = document.getElementById('custom-topup-credits');
   if (!el) return;
-  if (amt < 10) { el.textContent = '–'; return; }
-  const credits = Math.floor(amt / 0.059);
+  if (amt < 79) { el.textContent = '–'; return; }
+  const credits = Math.floor(amt / 0.053);
   el.textContent = credits.toLocaleString('en-US');
 }
 
