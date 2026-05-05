@@ -12,3 +12,8 @@ customer_assignments.json
 ig_*.png
 fix*.py
 reset*.py
+.env.*
+*.env
+*secret*
+*password*
+*credentials*
