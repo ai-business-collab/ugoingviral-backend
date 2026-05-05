@@ -2965,7 +2965,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <button class="curr-btn" data-curr="DKK" onclick="setCurrency('DKK')" style="background:none;border:none;color:rgba(255,255,255,.45);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">kr DKK</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--tx3);margin-top:-8px;margin-bottom:14px">Stripe charges in USD — displayed prices are for reference</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:-8px;margin-bottom:14px">Secure Payment processes in USD — displayed prices are for reference</div>
       
         <!-- Auto Top-Up -->
         <div class="card" style="margin-bottom:20px" id="auto-topup-card">
@@ -3000,6 +3000,13 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
 
 
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:11px;color:var(--tx2);font-weight:600">Monthly</span>
+          <button id="billing-cycle-btn" onclick="setBillingCycleIdx()" style="width:38px;height:21px;border-radius:11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);position:relative;cursor:pointer;padding:0;transition:background .2s;flex-shrink:0">
+            <div id="billing-cycle-thumb" style="position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:var(--tx);transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>
+          </button>
+          <span style="font-size:11px;color:var(--tx2);font-weight:600">Yearly <span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;margin-left:2px">Save 20%</span></span>
+        </div>
         <div id="billing-plans-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px"></div>
 
       <!-- ADD-ONS -->
@@ -3015,7 +3022,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Quick top-up</div>
             <div data-credit-usd="4" style="font-size:22px;font-weight:800;margin-bottom:12px">$4</div>
             <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(100,29)">💳 Stripe →</button>
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(100,29)">💳 Secure Payment →</button>
               <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(100,29,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
@@ -3026,7 +3033,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Best value</div>
             <div data-credit-usd="14" style="font-size:22px;font-weight:800;margin-bottom:12px">$14</div>
             <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(500,99)">💳 Stripe →</button>
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(500,99)">💳 Secure Payment →</button>
               <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(500,99,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
@@ -3037,7 +3044,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Best price per credit</div>
             <div data-credit-usd="36" style="font-size:22px;font-weight:800;margin-bottom:12px">$36</div>
             <div style="display:flex;flex-direction:column;gap:5px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(1500,249)">💳 Stripe →</button>
+              <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(1500,249)">💳 Secure Payment →</button>
               <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(1500,249,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
@@ -3057,7 +3064,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <div style="font-size:10px;color:var(--tx3)">credits</div>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;min-width:130px">
-              <button class="btn bp bsm" style="width:100%" onclick="buyCustomTopup('stripe')">💳 Stripe →</button>
+              <button class="btn bp bsm" style="width:100%" onclick="buyCustomTopup('stripe')">💳 Secure Payment →</button>
               <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyCustomTopup('paypal')">🅿️ PayPal →</button>
             </div>
           </div>
@@ -3483,7 +3490,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <div class="card" id="pipe-form-card" style="margin-bottom:18px">
       <div class="ctitle">🎬 Content Pipeline AI
-        <span class="tip"><span class="tip-icon">?</span><span class="tip-box">Upload product image → AI generates scripts → Runway creates video → ElevenLabs adds voiceover → FFmpeg assembles finished video.</span></span>
+        <span class="tip"><span class="tip-icon">?</span><span class="tip-box">Upload product image → AI generates scripts → Video Engine creates video → Voice Engine adds voiceover → assembles finished video.</span></span>
       </div>
       <div class="info-box" style="margin-bottom:18px">💡 The system automatically generates scripts, video and voiceover and assembles them into one finished video ready to upload.</div>
 
@@ -3579,7 +3586,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="pipe-step" id="pstep-2">
           <div class="pipe-step-ico">🎬</div>
           <div class="pipe-step-body">
-            <div class="pipe-step-title">Runway genererer video</div>
+            <div class="pipe-step-title">Video Engine genererer video</div>
             <div class="pipe-step-sub" id="pstep-2-sub">Venter...</div>
           </div>
           <div class="pipe-step-tag" id="pstep-2-tag">–</div>
@@ -3587,7 +3594,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="pipe-step" id="pstep-3">
           <div class="pipe-step-ico">🎙️</div>
           <div class="pipe-step-body">
-            <div class="pipe-step-title">ElevenLabs genererer voiceover</div>
+            <div class="pipe-step-title">Voice Engine genererer voiceover</div>
             <div class="pipe-step-sub" id="pstep-3-sub">Venter...</div>
           </div>
           <div class="pipe-step-tag" id="pstep-3-tag">–</div>
@@ -3609,14 +3616,14 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <!-- SCRIPT PREVIEW (vises efter AI trin, inden Runway) -->
     <div class="card" id="pipe-preview-card" style="display:none;margin-bottom:18px">
       <div class="ctitle" style="margin-bottom:12px">📝 Confirm script before video generation</div>
-      <div class="info-box" style="margin-bottom:14px">AI has written these scripts. Select one — you can edit it before Runway creates the video.</div>
+      <div class="info-box" style="margin-bottom:14px">AI has written these scripts. Select one — you can edit it before Video Engine creates the video.</div>
       <div id="pipe-preview-scripts"></div>
       <div class="fg" style="margin-top:10px">
         <label class="fl">Rediger valgt script</label>
         <textarea class="fi" id="pipe-preview-edit" rows="3" style="resize:vertical"></textarea>
       </div>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
-        <button class="btn bp" onclick="pipeConfirmScript()" style="padding:10px 24px;font-weight:700">🎬 Send til Runway →</button>
+        <button class="btn bp" onclick="pipeConfirmScript()" style="padding:10px 24px;font-weight:700">🎬 Opret video →</button>
         <button class="btn bg bsm" onclick="pipeRegenerateScripts()">🔄 Regenerer scripts</button>
         <button class="btn bg bsm" style="color:var(--red)" onclick="pipeAbort()">✕ Afbryd</button>
       </div>
@@ -4048,6 +4055,7 @@ async function loadBilling() {
     if (dm) dm.textContent = '/ ' + d.max_credits;
     if (db) { db.style.width = pct + '%'; db.style.background = `linear-gradient(90deg,${col},var(--ac2))`; }
     // billing page
+    window._currentPlan = d.plan || 'free';
     renderBillingPage(d);
     loadInvite();
     // Show Agency Dashboard only for agency plan users
@@ -4127,6 +4135,28 @@ async function detectBillingCurrency() {
   renderBillingPrices();
 }
 
+// ── Yearly billing toggle ────────────────────────────────
+window._ugvBillingCycle = 'monthly';
+
+function getPriceHtml(usd) {
+  if (usd === 0) return fmtPrice(0);
+  if (window._ugvBillingCycle === 'yearly') {
+    var yr = Math.round(usd * 0.8);
+    return '<span style="text-decoration:line-through;opacity:.4;font-size:13px">' + fmtPrice(usd) + '</span> ' + fmtPrice(yr) + '<span style="font-size:12px;font-weight:500;color:var(--tx2)"> /mo</span><div style="font-size:10px;color:#22c55e;font-weight:700;margin-top:1px">· billed yearly</div>';
+  }
+  return fmtPrice(usd) + (usd > 0 ? '<span style="font-size:12px;font-weight:500;color:var(--tx2)"> /mo</span>' : '');
+}
+
+function setBillingCycleIdx() {
+  window._ugvBillingCycle = window._ugvBillingCycle === 'monthly' ? 'yearly' : 'monthly';
+  var isY = window._ugvBillingCycle === 'yearly';
+  var thumb = document.getElementById('billing-cycle-thumb');
+  var btn   = document.getElementById('billing-cycle-btn');
+  if (thumb) thumb.style.left = isY ? '19px' : '2px';
+  if (btn)   btn.style.background = isY ? 'rgba(34,197,94,.25)' : 'rgba(255,255,255,.08)';
+  loadBilling();
+}
+
 function renderBillingPage(d) {
   const pct = Math.round((d.credits / d.max_credits) * 100);
   const col = pct < 20 ? 'var(--red)' : pct < 50 ? 'var(--or)' : 'var(--ac)';
@@ -4153,9 +4183,9 @@ function renderBillingPage(d) {
     return `<div style="background:${active ? 'linear-gradient(135deg,rgba(0,229,255,.08),rgba(124,58,237,.08))' : 'var(--glass)'};border:1px solid ${active ? 'var(--border-ac)' : 'var(--border)'};border-radius:16px;padding:20px;position:relative;transition:all .2s">
       ${active ? '<div style="position:absolute;top:10px;right:10px;background:var(--ac);color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">ACTIVE</div>' : ''}
       <div style="font-size:16px;font-weight:800;color:${active ? 'var(--ac)' : 'var(--tx)'};margin-bottom:2px">${p.name}</div>
-      <div style="font-size:22px;font-weight:900;color:var(--tx);margin-bottom:2px">${fmtPrice(PLAN_USD[key] !== undefined ? PLAN_USD[key] : Math.round(p.price/7))}${(PLAN_USD[key] || p.price) > 0 ? '<span style="font-size:12px;font-weight:500;color:var(--tx2)"> /mo</span>' : ''}</div>
+      <div style="font-size:22px;font-weight:900;color:var(--tx);margin-bottom:2px">${getPriceHtml(PLAN_USD[key] !== undefined ? PLAN_USD[key] : Math.round(p.price/7))}</div>
       <ul style="list-style:none;margin:10px 0 16px;padding:0;border-top:1px solid var(--border);padding-top:10px">${feats}</ul>
-      <button class="btn ${active ? 'bp' : 'bg'} bsm" style="width:100%;margin-bottom:${(!active && p.price > 0) ? '6px' : '0'}" onclick="${active ? '' : (p.price === 0 ? 'setPlan(\'' + key + '\')' : 'buyPlan(\'' + key + '\')')}" ${active ? 'disabled' : ''}>${active ? '✓ Current plan' : (p.price === 0 ? 'Start free →' : '💳 Stripe →')}</button>
+      <button class="btn ${active ? 'bp' : 'bg'} bsm" style="width:100%;margin-bottom:${(!active && p.price > 0) ? '6px' : '0'}" onclick="${active ? '' : (p.price === 0 ? 'setPlan(\'' + key + '\')' : 'buyPlan(\'' + key + '\')')}" ${active ? 'disabled' : ''}>${active ? '✓ Current plan' : (p.price === 0 ? 'Start free →' : '💳 Secure Payment →')}</button>
       ${(!active && p.price > 0) ? `<button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.15);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyPlanPayPal('${key}')">🅿️ PayPal →</button>` : ''}
     </div>`;
   }).join('');
@@ -4169,7 +4199,9 @@ async function buyPlan(planKey, provider='stripe') {
   try {
     toast('Opretter betaling...', 'info');
     const endpoint = provider === 'paypal' ? '/api/billing/create_paypal_checkout' : '/api/billing/create_checkout';
-    const d = await apiFetch(endpoint, 'POST', {plan: planKey, type: 'plan'}, true);
+    const payload = {plan: planKey, type: 'plan'};
+    if (window._ugvBillingCycle === 'yearly') payload.billing_cycle = 'yearly';
+    const d = await apiFetch(endpoint, 'POST', payload, true);
     if (d.url) window.location.href = d.url;
     else toast('Payment link not available', 'error');
   } catch(e) { toast('Fejl: ' + e.message, 'error'); }
@@ -4758,7 +4790,7 @@ function studioRender() {
     <!-- Voice-over -->
     <div class="card" style="margin-bottom:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${_studio.voiceEnabled?'12px':'0'}">
-        <div style="font-size:12px;font-weight:700;color:var(--tx2)">🎙️ Voice-over <span style="font-size:10px;color:var(--tx3);font-weight:400">via ElevenLabs (+${_studio.providers?.costs?.voice_over||15} cr)</span></div>
+        <div style="font-size:12px;font-weight:700;color:var(--tx2)">🎙️ Voice-over <span style="font-size:10px;color:var(--tx3);font-weight:400">Voice Engine (+${_studio.providers?.costs?.voice_over||15} cr)</span></div>
         <div class="tog ${_studio.voiceEnabled?'on':''}" onclick="studioToggleVoice(this)"></div>
       </div>
       <div id="studio-voice-field" style="display:${_studio.voiceEnabled?'block':'none'}">
@@ -10497,6 +10529,16 @@ function renderPipeContent() {
 #ag-send:hover { background:var(--ac2); transform:scale(1.05); }
 #ag-mic { background:#111d35; border:1px solid rgba(255,255,255,.1); color:var(--tx2); }
 #ag-mic.listening { background:rgba(239,68,68,.2); border-color:#ef4444; color:#ef4444; }
+body.light #agent-panel { background:#eef1f5; border-color:rgba(0,0,0,.1); box-shadow:0 20px 70px rgba(0,0,0,.2); }
+body.light #ag-msgs { background:#eef1f5; }
+body.light .ag-msg.bot .ag-bubble { background:#fff; color:#0f1923; border-color:rgba(0,0,0,.09); }
+body.light .ag-hname { color:#0f1923; }
+body.light #ag-input-row { background:#e4e8ef; border-top-color:rgba(0,0,0,.1); }
+body.light #ag-input { background:#fff; color:#0f1923; border-color:rgba(0,0,0,.15); }
+body.light #ag-input::placeholder { color:#8fa3b4; }
+body.light #ag-mic { background:#dde3ea; border-color:rgba(0,0,0,.12); color:#4a5e72; }
+body.light #ag-auto-bar { background:#eef1f5; border-top-color:rgba(0,0,0,.08); }
+body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); color:#4a5e72; }
 </style>
 
 <!-- Payment success modal -->
@@ -12932,6 +12974,93 @@ function renderAuditReport(a) {
     (opps ? '<div style="font-size:12px;font-weight:800;color:var(--tx2);margin:20px 0 10px">TOP GROWTH OPPORTUNITIES</div><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">' + opps + '</div>' : '') +
     (wins ? '<div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:10px">QUICK WINS</div><div>' + wins + '</div>' : '') +
     '</div>';
+}
+</script>
+
+<!-- T5: Download upgrade modal -->
+<div id="dl-upgrade-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+  <div style="background:#0d1526;border:1px solid rgba(0,229,255,.25);border-radius:20px;max-width:420px;width:90%;padding:36px 32px;text-align:center;position:relative">
+    <button onclick="document.getElementById('dl-upgrade-modal').style.display='none'" style="position:absolute;top:14px;right:14px;background:none;border:none;color:rgba(255,255,255,.4);font-size:18px;cursor:pointer;line-height:1">✕</button>
+    <div style="font-size:40px;margin-bottom:14px">🔒</div>
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:10px">Download Locked</div>
+    <p style="font-size:14px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:24px">Download is available on Starter plan and above. Upgrade to download your content.</p>
+    <button onclick="nav('billing');document.getElementById('dl-upgrade-modal').style.display='none'" style="width:100%;background:var(--ac);color:#000;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Upgrade Plan →</button>
+  </div>
+</div>
+
+<!-- T6: PWA install popup -->
+<div id="pwa-popup" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9002;background:#0d1526;border:1px solid rgba(0,229,255,.2);border-radius:16px;padding:18px 20px;width:min(340px,90vw);box-shadow:0 8px 40px rgba(0,0,0,.7)">
+  <button onclick="pwaClose()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:rgba(255,255,255,.4);font-size:16px;cursor:pointer;line-height:1">✕</button>
+  <div style="display:flex;align-items:flex-start;gap:12px">
+    <div style="font-size:28px;flex-shrink:0">📲</div>
+    <div>
+      <div id="pwa-title" style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px">Add UgoingViral to your desktop</div>
+      <div id="pwa-body" style="font-size:12px;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:12px">Quick access without opening your browser</div>
+      <button onclick="pwaInstall()" style="background:var(--ac);color:#000;border:none;border-radius:8px;padding:7px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Install →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// T5: Download lock for free plan
+window._currentPlan = window._currentPlan || 'free';
+document.addEventListener('click', function(e) {
+  var a = e.target.closest('a[download]');
+  if (!a) return;
+  if ((a.download || '').indexOf('calendar') > -1) return;
+  if ((window._currentPlan || 'free') !== 'free') return;
+  e.preventDefault();
+  e.stopPropagation();
+  var m = document.getElementById('dl-upgrade-modal');
+  if (m) m.style.display = 'flex';
+}, true);
+
+// T6: PWA install prompt
+var _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _pwaPrompt = e;
+});
+
+function initPwaPrompt() {
+  if (sessionStorage.getItem('pwa_dismissed')) return;
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  var mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  var titleEl = document.getElementById('pwa-title');
+  var bodyEl  = document.getElementById('pwa-body');
+  if (titleEl) titleEl.textContent = mobile
+    ? 'Add UgoingViral to your home screen'
+    : 'Add UgoingViral to your desktop for quick access';
+  if (bodyEl) bodyEl.textContent = mobile
+    ? 'Quick access from your home screen'
+    : 'Quick access without opening your browser';
+  setTimeout(function() {
+    if (!sessionStorage.getItem('pwa_dismissed')) {
+      var el = document.getElementById('pwa-popup');
+      if (el) el.style.display = 'block';
+    }
+  }, 30000);
+}
+
+function pwaInstall() {
+  if (_pwaPrompt) {
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.then(function() { _pwaPrompt = null; pwaClose(); });
+  } else {
+    pwaClose();
+    toast("Use your browser's menu: 'Add to Home Screen' or 'Install app'", 'info');
+  }
+}
+
+function pwaClose() {
+  sessionStorage.setItem('pwa_dismissed', '1');
+  var el = document.getElementById('pwa-popup');
+  if (el) el.style.display = 'none';
+}
+
+if (localStorage.getItem('ugv_token') && !sessionStorage.getItem('pwa_init')) {
+  sessionStorage.setItem('pwa_init', '1');
+  initPwaPrompt();
 }
 </script>
 </body>

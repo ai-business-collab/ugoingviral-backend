@@ -1404,5 +1404,79 @@
         "note": ""
       }
     ]
+  },
+  {
+    "run_id": "20260505T220002Z",
+    "timestamp": "2026-05-05T22:00:02.065860Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "passed": true,
+        "status_code": 400,
+        "response_time": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 299,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      }
+    ]
   }
 ]

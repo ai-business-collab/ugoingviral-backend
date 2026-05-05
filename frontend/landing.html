@@ -672,6 +672,7 @@ footer p { font-size: 13px; color: var(--text2); }
   <div class="curr-toggle">
     <button class="curr-btn" data-curr="USD" onclick="setCurrency('USD')">$ USD</button>
     <button class="curr-btn" data-curr="EUR" onclick="setCurrency('EUR')">€ EUR</button>
+    <button class="curr-btn" data-curr="DKK" onclick="setCurrency('DKK')">kr DKK</button>
   </div>
   <a href="#" class="nav-cta" onclick="openModal('login')">Log in →</a>
 </nav>
@@ -829,7 +830,7 @@ footer p { font-size: 13px; color: var(--text2); }
               </div>
               <!-- TikTok-style UI overlay -->
               <div style="position:absolute;bottom:12px;left:12px;right:12px">
-                <div style="font-size:9px;color:rgba(255,255,255,.7);line-height:1.5">✨ AI-generated video<br>ElevenLabs voiceover included</div>
+                <div style="font-size:9px;color:rgba(255,255,255,.7);line-height:1.5">✨ AI-generated video<br>AI Voice Engine voiceover included</div>
               </div>
               <div style="position:absolute;right:10px;bottom:60px;display:flex;flex-direction:column;align-items:center;gap:14px">
                 <div style="text-align:center"><div style="font-size:18px">❤️</div><div style="font-size:8px;color:rgba(255,255,255,.6)">2.4k</div></div>
@@ -848,13 +849,13 @@ footer p { font-size: 13px; color: var(--text2); }
             <div style="width:40px;height:40px;border-radius:10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎬</div>
             <div>
               <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Multi-scene AI Video</div>
-              <div style="font-size:13px;color:var(--text2);line-height:1.6">Choose 3, 6 or 10 scenes. AI scripts, renders and assembles automatically via Runway, Luma and Replicate.</div>
+              <div style="font-size:13px;color:var(--text2);line-height:1.6">Choose 3, 6 or 10 scenes. AI scripts, renders and assembles automatically via our Video Engine.</div>
             </div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="width:40px;height:40px;border-radius:10px;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎙️</div>
             <div>
-              <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">ElevenLabs AI Voiceover</div>
+              <div style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">AI Voice Engine</div>
               <div style="font-size:13px;color:var(--text2);line-height:1.6">Professional AI voice for your videos. Danish and English supported. Included in all studio packages.</div>
             </div>
           </div>
@@ -890,7 +891,7 @@ footer p { font-size: 13px; color: var(--text2); }
           <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Up to 3 scenes</li>
           <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Smart Clip Cutter — 6 clips</li>
           <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ 2 formats (9:16 + 16:9)</li>
-          <li style="padding:4px 0">✓ ElevenLabs voiceover</li>
+          <li style="padding:4px 0">✓ AI Voice Engine voiceover</li>
         </ul>
         <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;margin-top:16px;display:block;background:rgba(0,229,255,.15);color:#00e5ff;border:1px solid rgba(0,229,255,.3);font-weight:700;font-size:13px;text-align:center;padding:10px;border-radius:8px;text-decoration:none">Get started →</a>
       </div>
@@ -915,7 +916,7 @@ footer p { font-size: 13px; color: var(--text2); }
         <div style="font-size:12px;color:#f59e0b;margin-bottom:16px">1,200 credits included</div>
         <ul style="list-style:none;font-size:12px;color:var(--text2)">
           <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Up to 10 scenes</li>
-          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Multi-provider: Runway + Luma</li>
+          <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Multi-provider video engine</li>
           <li style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">✓ Priority rendering</li>
           <li style="padding:4px 0">✓ Auto-upload all platforms</li>
         </ul>
@@ -938,7 +939,14 @@ footer p { font-size: 13px; color: var(--text2); }
   <div class="section-tag">Pricing</div>
   <h2>Simple. Transparent.</h2>
   <p class="lead">No hidden fees. All plans include a free trial. <strong style="color:var(--accent)">Sign up and get 3 free AI videos.</strong></p>
-  <p style="font-size:13px;color:rgba(255,255,255,.4);margin-top:-8px;margin-bottom:24px">Prices shown in <span id="curr-label">USD</span>. Stripe charges in USD — displayed prices are for reference.</p>
+  <p style="font-size:13px;color:rgba(255,255,255,.4);margin-top:-8px;margin-bottom:24px">Prices shown in <span id="curr-label">USD</span>. Secure Payment processes in USD — displayed prices are for reference.</p>
+  <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:28px">
+    <span style="font-size:14px;color:var(--text2);font-weight:500">Monthly</span>
+    <button id="lp-bc-btn" onclick="setBillingCycle()" style="width:46px;height:25px;border-radius:13px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);position:relative;cursor:pointer;padding:0;transition:background .2s;flex-shrink:0">
+      <div id="lp-bc-thumb" style="position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:var(--white);transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>
+    </button>
+    <span style="font-size:14px;color:var(--text2);font-weight:500">Yearly <span style="background:rgba(34,197,94,.15);color:#22c55e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px">Save 20%</span></span>
+  </div>
   <div class="pricing-grid">
     <div class="price-card">
       <div class="price-name">Free</div>
@@ -1508,22 +1516,31 @@ if (new URLSearchParams(window.location.search).get('login') === '1') {
 }
 
 // ── Currency ──────────────────────────────────────────────────────────────────
-var CURRENCY_RATES  = { USD:1, EUR:0.92 };
+var CURRENCY_RATES  = { USD:1, EUR:0.92, DKK:6.9 };
 var EU_CC = ['AT','BE','BG','HR','CY','CZ','EE','FI','FR','DE','GR','HU','IE',
              'IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
-var _currency = (localStorage.getItem('ugv_currency') === 'DKK' ? 'USD' : (localStorage.getItem('ugv_currency') || 'USD'));
+var _currency = localStorage.getItem('ugv_currency') || 'USD';
 
 function fmtPrice(usd) {
+  if (usd === 0) return '$0';
   var rate = CURRENCY_RATES[_currency] || 1;
   var val  = Math.round(usd * rate);
+  if (_currency === 'DKK') return val.toLocaleString('da-DK') + ' kr';
   var sym  = _currency === 'EUR' ? '€' : '$';
   return sym + val.toLocaleString('en-US');
 }
 
 function renderPrices() {
+  var isYearly = window._ugvBilling === 'yearly';
   document.querySelectorAll('.price-amount[data-usd]').forEach(function(el) {
     var usd = parseFloat(el.getAttribute('data-usd'));
-    el.innerHTML = fmtPrice(usd) + '<span>/mo</span>';
+    if (usd === 0) { el.innerHTML = fmtPrice(0) + '<span>/mo</span>'; return; }
+    if (isYearly) {
+      var yr = Math.round(usd * 0.8);
+      el.innerHTML = '<span style="text-decoration:line-through;opacity:.45;font-size:14px">' + fmtPrice(usd) + '</span> ' + fmtPrice(yr) + '<span>/mo</span><div style="font-size:10px;color:#22c55e;font-weight:700;margin-top:2px">· billed yearly</div>';
+    } else {
+      el.innerHTML = fmtPrice(usd) + '<span>/mo</span>';
+    }
   });
   document.querySelectorAll('.curr-btn').forEach(function(b) {
     b.classList.toggle('curr-active', b.getAttribute('data-curr') === _currency);
@@ -1544,7 +1561,8 @@ async function detectCurrency() {
     var res = await fetch('https://ipapi.co/json/');
     var d   = await res.json();
     var cc  = d.country_code || '';
-    if (EU_CC.indexOf(cc) > -1) _currency = 'EUR';
+    if (cc === 'DK') _currency = 'DKK';
+    else if (EU_CC.indexOf(cc) > -1) _currency = 'EUR';
     else _currency = 'USD';
     localStorage.setItem('ugv_currency', _currency);
   } catch(e) {}
@@ -1552,6 +1570,18 @@ async function detectCurrency() {
 }
 
 detectCurrency();
+
+// ── Billing cycle toggle ──────────────────────────────────────────────
+window._ugvBilling = 'monthly';
+function setBillingCycle() {
+  window._ugvBilling = window._ugvBilling === 'monthly' ? 'yearly' : 'monthly';
+  var isY = window._ugvBilling === 'yearly';
+  var thumb = document.getElementById('lp-bc-thumb');
+  var btn   = document.getElementById('lp-bc-btn');
+  if (thumb) thumb.style.left = isY ? '23px' : '2px';
+  if (btn)   btn.style.background = isY ? 'rgba(34,197,94,.2)' : 'rgba(255,255,255,.1)';
+  renderPrices();
+}
 
 </script>
 
