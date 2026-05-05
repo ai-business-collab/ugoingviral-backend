@@ -3525,6 +3525,31 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <span style="font-size:12px;color:var(--tx3)">Detecting...</span>
             </div>
           </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px;font-weight:600">TONE OF VOICE</label>
+            <select id="cp-tone" class="inp" style="width:100%">
+              <option>Professional</option>
+              <option>Casual</option>
+              <option>Funny</option>
+              <option>Inspirational</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px;font-weight:600">LANGUAGE</label>
+            <select id="cp-language" class="inp" style="width:100%">
+              <option>English</option>
+              <option>Danish</option>
+              <option>German</option>
+              <option>Spanish</option>
+              <option>French</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Smart context badges -->
+        <div id="cp-context-info" style="display:none;margin-bottom:14px;padding:12px 14px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.12);border-radius:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">AI Context Found</div>
+          <div id="cp-context-badges" style="display:flex;flex-wrap:wrap;gap:8px"></div>
         </div>
 
         <button id="cp-generate-btn" class="btn bp" style="width:100%;padding:13px;font-size:14px;font-weight:700" onclick="generateContentPlan()">
@@ -13101,14 +13126,19 @@ function renderAuditReport(a) {
 var _cpPlan = null;
 var _cpPlatforms = [];
 
+var _cpContext = {products: [], mediaCount: 0, historyCount: 0};
+
 function loadContentPlanPage() {
-  // Detect connected platforms from store
   _cpPlatforms = [];
-  var platDisplay = document.getElementById('cp-platforms-display');
+  var platDisplay  = document.getElementById('cp-platforms-display');
+  var ctxInfo      = document.getElementById('cp-context-info');
+  var ctxBadges    = document.getElementById('cp-context-badges');
+  var upgBanner    = document.getElementById('cp-upgrade-banner');
+  var setupCard    = document.getElementById('cp-setup-card');
+
+  // Check plan gate first
   apiFetch('/api/billing/plan', 'GET', null, true).then(function(d) {
     var plan = (d.plan || 'free').toLowerCase();
-    var upgBanner = document.getElementById('cp-upgrade-banner');
-    var setupCard  = document.getElementById('cp-setup-card');
     if (plan === 'free') {
       if (upgBanner) upgBanner.style.display = 'block';
       if (setupCard)  setupCard.style.display = 'none';
@@ -13118,6 +13148,7 @@ function loadContentPlanPage() {
     if (setupCard)  setupCard.style.display = '';
   }).catch(function(){});
 
+  // Detect connected platforms
   apiFetch('/api/settings', 'GET', null, true).then(function(d) {
     var s = d.settings || d || {};
     var plats = s.platforms || {};
@@ -13134,27 +13165,73 @@ function loadContentPlanPage() {
     _cpPlatforms = ['instagram'];
     if (platDisplay) platDisplay.innerHTML = '<span style="font-size:12px;color:var(--tx3)">instagram</span>';
   });
+
+  // Fetch smart context: products, media, history in parallel
+  var badges = [];
+  var pending = 3;
+  function checkDone() {
+    pending--;
+    if (pending > 0) return;
+    if (badges.length && ctxBadges && ctxInfo) {
+      ctxBadges.innerHTML = badges.join('');
+      ctxInfo.style.display = '';
+    }
+  }
+
+  apiFetch('/api/store/products', 'GET', null, true).then(function(d) {
+    var prods = d.products || d.manual_products || d.items || [];
+    _cpContext.products = prods;
+    if (prods.length) badges.push('<span style="font-size:11px;font-weight:700;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:#34d399;border-radius:6px;padding:3px 9px">✅ ' + prods.length + ' product' + (prods.length>1?'s':'') + ' found</span>');
+    checkDone();
+  }).catch(function(){
+    checkDone();
+  });
+
+  apiFetch('/api/uploads/my', 'GET', null, true).then(function(d) {
+    var files = d.files || d.uploads || [];
+    _cpContext.mediaCount = files.length;
+    if (files.length) badges.push('<span style="font-size:11px;font-weight:700;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--ac);border-radius:6px;padding:3px 9px">🖼️ ' + files.length + ' media file' + (files.length>1?'s':'') + '</span>');
+    checkDone();
+  }).catch(function(){
+    checkDone();
+  });
+
+  apiFetch('/api/content/history', 'GET', null, true).then(function(d) {
+    var hist = d.history || d.items || [];
+    _cpContext.historyCount = hist.length;
+    if (hist.length) badges.push('<span style="font-size:11px;font-weight:700;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);color:#a78bfa;border-radius:6px;padding:3px 9px">📊 ' + hist.length + ' past post' + (hist.length>1?'s':'') + '</span>');
+    checkDone();
+  }).catch(function(){
+    checkDone();
+  });
 }
 
 async function generateContentPlan() {
-  var niche = document.getElementById('cp-niche')?.value || 'E-commerce';
-  var goal  = document.getElementById('cp-goal')?.value  || 'More followers';
-  var ppd   = parseInt(document.getElementById('cp-ppd')?.value  || '2');
+  var niche    = document.getElementById('cp-niche')?.value    || 'E-commerce';
+  var goal     = document.getElementById('cp-goal')?.value     || 'More followers';
+  var ppd      = parseInt(document.getElementById('cp-ppd')?.value     || '2');
+  var tone     = document.getElementById('cp-tone')?.value     || 'Professional';
+  var language = document.getElementById('cp-language')?.value || 'English';
 
   document.getElementById('cp-setup-card').style.display  = 'none';
   document.getElementById('cp-plan-output').style.display = 'none';
-  document.getElementById('cp-loading').style.display     = 'flex';
-  document.getElementById('cp-loading').style.flexDirection = 'column';
+  var loadEl = document.getElementById('cp-loading');
+  if (loadEl) { loadEl.style.display = 'flex'; loadEl.style.flexDirection = 'column'; }
 
   try {
     var plan = await apiFetch('/api/content/create-plan', 'POST', {
-      niche: niche, goal: goal, posts_per_day: ppd, platforms: _cpPlatforms
+      niche: niche,
+      goal: goal,
+      posts_per_day: ppd,
+      platforms: _cpPlatforms,
+      tone: tone,
+      language: language
     }, true);
     _cpPlan = plan;
     renderContentPlan(plan);
   } catch(e) {
-    document.getElementById('cp-loading').style.display     = 'none';
-    document.getElementById('cp-setup-card').style.display  = '';
+    if (loadEl) loadEl.style.display = 'none';
+    document.getElementById('cp-setup-card').style.display = '';
     var msg = (e && e.message) ? e.message : 'Failed to generate plan. Please try again.';
     if (msg.includes('403') || msg.toLowerCase().includes('paid')) {
       document.getElementById('cp-upgrade-banner').style.display = 'block';
@@ -13169,8 +13246,10 @@ var POST_TYPE_ICONS = {video:'🎬', image:'📸', text:'✍️', story:'⭕'};
 var PLATFORM_ICONS  = {instagram:'📸', tiktok:'🎵', facebook:'👍', twitter:'🐦', youtube:'▶️'};
 
 function renderContentPlan(plan) {
-  document.getElementById('cp-loading').style.display     = 'none';
-  document.getElementById('cp-plan-output').style.display = '';
+  var loadEl = document.getElementById('cp-loading');
+  if (loadEl) loadEl.style.display = 'none';
+  var outEl = document.getElementById('cp-plan-output');
+  if (outEl) outEl.style.display = '';
 
   var sumEl = document.getElementById('cp-summary');
   var crEl  = document.getElementById('cp-total-credits');
@@ -13187,15 +13266,27 @@ function renderContentPlan(plan) {
       var platIcon = PLATFORM_ICONS[p.platform]   || '📱';
       var platName = (p.platform || '').charAt(0).toUpperCase() + (p.platform || '').slice(1);
       var tags     = (p.hashtags || []).map(function(t){ return '<span style="font-size:10px;background:rgba(0,229,255,.08);color:var(--ac);border-radius:4px;padding:2px 6px">' + t + '</span>'; }).join(' ');
+
+      // Product thumbnail if a product was referenced
+      var prodThumb = '';
+      if (p.product_name && _cpContext.products.length) {
+        var prod = _cpContext.products.find(function(pr){ return pr.name && pr.name.toLowerCase().indexOf(p.product_name.toLowerCase()) !== -1; });
+        if (prod && prod.image_url) {
+          prodThumb = '<img src="' + prod.image_url + '" alt="' + (prod.name||'') + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--border);margin-right:10px;flex-shrink:0" onerror="this.style.display='none'">';
+        }
+      }
+
       return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:10px">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
         + '<div style="display:flex;align-items:center;gap:8px">'
+        + prodThumb
         + '<span style="font-size:18px">' + icon + '</span>'
         + '<span style="font-size:12px;font-weight:700;color:var(--tx)">' + (p.post_type||'post').charAt(0).toUpperCase() + (p.post_type||'post').slice(1) + '</span>'
         + '<span style="font-size:11px;color:var(--tx3)">' + platIcon + ' ' + platName + '</span>'
         + '</div>'
         + '<span style="font-size:11px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--tx3)">⏰ ' + (p.best_time||'09:00') + '</span>'
         + '</div>'
+        + (p.product_name ? '<div style="font-size:11px;color:var(--ac);font-weight:600;margin-bottom:4px">🛍️ ' + p.product_name + '</div>' : '')
         + '<div style="font-size:12px;font-weight:600;color:var(--ac);margin-bottom:4px">' + (p.caption_style||'') + '</div>'
         + '<div style="font-size:12px;color:var(--tx2);line-height:1.5;margin-bottom:8px;font-style:italic">"' + (p.caption_example||'') + '"</div>'
         + '<div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Strategy: ' + (p.hashtag_strategy||'') + '</div>'
@@ -13207,7 +13298,7 @@ function renderContentPlan(plan) {
     var dayCard = document.createElement('div');
     dayCard.className = 'card';
     dayCard.style.cssText = 'padding:20px';
-    dayCard.innerHTML = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:2px">'
+    dayCard.innerHTML = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
       + '<div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(124,58,237,.1));border:1px solid rgba(0,229,255,.2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--ac)">' + day.day + '</div>'
       + '<div>'
       + '<div style="font-size:14px;font-weight:700;color:var(--tx)">Day ' + day.day + '</div>'
@@ -13220,7 +13311,7 @@ function renderContentPlan(plan) {
 
 async function cpApproveSchedule() {
   if (!_cpPlan || !_cpPlan.days) return;
-  var btn = document.getElementById('cp-approve-btn');
+  var btn   = document.getElementById('cp-approve-btn');
   var msgEl = document.getElementById('cp-action-msg');
   if (btn) btn.disabled = true;
 
@@ -13267,7 +13358,7 @@ async function cpSetAutopilot() {
         msgEl.style.background = 'rgba(239,68,68,.08)';
         msgEl.style.border = '1px solid rgba(239,68,68,.2)';
         msgEl.style.color = '#f87171';
-        msgEl.innerHTML = '⚠️ Insufficient credits. Autopilot requires at least 200 credits. You have <strong>' + credits + '</strong>. <a href="#" onclick="nav('billing');return false" style="color:var(--ac)">Top up →</a>';
+        msgEl.innerHTML = '⚠️ Insufficient credits. Autopilot requires at least 200 credits. You have <strong>' + credits + '</strong>. <a href="#" onclick="nav(\'billing\');return false" style="color:var(--ac)">Top up →</a>';
       }
       return;
     }
@@ -13276,9 +13367,7 @@ async function cpSetAutopilot() {
       plan_id: _cpPlan && _cpPlan.plan_id,
       platforms: _cpPlatforms,
       posts_per_day: _cpPlan && _cpPlan.posts_per_day
-    }, true).catch(function(){
-      // Autopilot endpoint may differ — fall through to success UI
-    });
+    }, true).catch(function(){});
 
     if (msgEl) {
       msgEl.style.display = '';
@@ -13296,11 +13385,14 @@ async function cpSetAutopilot() {
 
 function cpReset() {
   _cpPlan = null;
-  document.getElementById('cp-plan-output').style.display = 'none';
-  document.getElementById('cp-setup-card').style.display  = '';
-  document.getElementById('cp-loading').style.display     = 'none';
-  var msgEl = document.getElementById('cp-action-msg');
-  if (msgEl) msgEl.style.display = 'none';
+  var outEl = document.getElementById('cp-plan-output');
+  var setupEl = document.getElementById('cp-setup-card');
+  var loadEl  = document.getElementById('cp-loading');
+  var msgEl   = document.getElementById('cp-action-msg');
+  if (outEl)   outEl.style.display   = 'none';
+  if (setupEl) setupEl.style.display = '';
+  if (loadEl)  loadEl.style.display  = 'none';
+  if (msgEl)   msgEl.style.display   = 'none';
   var apBtn = document.getElementById('cp-autopilot-btn');
   var scBtn = document.getElementById('cp-approve-btn');
   if (apBtn) apBtn.textContent = '🚀 Set to Autopilot';

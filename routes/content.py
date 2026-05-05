@@ -705,6 +705,8 @@ class ContentPlanRequest(BaseModel):
     goal: str
     posts_per_day: int = 2
     platforms: list = []
+    tone: str = "Professional"
+    language: str = "English"
 
 @router.post("/api/content/create-plan")
 async def create_content_plan(req: ContentPlanRequest, current_user: dict = Depends(get_current_user)):
@@ -728,15 +730,36 @@ async def create_content_plan(req: ContentPlanRequest, current_user: dict = Depe
     save_store()
 
     platforms_str = ", ".join(req.platforms) if req.platforms else "Instagram, TikTok"
+    from datetime import timedelta
     start_date = datetime.now()
 
-    # Build day entries for the prompt
     days_info = []
     for i in range(7):
-        from datetime import timedelta
         d = start_date + timedelta(days=i)
         days_info.append(f"Day {i+1}: {d.strftime('%Y-%m-%d')}")
     days_block = "\n".join(days_info)
+
+    # Gather smart context from user data
+    products = store.get("manual_products", [])
+    content_history = store.get("content_history", [])[-5:]
+
+    context_lines = []
+    if products:
+        prod_names = [p.get("name","") for p in products[:8] if p.get("name")]
+        if prod_names:
+            context_lines.append(f"Products in webshop: {', '.join(prod_names)}")
+    if content_history:
+        recent_topics = [h.get("topic") or h.get("content","")[:40] for h in content_history if h.get("topic") or h.get("content")]
+        if recent_topics:
+            context_lines.append(f"Recent content topics: {'; '.join(recent_topics)}")
+    context_block = "\n".join(context_lines) if context_lines else "No additional context available."
+
+    # Product field in JSON if products exist
+    product_field = ""
+    if products:
+        product_field = '          "product_name": "exact product name if this post features a specific product, else null",'
+
+    first_platform = req.platforms[0] if req.platforms else "instagram"
 
     prompt = f"""You are a professional social media strategist. Create a 7-day content plan.
 
@@ -745,6 +768,11 @@ Client info:
 - Primary Goal: {req.goal}
 - Posts per day: {req.posts_per_day}
 - Platforms: {platforms_str}
+- Tone of Voice: {req.tone}
+- Language: {req.language}
+
+User context:
+{context_block}
 
 Dates:
 {days_block}
@@ -760,10 +788,11 @@ Return ONLY valid JSON — no markdown fences, no explanation. Use this exact st
       "posts": [
         {{
           "post_type": "video|image|text|story",
-          "platform": "{(req.platforms[0] if req.platforms else 'instagram')}",
+          "platform": "{first_platform}",
           "best_time": "HH:MM",
+{product_field}
           "caption_style": "Brief style description",
-          "caption_example": "Ready-to-use caption with emojis and CTA",
+          "caption_example": "Ready-to-use caption with emojis and CTA in {req.language}",
           "hashtag_strategy": "Brief strategy note",
           "hashtags": ["#tag1","#tag2","#tag3","#tag4","#tag5"],
           "credits_estimate": <2 for text/story, 3 for image, 5 for video>
@@ -778,7 +807,10 @@ Rules:
 - Each day has exactly {req.posts_per_day} post(s)
 - Distribute across platforms: {platforms_str}
 - Vary post types strategically for {req.goal}
+- Use {req.tone} tone throughout all captions
+- Write all captions in {req.language}
 - Use realistic posting times for each platform
+- If user has products, feature them naturally in relevant posts
 - total_credits_estimate must equal the exact sum of all credits_estimate values"""
 
     # Use direct AI call with higher token limit for the full 7-day plan
@@ -842,6 +874,8 @@ Rules:
         "goal": req.goal,
         "posts_per_day": req.posts_per_day,
         "platforms": req.platforms,
+        "tone": req.tone,
+        "language": req.language,
         **plan_data,
     }
 
