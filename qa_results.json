@@ -3125,5 +3125,169 @@
         "detail": "status=401 1ms"
       }
     ]
+  },
+  {
+    "run_id": "20260506T160001Z",
+    "timestamp": "2026-05-06T16:00:01.940848Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "passed": true,
+        "status_code": 400,
+        "response_time": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 337,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 275,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 7,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 9,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T16:00:05.857720Z",
+    "platform": "ugoingviral",
+    "passed": 10,
+    "failed": 6,
+    "total": 16,
+    "all_pass": false,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_generate",
+        "status": "PASS",
+        "detail": "status=200"
+      },
+      {
+        "name": "plans_fetch",
+        "status": "FAIL",
+        "detail": "[Errno 111] Connection refused"
+      },
+      {
+        "name": "health_root",
+        "status": "FAIL",
+        "detail": "[Errno 111] Connection refused"
+      },
+      {
+        "name": "health_health",
+        "status": "FAIL",
+        "detail": "[Errno 111] Connection refused"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "FAIL",
+        "detail": "[Errno 111] Connection refused"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "FAIL",
+        "detail": "[Errno 111] Connection refused"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "FAIL",
+        "detail": "[Errno 111] Connection refused"
+      }
+    ]
   }
 ]

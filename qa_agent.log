@@ -102,3 +102,43 @@ RESULT: 27/28 passed FAILURES
 ========================================
 
 [report] Nexcore → status=405
+/root/ugoingviral-backend/qa_agent.py:369: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  print(f"UgoingViral QA Agent — {datetime.utcnow().isoformat()}Z")
+/root/ugoingviral-backend/qa_agent.py:384: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp":  datetime.utcnow().isoformat() + "Z",
+UgoingViral QA Agent — 2026-05-06T16:00:01.521788Z
+skip_ai=False
+
+=== SUITE 1: Signup / Login ===
+  [PASS] register — status=400
+  [PASS] login — user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683
+  [PASS] jwt_validation
+
+=== SUITE 2: Free Plan Limits ===
+  [PASS] plan_is_free
+  [PASS] max_credits_50
+  [PASS] free_videos_3
+  [PASS] download_locked
+  [PASS] gated_api/studio — status=404
+  [PASS] gated_api/generate — status=404
+
+=== SUITE 3: Content Generation ===
+  [PASS] content_generate — status=200
+
+=== SUITE 4: Billing Verification ===
+  [FAIL] plans_fetch — [Errno 111] Connection refused
+
+=== SUITE 5: Platform Health ===
+  [FAIL] health_root — [Errno 111] Connection refused
+  [FAIL] health_health — [Errno 111] Connection refused
+  [FAIL] health_api/auth/login — [Errno 111] Connection refused
+  [FAIL] health_api/billing/plan — [Errno 111] Connection refused
+  [FAIL] health_api/billing/usage — [Errno 111] Connection refused
+
+[cleanup] Reset credits to 50 for user e7ffa80f-39cd-4cf8-904d-fea0b380e683
+
+========================================
+RESULT: 10/16 passed FAILURES
+========================================
+
+[report] Nexcore → status=405
