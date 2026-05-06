@@ -187,3 +187,60 @@ def delete_creator(cid: str):
     store["creators"] = [c for c in store.get("creators", []) if c["id"] != cid]
     save_store()
     return {"status": "deleted"}
+
+
+# ── Watermark / User profile ───────────────────────────────────────────────────
+
+from routes.auth import get_current_user as _get_current_user
+from fastapi import Depends as _Depends
+
+@router.get("/api/user/profile")
+def get_user_profile(current_user: dict = _Depends(_get_current_user)):
+    billing = store.get("billing", {})
+    plan = billing.get("plan", "free")
+    is_free = plan == "free"
+    profile = store.get("profile", {})
+    watermark_enabled = True if is_free else profile.get("watermark_enabled", False)
+    return {
+        "id": current_user["id"],
+        "name": current_user.get("name", ""),
+        "email": current_user.get("email", ""),
+        "username": current_user.get("username", ""),
+        "plan": plan,
+        "is_free": is_free,
+        "watermark_enabled": watermark_enabled,
+    }
+
+
+@router.post("/api/user/update_profile")
+async def update_user_profile(request: Request, current_user: dict = _Depends(_get_current_user)):
+    from services.users import update_user
+    body = await request.json()
+    updates = {}
+    name = (body.get("name") or "").strip()
+    email = (body.get("email") or "").strip()
+    username = (body.get("username") or "").strip()
+    if name:
+        updates["name"] = name
+    if email:
+        updates["email"] = email
+    if username:
+        updates["username"] = username
+    if updates:
+        update_user(current_user["id"], updates)
+    return {"ok": True}
+
+
+@router.post("/api/user/watermark")
+async def set_watermark(request: Request, current_user: dict = _Depends(_get_current_user)):
+    billing = store.get("billing", {})
+    plan = billing.get("plan", "free")
+    if plan == "free":
+        raise HTTPException(status_code=403, detail="Watermark cannot be disabled on the Free plan")
+    body = await request.json()
+    enabled = bool(body.get("enabled", False))
+    profile = store.setdefault("profile", {})
+    profile["watermark_enabled"] = enabled
+    store["profile"] = profile
+    save_store()
+    return {"ok": True, "watermark_enabled": enabled}

@@ -525,20 +525,41 @@ async def _fetch_to_tmp(url: str, suffix: str) -> str:
     return tmp.name
 
 
-def _run_ffmpeg(video_path: str, audio_path: str, output_path: str) -> str:
+def _run_ffmpeg(video_path: str, audio_path: str, output_path: str, watermark: bool = False) -> str:
     """Kør FFmpeg synkront — returnerer stderr ved fejl, tom streng ved succes."""
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", video_path,
-        "-i", audio_path,
-        "-c:v", "copy",
-        "-c:a", "aac",
-        "-map", "0:v:0",
-        "-map", "1:a:0",
-        "-shortest",
-        output_path,
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+    wm_filter = (
+        "drawtext=text='Made with UgoingViral'"
+        ":fontcolor=white:fontsize=14"
+        ":x=w-tw-12:y=h-th-12"
+        ":shadowcolor=black:shadowx=1:shadowy=1"
+        ":alpha=0.65"
+    )
+    if watermark:
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", video_path,
+            "-i", audio_path,
+            "-filter_complex", f"[0:v]{wm_filter}[vout]",
+            "-map", "[vout]",
+            "-map", "1:a:0",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+            "-c:a", "aac",
+            "-shortest",
+            output_path,
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", video_path,
+            "-i", audio_path,
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-shortest",
+            output_path,
+        ]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     return "" if result.returncode == 0 else result.stderr[-600:]
 
 
@@ -564,8 +585,12 @@ async def assemble_video(req: AssembleRequest):
         output_path = os.path.join(final_dir, filename)
 
         # Kør FFmpeg i thread-executor så vi ikke blokerer event loop
+        billing = store.get("billing", {})
+        plan = billing.get("plan", "free")
+        profile = store.get("profile", {})
+        watermark = (plan == "free") or profile.get("watermark_enabled", False)
         loop = asyncio.get_event_loop()
-        err  = await loop.run_in_executor(None, _run_ffmpeg, tmp_video, tmp_audio, output_path)
+        err  = await loop.run_in_executor(None, _run_ffmpeg, tmp_video, tmp_audio, output_path, watermark)
         if err:
             raise HTTPException(status_code=500, detail=f"FFmpeg fejl: {err}")
 

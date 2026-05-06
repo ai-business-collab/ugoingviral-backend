@@ -463,6 +463,28 @@ async def _generate_voiceover(script: str) -> Optional[str]:
     return None
 
 
+
+
+def _add_watermark(input_path: str, output_path: str) -> bool:
+    """Burn 'Made with UgoingViral' text into bottom-right corner."""
+    wm = (
+        "drawtext=text='Made with UgoingViral'"
+        ":fontcolor=white:fontsize=14"
+        ":x=w-tw-12:y=h-th-12"
+        ":shadowcolor=black:shadowx=1:shadowy=1"
+        ":alpha=0.65"
+    )
+    try:
+        subprocess.run([
+            "ffmpeg", "-y", "-i", input_path,
+            "-vf", wm,
+            "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+            "-c:a", "copy", output_path,
+        ], capture_output=True, timeout=180)
+        return os.path.exists(output_path)
+    except Exception:
+        return False
+
 def _merge_voiceover(video_path: str, audio_path: str, output_path: str) -> bool:
     """Mix voice-over with video (replace or mix audio)."""
     try:
@@ -592,6 +614,15 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
                 out_path = os.path.join(UPLOADS_DIR, f"series_{session_id}.mp4")
                 if _concat_videos(tmp_paths, out_path,
                                   [s.transition for s in req.scenes]):
+                    # Apply watermark if required
+                    billing = store.get("billing", {})
+                    plan = billing.get("plan", "free")
+                    profile = store.get("profile", {})
+                    wm_needed = (plan == "free") or profile.get("watermark_enabled", False)
+                    if wm_needed and _ffmpeg_available():
+                        wm_out = os.path.join(UPLOADS_DIR, f"series_{session_id}_wm.mp4")
+                        if _add_watermark(out_path, wm_out):
+                            os.replace(wm_out, out_path)
                     assembled_url = f"/uploads/studio/series_{session_id}.mp4"
                 # Cleanup temp files
                 for p in tmp_paths:

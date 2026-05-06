@@ -2854,6 +2854,19 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <button class="btn bg bsm" style="margin-top:14px" onclick="obReset()">👋 Show onboarding guide</button>
       </div>
 
+      <!-- WATERMARK (paid users only) -->
+      <div class="card" id="watermark-settings-card" style="margin-bottom:20px;display:none">
+        <div class="ctitle">🔖 Content Watermark</div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">On the Free plan the watermark is always added. Paid users can choose to add it voluntarily.</div>
+        <div class="trow">
+          <div>
+            <div class="tname">Add "Made with UgoingViral" watermark</div>
+            <div class="tdesc">Small text overlay in the bottom-right corner of generated videos</div>
+          </div>
+          <div class="tog" id="tog-watermark" onclick="toggleWatermark(this)"></div>
+        </div>
+      </div>
+
       <!-- DANGER ZONE -->
       <div class="card" style="margin-bottom:20px;border-color:rgba(239,68,68,.18)">
         <div class="ctitle" style="color:#ef4444">⚠️ Danger Zone</div>
@@ -3230,6 +3243,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     </div>
     <div id="studio-root"></div>
     <div id="studio-portrait-root" style="display:none"></div>
+      <!-- Watermark notice for free users -->
+      <div id="studio-watermark-notice" style="display:none;background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;margin-top:12px;font-size:12px;color:var(--tx2)">
+        🔖 <strong>Free plan:</strong> Your generated videos will include a "Made with UgoingViral" watermark. <span style="cursor:pointer;color:var(--ac);text-decoration:underline" onclick="nav('billing')">Upgrade to remove it →</span>
+      </div>
   </div>
 
   <!-- ══ CONTENT PIPELINE ══════════════════════════════════════════════════ -->
@@ -4809,7 +4826,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('da-DK'); }, 1000);
   if (localStorage.getItem('theme') === 'light') applyTheme(true);
   loadSidebarUser();
-  checkHealth(); loadConnections(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus();
+  checkHealth(); loadConnections(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus(); _loadWatermarkSettings();
   loadBilling(); loadSubAccounts();
   checkTikTokAPIStatus(); checkYouTubeAPIStatus();
   if(typeof checkInstagramToken==='function') checkInstagramToken();
@@ -5850,6 +5867,8 @@ async function loadSettingsPage() {
     const d = await apiFetch('/api/billing/plan');
     renderSettingsPlanFeatures(d);
   } catch(e) {}
+  // Load watermark setting
+  await _loadWatermarkSettings();
   // Notifications pref
   const notifTog = document.getElementById('tog-notifications');
   if (notifTog) {
@@ -10854,6 +10873,37 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
 </div>
 
 <script>
+
+
+// ── Watermark helpers ─────────────────────────────────────────────────────────
+async function toggleWatermark(tog) {
+  const enabled = !tog.classList.contains('on');
+  tog.classList.toggle('on', enabled);
+  try {
+    await apiFetch('/api/user/watermark', 'POST', {enabled});
+    toast(enabled ? 'Watermark enabled' : 'Watermark disabled', 'success');
+  } catch(e) {
+    tog.classList.toggle('on', !enabled);
+    toast('Could not save watermark setting', 'error');
+  }
+}
+
+async function _loadWatermarkSettings() {
+  try {
+    const d = await apiFetch('/api/user/profile', 'GET', null, false);
+    const card = document.getElementById('watermark-settings-card');
+    const tog  = document.getElementById('tog-watermark');
+    const notice = document.getElementById('studio-watermark-notice');
+    if (d.is_free) {
+      if (notice) notice.style.display = '';
+      if (card)   card.style.display   = 'none';
+    } else {
+      if (notice) notice.style.display = 'none';
+      if (card)   card.style.display   = '';
+      if (tog)    tog.classList.toggle('on', !!d.watermark_enabled);
+    }
+  } catch(e) {}
+}
 
 // ═══════════════════════════════════════════════════════
 //   AI PORTRAIT — Face-Scene (InstantID via Replicate)
