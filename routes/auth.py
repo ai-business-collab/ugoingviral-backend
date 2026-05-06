@@ -22,6 +22,10 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://ugoingviral.com/api/auth/google/callback")
 
+GITHUB_CLIENT_ID     = os.getenv("GITHUB_CLIENT_ID", "")
+GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
+GITHUB_REDIRECT_URI  = os.getenv("GITHUB_REDIRECT_URI", "https://ugoingviral.com/api/auth/github/callback")
+
 
 class RegisterRequest(BaseModel):
     email: str
@@ -211,6 +215,98 @@ async def google_callback(code: str = None, error: str = None):
     name = info.get("name", "")
     if not email:
         return RedirectResponse("/?error=google_no_email")
+
+    user = get_user_by_email(email)
+    if not user:
+        user = create_user(email, os.urandom(24).hex(), name, "")
+        try:
+            from routes.email import send_welcome_email
+            import asyncio
+            asyncio.get_event_loop().run_in_executor(None, send_welcome_email, email, name)
+        except Exception:
+            pass
+
+    if not user.get("is_active"):
+        return RedirectResponse("/?error=account_inactive")
+
+    token = _create_token(user["id"], user["email"])
+    return RedirectResponse(f"/app?token={token}")
+
+
+
+@router.get("/api/auth/github/login")
+def github_login():
+    if not GITHUB_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="GitHub login not configured")
+    import urllib.parse
+    params = {
+        "client_id":    GITHUB_CLIENT_ID,
+        "redirect_uri": GITHUB_REDIRECT_URI,
+        "scope":        "user:email",
+    }
+    url = "https://github.com/login/oauth/authorize?" + urllib.parse.urlencode(params)
+    return RedirectResponse(url)
+
+
+@router.get("/api/auth/github/callback")
+async def github_callback(code: str = None, error: str = None):
+    if error or not code:
+        return RedirectResponse("/?error=github_cancelled")
+    if not GITHUB_CLIENT_ID:
+        return RedirectResponse("/?error=github_not_configured")
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        # Exchange code for access token
+        token_resp = await client.post(
+            "https://github.com/login/oauth/access_token",
+            headers={"Accept": "application/json"},
+            data={
+                "client_id":     GITHUB_CLIENT_ID,
+                "client_secret": GITHUB_CLIENT_SECRET,
+                "code":          code,
+                "redirect_uri":  GITHUB_REDIRECT_URI,
+            },
+        )
+        if token_resp.status_code != 200:
+            return RedirectResponse("/?error=github_token_failed")
+        token_data = token_resp.json()
+        access_token = token_data.get("access_token", "")
+        if not access_token:
+            return RedirectResponse("/?error=github_token_failed")
+
+        gh_headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept":        "application/vnd.github.v3+json",
+        }
+
+        # Get user profile
+        user_resp = await client.get("https://api.github.com/user", headers=gh_headers)
+        if user_resp.status_code != 200:
+            return RedirectResponse("/?error=github_userinfo_failed")
+        gh_user = user_resp.json()
+
+        # Primary email may be null if user keeps it private — fetch /user/emails
+        email = gh_user.get("email") or ""
+        if not email:
+            emails_resp = await client.get(
+                "https://api.github.com/user/emails", headers=gh_headers
+            )
+            if emails_resp.status_code == 200:
+                for entry in emails_resp.json():
+                    if entry.get("primary") and entry.get("verified"):
+                        email = entry.get("email", "")
+                        break
+                if not email:
+                    # Fallback: any verified email
+                    for entry in emails_resp.json():
+                        if entry.get("verified"):
+                            email = entry.get("email", "")
+                            break
+
+    if not email:
+        return RedirectResponse("/?error=github_no_email")
+
+    name = gh_user.get("name") or gh_user.get("login") or ""
 
     user = get_user_by_email(email)
     if not user:
