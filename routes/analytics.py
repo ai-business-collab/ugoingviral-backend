@@ -393,6 +393,10 @@ def fetch_tiktok_analytics(user_id: str) -> dict:
                     "likes_count", "video_count", "display_name",
                 ]},
             )
+            if resp.status_code == 401:
+                return {"connected": False}
+            if not resp.text or not resp.text.strip():
+                return {"connected": True, "error": "Empty response from TikTok API"}
             data = resp.json()
 
         info = data.get("data", {}).get("user", {})
@@ -465,8 +469,16 @@ async def run_analytics_sync():
     while True:
         try:
             with open(users_path) as f:
-                all_users = json.load(f)
+                raw = json.load(f)
+            if isinstance(raw, dict):
+                all_users = raw.get("users", [])
+            elif isinstance(raw, list):
+                all_users = raw
+            else:
+                all_users = []
             for u in all_users:
+                if not isinstance(u, dict):
+                    continue
                 uid = u.get("id")
                 if not uid:
                     continue
