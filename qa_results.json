@@ -1843,5 +1843,1287 @@
         "detail": "status=401 2ms"
       }
     ]
+  },
+  {
+    "run_id": "20260506T040001Z",
+    "timestamp": "2026-05-06T04:00:01.747453Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 7,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "passed": true,
+        "status_code": 400,
+        "response_time": 6,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 295,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 269,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 6,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 3,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T04:00:01.803225Z",
+    "platform": "ugoingviral",
+    "passed": 27,
+    "failed": 1,
+    "total": 28,
+    "all_pass": false,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_generate",
+        "status": "FAIL",
+        "detail": "status=422 body={\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"content_type\"],\"msg\":\"Field required\",\"input\":{\"topic\":\"QA Test Video\",\"plat"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$89"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 6ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 2ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 2ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      }
+    ]
+  },
+  {
+    "run_id": "20260506T100002Z",
+    "timestamp": "2026-05-06T10:00:02.097324Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "passed": true,
+        "status_code": 400,
+        "response_time": 2,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 281,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 6,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 286,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 16,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 7,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 7,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T10:00:02.121354Z",
+    "platform": "ugoingviral",
+    "passed": 27,
+    "failed": 1,
+    "total": 28,
+    "all_pass": false,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_generate",
+        "status": "FAIL",
+        "detail": "status=422 body={\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"content_type\"],\"msg\":\"Field required\",\"input\":{\"topic\":\"QA Test Video\",\"plat"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$89"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 4ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 2ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 2ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      }
+    ]
+  },
+  {
+    "run_id": "20260506T110749Z",
+    "timestamp": "2026-05-06T11:07:49.721516Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 3,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "passed": true,
+        "status_code": 400,
+        "response_time": 2,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 267,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 3,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 3,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 4,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T11:07:59.552997Z",
+    "platform": "ugoingviral",
+    "passed": 28,
+    "failed": 0,
+    "total": 28,
+    "all_pass": true,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_gen_skipped",
+        "status": "PASS",
+        "detail": "--skip-ai flag set"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$89"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 3ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 2ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 1ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 3ms"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T11:08:12.326249Z",
+    "platform": "ugoingviral",
+    "passed": 27,
+    "failed": 1,
+    "total": 28,
+    "all_pass": false,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_generate",
+        "status": "FAIL",
+        "detail": "status=422 body={\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"content_type\"],\"msg\":\"Field required\",\"input\":{\"topic\":\"QA Test Video\",\"plat"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$89"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 2ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 2ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 1ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T11:10:23.472122Z",
+    "platform": "ugoingviral",
+    "passed": 28,
+    "failed": 1,
+    "total": 29,
+    "all_pass": false,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_generate",
+        "status": "PASS",
+        "detail": "status=200"
+      },
+      {
+        "name": "credits_deducted",
+        "status": "FAIL",
+        "detail": "before=0 after=0"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$89"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 3ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 4ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 2ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T11:10:37.338222Z",
+    "platform": "ugoingviral",
+    "passed": 28,
+    "failed": 1,
+    "total": 29,
+    "all_pass": false,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_generate",
+        "status": "PASS",
+        "detail": "status=200"
+      },
+      {
+        "name": "credits_deducted",
+        "status": "FAIL",
+        "detail": "before=0 after=0"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$89"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 2ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 1ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 2ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 1ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T11:27:02.173339Z",
+    "platform": "ugoingviral",
+    "passed": 28,
+    "failed": 0,
+    "total": 28,
+    "all_pass": true,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_generate",
+        "status": "PASS",
+        "detail": "status=200"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$89"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 2ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 3ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 2ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 2ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 1ms"
+      }
+    ]
   }
 ]

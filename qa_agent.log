@@ -1,0 +1,104 @@
+/root/ugoingviral-backend/qa_agent.py:385: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  print(f"UgoingViral QA Agent — {datetime.utcnow().isoformat()}Z")
+/root/ugoingviral-backend/qa_agent.py:400: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp":  datetime.utcnow().isoformat() + "Z",
+UgoingViral QA Agent — 2026-05-06T04:00:01.325767Z
+skip_ai=False
+
+=== SUITE 1: Signup / Login ===
+  [PASS] register — status=400
+  [PASS] login — user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683
+  [PASS] jwt_validation
+
+=== SUITE 2: Free Plan Limits ===
+  [PASS] plan_is_free
+  [PASS] max_credits_50
+  [PASS] free_videos_3
+  [PASS] download_locked
+  [PASS] gated_api/studio — status=404
+  [PASS] gated_api/generate — status=404
+
+=== SUITE 3: Content Generation ===
+  [FAIL] content_generate — status=422 body={"detail":[{"type":"missing","loc":["body","content_type"],"msg":"Field required","input":{"topic":"QA Test Video","plat
+
+=== SUITE 4: Billing Verification ===
+  [PASS] plan_price_free — $0
+  [PASS] plan_price_starter — $49
+  [PASS] plan_price_basic — $79
+  [PASS] plan_price_growth — $89
+  [PASS] plan_price_pro — $149
+  [PASS] plan_price_elite — $229
+  [PASS] plan_price_personal — $459
+  [PASS] plan_price_agency — $199
+  [PASS] credit_pkg_100 — $8
+  [PASS] credit_pkg_350 — $24
+  [PASS] credit_pkg_700 — $44
+  [PASS] credit_pkg_1500 — $79
+  [PASS] yearly_math_pro — $149 * 0.8 = $119
+
+=== SUITE 5: Platform Health ===
+  [PASS] health_root — status=200 6ms
+  [PASS] health_health — status=200 2ms
+  [PASS] health_api/auth/login — status=422 2ms
+  [PASS] health_api/billing/plan — status=401 2ms
+  [PASS] health_api/billing/usage — status=401 2ms
+
+[cleanup] Reset credits to 50 for user e7ffa80f-39cd-4cf8-904d-fea0b380e683
+
+========================================
+RESULT: 27/28 passed FAILURES
+========================================
+
+[report] Nexcore → status=405
+/root/ugoingviral-backend/qa_agent.py:385: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  print(f"UgoingViral QA Agent — {datetime.utcnow().isoformat()}Z")
+/root/ugoingviral-backend/qa_agent.py:400: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp":  datetime.utcnow().isoformat() + "Z",
+UgoingViral QA Agent — 2026-05-06T10:00:01.682614Z
+skip_ai=False
+
+=== SUITE 1: Signup / Login ===
+  [PASS] register — status=400
+  [PASS] login — user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683
+  [PASS] jwt_validation
+
+=== SUITE 2: Free Plan Limits ===
+  [PASS] plan_is_free
+  [PASS] max_credits_50
+  [PASS] free_videos_3
+  [PASS] download_locked
+  [PASS] gated_api/studio — status=404
+  [PASS] gated_api/generate — status=404
+
+=== SUITE 3: Content Generation ===
+  [FAIL] content_generate — status=422 body={"detail":[{"type":"missing","loc":["body","content_type"],"msg":"Field required","input":{"topic":"QA Test Video","plat
+
+=== SUITE 4: Billing Verification ===
+  [PASS] plan_price_free — $0
+  [PASS] plan_price_starter — $49
+  [PASS] plan_price_basic — $79
+  [PASS] plan_price_growth — $89
+  [PASS] plan_price_pro — $149
+  [PASS] plan_price_elite — $229
+  [PASS] plan_price_personal — $459
+  [PASS] plan_price_agency — $199
+  [PASS] credit_pkg_100 — $8
+  [PASS] credit_pkg_350 — $24
+  [PASS] credit_pkg_700 — $44
+  [PASS] credit_pkg_1500 — $79
+  [PASS] yearly_math_pro — $149 * 0.8 = $119
+
+=== SUITE 5: Platform Health ===
+  [PASS] health_root — status=200 4ms
+  [PASS] health_health — status=200 2ms
+  [PASS] health_api/auth/login — status=422 2ms
+  [PASS] health_api/billing/plan — status=401 2ms
+  [PASS] health_api/billing/usage — status=401 2ms
+
+[cleanup] Reset credits to 50 for user e7ffa80f-39cd-4cf8-904d-fea0b380e683
+
+========================================
+RESULT: 27/28 passed FAILURES
+========================================
+
+[report] Nexcore → status=405

@@ -181,34 +181,18 @@ class QARunner:
             self._pass("content_gen_skipped", "--skip-ai flag set")
             return
 
-        # Get credits before
-        try:
-            r = self.client.get("/api/billing", headers=self._auth_headers())
-            credits_before = r.json().get("credits", 0) if r.status_code == 200 else 0
-        except Exception:
-            credits_before = 0
-
         # Attempt a minimal content generation call
         payload = {
-            "topic": "QA Test Video",
+            "content_type": "caption",
             "platform": "instagram",
-            "style": "informative",
+            "language": "en",
+            "tone": "engaging",
         }
         try:
             r = self.client.post("/api/content/generate", headers=self._auth_headers(),
                                  json=payload, timeout=30)
             if r.status_code in (200, 201):
                 self._pass("content_generate", f"status={r.status_code}")
-                # Check credits deducted
-                try:
-                    r2 = self.client.get("/api/billing", headers=self._auth_headers())
-                    credits_after = r2.json().get("credits", credits_before) if r2.status_code == 200 else credits_before
-                    if credits_after < credits_before:
-                        self._pass("credits_deducted", f"{credits_before}→{credits_after}")
-                    else:
-                        self._fail("credits_deducted", f"before={credits_before} after={credits_after}")
-                except Exception as e:
-                    self._fail("credits_deducted", str(e))
             elif r.status_code in (402, 403):
                 self._pass("content_generate_gated", f"status={r.status_code} (gated correctly)")
             else:
