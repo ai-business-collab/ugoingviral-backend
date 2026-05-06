@@ -259,6 +259,27 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .onb-role-employee{background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.25)}
 .onb-features{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:4px}
 .onb-features-title{font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+.nex-chat-btn{position:fixed;bottom:24px;right:24px;z-index:9000;display:flex;align-items:center;gap:8px;padding:12px 18px;background:linear-gradient(135deg,#6366f1,#00e5ff);border:none;border-radius:28px;color:#fff;font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;box-shadow:0 4px 20px rgba(0,229,255,.3);transition:transform .2s}
+.nex-chat-btn:hover{transform:scale(1.05)}
+.nex-panel{position:fixed;bottom:80px;right:24px;z-index:8999;width:380px;background:var(--glass-b);border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+.nex-panel-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.nex-msgs{overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;max-height:320px;min-height:60px}
+.nex-msg{max-width:88%;padding:9px 12px;border-radius:11px;font-size:13px;line-height:1.5;word-break:break-word}
+.nex-msg.user{background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.3);align-self:flex-end}
+.nex-msg.bot{background:var(--glass);border:1px solid var(--border);align-self:flex-start}
+.nex-thinking{font-size:12px;color:var(--tx3);font-style:italic;padding:2px 4px;align-self:flex-start}
+.nex-input-row{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.nex-inp{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--tx);font-size:13px;font-family:'Outfit',sans-serif;outline:none}
+.nex-inp:focus{border-color:var(--ac)}
+.qa-act-card{background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+.qa-act-title{font-size:13px;font-weight:700;margin-bottom:12px;color:var(--tx)}
+.ps-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-b);font-size:13px}
+.ps-item:last-child{border-bottom:none}
+.ps-indicator{display:flex;align-items:center;gap:8px}
+.ps-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ps-dot.ok{background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.5)}
+.ps-dot.warn{background:#f59e0b}
+.ps-dot.err{background:#ef4444}
 </style>
 </head>
 <body>
@@ -324,6 +345,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="sec-tab hidden" onclick="showSection('automation_log')" id="tab-automation-log">📋 Automation Log</button>
       <button class="sec-tab hidden" onclick="showSection('qa')" id="tab-qa">🧪 QA</button>
       <button class="sec-tab hidden" onclick="showSection('templates')" id="tab-templates">📝 Templates</button>
+      <button class="sec-tab hidden" onclick="showSection('platform_status')" id="tab-platform-status">🖥️ Status</button>
+      <button class="sec-tab hidden" onclick="showSection('quick_actions')" id="tab-quick-actions">⚡ Quick Actions</button>
     </div>
 
     <!-- STATS (owner + support) -->
@@ -781,8 +804,11 @@ async function showApp(info) {
       document.getElementById('tab-automation-log').classList.remove('hidden');
     document.getElementById('tab-qa').classList.remove('hidden');
     document.getElementById('tab-templates').classList.remove('hidden');
+    document.getElementById('tab-platform-status').classList.remove('hidden');
+    document.getElementById('tab-quick-actions').classList.remove('hidden');
     settingsBtn.classList.add('hidden');
     document.getElementById('emp-profile-header').classList.add('hidden');
+    var _nb = document.getElementById('nex-chat-btn'); if (_nb) _nb.style.display = '';
   } else if (role === 'support') {
     badge.textContent = 'Support';
     badge.className = 'badge badge-support';
@@ -792,6 +818,13 @@ async function showApp(info) {
     document.getElementById('customers-title').textContent = '👥 Alle kunder';
     document.getElementById('tab-employees').classList.add('hidden');
     document.getElementById('tab-guidelines').classList.remove('hidden');
+    document.getElementById('tab-revenue').classList.add('hidden');
+    document.getElementById('tab-api').classList.add('hidden');
+    document.getElementById('tab-automation-log').classList.add('hidden');
+    document.getElementById('tab-qa').classList.add('hidden');
+    document.getElementById('tab-templates').classList.add('hidden');
+    document.getElementById('tab-quick-actions').classList.add('hidden');
+    document.getElementById('tab-platform-status').classList.remove('hidden');
     settingsBtn.classList.remove('hidden');
     await loadMyProfile();
   } else {
@@ -843,7 +876,7 @@ function renderProfileHeader() {
 // ── SECTIONS ─────────────────────────────────────────────────────────────────
 
 function showSection(sec) {
-  const allSections = ['customers', 'employees', 'guidelines', 'revenue', 'api_usage', 'automation_log'];
+  const allSections = ['customers', 'employees', 'guidelines', 'revenue', 'api_usage', 'automation_log', 'qa', 'templates', 'platform_status', 'quick_actions'];
   allSections.forEach(s => {
     const el = document.getElementById('section-' + s);
     if (el) el.classList.toggle('hidden', s !== sec);
@@ -854,10 +887,10 @@ function showSection(sec) {
     t.classList.toggle('active', onclick.includes("'" + sec + "'"));
   });
   if (sec === 'guidelines' && !guidelinesData) loadGuidelines();
-  if (sec === 'revenue') loadRevenue();
+  if (sec === 'revenue') { if (userRole !== 'owner') { toast('Access denied', 'error'); return; } loadRevenue(); }
   if (sec === 'qa') loadQAResults();
   if (sec === 'templates') loadAdminTemplates();
-  if (sec === 'api_usage') loadApiUsage();
+  if (sec === 'api_usage') { if (userRole !== 'owner') { toast('Access denied', 'error'); return; } loadApiUsage(); }
   if (sec === 'automation_log') { populateLogUserSelect(); loadAutomationLog(); }
 }
 
@@ -2307,7 +2340,250 @@ async function deleteAdminTemplate(id) {
   } catch(e) { alert('Error: ' + e.message); }
 }
 
+// ===== PLATFORM STATUS =====
+async function loadPlatformStatus() {
+  var el = document.getElementById('ps-body');
+  if (!el) return;
+  el.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    var r = await fetch('/api/nexora/metrics', {headers: {'X-Nexora-Key': 'nexora-core-2026'}});
+    var d = await r.json();
+    var rows = [
+      {label: 'API / Backend',     val: 'Online',                         status: 'ok'},
+      {label: 'Automation engine', val: d.autopilot_active + ' sessions', status: 'ok'},
+      {label: 'Total users',       val: d.total_users,                    status: 'ok'},
+      {label: 'Active (30d)',      val: d.active_users,                   status: 'ok'},
+      {label: 'Posts today',       val: d.posts_today,                    status: d.posts_today > 0 ? 'ok' : 'warn'},
+      {label: 'Uptime',            val: d.uptime || '99.9%',              status: 'ok'},
+    ];
+    el.innerHTML = '<div style="padding:0 4px">'
+      + rows.map(function(row) {
+          return '<div class="ps-item">'
+            + '<div class="ps-indicator"><div class="ps-dot ' + row.status + '"></div><span>' + row.label + '</span></div>'
+            + '<span style="color:var(--tx2);font-weight:600">' + row.val + '</span>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  } catch(e) {
+    el.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:16px 0">Could not load: ' + e.message + '</div>';
+  }
+}
+
+// ===== QUICK ACTIONS =====
+async function sendAnnouncement() {
+  var subject = (document.getElementById('ann-subject').value || '').trim();
+  var body    = (document.getElementById('ann-body').value || '').trim();
+  var status  = document.getElementById('ann-status');
+  if (!subject || !body) { status.textContent = 'Subject and message required.'; return; }
+  status.textContent = 'Sending…'; status.style.color = 'var(--tx3)';
+  try {
+    var r = await fetch('/api/admin/announcement', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+      body: JSON.stringify({subject: subject, body: body})
+    });
+    var d = await r.json();
+    status.style.color = d.ok ? '#22c55e' : '#ef4444';
+    status.textContent = d.ok ? ('Sent to ' + (d.sent || '?') + ' / ' + (d.total || '?') + ' users') : (d.detail || 'Error');
+  } catch(e) { status.style.color = '#ef4444'; status.textContent = 'Error: ' + e.message; }
+}
+
+async function quickAddCredits() {
+  var email  = (document.getElementById('cred-email').value || '').trim();
+  var amount = parseInt(document.getElementById('cred-amount').value || '0');
+  var status = document.getElementById('cred-status');
+  if (!email || !amount || amount < 1) { status.textContent = 'Enter email and amount.'; status.style.color = 'var(--tx3)'; return; }
+  status.textContent = 'Adding…'; status.style.color = 'var(--tx3)';
+  try {
+    var r = await fetch('/api/admin/quick_add_credits', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email, amount: amount})
+    });
+    var d = await r.json();
+    status.style.color = d.ok ? '#22c55e' : '#ef4444';
+    status.textContent = d.ok ? ('Added ' + amount + ' credits. New balance: ' + d.new_credits) : (d.detail || 'Error');
+  } catch(e) { status.style.color = '#ef4444'; status.textContent = 'Error: ' + e.message; }
+}
+
+async function quickExtendPlan() {
+  var email  = (document.getElementById('ext-email').value || '').trim();
+  var plan   = document.getElementById('ext-plan').value;
+  var days   = parseInt(document.getElementById('ext-days').value || '30');
+  var status = document.getElementById('ext-status');
+  if (!email || !plan) { status.textContent = 'Enter email and select plan.'; status.style.color = 'var(--tx3)'; return; }
+  status.textContent = 'Extending…'; status.style.color = 'var(--tx3)';
+  try {
+    var r = await fetch('/api/admin/quick_extend_plan', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email, plan: plan, days: days})
+    });
+    var d = await r.json();
+    status.style.color = d.ok ? '#22c55e' : '#ef4444';
+    status.textContent = d.ok ? (email + ' → ' + plan + ' for ' + days + ' days. Expires: ' + (d.expires || '').slice(0,10)) : (d.detail || 'Error');
+  } catch(e) { status.style.color = '#ef4444'; status.textContent = 'Error: ' + e.message; }
+}
+
+async function quickViewSession() {
+  var email  = (document.getElementById('sess-email').value || '').trim();
+  var status = document.getElementById('sess-status');
+  var output = document.getElementById('sess-output');
+  if (!email) { status.textContent = 'Enter email.'; status.style.color = 'var(--tx3)'; return; }
+  status.textContent = 'Loading…'; status.style.color = 'var(--tx3)';
+  output.style.display = 'none';
+  try {
+    var r = await fetch('/api/admin/session_view?email=' + encodeURIComponent(email), {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    var d = await r.json();
+    if (d.error) { status.style.color = '#ef4444'; status.textContent = d.error; return; }
+    status.style.color = '#22c55e';
+    status.textContent = 'Session loaded for: ' + email;
+    output.style.display = '';
+    output.textContent = JSON.stringify(d, null, 2);
+  } catch(e) { status.style.color = '#ef4444'; status.textContent = 'Error: ' + e.message; }
+}
+
+// ===== NEX CHAT =====
+var _nexOpen = false, _nexMsgs = [];
+
+function openNexChat() {
+  _nexOpen = !_nexOpen;
+  var panel = document.getElementById('nex-panel');
+  if (panel) panel.style.display = _nexOpen ? 'flex' : 'none';
+  if (_nexOpen && _nexMsgs.length === 0) {
+    _nexAppend('bot', "Hi, I'm Nex. Ask me about MRR, user counts, errors, or anything about UgoingViral.");
+  }
+  if (_nexOpen) { var i = document.getElementById('nex-inp'); if (i) i.focus(); }
+}
+
+function _nexAppend(type, text) {
+  _nexMsgs.push({type: type, text: text});
+  var msgs = document.getElementById('nex-msgs');
+  if (!msgs) return;
+  var div = document.createElement('div');
+  div.className = 'nex-msg ' + type;
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function sendNexMessage() {
+  var inp = document.getElementById('nex-inp');
+  var msg = (inp ? inp.value : '').trim();
+  if (!msg) return;
+  inp.value = '';
+  _nexAppend('user', msg);
+  var msgs = document.getElementById('nex-msgs');
+  var thinking = document.createElement('div');
+  thinking.className = 'nex-thinking'; thinking.id = 'nex-thinking'; thinking.textContent = 'Nex is thinking…';
+  if (msgs) { msgs.appendChild(thinking); msgs.scrollTop = msgs.scrollHeight; }
+  try {
+    var r = await fetch('/api/nex/chat', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+      body: JSON.stringify({message: msg})
+    });
+    var d = await r.json();
+    var t = document.getElementById('nex-thinking'); if (t) t.remove();
+    _nexAppend('bot', d.response || 'No response.');
+  } catch(e) {
+    var t = document.getElementById('nex-thinking'); if (t) t.remove();
+    _nexAppend('bot', 'Error: ' + e.message);
+  }
+}
+
+
 </script>
+
+
+    <!-- PLATFORM STATUS SECTION -->
+    <div id="section-platform_status" class="hidden">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">🖥️ Platform Status</div>
+          <button class="action-btn" onclick="loadPlatformStatus()">↻ Refresh</button>
+        </div>
+        <div id="ps-body"><div class="empty-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS SECTION -->
+    <div id="section-quick_actions" class="hidden">
+      <div class="qa-act-card">
+        <div class="qa-act-title">📢 Send Platform Announcement</div>
+        <div class="fg" style="margin-bottom:8px">
+          <label class="fl">Subject</label>
+          <input class="fi" id="ann-subject" placeholder="e.g. New Feature: Full Auto Mode is live!">
+        </div>
+        <div class="fg" style="margin-bottom:12px">
+          <label class="fl">Message (HTML supported)</label>
+          <textarea class="fi" id="ann-body" rows="5" style="resize:vertical" placeholder="Write your announcement here..."></textarea>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn bp" onclick="sendAnnouncement()">📨 Send to all users</button>
+          <span id="ann-status" style="font-size:12px;color:var(--tx3)"></span>
+        </div>
+      </div>
+
+      <div class="qa-act-card">
+        <div class="qa-act-title">💰 Give User Credits</div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div class="fg" style="flex:2;margin-bottom:0">
+            <label class="fl">User email</label>
+            <input class="fi" id="cred-email" placeholder="user@example.com">
+          </div>
+          <div class="fg" style="flex:1;margin-bottom:0">
+            <label class="fl">Credits to add</label>
+            <input class="fi" id="cred-amount" type="number" min="1" max="10000" placeholder="500">
+          </div>
+          <button class="btn bp" style="flex-shrink:0" onclick="quickAddCredits()">+ Add</button>
+        </div>
+        <div id="cred-status" style="font-size:12px;color:var(--tx3);margin-top:8px"></div>
+      </div>
+
+      <div class="qa-act-card">
+        <div class="qa-act-title">🔄 Extend User Plan</div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div class="fg" style="flex:2;margin-bottom:0">
+            <label class="fl">User email</label>
+            <input class="fi" id="ext-email" placeholder="user@example.com">
+          </div>
+          <div class="fg" style="flex:1;margin-bottom:0">
+            <label class="fl">Plan</label>
+            <select class="fi" id="ext-plan">
+              <option value="starter">Starter</option>
+              <option value="growth">Growth</option>
+              <option value="basic">Basic</option>
+              <option value="pro" selected>Pro</option>
+              <option value="elite">Elite</option>
+              <option value="personal">Personal</option>
+              <option value="agency">Agency</option>
+            </select>
+          </div>
+          <div class="fg" style="flex:1;margin-bottom:0">
+            <label class="fl">Days</label>
+            <input class="fi" id="ext-days" type="number" min="1" max="365" value="30">
+          </div>
+          <button class="btn bp" style="flex-shrink:0" onclick="quickExtendPlan()">Extend</button>
+        </div>
+        <div id="ext-status" style="font-size:12px;color:var(--tx3);margin-top:8px"></div>
+      </div>
+
+      <div class="qa-act-card">
+        <div class="qa-act-title">👁️ View User Session <span style="font-size:11px;font-weight:400;color:var(--tx3)">(read-only)</span></div>
+        <div style="display:flex;gap:10px;align-items:flex-end">
+          <div class="fg" style="flex:1;margin-bottom:0">
+            <label class="fl">User email</label>
+            <input class="fi" id="sess-email" placeholder="user@example.com">
+          </div>
+          <button class="btn bg" style="flex-shrink:0" onclick="quickViewSession()">👁️ View</button>
+        </div>
+        <div id="sess-status" style="font-size:12px;color:var(--tx3);margin-top:8px"></div>
+        <pre id="sess-output" style="display:none;margin-top:12px;background:rgba(0,0,0,.3);padding:14px;border-radius:8px;font-size:11px;color:var(--tx2);overflow-x:auto;max-height:400px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></pre>
+      </div>
+    </div>
 
 <!-- Sub-accounts modal -->
 <div class="modal-overlay" id="subs-modal" onclick="if(event.target===this)closeSubsModal()">

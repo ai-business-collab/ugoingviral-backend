@@ -2,7 +2,7 @@ import os
 import json
 import uuid
 from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from pydantic import BaseModel
@@ -737,3 +737,101 @@ def admin_block_subs(user_id: str, body: dict, admin=Depends(require_owner)):
     ustore.setdefault("billing", {})["subs_blocked"] = blocked
     _save_user_store(user_id, ustore)
     return {"ok": True, "subs_blocked": blocked}
+
+
+# ── QUICK ACTIONS (owner only) ────────────────────────────────────────────────
+
+@router.post("/api/admin/announcement")
+async def send_announcement(req: Request, admin=Depends(require_owner)):
+    body = await req.json()
+    subject = str(body.get("subject", "")).strip()[:200]
+    message = str(body.get("body", "")).strip()
+    if not subject or not message:
+        raise HTTPException(status_code=400, detail="Subject and body required")
+
+    users = load_users().get("users", [])
+    emails = [u["email"] for u in users if isinstance(u, dict) and u.get("email")]
+
+    from routes.email import send_system_email
+    sent = 0
+    html_body = (
+        "<div style='font-family:sans-serif;max-width:600px;color:#111'>"
+        + message.replace("\n", "<br>")
+        + "<br><br><hr style='border:none;border-top:1px solid #eee'>"
+        + "<p style='font-size:12px;color:#888'>UgoingViral — Social Media Autopilot</p>"
+        + "</div>"
+    )
+    for email in emails:
+        try:
+            ok = send_system_email(email, subject, html_body)
+            if ok:
+                sent += 1
+        except Exception:
+            pass
+
+    return {"ok": True, "sent": sent, "total": len(emails)}
+
+
+@router.post("/api/admin/quick_add_credits")
+async def quick_add_credits_ep(req: Request, admin=Depends(require_owner)):
+    body = await req.json()
+    email  = str(body.get("email", "")).strip().lower()
+    amount = int(body.get("amount", 0))
+    if not email or amount < 1:
+        raise HTTPException(status_code=400, detail="Email and positive amount required")
+
+    users = load_users().get("users", [])
+    user  = next((u for u in users if isinstance(u, dict)
+                  and u.get("email", "").lower() == email), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    uid    = user["id"]
+    ustore = _load_user_store(uid)
+    billing = ustore.setdefault("billing", {})
+    billing["credits"] = billing.get("credits", 0) + amount
+    _save_user_store(uid, ustore)
+    return {"ok": True, "new_credits": billing["credits"], "added": amount}
+
+
+@router.post("/api/admin/quick_extend_plan")
+async def quick_extend_plan_ep(req: Request, admin=Depends(require_owner)):
+    body  = await req.json()
+    email = str(body.get("email", "")).strip().lower()
+    plan  = str(body.get("plan", "pro")).strip()
+    days  = max(1, min(365, int(body.get("days", 30))))
+
+    valid_plans = {"starter", "growth", "basic", "pro", "elite", "personal", "agency"}
+    if plan not in valid_plans:
+        raise HTTPException(status_code=400, detail="Invalid plan")
+
+    users = load_users().get("users", [])
+    user  = next((u for u in users if isinstance(u, dict)
+                  and u.get("email", "").lower() == email), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    uid    = user["id"]
+    ustore = _load_user_store(uid)
+    billing = ustore.setdefault("billing", {})
+    billing["plan"]             = plan
+    billing["plan_expires"]     = (datetime.utcnow() + timedelta(days=days)).isoformat()
+    billing["plan_extended_by"] = "admin"
+    _save_user_store(uid, ustore)
+    return {"ok": True, "plan": plan, "days": days, "expires": billing["plan_expires"]}
+
+
+@router.get("/api/admin/session_view")
+def session_view_ep(email: str, admin=Depends(require_owner)):
+    users = load_users().get("users", [])
+    user  = next((u for u in users if isinstance(u, dict)
+                  and u.get("email", "").lower() == email.lower()), None)
+    if not user:
+        return {"error": "User not found"}
+
+    uid    = user["id"]
+    ustore = _load_user_store(uid)
+    safe   = {k: v for k, v in ustore.items()
+              if k not in ("password", "password_hash", "hashed_password", "api_keys", "access_tokens")}
+    safe["_user"] = {k: user.get(k) for k in ("id", "email", "name", "plan", "created_at")}
+    return safe
