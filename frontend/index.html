@@ -1169,6 +1169,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   table { display: block; overflow-x: auto; white-space: nowrap; }
 }
 
+.safety-btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border-b);background:var(--glass);color:var(--tx2);transition:all .2s;font-family:'Outfit',sans-serif}
+.safety-btn.active,.safety-btn:hover{border-color:var(--ac);color:var(--ac);background:rgba(99,102,241,.1)}
+.usage-bar{height:5px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:3px}
+.usage-bar-fill{height:100%;border-radius:3px;background:var(--ac);transition:width .4s}
+.usage-bar-fill.warn{background:#f59e0b}.usage-bar-fill.danger{background:#ef4444}
 </style>
 <style>.curr-btn.curr-active{background:rgba(255,255,255,.14)!important;color:#fff!important}</style>
 </head>
@@ -2648,6 +2653,34 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               </div>
             </div>
             <div style="padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--tx3)">Commands: /start /stats /credits /autopilot /help</div>
+          </div>
+        </div>
+
+        <div class="card" id="safety-card">
+          <div class="ctitle"><span>🛡️ Automation Safety</span><button class="btn bg bsm" onclick="loadSafetyStatus()">↻</button></div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Safety Level</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="safety-btn" id="sbtn-conservative" onclick="setSafetyLevel('conservative')">🐢 Conservative</button>
+              <button class="safety-btn active" id="sbtn-balanced" onclick="setSafetyLevel('balanced')">⚖️ Balanced</button>
+              <button class="safety-btn" id="sbtn-aggressive" onclick="setSafetyLevel('aggressive')">⚡ Aggressive</button>
+            </div>
+            <div id="safety-aggressive-warn" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:11px;color:#f59e0b">⚠️ Aggressive mode may increase risk of platform restrictions. Use at your own risk.</div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Daily Usage</div>
+            <div style="display:grid;gap:8px">
+              <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>❤️ Likes</span><span id="su-likes">0/150</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-likes" style="width:0%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>👤 Follows</span><span id="su-follows">0/50</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-follows" style="width:0%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>💬 Comments</span><span id="su-comments">0/80</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-comments" style="width:0%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>✉️ DMs</span><span id="su-dms">0/50</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-dms" style="width:0%"></div></div></div>
+            </div>
+          </div>
+          <div id="safety-pause-banner" style="display:none;padding:8px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:11px;color:#ef4444;margin-bottom:12px">🚫 Automation paused until <span id="safety-pause-until"></span></div>
+          <div style="border-top:1px solid var(--border);padding-top:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Proxy Isolation</div>
+            <div id="safety-proxy-status" style="font-size:12px;color:var(--tx3);margin-bottom:8px">Not assigned</div>
+            <button class="btn bg bsm" onclick="assignProxy()">🌐 Assign Dedicated Session</button>
           </div>
         </div>
 
@@ -4910,7 +4943,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('da-DK'); }, 1000);
   if (localStorage.getItem('theme') === 'light') applyTheme(true);
   loadSidebarUser();
-  checkHealth(); loadConnections(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus(); _loadWatermarkSettings();
+  checkHealth(); loadConnections(); loadSafetyStatus(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus(); _loadWatermarkSettings();
   loadBilling(); loadSubAccounts();
   checkTikTokAPIStatus(); checkYouTubeAPIStatus();
   if(typeof checkInstagramToken==='function') checkInstagramToken();
@@ -6259,6 +6292,44 @@ async function loadConnections() {
       if (el) el.classList.toggle('on', !!ae[p]);
     }
   } catch {}
+}
+async function loadSafetyStatus() {
+  try {
+    const d = await apiFetch("/api/automation/safety");
+    ["conservative","balanced","aggressive"].forEach(l => {
+      const b = document.getElementById("sbtn-" + l);
+      if (b) b.classList.toggle("active", d.safety_level === l);
+    });
+    const warn = document.getElementById("safety-aggressive-warn");
+    if (warn) warn.style.display = d.safety_level === "aggressive" ? "" : "none";
+    ["likes","follows","comments","dms"].forEach(m => {
+      const lim = (d.limits||{})[m]||1, use = (d.usage||{})[m]||0;
+      const pct = Math.min(100, Math.round(use/lim*100));
+      const lbl = document.getElementById("su-"+m), bar = document.getElementById("sub-"+m);
+      if (lbl) lbl.textContent = use+"/"+lim;
+      if (bar) { bar.style.width=pct+"%"; bar.className="usage-bar-fill"+(pct>=90?" danger":pct>=70?" warn":""); }
+    });
+    const pb=document.getElementById("safety-pause-banner"), pu=document.getElementById("safety-pause-until");
+    if (d.paused_until) { if(pb)pb.style.display=""; if(pu)pu.textContent=d.paused_until.slice(0,16)+" UTC"; }
+    else { if(pb)pb.style.display="none"; }
+    const ps=document.getElementById("safety-proxy-status");
+    if (ps) ps.textContent = d.proxy_assigned
+      ? "Session: "+d.proxy_session+" ("+((d.proxy_assigned_at||"").slice(0,10))+")"
+      : "Not assigned";
+  } catch(e) {}
+}
+async function setSafetyLevel(level) {
+  try {
+    await apiFetch("/api/automation/safety","POST",{safety_level:level});
+    toast("Safety level: "+level,"success"); loadSafetyStatus();
+  } catch(e) { toast("Error","error"); }
+}
+async function assignProxy() {
+  try {
+    const d = await apiFetch("/api/automation/assign_proxy","POST",{});
+    if (d.ok) { toast("Proxy assigned: "+d.session_id,"success"); loadSafetyStatus(); }
+    else toast(d.detail||"Requires Growth+ plan","error");
+  } catch(e) { toast("Error assigning proxy","error"); }
 }
 function toggleCon(name) { document.getElementById('con-' + name)?.classList.toggle('expanded'); }
 async function toggleAPI(platform, el) {
@@ -8929,6 +9000,12 @@ function sendQueueToPost(id) {
       <div class="card">
         <div class="ctitle">🏆 Best performing post</div>
         <div id="an-best-post" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="ctitle" style="margin-bottom:14px">🌐 Live Platform Analytics</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px" id="an-platform-cards">
+        <div style="color:var(--tx3);font-size:13px;padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">Loading...</div>
       </div>
     </div>
   </div>
@@ -12765,6 +12842,71 @@ async function loadAnalytics() {
       var el = document.getElementById(id); if (el) el.textContent = '–';
     });
   }
+  _loadPlatformAnalytics();
+}
+
+async function _loadPlatformAnalytics() {
+  var wrap = document.getElementById('an-platform-cards');
+  try {
+    var p = await apiFetch('/api/analytics/platform');
+    _renderPlatformCards(p);
+  } catch(e) {
+    if (wrap) wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:14px">Could not load platform data.</div>';
+  }
+}
+
+function _renderPlatformCards(data) {
+  var wrap = document.getElementById('an-platform-cards');
+  if (!wrap) return;
+  var meta = {
+    instagram: {icon:'📸', label:'Instagram', color:'#E1306C'},
+    youtube:   {icon:'▶️',   label:'YouTube',   color:'#FF0000'},
+    tiktok:    {icon:'🎵', label:'TikTok',    color:'#00f2ea'},
+  };
+  var cards = [];
+  ['instagram','youtube','tiktok'].forEach(function(key) {
+    var m = meta[key];
+    var d = (data && data[key]) || {};
+    if (!d.connected) {
+      cards.push('<div style="padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border);opacity:0.55">'
+        + '<div style="font-size:20px;margin-bottom:5px">' + m.icon + '</div>'
+        + '<div style="font-weight:600;font-size:13px;color:var(--tx2);margin-bottom:3px">' + m.label + '</div>'
+        + '<div style="font-size:11px;color:var(--tx3)">Not connected</div></div>');
+      return;
+    }
+    if (d.error) {
+      cards.push('<div style="padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">'
+        + '<div style="font-size:20px;margin-bottom:5px">' + m.icon + '</div>'
+        + '<div style="font-weight:600;font-size:13px;color:var(--tx2);margin-bottom:3px">' + m.label + '</div>'
+        + '<div style="font-size:11px;color:#ef4444">' + String(d.error).slice(0,80) + '</div></div>');
+      return;
+    }
+    var followers = (d.followers !== undefined ? d.followers : d.subscribers) || 0;
+    var followerLabel = key === 'youtube' ? 'Subscribers' : 'Followers';
+    var extra = '';
+    if (key === 'instagram') {
+      var g = d.follower_growth_7d || 0;
+      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">7d growth: ' + (g >= 0 ? '+' : '') + Number(g).toLocaleString() + '</div>'
+        + '<div style="font-size:11px;color:var(--tx3)">Reach 7d: ' + Number(d.reach_7d || 0).toLocaleString() + '</div>';
+    } else if (key === 'youtube') {
+      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">Total views: ' + Number(d.total_views || 0).toLocaleString() + '</div>'
+        + '<div style="font-size:11px;color:var(--tx3)">Videos: ' + (d.video_count || 0) + '</div>';
+    } else if (key === 'tiktok') {
+      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">Total likes: ' + Number(d.total_likes || 0).toLocaleString() + '</div>'
+        + '<div style="font-size:11px;color:var(--tx3)">Videos: ' + (d.video_count || 0) + '</div>';
+    }
+    var ts = d.fetched_at ? new Date(d.fetched_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+    cards.push('<div style="padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">'
+      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'
+      + '<span style="font-size:20px">' + m.icon + '</span>'
+      + '<span style="font-weight:600;font-size:13px;color:var(--tx2)">' + m.label + '</span></div>'
+      + '<div style="font-size:24px;font-weight:700;color:' + m.color + ';line-height:1">' + Number(followers).toLocaleString() + '</div>'
+      + '<div style="font-size:10px;color:var(--tx3);margin-bottom:5px">' + followerLabel + '</div>'
+      + extra
+      + (ts ? '<div style="font-size:9px;color:var(--tx3);margin-top:7px;opacity:0.55">Updated ' + ts + '</div>' : '')
+      + '</div>');
+  });
+  wrap.innerHTML = cards.join('') || '<div style="color:var(--tx3);font-size:13px;padding:14px">Connect platforms in Settings to see live stats.</div>';
 }
 
 function _renderAnPostsChart(labels, perDay) {

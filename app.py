@@ -246,6 +246,7 @@ async def startup_event():
     asyncio.create_task(telegram.run_daily_reports())
     asyncio.create_task(automation.run_auto_dm_scheduler())
     asyncio.create_task(scheduler.run_content_refresh())
+    asyncio.create_task(analytics.run_analytics_sync())
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon_ico():
