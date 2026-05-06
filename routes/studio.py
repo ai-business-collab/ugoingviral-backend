@@ -754,3 +754,127 @@ def studio_pack_status(current_user: dict = Depends(get_current_user)):
         "scenes_used": used,
         "scenes_total": total,
     }
+
+
+# ── AI Portrait / Face-Scene ───────────────────────────────────────────────────
+
+FACE_SCENE_COST = 50
+
+FACE_SCENE_PRESETS = [
+    {"label": "CEO Headshot",       "prompt": "CEO headshot, modern office background, professional lighting, sharp focus"},
+    {"label": "Business Meeting",   "prompt": "Professional business meeting, modern office, shot from above, photorealistic"},
+    {"label": "Conference Room",    "prompt": "Team meeting around conference table, 5 people, modern office"},
+    {"label": "LinkedIn Profile",   "prompt": "Professional LinkedIn profile photo, corporate background, natural smile"},
+    {"label": "Product Launch",     "prompt": "Product launch event stage, dramatic lighting, crowd in background"},
+    {"label": "Outdoor Creative",   "prompt": "Creative outdoor portrait, nature background, golden hour lighting"},
+]
+
+
+class FaceSceneRequest(BaseModel):
+    face_image: str          # base64 data URL (data:image/...) or public https:// URL
+    scene_prompt: str
+    style: str = "professional"
+
+
+@router.post("/api/studio/face-scene")
+async def face_scene(req: FaceSceneRequest, current_user: dict = Depends(get_current_user)):
+    uid = current_user["id"]
+
+    if not REPLICATE_API_KEY:
+        raise HTTPException(status_code=503, detail="Replicate API not configured")
+
+    # ── Resolve face image to a public URL Replicate can fetch ────────────────
+    face_url = req.face_image
+    if face_url.startswith("data:"):
+        import base64 as _b64
+        try:
+            header, b64data = face_url.split(",", 1)
+            ext = "png" if "png" in header else "jpg"
+            img_bytes = _b64.b64decode(b64data)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid base64 image")
+        fname = f"face_{uuid.uuid4().hex[:8]}.{ext}"
+        fpath = os.path.join(UPLOADS_DIR, fname)
+        with open(fpath, "wb") as fh:
+            fh.write(img_bytes)
+        face_url = f"https://ugoingviral.com/uploads/studio/{fname}"
+
+    if not face_url.startswith("http"):
+        raise HTTPException(status_code=400, detail="face_image must be base64 or a public URL")
+
+    # ── Build prompt ──────────────────────────────────────────────────────────
+    style_suffix = {
+        "professional": "professional lighting, sharp focus, photorealistic, 8k quality",
+        "creative":     "artistic, vibrant colors, creative composition, dramatic lighting",
+        "casual":       "natural lighting, candid atmosphere, lifestyle, warm tones",
+    }.get(req.style, "photorealistic, high quality")
+    prompt = f"{req.scene_prompt.strip()}, {style_suffix}"
+
+    # ── Deduct credits before API call ────────────────────────────────────────
+    _deduct(FACE_SCENE_COST, uid)
+
+    # ── Call Replicate InstantID ──────────────────────────────────────────────
+    async with httpx.AsyncClient(timeout=180) as client:
+        r = await client.post(
+            "https://api.replicate.com/v1/models/zsxkib/instant-id/predictions",
+            headers={
+                "Authorization": f"Token {REPLICATE_API_KEY}",
+                "Content-Type":  "application/json",
+                "Prefer":        "wait",
+            },
+            json={"input": {
+                "image":               face_url,
+                "prompt":              prompt,
+                "negative_prompt":     "ugly, blurry, low quality, deformed, bad anatomy, watermark",
+                "num_inference_steps": 30,
+                "guidance_scale":      5,
+            }},
+        )
+        if r.status_code not in (200, 201):
+            raise HTTPException(status_code=500,
+                                detail=f"Replicate error {r.status_code}: {r.text[:200]}")
+
+        data = r.json()
+        pred_id = data.get("id")
+        if not pred_id:
+            raise HTTPException(status_code=500, detail="No prediction ID returned by Replicate")
+
+        # If Prefer:wait succeeded synchronously, check immediately
+        if data.get("status") == "succeeded":
+            output = data.get("output")
+            img_url = (output[0] if isinstance(output, list) else output) or ""
+            if img_url:
+                _log_face_scene(FACE_SCENE_COST)
+                return {"ok": True, "image_url": img_url, "credits_used": FACE_SCENE_COST}
+
+        # ── Poll until done ───────────────────────────────────────────────────
+        for _ in range(40):
+            await asyncio.sleep(5)
+            poll = await client.get(
+                f"https://api.replicate.com/v1/predictions/{pred_id}",
+                headers={"Authorization": f"Token {REPLICATE_API_KEY}"},
+            )
+            result = poll.json()
+            status = result.get("status")
+            if status == "succeeded":
+                output = result.get("output")
+                img_url = (output[0] if isinstance(output, list) else output) or ""
+                _log_face_scene(FACE_SCENE_COST)
+                return {"ok": True, "image_url": img_url, "credits_used": FACE_SCENE_COST}
+            if status == "failed":
+                raise HTTPException(status_code=500,
+                                    detail=f"Generation failed: {result.get('error', 'unknown')}")
+
+    raise HTTPException(status_code=504, detail="Portrait generation timed out")
+
+
+def _log_face_scene(credits: int):
+    log = store.setdefault("api_usage", [])
+    log.append({"action": "face_scene", "credits": credits, "ts": datetime.now().isoformat()})
+    store["api_usage"] = log[-200:]
+    save_store()
+
+
+@router.get("/api/studio/face-scene/presets")
+def face_scene_presets(current_user: dict = Depends(get_current_user)):
+    return {"presets": FACE_SCENE_PRESETS, "cost": FACE_SCENE_COST}

@@ -3223,7 +3223,13 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ══ VIDEO STUDIO ═══════════════════════════════════════════════════════ -->
   <div id="page-studio" class="page">
+    <!-- Studio tab bar -->
+    <div style="display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid var(--border)">
+      <button id="studio-tab-video" onclick="studioSwitchTab('video')" style="background:none;border:none;border-bottom:2px solid var(--ac);margin-bottom:-2px;padding:8px 18px;font-size:13px;font-weight:700;color:var(--ac);cursor:pointer">🎬 Video Studio</button>
+      <button id="studio-tab-portrait" onclick="studioSwitchTab('portrait')" style="background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;padding:8px 18px;font-size:13px;font-weight:700;color:var(--tx3);cursor:pointer">🤳 AI Portrait</button>
+    </div>
     <div id="studio-root"></div>
+    <div id="studio-portrait-root" style="display:none"></div>
   </div>
 
   <!-- ══ CONTENT PIPELINE ══════════════════════════════════════════════════ -->
@@ -10848,6 +10854,188 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
 </div>
 
 <script>
+
+// ═══════════════════════════════════════════════════════
+//   AI PORTRAIT — Face-Scene (InstantID via Replicate)
+// ═══════════════════════════════════════════════════════
+var _portrait = {
+  faceImageB64: null,
+  faceImageName: '',
+  scenePrompt: '',
+  customPrompt: '',
+  style: 'professional',
+  generating: false,
+  result: null,
+  presets: [],
+};
+
+function studioSwitchTab(tab) {
+  var videoRoot     = document.getElementById('studio-root');
+  var portraitRoot  = document.getElementById('studio-portrait-root');
+  var tabVideo      = document.getElementById('studio-tab-video');
+  var tabPortrait   = document.getElementById('studio-tab-portrait');
+  if (!videoRoot || !portraitRoot) return;
+
+  var isVideo = tab === 'video';
+  videoRoot.style.display    = isVideo ? '' : 'none';
+  portraitRoot.style.display = isVideo ? 'none' : '';
+
+  tabVideo.style.color       = isVideo ? 'var(--ac)' : 'var(--tx3)';
+  tabVideo.style.borderBottomColor = isVideo ? 'var(--ac)' : 'transparent';
+  tabPortrait.style.color    = isVideo ? 'var(--tx3)' : 'var(--ac)';
+  tabPortrait.style.borderBottomColor = isVideo ? 'transparent' : 'var(--ac)';
+
+  if (!isVideo) portraitRender();
+}
+
+async function portraitLoadPresets() {
+  if (_portrait.presets.length) return;
+  try {
+    var d = await apiFetch('/api/studio/face-scene/presets', 'GET', null, false);
+    _portrait.presets = d.presets || [];
+  } catch(e) {}
+}
+
+function portraitRender() {
+  var root = document.getElementById('studio-portrait-root');
+  if (!root) return;
+  portraitLoadPresets();
+
+  var previewHtml = '';
+  if (_portrait.faceImageB64) {
+    previewHtml = '<img src="' + _portrait.faceImageB64 + '" style="width:90px;height:90px;object-fit:cover;border-radius:10px;border:2px solid var(--ac)" />';
+  } else {
+    previewHtml = '<div style="width:90px;height:90px;border-radius:10px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--tx3)">🤳</div>';
+  }
+
+  var presetBtns = (_portrait.presets.length ? _portrait.presets : [
+    {label:"CEO Headshot", prompt:"CEO headshot, modern office background, professional lighting"},
+    {label:"Business Meeting", prompt:"Professional business meeting, modern office, photorealistic"},
+    {label:"Conference Room", prompt:"Team meeting around conference table, 5 people, modern office"},
+    {label:"LinkedIn Profile", prompt:"Professional LinkedIn profile photo, corporate background"},
+    {label:"Product Launch", prompt:"Product launch event stage, dramatic lighting"},
+    {label:"Outdoor Creative", prompt:"Creative outdoor portrait, nature background, golden hour lighting"},
+  ]).map(function(p) {
+    var active = _portrait.scenePrompt === p.prompt;
+    return '<button onclick="portraitSelectPreset(' + JSON.stringify(p.prompt) + ')" style="padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid ' + (active ? 'var(--ac)' : 'var(--border)') + ';background:' + (active ? 'rgba(0,229,255,.12)' : 'var(--glass)') + ';color:' + (active ? 'var(--ac)' : 'var(--tx)') + ';font-weight:' + (active ? '700' : '400') + '">' + p.label + '</button>';
+  }).join('');
+
+  var resultHtml = '';
+  if (_portrait.result) {
+    resultHtml = '<div class="card" style="margin-top:18px">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:12px">✅ Generated Portrait</div>' +
+      '<img src="' + _portrait.result + '" style="width:100%;max-width:512px;border-radius:12px;display:block;margin:0 auto 12px" />' +
+      '<div style="display:flex;gap:8px;justify-content:center">' +
+        '<a href="' + _portrait.result + '" target="_blank" download class="btn bp bsm">⬇️ Download</a>' +
+        '<button class="btn bg bsm" onclick="_portrait.result=null;portraitRender()">🔄 Generate Again</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  root.innerHTML =
+    '<div style="max-width:640px">' +
+      '<div class="card" style="margin-bottom:18px">' +
+        '<div class="ctitle">🤳 AI Portrait — Place Your Face in Any Scene</div>' +
+        '<div style="font-size:12px;color:var(--tx3);margin-bottom:16px">Upload a face photo and choose a scene. The AI places your face into the scene realistically. Costs 50 credits.</div>' +
+
+        '<!-- Face upload -->' +
+        '<div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px">1. Upload Face Photo</div>' +
+        '<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">' +
+          previewHtml +
+          '<div>' +
+            '<label style="display:inline-block;padding:9px 16px;background:var(--glass);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;color:var(--tx)">' +
+              (_portrait.faceImageB64 ? '🔄 Change Photo' : '📷 Upload Face Photo') +
+              '<input type="file" accept="image/*" style="display:none" onchange="portraitHandleFile(event)" />' +
+            '</label>' +
+            (_portrait.faceImageName ? '<div style="font-size:11px;color:var(--tx3);margin-top:4px">' + _portrait.faceImageName + '</div>' : '<div style="font-size:11px;color:var(--tx3);margin-top:4px">JPG or PNG, front-facing photo works best</div>') +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Scene presets -->' +
+        '<div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px">2. Choose Scene</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px">' + presetBtns + '</div>' +
+        '<div class="fg" style="margin-bottom:16px">' +
+          '<label class="fl" style="font-size:11px">Custom scene prompt</label>' +
+          '<input class="fi" placeholder="or type your own scene..." value="' + _escHtml(_portrait.scenePrompt || '') + '" oninput="portraitSetPrompt(this.value)" />' +
+        '</div>' +
+
+        '<!-- Style -->' +
+        '<div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px">3. Style</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:18px">' +
+          ['professional','creative','casual'].map(function(s) {
+            var icons = {professional:'👔',creative:'🎨',casual:'😊'};
+            var labels = {professional:'Professional',creative:'Creative',casual:'Casual'};
+            var active = _portrait.style === s;
+            return '<button onclick="portraitSetStyle('' + s + '')" style="flex:1;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid ' + (active ? 'var(--ac)' : 'var(--border)') + ';background:' + (active ? 'rgba(0,229,255,.12)' : 'var(--glass)') + ';color:' + (active ? 'var(--ac)' : 'var(--tx)') + ';font-weight:' + (active ? '700' : '400') + '">' + icons[s] + ' ' + labels[s] + '</button>';
+          }).join('') +
+        '</div>' +
+
+        '<!-- Generate button -->' +
+        '<button onclick="portraitGenerate()" ' + (_portrait.generating ? 'disabled' : '') + ' style="width:100%;padding:13px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;border:none;background:' + (_portrait.generating ? 'var(--glass)' : 'linear-gradient(135deg,var(--ac),var(--ac2))') + ';color:#000">' +
+          (_portrait.generating ? '<span class="spin-icon">⏳</span> Generating portrait...' : '🤳 Generate AI Portrait — 50 credits') +
+        '</button>' +
+      '</div>' +
+      resultHtml +
+    '</div>';
+}
+
+function portraitHandleFile(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    _portrait.faceImageB64 = ev.target.result;
+    _portrait.faceImageName = file.name;
+    portraitRender();
+  };
+  reader.readAsDataURL(file);
+}
+
+function portraitSelectPreset(prompt) {
+  _portrait.scenePrompt = prompt;
+  portraitRender();
+}
+
+function portraitSetPrompt(v) {
+  _portrait.scenePrompt = v;
+}
+
+function portraitSetStyle(s) {
+  _portrait.style = s;
+  portraitRender();
+}
+
+async function portraitGenerate() {
+  if (_portrait.generating) return;
+  if (!_portrait.faceImageB64) {
+    toast('Please upload a face photo first', 'error');
+    return;
+  }
+  if (!_portrait.scenePrompt.trim()) {
+    toast('Please choose or enter a scene prompt', 'error');
+    return;
+  }
+  _portrait.generating = true;
+  portraitRender();
+  try {
+    var d = await apiFetch('/api/studio/face-scene', 'POST', {
+      face_image:   _portrait.faceImageB64,
+      scene_prompt: _portrait.scenePrompt.trim(),
+      style:        _portrait.style,
+    });
+    if (d.image_url) {
+      _portrait.result = d.image_url;
+      toast('Portrait generated! 🤳', 'success');
+    } else {
+      toast('Generation failed — no image returned', 'error');
+    }
+  } catch(err) {
+    toast('Portrait generation failed: ' + (err.message || err), 'error');
+  }
+  _portrait.generating = false;
+  portraitRender();
+}
+
 // ═══════════════════════════════════════════════════════
 //   FEATURE LOCKED MODAL
 // ═══════════════════════════════════════════════════════
