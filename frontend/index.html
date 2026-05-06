@@ -4730,7 +4730,7 @@ async function loadStudioPackages() {
         </ul>
                 <div style="margin-bottom:12px">
             <div style="font-size:11px;color:var(--tx3)">Price</div>
-            <div style="font-size:22px;font-weight:900;color:var(--tx)">${pkg.price} <span style="font-size:12px;font-weight:500;color:var(--tx2)">kr</span></div>
+            <div style="font-size:22px;font-weight:900;color:var(--tx)">${Math.round(pkg.price * (window._currencyRate||1))} <span style="font-size:12px;font-weight:500;color:var(--tx2)">${window._currencySymbol||"USD"}</span></div>
           </div>
           </div>
         </div>
