@@ -662,6 +662,37 @@ async def _run_for_user(force: bool = False):
             except Exception:
                 pass
 
+            # Send CONTENT_POSTED event to NIE (fire-and-forget)
+            try:
+                import asyncio as _asyncio, httpx as _httpx
+                from services.store import _uid_ctx as _uctx2
+                _uid2 = _uctx2.get(None)
+                import hashlib as _hl
+                _hash = _hl.sha256((_uid2 or "").encode()).hexdigest()[:16] if _uid2 else ""
+                _niche2 = store.get("automation", {}).get("niche", "")
+                _plat2  = active_platforms[0] if active_platforms else "unknown"
+                _nie_data = {
+                    "content_type":   "image",
+                    "platform":       _plat2,
+                    "niche":          _niche2,
+                    "hour":           datetime.now().hour,
+                    "hashtag_categories": [_niche2] if _niche2 else [],
+                    "source":         "autopilot",
+                }
+                async def _send_nie():
+                    try:
+                        async with _httpx.AsyncClient(timeout=4) as _c:
+                            await _c.post(
+                                "http://localhost:4000/api/nie/event",
+                                json={"platform": _plat2, "event_type": "CONTENT_POSTED",
+                                      "niche": _niche2, "data": _nie_data, "user_id_hash": _hash},
+                            )
+                    except Exception:
+                        pass
+                _asyncio.create_task(_send_nie())
+            except Exception:
+                pass
+
     except Exception as e:
         add_log(f"❌ Scheduler error: {str(e)[:80]}", "error")
 

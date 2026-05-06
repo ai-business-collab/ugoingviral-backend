@@ -274,6 +274,34 @@ def _build_context(user_id: str, current_page: str = "") -> str:
             ctx += f"\n- Recommended posting times ({main_plat}): {', '.join(best_times)}"
             ctx += "\n- No personal performance data yet — track your posts to get personalised insights"
 
+    # ── NIE cross-platform insights ───────────────────────────────────────────
+    try:
+        import httpx as _hx
+        _conns = store.get("connections", {})
+        _plats = [p for p, v in _conns.items() if isinstance(v, dict) and v.get("username")]
+        if _plats:
+            _nie_plat = _plats[0]
+            _auto = store.get("automation", {})
+            _nie_niche = _auto.get("niche", "")
+            _r = _hx.get(
+                "http://localhost:4000/api/nie/insights",
+                params={"platform": _nie_plat, "niche": _nie_niche, "days": 30},
+                timeout=2,
+            )
+            if _r.status_code == 200:
+                _ni = _r.json()
+                if _ni.get("sample_size", 0) >= 10:
+                    ctx += (
+                        f"\n\nNIE CROSS-PLATFORM INSIGHTS (from {_ni['sample_size']} similar accounts):"
+                        f"\n- Best content type for {_nie_plat}: {_ni.get('best_content_type','image')}"
+                        f"\n- Best posting hours: {', '.join(str(h) + ':00' for h in _ni.get('best_posting_hours', []))}"
+                    )
+                    _cats = _ni.get('top_hashtag_categories', [])
+                    if _cats:
+                        ctx += f"\n- Top hashtag categories: {', '.join(_cats[:3])}"
+    except Exception:
+        pass
+
     return ctx
 
 
