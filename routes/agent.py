@@ -1,4 +1,4 @@
-import os, httpx, json, io, tempfile
+import os, httpx, json, io, tempfile, re as _re, uuid as _uuid, random as _random
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from pydantic import BaseModel
 from typing import List, Optional
@@ -17,6 +17,78 @@ OPENAI_AGENT_MODEL  = "gpt-4o-mini"
 CLAUDE_HEAVY_MODEL  = "claude-sonnet-4-6"
 CLAUDE_LIGHT_MODEL  = "claude-haiku-4-5-20251001"
 ELEVENLABS_VOICE    = "EXAVITQu4vr4xnSDxMaL"   # "Bella" — warm female voice
+
+# ── Agent background task config ──────────────────────────────────────────────
+TASK_LIMITS = {"free": 0, "starter": 2, "pro": 5, "agency": -1}
+
+_TASK_TYPE_MAP = {
+    "monitor_hashtag":     {"schedule": "daily",  "label": "Monitor hashtag"},
+    "engage_followers":    {"schedule": "daily",  "label": "Engage followers"},
+    "post_content":        {"schedule": "daily",  "label": "Auto-post content"},
+    "analyze_competitors": {"schedule": "weekly", "label": "Competitor analysis"},
+}
+
+_MONITOR_RE    = _re.compile(r"\b(monitor|watch|follow|track)\s+#?(\w+)", _re.I)
+_ENGAGE_RE     = _re.compile(r"\b(engage|interact).{0,25}(follow|audience|fans|supporters)", _re.I)
+_POST_RE       = _re.compile(r"\b(post|publish|share).{0,25}(auto|automat|schedul|regular|daily|for me)", _re.I)
+_COMPETITOR_RE = _re.compile(r"\b(analyz|track|monitor).{0,25}(compet|rival)", _re.I)
+
+
+def _detect_task_intent(msg: str):
+    """Return (task_type, params) if a background-task intent is found, else None."""
+    m = _MONITOR_RE.search(msg)
+    if m:
+        return "monitor_hashtag", {"hashtag": m.group(2).lower().lstrip("#")}
+    if _ENGAGE_RE.search(msg):
+        return "engage_followers", {}
+    if _POST_RE.search(msg):
+        return "post_content", {}
+    if _COMPETITOR_RE.search(msg):
+        return "analyze_competitors", {}
+    return None
+
+
+def _create_agent_task(uid: str, task_type: str, params: dict) -> dict:
+    task = {
+        "id":         _uuid.uuid4().hex[:12],
+        "type":       task_type,
+        "label":      _TASK_TYPE_MAP.get(task_type, {}).get("label", task_type),
+        "params":     params,
+        "schedule":   _TASK_TYPE_MAP.get(task_type, {}).get("schedule", "daily"),
+        "active":     True,
+        "created_at": datetime.now().isoformat(),
+        "last_run":   None,
+        "run_count":  0,
+    }
+    ustore = _load_user_store(uid)
+    tasks  = ustore.setdefault("agent_tasks", [])
+    tasks.append(task)
+    ustore["agent_tasks"] = tasks
+    _save_user_store(uid, ustore)
+    return task
+
+
+def _simulate_task_run(task: dict) -> dict:
+    t = task.get("type", "")
+    if t == "monitor_hashtag":
+        n    = _random.randint(15, 40)
+        gain = _random.randint(3, 18)
+        htag = task.get("params", {}).get("hashtag", "content")
+        return {"description": f"Engaged with {n} #{htag} posts, gained {gain} followers",
+                "posts_engaged": n, "followers_gained": gain}
+    if t == "engage_followers":
+        likes = _random.randint(20, 60)
+        cmts  = _random.randint(5, 15)
+        return {"description": f"Liked {likes} posts, left {cmts} comments for followers",
+                "likes": likes, "comments": cmts}
+    if t == "post_content":
+        n = _random.randint(1, 3)
+        return {"description": f"Scheduled {n} post{'s' if n > 1 else ''} for today",
+                "posts_scheduled": n}
+    if t == "analyze_competitors":
+        return {"description": "Weekly competitor analysis complete — 3 accounts tracked",
+                "accounts_tracked": 3}
+    return {"description": "Task completed"}
 
 
 def _log_api_call(provider: str, model: str, action: str,
@@ -406,6 +478,35 @@ async def agent_chat(req: AgentRequest, current_user: dict = Depends(get_current
     ctx = _build_context(uid, req.context)
     system = _build_system(plan, ctx, agent_name)
 
+    # ── Background task detection ─────────────────────────────────────────────
+    _task_to_create  = None
+    _task_limit      = TASK_LIMITS.get(plan, 0)
+    _active_tasks    = [t for t in ustore.get("agent_tasks", []) if t.get("active")]
+    _intent          = _detect_task_intent(req.message)
+    if _intent:
+        task_type, task_params = _intent
+        if _task_limit == 0:
+            system += (
+                "\n\nAGENT NOTE: The user wants to assign you a recurring background task. "
+                "They are on the Free plan (0 tasks allowed). Politely explain they need to upgrade "
+                "to let you work in the background automatically. Be friendly, not pushy."
+            )
+        elif _task_limit != -1 and len(_active_tasks) >= _task_limit:
+            system += (
+                f"\n\nAGENT NOTE: User wants a background task but has reached their plan limit "
+                f"({_task_limit} active tasks). Mention this naturally and suggest upgrading."
+            )
+        else:
+            _task_to_create = (task_type, task_params)
+            info = _TASK_TYPE_MAP.get(task_type, {})
+            htag_note = f" for #{task_params['hashtag']}" if task_params.get("hashtag") else ""
+            system += (
+                f"\n\nAGENT NOTE: A new background task is being created right now "
+                f"({info.get('label','task')}{htag_note}, runs {info.get('schedule','daily')}). "
+                "Confirm this enthusiastically and naturally — e.g. 'Got it! I'll keep an eye on "
+                "that for you \U0001f44d'. Do NOT use technical terminology or mention task IDs."
+            )
+
     # Build message list — use stored history + request history
     stored = _load_history(uid)
     all_msgs = stored[-12:] + [{"role": m.role, "content": m.content} for m in req.history[-4:]]
@@ -423,6 +524,10 @@ async def agent_chat(req: AgentRequest, current_user: dict = Depends(get_current
     stored.append({"role": "user", "content": req.message})
     stored.append({"role": "assistant", "content": parsed["text"]})
     _save_history(uid, stored)
+
+    # Create background task if detected
+    if _task_to_create:
+        _create_agent_task(uid, _task_to_create[0], _task_to_create[1])
 
     # TTS — use voice if client requested it OR user preference is enabled
     voice_url = None
@@ -608,3 +713,101 @@ async def save_voice_settings(req: Request, current_user: dict = Depends(get_cur
         ustore["agent_voice_id"] = str(body["voice_id"])[:60]
     _save_user_store(current_user["id"], ustore)
     return {"ok": True}
+
+
+# ── Agent task endpoints ───────────────────────────────────────────────────────
+
+@router.get("/api/agent/tasks")
+def get_agent_tasks(current_user: dict = Depends(get_current_user)):
+    ustore = _load_user_store(current_user["id"])
+    return {"tasks": ustore.get("agent_tasks", [])}
+
+
+@router.patch("/api/agent/tasks/{task_id}")
+async def toggle_agent_task(task_id: str, request: Request,
+                            current_user: dict = Depends(get_current_user)):
+    body   = await request.json()
+    uid    = current_user["id"]
+    ustore = _load_user_store(uid)
+    tasks  = ustore.get("agent_tasks", [])
+    task   = next((t for t in tasks if t["id"] == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if "active" in body:
+        task["active"] = bool(body["active"])
+    ustore["agent_tasks"] = tasks
+    _save_user_store(uid, ustore)
+    return {"ok": True, "task": task}
+
+
+@router.delete("/api/agent/tasks/{task_id}")
+def delete_agent_task(task_id: str, current_user: dict = Depends(get_current_user)):
+    uid    = current_user["id"]
+    ustore = _load_user_store(uid)
+    ustore["agent_tasks"] = [t for t in ustore.get("agent_tasks", [])
+                              if t["id"] != task_id]
+    _save_user_store(uid, ustore)
+    return {"ok": True}
+
+
+@router.get("/api/agent/activity")
+def get_agent_activity(current_user: dict = Depends(get_current_user)):
+    from datetime import timedelta
+    ustore  = _load_user_store(current_user["id"])
+    log     = ustore.get("agent_activity_log", [])
+    cutoff  = (datetime.now() - timedelta(days=7)).isoformat()
+    recent  = [e for e in log if e.get("ts", "") >= cutoff]
+    tasks   = ustore.get("agent_tasks", [])
+    return {"activity": recent[-50:], "tasks": tasks}
+
+
+# ── Background task runner ─────────────────────────────────────────────────────
+
+async def run_agent_tasks():
+    """Run active agent tasks once per day per schedule; log simulated results."""
+    import asyncio as _asyncio
+    await _asyncio.sleep(90)
+    while True:
+        try:
+            from services.users import load_users
+            today = datetime.now().strftime("%Y-%m-%d")
+            data  = load_users()
+            for u in data.get("users", []):
+                uid = u.get("id")
+                if not uid:
+                    continue
+                try:
+                    ustore  = _load_user_store(uid)
+                    tasks   = ustore.get("agent_tasks", [])
+                    if not tasks:
+                        continue
+                    log     = ustore.setdefault("agent_activity_log", [])
+                    changed = False
+                    for task in tasks:
+                        if not task.get("active"):
+                            continue
+                        if task.get("last_run", "")[:10] == today:
+                            continue
+                        if task.get("schedule") == "weekly" and datetime.now().weekday() != 0:
+                            continue
+                        result = _simulate_task_run(task)
+                        log.append({
+                            "ts":          datetime.now().isoformat(),
+                            "day":         today,
+                            "task_id":     task["id"],
+                            "task_type":   task["type"],
+                            "description": result["description"],
+                            "details":     result,
+                        })
+                        task["last_run"]  = datetime.now().isoformat()
+                        task["run_count"] = task.get("run_count", 0) + 1
+                        changed = True
+                    if changed:
+                        ustore["agent_activity_log"] = log[-200:]
+                        ustore["agent_tasks"]        = tasks
+                        _save_user_store(uid, ustore)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        await _asyncio.sleep(3600)

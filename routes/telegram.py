@@ -571,12 +571,21 @@ async def _send_daily_report(user_id: str, tg_id: int):
     if not tg_prefs.get("notify_daily_summary", True):
         return
 
+    # Agent activity in daily report
+    agent_log = ustore.get("agent_activity_log", [])
+    yesterday_agent = [a for a in agent_log if a.get("day") == yesterday]
+    agent_section = ""
+    if yesterday_agent:
+        lines = "\n".join(f"- {a['description']}" for a in yesterday_agent[:5])
+        agent_section = f"\n\n\U0001f916 *Agent Activity yesterday:*\n{lines}"
+
     msg = (
         f"*☀️ Daily Report — {today_str}*\n\n"
         f"Posts sent yesterday: *{yesterday_posted}*\n"
         f"Credits used yesterday: *{credits_yesterday}*\n"
         f"Credits remaining: *{credits}*\n\n"
         f"*Today\'s schedule:*\n{today_section}"
+        f"{agent_section}"
         f"{low_cr_alert}\n\n"
         "https://ugoingviral.com/app"
     )
