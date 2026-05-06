@@ -242,6 +242,8 @@ async def serve_affiliate():
 
 @app.on_event("startup")
 async def startup_event():
+    from services.db import init_db
+    init_db()
     asyncio.create_task(scheduler.run_scheduler())
     asyncio.create_task(autopilot.run_autopilot_credit_checker())
     asyncio.create_task(telegram.run_daily_reports())

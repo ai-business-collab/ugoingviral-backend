@@ -76,6 +76,11 @@ def _save_user_store(user_id: str, data: dict) -> None:
     path = _store_path(user_id)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False, default=str)
+    try:
+        from services.db_sync import pg_sync_user_store
+        pg_sync_user_store(user_id, data)
+    except Exception:
+        pass
 
 
 def get_all_user_ids() -> list:

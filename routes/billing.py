@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from routes.auth import get_current_user
+from services.db_sync import pg_update_user_billing as _pg_billing, pg_add_billing_event as _pg_event
 from services.store import store, save_store, _load_user_store, _save_user_store
 
 router = APIRouter()

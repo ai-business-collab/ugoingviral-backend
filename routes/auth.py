@@ -82,6 +82,11 @@ async def register(req: RegisterRequest):
     if get_user_by_email(req.email):
         raise HTTPException(status_code=400, detail="Email er allerede i brug")
     user = create_user(req.email, req.password, req.name, req.company, req.niche)
+    try:
+        from services.db_sync import pg_create_user
+        pg_create_user(user)
+    except Exception:
+        pass
     token = _create_token(user["id"], user["email"])
     try:
         from routes.workspaces import _ensure_default_workspace
