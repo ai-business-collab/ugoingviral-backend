@@ -814,6 +814,19 @@ async def face_scene(req: FaceSceneRequest, current_user: dict = Depends(get_cur
     if not REPLICATE_API_KEY:
         raise HTTPException(status_code=503, detail="Replicate API not configured")
 
+    # ── Free-plan gate ────────────────────────────────────────────────────────
+    from routes.billing import PLANS as _PLANS
+    billing = store.get("billing", {})
+    plan = billing.get("plan", "free")
+    if plan == "free":
+        raise HTTPException(status_code=403, detail="Upgrade required to use AI Portrait")
+
+    # ── Check credits (don't deduct yet) ─────────────────────────────────────
+    current_credits = billing.get("credits", 0)
+    if current_credits < FACE_SCENE_COST:
+        raise HTTPException(status_code=402,
+            detail=f"Insufficient credits. Need {FACE_SCENE_COST}, have {current_credits}.")
+
     # ── Resolve face image to a public URL Replicate can fetch ────────────────
     face_url = req.face_image
     if face_url.startswith("data:"):
@@ -824,6 +837,8 @@ async def face_scene(req: FaceSceneRequest, current_user: dict = Depends(get_cur
             img_bytes = _b64.b64decode(b64data)
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid base64 image")
+        if len(img_bytes) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Image too large (max 10MB)")
         fname = f"face_{uuid.uuid4().hex[:8]}.{ext}"
         fpath = os.path.join(UPLOADS_DIR, fname)
         with open(fpath, "wb") as fh:
@@ -840,9 +855,6 @@ async def face_scene(req: FaceSceneRequest, current_user: dict = Depends(get_cur
         "casual":       "natural lighting, candid atmosphere, lifestyle, warm tones",
     }.get(req.style, "photorealistic, high quality")
     prompt = f"{req.scene_prompt.strip()}, {style_suffix}"
-
-    # ── Deduct credits before API call ────────────────────────────────────────
-    _deduct(FACE_SCENE_COST, uid)
 
     # ── Call Replicate InstantID ──────────────────────────────────────────────
     async with httpx.AsyncClient(timeout=180) as client:
@@ -870,33 +882,38 @@ async def face_scene(req: FaceSceneRequest, current_user: dict = Depends(get_cur
         if not pred_id:
             raise HTTPException(status_code=500, detail="No prediction ID returned by Replicate")
 
+        img_url = ""
+
         # If Prefer:wait succeeded synchronously, check immediately
         if data.get("status") == "succeeded":
             output = data.get("output")
             img_url = (output[0] if isinstance(output, list) else output) or ""
-            if img_url:
-                _log_face_scene(FACE_SCENE_COST)
-                return {"ok": True, "image_url": img_url, "credits_used": FACE_SCENE_COST}
 
-        # ── Poll until done ───────────────────────────────────────────────────
-        for _ in range(40):
-            await asyncio.sleep(5)
-            poll = await client.get(
-                f"https://api.replicate.com/v1/predictions/{pred_id}",
-                headers={"Authorization": f"Token {REPLICATE_API_KEY}"},
-            )
-            result = poll.json()
-            status = result.get("status")
-            if status == "succeeded":
-                output = result.get("output")
-                img_url = (output[0] if isinstance(output, list) else output) or ""
-                _log_face_scene(FACE_SCENE_COST)
-                return {"ok": True, "image_url": img_url, "credits_used": FACE_SCENE_COST}
-            if status == "failed":
-                raise HTTPException(status_code=500,
-                                    detail=f"Generation failed: {result.get('error', 'unknown')}")
+        if not img_url:
+            # ── Poll until done ───────────────────────────────────────────────
+            for _ in range(40):
+                await asyncio.sleep(3)
+                poll = await client.get(
+                    f"https://api.replicate.com/v1/predictions/{pred_id}",
+                    headers={"Authorization": f"Token {REPLICATE_API_KEY}"},
+                )
+                result = poll.json()
+                status = result.get("status")
+                if status == "succeeded":
+                    output = result.get("output")
+                    img_url = (output[0] if isinstance(output, list) else output) or ""
+                    break
+                if status == "failed":
+                    raise HTTPException(status_code=500,
+                                        detail=f"Generation failed: {result.get('error', 'unknown')}")
 
-    raise HTTPException(status_code=504, detail="Portrait generation timed out")
+        if not img_url:
+            raise HTTPException(status_code=504, detail="Portrait generation timed out")
+
+        # ── Deduct credits only on success ────────────────────────────────────
+        _deduct(FACE_SCENE_COST, uid)
+        _log_face_scene(FACE_SCENE_COST)
+        return {"ok": True, "image_url": img_url, "credits_used": FACE_SCENE_COST}
 
 
 def _log_face_scene(credits: int):

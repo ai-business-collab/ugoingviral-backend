@@ -10993,8 +10993,9 @@ function portraitRender() {
     resultHtml = '<div class="card" style="margin-top:18px">' +
       '<div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:12px">✅ Generated Portrait</div>' +
       '<img src="' + _portrait.result + '" style="width:100%;max-width:512px;border-radius:12px;display:block;margin:0 auto 12px" />' +
-      '<div style="display:flex;gap:8px;justify-content:center">' +
-        '<a href="' + _portrait.result + '" target="_blank" download class="btn bp bsm">⬇️ Download</a>' +
+      '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">' +
+        '<a href="' + _portrait.result + '" download="ai-portrait.jpg" target="_blank" class="btn bp bsm">⬇️ Download</a>' +
+        '<a href="' + _portrait.result + '" download="profile-photo.jpg" target="_blank" class="btn bg bsm">🪪 Use as profile photo</a>' +
         '<button class="btn bg bsm" onclick="_portrait.result=null;portraitRender()">🔄 Generate Again</button>' +
       '</div>' +
     '</div>';
@@ -11008,15 +11009,13 @@ function portraitRender() {
 
         '<!-- Face upload -->' +
         '<div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px">1. Upload Face Photo</div>' +
-        '<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">' +
+        '<div id="portrait-drop-zone" ondragover="event.preventDefault();this.style.borderColor=\'var(--ac)\'" ondragleave="this.style.borderColor=\'var(--border)\'" ondrop="portraitHandleDrop(event)" style="border:2px dashed var(--border);border-radius:12px;padding:18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color .2s" onclick="document.getElementById(\'portrait-file-input\').click()">' +
           previewHtml +
-          '<div>' +
-            '<label style="display:inline-block;padding:9px 16px;background:var(--glass);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;color:var(--tx)">' +
-              (_portrait.faceImageB64 ? '🔄 Change Photo' : '📷 Upload Face Photo') +
-              '<input type="file" accept="image/*" style="display:none" onchange="portraitHandleFile(event)" />' +
-            '</label>' +
-            (_portrait.faceImageName ? '<div style="font-size:11px;color:var(--tx3);margin-top:4px">' + _portrait.faceImageName + '</div>' : '<div style="font-size:11px;color:var(--tx3);margin-top:4px">JPG or PNG, front-facing photo works best</div>') +
+          '<div style="flex:1">' +
+            '<div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:4px">' + (_portrait.faceImageB64 ? '🔄 Change Photo' : '📷 Click or drag & drop') + '</div>' +
+            (_portrait.faceImageName ? '<div style="font-size:11px;color:var(--tx3)">' + _portrait.faceImageName + '</div>' : '<div style="font-size:11px;color:var(--tx3)">JPG or PNG • max 10MB • front-facing works best</div>') +
           '</div>' +
+          '<input type="file" id="portrait-file-input" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="portraitHandleFile(event)" />' +
         '</div>' +
 
         '<!-- Scene presets -->' +
@@ -11034,7 +11033,7 @@ function portraitRender() {
             var icons = {professional:'👔',creative:'🎨',casual:'😊'};
             var labels = {professional:'Professional',creative:'Creative',casual:'Casual'};
             var active = _portrait.style === s;
-            return '<button onclick="portraitSetStyle('' + s + '')" style="flex:1;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid ' + (active ? 'var(--ac)' : 'var(--border)') + ';background:' + (active ? 'rgba(0,229,255,.12)' : 'var(--glass)') + ';color:' + (active ? 'var(--ac)' : 'var(--tx)') + ';font-weight:' + (active ? '700' : '400') + '">' + icons[s] + ' ' + labels[s] + '</button>';
+            return '<button onclick="portraitSetStyle(\'' + s + '\')" style="flex:1;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid ' + (active ? 'var(--ac)' : 'var(--border)') + ';background:' + (active ? 'rgba(0,229,255,.12)' : 'var(--glass)') + ';color:' + (active ? 'var(--ac)' : 'var(--tx)') + ';font-weight:' + (active ? '700' : '400') + '">' + icons[s] + ' ' + labels[s] + '</button>';
           }).join('') +
         '</div>' +
 
@@ -11050,6 +11049,24 @@ function portraitRender() {
 function portraitHandleFile(e) {
   var file = e.target.files[0];
   if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { toast('Image too large — max 10MB', 'error'); return; }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    _portrait.faceImageB64 = ev.target.result;
+    _portrait.faceImageName = file.name;
+    portraitRender();
+  };
+  reader.readAsDataURL(file);
+}
+
+function portraitHandleDrop(e) {
+  e.preventDefault();
+  var dz = document.getElementById('portrait-drop-zone');
+  if (dz) dz.style.borderColor = 'var(--border)';
+  var file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { toast('Please drop an image file', 'error'); return; }
+  if (file.size > 10 * 1024 * 1024) { toast('Image too large — max 10MB', 'error'); return; }
   var reader = new FileReader();
   reader.onload = function(ev) {
     _portrait.faceImageB64 = ev.target.result;
@@ -11098,7 +11115,14 @@ async function portraitGenerate() {
       toast('Generation failed — no image returned', 'error');
     }
   } catch(err) {
-    toast('Portrait generation failed: ' + (err.message || err), 'error');
+    var msg = err.message || String(err);
+    if (msg.toLowerCase().includes('upgrade required') || msg.includes('403')) {
+      showLockedFeatureModal({title: 'AI Portrait — Upgrade Required', desc: 'AI Portrait is available on Starter and higher plans. Generate photorealistic portraits with your face in any scene.', icon: '🤳', credits: 50});
+    } else if (msg.toLowerCase().includes('insufficient credits') || msg.includes('402')) {
+      toast('Not enough credits — need 50 credits to generate', 'error');
+    } else {
+      toast('Portrait generation failed: ' + msg, 'error');
+    }
   }
   _portrait.generating = false;
   portraitRender();
