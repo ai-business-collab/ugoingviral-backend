@@ -72,17 +72,38 @@ def _build_context(user_id: str, current_page: str = "") -> str:
     bonuses = billing.get("claimed_bonuses", [])
     auto_perm = ustore.get("agent_auto_permission", False)
 
+    autopilot = ustore.get("autopilot", {})
+    autopilot_active = autopilot.get("active", False)
+
+    days_since_post: int | str = "never"
+    if history_items:
+        timestamps = []
+        for h in history_items:
+            if "timestamp" in h:
+                try:
+                    timestamps.append(datetime.fromisoformat(h["timestamp"][:19]))
+                except Exception:
+                    pass
+        if timestamps:
+            days_since_post = (datetime.now() - max(timestamps)).days
+
     ctx = f"""USER CONTEXT:
 - Plan: {plan_name} ({credits} credits left)
 - Connected platforms: {', '.join(connected) if connected else 'none'}
 - Content created last 30 days: {recent_content}
 - Pending scheduled posts: {pending_posts}
 - Agent auto-permission: {'enabled' if auto_perm else 'disabled'}
+- Autopilot: {'active' if autopilot_active else 'paused'}
+- Days since last post: {days_since_post}
 - Current page: {current_page or 'unknown'}
 - User ID: {user_id}"""
 
     if plan in ("pro", "elite", "personal"):
         ctx += "\n- Support tier: Live support eligible"
+
+    if plan == "agency":
+        clients = ustore.get("client_accounts", [])
+        ctx += f"\n- Agency clients: {len(clients)}"
 
     return ctx
 
@@ -122,7 +143,10 @@ RESPONSE RULES:
 4. When you want to suggest quick actions, add [[BTN:Label:action]] at the END. Actions: nav:pagename, generate, schedule
 5. When asked to generate content directly, do it inline in your response.
 6. If the user gives you AUTO PERMISSION and you detect stale content (>30 days, no recent posts), proactively suggest generating new content.
-7. For Pro/Elite/Personal users who need human help: add [[ESCALATE]] to trigger live support."""
+7. For Pro/Elite/Personal users who need human help: add [[ESCALATE]] to trigger live support.
+8. If credits < 100, proactively mention the low balance and suggest topping up. [[NAV:billing]]
+9. If days since last post > 3, proactively suggest creating new content. [[NAV:generator]]
+10. If autopilot is paused and user has 200+ credits, proactively suggest resuming autopilot."""
 
 
 # ── History helpers ────────────────────────────────────────────────────────────
