@@ -84,6 +84,14 @@ async def register(req: RegisterRequest):
     user = create_user(req.email, req.password, req.name, req.company, req.niche)
     token = _create_token(user["id"], user["email"])
     try:
+        from routes.workspaces import _ensure_default_workspace
+        from services.store import _load_user_store, _save_user_store
+        _ustore = _load_user_store(user["id"])
+        _ustore = _ensure_default_workspace(_ustore)
+        _save_user_store(user["id"], _ustore)
+    except Exception:
+        pass
+    try:
         import asyncio
         from routes.email import send_welcome_email
         asyncio.get_event_loop().run_in_executor(None, send_welcome_email, user["email"], user.get("name", ""))

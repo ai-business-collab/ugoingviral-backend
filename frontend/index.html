@@ -1174,6 +1174,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 .usage-bar{height:5px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:3px}
 .usage-bar-fill{height:100%;border-radius:3px;background:var(--ac);transition:width .4s}
 .usage-bar-fill.warn{background:#f59e0b}.usage-bar-fill.danger{background:#ef4444}
+.ws-select{width:100%;padding:5px 8px;border-radius:8px;border:1px solid var(--border-b);background:var(--glass);color:var(--tx);font-size:12px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;outline:none}
+.ws-select:focus{border-color:var(--ac)}
+.fa-mode-btn{padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border-b);background:var(--glass);color:var(--tx2);transition:all .2s;font-family:'Outfit',sans-serif;text-align:left}
+.fa-mode-btn.active{border-color:var(--ac);color:var(--ac);background:rgba(99,102,241,.1)}
 </style>
 <style>.curr-btn.curr-active{background:rgba(255,255,255,.14)!important;color:#fff!important}</style>
 </head>
@@ -1189,6 +1193,13 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="logo-icon" style="display:none">⚡</div>
     <div class="logo-name">UgoingViral</div>
     <div class="logo-tag">Social Media Autopilot · v4</div>
+  </div>
+
+  <div id="ws-bar" style="padding:6px 14px 8px;border-bottom:1px solid var(--border);display:none">
+    <div style="display:flex;align-items:center;gap:6px">
+      <select id="ws-select" class="ws-select" onchange="switchWorkspace(this.value)"></select>
+      <button onclick="nav('settings')" title="Manage workspaces" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--tx3);font-size:16px;padding:2px 4px;line-height:1;border-radius:6px" onmouseover="this.style.color='var(--ac)'" onmouseout="this.style.color='var(--tx3)'">+</button>
+    </div>
   </div>
 
   <div style="padding:8px 14px 12px;border-bottom:1px solid var(--border);margin-bottom:2px">
@@ -2978,6 +2989,16 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
 
+      <!-- WORKSPACES -->
+      <div class="card" style="margin-bottom:20px" id="workspace-settings-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="ctitle" style="margin:0">🗂️ Workspaces</div>
+          <button class="btn bp bsm" onclick="createWorkspacePrompt()" id="ws-add-btn">+ Add</button>
+        </div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">Separate content, posts and analytics per workspace. Agency plan: up to 10 workspaces.</div>
+        <div id="ws-settings-list"></div>
+      </div>
+
       <!-- DANGER ZONE -->
       <div class="card" style="margin-bottom:20px;border-color:rgba(239,68,68,.18)">
         <div class="ctitle" style="color:#ef4444">⚠️ Danger Zone</div>
@@ -3581,6 +3602,36 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
         </div>
       </div>
+      <div class="card" style="margin-bottom:16px" id="full-auto-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <div class="ctitle" style="margin:0">🤖 Full Auto Mode</div>
+            <div style="font-size:12px;color:var(--tx3);margin-top:3px">AI autonomously generates and schedules content every 6 hours</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="fa-toggle-label" style="font-size:13px;font-weight:700;color:var(--tx3)">OFF</div>
+            <div id="fa-toggle" onclick="toggleFullAuto()" style="width:52px;height:28px;border-radius:14px;background:var(--border);position:relative;cursor:pointer;transition:background .25s">
+              <div id="fa-thumb" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .25s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12px;color:#f59e0b;margin-bottom:14px">
+          ⚠️ <strong>Warning:</strong> Your AI agent will autonomously generate and schedule content based on your performance data.
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Mode</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="fa-mode-btn active" id="fa-mode-review" onclick="setFullAutoMode('review')">
+              👁️ Review — Agent prepares content, you approve via Telegram
+            </button>
+            <button class="fa-mode-btn" id="fa-mode-autonomous" onclick="setFullAutoMode('autonomous')">
+              ⚡ Autonomous — Agent posts automatically (Pro+ only)
+            </button>
+          </div>
+        </div>
+        <div id="fa-last-info" style="margin-top:10px;font-size:11px;color:var(--tx3);display:none"></div>
+      </div>
+
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div class="ctitle" style="margin:0">Upcoming Posts</div>
@@ -4943,7 +4994,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('da-DK'); }, 1000);
   if (localStorage.getItem('theme') === 'light') applyTheme(true);
   loadSidebarUser();
-  checkHealth(); loadConnections(); loadSafetyStatus(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus(); _loadWatermarkSettings();
+  checkHealth(); loadConnections(); loadSafetyStatus(); loadWorkspaces(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus(); _loadWatermarkSettings();
   loadBilling(); loadSubAccounts();
   checkTikTokAPIStatus(); checkYouTubeAPIStatus();
   if(typeof checkInstagramToken==='function') checkInstagramToken();
@@ -6207,7 +6258,7 @@ function nav(p) {
   if (p === 'subaccounts') loadSubAccounts();
   if (p === 'studio') studioInit();
   if (p === 'content-engine') { loadContentCalendar(); }
-  if (p === 'autopilot') { loadAutoPilot(); }
+  if (p === 'autopilot') { loadAutoPilot(); loadFullAutoStatus(); }
   if (p === 'growth-dashboard') { loadGrowthDashboard(); }
   if (p === 'agency-dashboard') { loadAgencyDashboard(); }
   if (p === 'connect') { loadTelegramStatus(); }
@@ -6331,6 +6382,149 @@ async function assignProxy() {
     else toast(d.detail||"Requires Growth+ plan","error");
   } catch(e) { toast("Error assigning proxy","error"); }
 }
+// ===== WORKSPACES =====
+var _workspaces = [], _activeWs = '';
+
+async function loadWorkspaces() {
+  try {
+    var d = await apiFetch('/api/workspaces');
+    _workspaces = d.workspaces || [];
+    _activeWs   = d.active_workspace || '';
+    var bar = document.getElementById('ws-bar');
+    var sel = document.getElementById('ws-select');
+    if (_workspaces.length > 0) {
+      if (bar) bar.style.display = '';
+      if (sel) {
+        sel.innerHTML = _workspaces.map(function(w) {
+          return '<option value="' + w.id + '"' + (w.id === _activeWs ? ' selected' : '') + '>' + ceEsc(w.name) + '</option>';
+        }).join('');
+      }
+    }
+    renderWsSettings(d);
+    var addBtn = document.getElementById('ws-add-btn');
+    if (addBtn) addBtn.style.display = (d.limit > _workspaces.length) ? '' : 'none';
+  } catch(e) {}
+}
+
+async function switchWorkspace(wid) {
+  if (!wid || wid === _activeWs) return;
+  try {
+    await apiFetch('/api/workspaces/' + wid + '/switch', 'POST', {});
+    _activeWs = wid;
+    toast('Workspace switched', 'success');
+    loadWorkspaces();
+  } catch(e) { toast('Error switching workspace', 'error'); }
+}
+
+async function createWorkspacePrompt() {
+  var name = prompt('Workspace name:');
+  if (!name || !name.trim()) return;
+  try {
+    var d = await apiFetch('/api/workspaces', 'POST', {name: name.trim()});
+    if (d.ok) { toast('Workspace created: ' + name, 'success'); loadWorkspaces(); }
+    else if (d.detail === 'workspace_limit_reached')
+      showLockedFeatureModal({title: 'More Workspaces — Agency Plan', desc: 'Your plan supports 1 workspace. Upgrade to Agency for up to 10 workspaces.', icon: '\U0001f5c2️', credits: 0});
+  } catch(e) { toast('Error creating workspace', 'error'); }
+}
+
+async function renameWorkspace(wid, currentName) {
+  var name = prompt('Rename workspace:', currentName);
+  if (!name || !name.trim() || name.trim() === currentName) return;
+  try {
+    await apiFetch('/api/workspaces/' + wid, 'PATCH', {name: name.trim()});
+    toast('Renamed', 'success'); loadWorkspaces();
+  } catch(e) { toast('Error', 'error'); }
+}
+
+async function deleteWorkspace(wid, name) {
+  if (!confirm('Delete workspace "' + name + '"? This cannot be undone.')) return;
+  try {
+    var d = await apiFetch('/api/workspaces/' + wid, 'DELETE');
+    if (d.ok) { toast('Deleted', 'info'); loadWorkspaces(); }
+    else toast(d.detail || 'Cannot delete', 'error');
+  } catch(e) { toast('Error', 'error'); }
+}
+
+function renderWsSettings(d) {
+  var el = document.getElementById('ws-settings-list'); if (!el) return;
+  var wss = d.workspaces || [], active = d.active_workspace || '';
+  if (!wss.length) { el.innerHTML = '<div style="color:var(--tx3);font-size:13px">No workspaces yet</div>'; return; }
+  el.innerHTML = wss.map(function(w) {
+    var isActive = w.id === active;
+    return '<div class="trow">'
+      + '<div><div class="tname">' + ceEsc(w.name) + (isActive ? ' <span style="color:#10b981;font-size:10px">● active</span>' : '') + '</div>'
+      + '<div class="tdesc">' + (w.niche || 'No niche set') + '</div></div>'
+      + '<div style="display:flex;gap:6px">'
+      + (isActive ? '' : '<button class="btn bg bsm" onclick="switchWorkspace(\'' + w.id + '\')">Switch</button>')
+      + '<button class="btn bg bsm" onclick="renameWorkspace(\'' + w.id + '\',\'' + ceEsc(w.name) + '\')">Rename</button>'
+      + (wss.length > 1 ? '<button class="btn bsm" style="color:#ef4444;border-color:rgba(239,68,68,.3)" onclick="deleteWorkspace(\'' + w.id + '\',\'' + ceEsc(w.name) + '\')">Del</button>' : '')
+      + '</div></div>';
+  }).join('');
+}
+
+// ===== FULL AUTO MODE =====
+var _faActive = false, _faMode = 'review';
+
+async function loadFullAutoStatus() {
+  try {
+    var d = await apiFetch('/api/autopilot/full_auto_status');
+    _faActive = d.full_auto_enabled;
+    _faMode   = d.full_auto_mode || 'review';
+    renderFaToggle(_faActive);
+    renderFaMode(_faMode);
+    var info = document.getElementById('fa-last-info');
+    if (info) {
+      if (d.last_run) {
+        info.textContent = 'Last run: ' + d.last_run.slice(0,16) + ' UTC';
+        info.style.display = '';
+      } else { info.style.display = 'none'; }
+    }
+  } catch(e) {}
+}
+
+function renderFaToggle(active) {
+  var t = document.getElementById('fa-toggle'),
+      th = document.getElementById('fa-thumb'),
+      lb = document.getElementById('fa-toggle-label');
+  if (!t) return;
+  t.style.background = active ? '#6366f1' : 'var(--border)';
+  if (th) th.style.left = active ? '27px' : '3px';
+  if (lb) { lb.textContent = active ? 'ON' : 'OFF'; lb.style.color = active ? '#6366f1' : 'var(--tx3)'; }
+}
+
+function renderFaMode(mode) {
+  var r = document.getElementById('fa-mode-review'),
+      a = document.getElementById('fa-mode-autonomous');
+  if (r) r.classList.toggle('active', mode === 'review');
+  if (a) a.classList.toggle('active', mode === 'autonomous');
+}
+
+async function toggleFullAuto() {
+  _faActive = !_faActive;
+  renderFaToggle(_faActive);
+  try {
+    var d = await apiFetch('/api/autopilot/full_auto_toggle', 'POST', {enabled: _faActive, mode: _faMode});
+    if (!d.ok) {
+      _faActive = !_faActive; renderFaToggle(_faActive);
+      if (d.error === 'pro_required') showLockedFeatureModal({title: 'Full Auto Mode — Pro Required', desc: 'Full Auto Mode requires a Pro plan or above.', icon: '\U0001f916', credits: 0});
+      else if (d.error === 'insufficient_credits') toast(d.message || 'Need 200 credits', 'error');
+      else toast(d.message || 'Error', 'error');
+      return;
+    }
+    toast(_faActive ? 'Full Auto Mode ON ✓' : 'Full Auto Mode OFF', _faActive ? 'success' : 'info');
+    loadFullAutoStatus();
+  } catch(e) { _faActive = !_faActive; renderFaToggle(_faActive); }
+}
+
+async function setFullAutoMode(mode) {
+  _faMode = mode;
+  renderFaMode(mode);
+  if (_faActive) {
+    try { await apiFetch('/api/autopilot/full_auto_toggle', 'POST', {enabled: true, mode: mode}); }
+    catch(e) {}
+  }
+}
+
 function toggleCon(name) { document.getElementById('con-' + name)?.classList.toggle('expanded'); }
 async function toggleAPI(platform, el) {
   el.classList.toggle('on');

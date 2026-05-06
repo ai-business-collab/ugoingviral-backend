@@ -229,7 +229,7 @@ app.include_router(csv_import.router)
 app.include_router(video_script.router)
 app.include_router(reel_templates.router)
 app.include_router(audit.router)
-    app.include_router(workspaces.router)
+app.include_router(workspaces.router)
 
 
 @app.get("/affiliate")
