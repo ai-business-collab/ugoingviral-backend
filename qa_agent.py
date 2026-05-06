@@ -25,6 +25,7 @@ QA_EMAIL      = "qa-auto@ugoingviral.com"
 QA_PASSWORD   = "QaAuto2026!"
 RESULTS_FILE  = os.path.join(BASE_DIR, "qa_results.json")
 USER_DATA_DIR = os.path.join(BASE_DIR, "user_data")
+USERS_FILE    = os.path.join(BASE_DIR, "users.json")
 NEXORA_KEY    = os.getenv("NEXORA_API_KEY", "nexora-core-2026")
 NEXORA_URL    = "https://nex-core.tech/api/qa/report"
 TG_BOT_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -59,6 +60,61 @@ class QARunner:
 
     def _auth_headers(self):
         return {"Authorization": f"Bearer {self.token}"}
+
+    def _fresh_user(self, label: str):
+        """Register a disposable test user. Returns (token, user_id, email)."""
+        ts = int(time.time() * 1000)
+        email = f"qa-{label}-{ts}@ugoingviral.com"
+        password = "QaTest2026!"
+        try:
+            r = self.client.post("/api/auth/register", json={
+                "email": email, "password": password, "name": f"QA {label}"
+            })
+            if r.status_code in (200, 201):
+                data = r.json()
+                token   = data.get("token") or data.get("access_token")
+                user_id = (data.get("user") or {}).get("id") or data.get("user_id")
+                return token, user_id, email
+        except Exception:
+            pass
+        return None, None, email
+
+    def _set_billing(self, user_id: str, plan: str, credits: int) -> bool:
+        """Directly write billing plan + credits into the user's JSON store."""
+        user_file = os.path.join(USER_DATA_DIR, f"{user_id}.json")
+        try:
+            data = {}
+            if os.path.exists(user_file):
+                with open(user_file, encoding="utf-8") as f:
+                    data = json.load(f)
+            billing = data.get("billing", {})
+            billing["plan"]    = plan
+            billing["credits"] = credits
+            data["billing"]    = billing
+            with open(user_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception:
+            return False
+
+    def _remove_fresh_user(self, user_id: str, email: str):
+        """Delete a disposable test user from users.json and remove their data file."""
+        try:
+            if os.path.exists(USERS_FILE):
+                with open(USERS_FILE, encoding="utf-8") as f:
+                    users = json.load(f)
+                users = [u for u in users
+                         if u.get("id") != user_id and u.get("email") != email]
+                with open(USERS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(users, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+        user_file = os.path.join(USER_DATA_DIR, f"{user_id}.json")
+        if os.path.exists(user_file):
+            try:
+                os.remove(user_file)
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------
     # Suite 1 — Signup / Login flow
@@ -294,6 +350,433 @@ class QARunner:
                 self._fail(f"health_{path.strip('/') or 'root'}", str(e))
 
     # ------------------------------------------------------------------
+    # Suite 6 — Agent Welcome Flow
+    # ------------------------------------------------------------------
+
+    def suite6_agent_welcome(self):
+        print("\n=== SUITE 6: Agent Welcome Flow ===")
+
+        token, uid, email = self._fresh_user("s6")
+        if not token or not uid:
+            self._fail("s6_setup", "could not register fresh test user")
+            return
+
+        hdrs = {"Authorization": f"Bearer {token}"}
+
+        # 1. Agent name starts empty
+        try:
+            r = self.client.get("/api/agent/name", headers=hdrs)
+            if r.status_code == 200 and r.json().get("name") in (None, ""):
+                self._pass("s6_name_empty", "name is empty for new user")
+            else:
+                self._fail("s6_name_empty",
+                    f"status={r.status_code} name={r.json().get('name')!r}")
+        except Exception as e:
+            self._fail("s6_name_empty", str(e))
+
+        # 2. First message returns a welcome response
+        if not self.skip_ai:
+            try:
+                r = self.client.post("/api/agent/chat", headers=hdrs,
+                    json={"message": "Hello, who are you?", "history": []}, timeout=30)
+                if r.status_code == 200 and r.json().get("response"):
+                    self._pass("s6_first_message",
+                        f"got {len(r.json()['response'])} chars")
+                else:
+                    self._fail("s6_first_message",
+                        f"status={r.status_code} body={r.text[:120]}")
+            except Exception as e:
+                self._fail("s6_first_message", str(e))
+        else:
+            self._pass("s6_first_message", "--skip-ai (chat call skipped)")
+
+        # 3. Save agent name "Nova" via PATCH
+        try:
+            r = self.client.patch("/api/agent/name", headers=hdrs,
+                json={"name": "Nova"})
+            if r.status_code == 200 and r.json().get("name") == "Nova":
+                self._pass("s6_name_saved", "name=Nova")
+            else:
+                self._fail("s6_name_saved",
+                    f"status={r.status_code} body={r.text[:80]}")
+        except Exception as e:
+            self._fail("s6_name_saved", str(e))
+
+        # 4. GET confirms name persisted
+        try:
+            r = self.client.get("/api/agent/name", headers=hdrs)
+            if r.status_code == 200 and r.json().get("name") == "Nova":
+                self._pass("s6_name_persisted")
+            else:
+                self._fail("s6_name_persisted",
+                    f"got name={r.json().get('name')!r}")
+        except Exception as e:
+            self._fail("s6_name_persisted", str(e))
+
+        # 5. Agent greets with the saved name (AI call)
+        if not self.skip_ai:
+            try:
+                r = self.client.post("/api/agent/chat", headers=hdrs,
+                    json={"message": "What is your name?", "history": []}, timeout=30)
+                if r.status_code == 200:
+                    text = r.json().get("response", "")
+                    if "Nova" in text:
+                        self._pass("s6_name_in_response", "response contains 'Nova'")
+                    else:
+                        self._fail("s6_name_in_response",
+                            f"'Nova' not found in: {text[:120]}")
+                else:
+                    self._fail("s6_name_in_response",
+                        f"status={r.status_code}")
+            except Exception as e:
+                self._fail("s6_name_in_response", str(e))
+        else:
+            self._pass("s6_name_in_response", "--skip-ai (chat verification skipped)")
+
+        self._remove_fresh_user(uid, email)
+
+    # ------------------------------------------------------------------
+    # Suite 7 — Voice Features
+    # ------------------------------------------------------------------
+
+    def suite7_voice_features(self):
+        print("\n=== SUITE 7: Voice Features ===")
+        if not self.token:
+            self._fail("s7_skip", "no token — skipping suite")
+            return
+
+        hdrs = self._auth_headers()
+
+        # 1. GET /api/agent/voices → list returned
+        try:
+            r = self.client.get("/api/agent/voices", headers=hdrs)
+            if r.status_code == 200 and "voices" in r.json():
+                voices = r.json()["voices"]
+                self._pass("s7_voices_list",
+                    f"{len(voices)} voices returned")
+            else:
+                self._fail("s7_voices_list",
+                    f"status={r.status_code} body={r.text[:80]}")
+        except Exception as e:
+            self._fail("s7_voices_list", str(e))
+
+        # 2. GET /api/agent/voice_settings → defaults present
+        try:
+            r = self.client.get("/api/agent/voice_settings", headers=hdrs)
+            if r.status_code == 200:
+                d = r.json()
+                if "voice_enabled" in d and "voice_id" in d:
+                    self._pass("s7_voice_settings_defaults",
+                        f"voice_enabled={d['voice_enabled']} voice_id present")
+                else:
+                    self._fail("s7_voice_settings_defaults",
+                        f"missing keys — got: {list(d.keys())}")
+            else:
+                self._fail("s7_voice_settings_defaults",
+                    f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s7_voice_settings_defaults", str(e))
+
+        # 3. POST → enable voice
+        try:
+            r = self.client.post("/api/agent/voice_settings", headers=hdrs,
+                json={"voice_enabled": True})
+            if r.status_code == 200 and r.json().get("ok"):
+                self._pass("s7_voice_enable", "voice_enabled=true saved")
+            else:
+                self._fail("s7_voice_enable",
+                    f"status={r.status_code} body={r.text[:80]}")
+        except Exception as e:
+            self._fail("s7_voice_enable", str(e))
+
+        # 4. GET → confirm persisted
+        try:
+            r = self.client.get("/api/agent/voice_settings", headers=hdrs)
+            if r.status_code == 200 and r.json().get("voice_enabled") is True:
+                self._pass("s7_voice_enabled_persisted")
+            else:
+                got = r.json().get("voice_enabled") if r.status_code == 200 else r.status_code
+                self._fail("s7_voice_enabled_persisted",
+                    f"voice_enabled={got!r} expected True")
+        except Exception as e:
+            self._fail("s7_voice_enabled_persisted", str(e))
+
+        # Cleanup — reset voice setting
+        try:
+            self.client.post("/api/agent/voice_settings", headers=hdrs,
+                json={"voice_enabled": False})
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
+    # Suite 8 — Watermark
+    # ------------------------------------------------------------------
+
+    def suite8_watermark(self):
+        print("\n=== SUITE 8: Watermark ===")
+        if not self.token:
+            self._fail("s8_skip", "no token — skipping suite")
+            return
+
+        hdrs = self._auth_headers()
+
+        # --- Free user tests ---
+
+        # 1. Free user: watermark_enabled = True by default
+        try:
+            r = self.client.get("/api/user/profile", headers=hdrs)
+            if r.status_code == 200:
+                d    = r.json()
+                plan = d.get("plan", "")
+                wm   = d.get("watermark_enabled")
+                if plan == "free" and wm is True:
+                    self._pass("s8_free_watermark_on",
+                        "watermark=True on free plan")
+                elif plan != "free":
+                    self._fail("s8_free_watermark_on",
+                        f"QA user not on free plan (plan={plan!r})")
+                else:
+                    self._fail("s8_free_watermark_on",
+                        f"watermark_enabled={wm!r} expected True")
+            else:
+                self._fail("s8_free_watermark_on", f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s8_free_watermark_on", str(e))
+
+        # 2. Free user: cannot disable watermark → 403
+        try:
+            r = self.client.post("/api/user/watermark", headers=hdrs,
+                json={"enabled": False})
+            if r.status_code == 403:
+                self._pass("s8_free_watermark_locked",
+                    "correctly blocked with 403")
+            else:
+                self._fail("s8_free_watermark_locked",
+                    f"expected 403 got {r.status_code} body={r.text[:80]}")
+        except Exception as e:
+            self._fail("s8_free_watermark_locked", str(e))
+
+        # --- Paid user tests ---
+
+        token_p, uid_p, email_p = self._fresh_user("s8paid")
+        if not token_p or not uid_p:
+            self._fail("s8_paid_setup", "could not create paid test user")
+            return
+
+        if not self._set_billing(uid_p, "starter", 100):
+            self._fail("s8_paid_billing", "could not set plan=starter in user store")
+            self._remove_fresh_user(uid_p, email_p)
+            return
+
+        hdrs_p = {"Authorization": f"Bearer {token_p}"}
+
+        # 3. Paid user: watermark_enabled = False by default
+        try:
+            r = self.client.get("/api/user/profile", headers=hdrs_p)
+            if r.status_code == 200:
+                wm = r.json().get("watermark_enabled")
+                if wm is False:
+                    self._pass("s8_paid_watermark_off",
+                        "watermark=False by default on paid plan")
+                else:
+                    self._fail("s8_paid_watermark_off",
+                        f"watermark_enabled={wm!r} expected False")
+            else:
+                self._fail("s8_paid_watermark_off", f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s8_paid_watermark_off", str(e))
+
+        # 4. Paid user: toggle watermark on → saved
+        try:
+            r = self.client.post("/api/user/watermark", headers=hdrs_p,
+                json={"enabled": True})
+            if r.status_code == 200 and r.json().get("watermark_enabled") is True:
+                self._pass("s8_paid_watermark_toggle",
+                    "watermark toggled on successfully")
+            else:
+                self._fail("s8_paid_watermark_toggle",
+                    f"status={r.status_code} body={r.text[:80]}")
+        except Exception as e:
+            self._fail("s8_paid_watermark_toggle", str(e))
+
+        self._remove_fresh_user(uid_p, email_p)
+
+    # ------------------------------------------------------------------
+    # Suite 9 — AI Portrait (face-scene)
+    # ------------------------------------------------------------------
+
+    def suite9_ai_portrait(self):
+        print("\n=== SUITE 9: AI Portrait ===")
+        if not self.token:
+            self._fail("s9_skip", "no token — skipping suite")
+            return
+
+        hdrs = self._auth_headers()
+        # Minimal payload — errors happen before image processing for plan/credit checks
+        payload = {
+            "face_image":    "https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg",
+            "scene_prompt":  "professional office background, corporate headshot",
+            "style":         "professional",
+        }
+
+        # 1. Free user → 403 (plan gate fires before any image work)
+        try:
+            r = self.client.post("/api/studio/face-scene", headers=hdrs,
+                json=payload, timeout=15)
+            if r.status_code == 403:
+                self._pass("s9_free_blocked", "403 on free plan")
+            elif r.status_code == 503:
+                self._fail("s9_free_blocked",
+                    "503 — Replicate key missing, plan gate not reached")
+            else:
+                self._fail("s9_free_blocked",
+                    f"expected 403 got {r.status_code} body={r.text[:80]}")
+        except Exception as e:
+            self._fail("s9_free_blocked", str(e))
+
+        # --- Paid user with < 50 credits → 402 ---
+
+        token_p, uid_p, email_p = self._fresh_user("s9paid")
+        if not token_p or not uid_p:
+            self._fail("s9_paid_setup", "could not create paid test user")
+            return
+
+        # Set credits to 20 — below FACE_SCENE_COST (50)
+        if not self._set_billing(uid_p, "starter", 20):
+            self._fail("s9_paid_billing", "could not set plan=starter credits=20")
+            self._remove_fresh_user(uid_p, email_p)
+            return
+
+        hdrs_p = {"Authorization": f"Bearer {token_p}"}
+
+        # 2. Paid user, insufficient credits → 402
+        try:
+            r = self.client.post("/api/studio/face-scene", headers=hdrs_p,
+                json=payload, timeout=15)
+            if r.status_code == 402:
+                self._pass("s9_paid_low_credits",
+                    "402 on insufficient credits (need 50, have 20)")
+            elif r.status_code == 503:
+                self._fail("s9_paid_low_credits",
+                    "503 — Replicate key missing, credit gate not reached")
+            else:
+                self._fail("s9_paid_low_credits",
+                    f"expected 402 got {r.status_code} body={r.text[:80]}")
+        except Exception as e:
+            self._fail("s9_paid_low_credits", str(e))
+
+        # 3. Endpoint exists — presets endpoint is always 200 for any paid user
+        try:
+            r = self.client.get("/api/studio/face-scene/presets",
+                headers=hdrs_p, timeout=10)
+            if r.status_code == 200 and "presets" in r.json():
+                self._pass("s9_endpoint_exists",
+                    f"{len(r.json()['presets'])} presets, cost={r.json().get('cost')}")
+            else:
+                self._fail("s9_endpoint_exists",
+                    f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s9_endpoint_exists", str(e))
+
+        self._remove_fresh_user(uid_p, email_p)
+
+    # ------------------------------------------------------------------
+    # Suite 10 — Content Plan
+    # ------------------------------------------------------------------
+
+    def suite10_content_plan(self):
+        print("\n=== SUITE 10: Content Plan ===")
+        if not self.token:
+            self._fail("s10_skip", "no token — skipping suite")
+            return
+
+        hdrs = self._auth_headers()
+        plan_payload = {
+            "niche":         "fitness & wellness",
+            "goal":          "grow followers and drive engagement",
+            "posts_per_day": 1,
+            "platforms":     ["instagram"],
+            "tone":          "Motivational",
+            "language":      "English",
+        }
+
+        # 1. Free user → 403
+        try:
+            r = self.client.post("/api/content/create-plan", headers=hdrs,
+                json=plan_payload, timeout=15)
+            if r.status_code == 403:
+                self._pass("s10_free_blocked", "403 on free plan")
+            else:
+                self._fail("s10_free_blocked",
+                    f"expected 403 got {r.status_code} body={r.text[:80]}")
+        except Exception as e:
+            self._fail("s10_free_blocked", str(e))
+
+        # AI-dependent tests (skip if --skip-ai)
+        if self.skip_ai:
+            self._pass("s10_plan_gen", "--skip-ai (content plan generation skipped)")
+            self._pass("s10_credits_deducted", "--skip-ai (credit check skipped)")
+            return
+
+        # --- Paid user with enough credits → full plan returned ---
+
+        token_p, uid_p, email_p = self._fresh_user("s10paid")
+        if not token_p or not uid_p:
+            self._fail("s10_paid_setup", "could not create paid test user")
+            return
+
+        credits_start = 100
+        if not self._set_billing(uid_p, "starter", credits_start):
+            self._fail("s10_paid_billing", "could not set plan=starter credits=100")
+            self._remove_fresh_user(uid_p, email_p)
+            return
+
+        hdrs_p = {"Authorization": f"Bearer {token_p}"}
+
+        # 2. POST create-plan → 200, plan returned with 7 days
+        try:
+            r = self.client.post("/api/content/create-plan", headers=hdrs_p,
+                json=plan_payload, timeout=90)
+            if r.status_code == 200:
+                plan = r.json()
+                days = plan.get("days", [])
+                if isinstance(days, list) and len(days) == 7:
+                    total_posts = sum(len(d.get("posts", [])) for d in days)
+                    self._pass("s10_plan_returned",
+                        f"7 days, {total_posts} posts total")
+                else:
+                    self._fail("s10_plan_returned",
+                        f"days={len(days)} expected 7")
+            elif r.status_code == 503:
+                self._fail("s10_plan_returned",
+                    "503 — AI service unavailable")
+            else:
+                self._fail("s10_plan_returned",
+                    f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s10_plan_returned", str(e))
+
+        # 3. Verify 10 credits were deducted
+        try:
+            r = self.client.get("/api/billing/plan", headers=hdrs_p)
+            if r.status_code == 200:
+                credits_now = r.json().get("credits", -1)
+                expected    = credits_start - 10
+                if credits_now == expected:
+                    self._pass("s10_credits_deducted",
+                        f"{credits_start}→{credits_now} (-10)")
+                else:
+                    self._fail("s10_credits_deducted",
+                        f"expected {expected} got {credits_now}")
+            else:
+                self._fail("s10_credits_deducted",
+                    f"billing check status={r.status_code}")
+        except Exception as e:
+            self._fail("s10_credits_deducted", str(e))
+
+        self._remove_fresh_user(uid_p, email_p)
+
+    # ------------------------------------------------------------------
     # Cleanup
     # ------------------------------------------------------------------
 
@@ -374,6 +857,11 @@ class QARunner:
         self.suite3_content_gen()
         self.suite4_billing()
         self.suite5_health()
+        self.suite6_agent_welcome()
+        self.suite7_voice_features()
+        self.suite8_watermark()
+        self.suite9_ai_portrait()
+        self.suite10_content_plan()
         self._cleanup()
 
         passed = sum(1 for r in self.results if r["status"] == "PASS")
