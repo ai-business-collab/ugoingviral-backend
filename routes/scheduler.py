@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Request, Depends
+from routes.auth import get_current_user
 from typing import Optional, List
 import httpx, os, json, asyncio, shutil
 from datetime import datetime, timedelta
