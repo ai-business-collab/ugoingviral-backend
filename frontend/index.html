@@ -2955,8 +2955,14 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <button class="btn bsm" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;white-space:nowrap;margin-left:16px" onclick="confirmDeactivate()">Deactivate</button>
         </div>
+        <div class="trow" style="border-color:rgba(239,68,68,.1)">
+          <div>
+            <div class="tname" style="color:#ef4444">Delete account permanently</div>
+            <div class="tdesc">Permanently deletes your account and all associated data. This cannot be undone.</div>
+          </div>
+          <button class="btn bsm" style="background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.4);color:#ef4444;white-space:nowrap;margin-left:16px;font-weight:700" onclick="openDeleteAccountModal()">Delete</button>
+        </div>
       </div>
-
     </div>
   </div>
 
@@ -6058,6 +6064,33 @@ function confirmDeactivate() {
   }).catch(e => toast('Error: ' + (e.message || 'Unknown error'), 'error'));
 }
 
+function openDeleteAccountModal() {
+  var m = document.getElementById('delete-account-modal');
+  document.getElementById('delete-confirm-input').value = '';
+  document.getElementById('delete-confirm-btn').disabled = true;
+  document.getElementById('delete-confirm-btn').style.opacity = '.5';
+  m.style.display = 'flex';
+}
+
+function closeDeleteAccountModal() {
+  document.getElementById('delete-account-modal').style.display = 'none';
+}
+
+async function doDeleteAccount() {
+  var confirm_val = document.getElementById('delete-confirm-input').value;
+  if (confirm_val !== 'DELETE') return;
+  var btn = document.getElementById('delete-confirm-btn');
+  btn.textContent = 'Deleting…'; btn.disabled = true;
+  try {
+    await apiFetch('/api/user/delete', 'DELETE', {confirm: 'DELETE'});
+    toast('Account deleted. Goodbye.', 'info');
+    setTimeout(() => { localStorage.clear(); window.location.href = '/'; }, 2500);
+  } catch(e) {
+    toast('Error: ' + (e.message || 'Could not delete account'), 'error');
+    btn.textContent = 'Delete Forever'; btn.disabled = false;
+  }
+}
+
 async function buyExtraProfileSlot(qty) {
   try {
     const d = await apiFetch('/api/billing/create_checkout', 'POST', {type:'extra_sub', quantity:qty}, true);
@@ -7442,6 +7475,18 @@ async function loadRepostSettings() {
 }
 
 function togRepost(el) {
+  var _REPOST_PLANS = ['growth','basic','pro','elite','personal','agency'];
+  var plan = (window._currentPlan || 'free').toLowerCase();
+  var tryingToEnable = !el.classList.contains('on');
+  if (tryingToEnable && !_REPOST_PLANS.includes(plan)) {
+    showLockedFeatureModal({
+      title: 'Auto Repost — Growth Feature',
+      desc: 'Auto Repost is available on Growth plan and above. Upgrade to keep your profile active automatically without extra effort.',
+      icon: '♻️',
+      credits: 0
+    });
+    return;
+  }
   el.classList.toggle('on');
   const on = el.classList.contains('on');
   document.getElementById('repost-cfg').style.display = on ? 'block' : 'none';
@@ -10890,6 +10935,27 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
 
 <!-- Panel -->
 <!-- ══ FEATURE LOCKED MODAL ══════════════════════════════════════════════ -->
+
+<!-- DELETE ACCOUNT MODAL -->
+<div id="delete-account-modal" style="display:none;position:fixed;inset:0;z-index:9901;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--bg2);border:1px solid rgba(239,68,68,.4);border-radius:20px;padding:32px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.6)">
+    <div style="font-size:24px;text-align:center;margin-bottom:12px">⚠️</div>
+    <div style="font-size:18px;font-weight:800;color:#ef4444;text-align:center;margin-bottom:8px">Delete Account Permanently</div>
+    <div style="font-size:13px;color:var(--tx2);text-align:center;margin-bottom:20px;line-height:1.6">
+      This will permanently delete your account and all your data — content, billing history, connected accounts, and settings.<br><br>
+      <strong style="color:var(--tx)">This action cannot be undone.</strong>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;color:var(--tx3);font-weight:600;letter-spacing:1px;text-transform:uppercase">Type DELETE to confirm</label>
+      <input id="delete-confirm-input" type="text" class="inp" placeholder="DELETE" style="margin-top:6px;width:100%;text-align:center;font-weight:700;letter-spacing:2px" oninput="document.getElementById('delete-confirm-btn').disabled=this.value!=='DELETE'">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn bg" style="flex:1" onclick="closeDeleteAccountModal()">Cancel</button>
+      <button id="delete-confirm-btn" class="btn bsm" style="flex:1;background:#ef4444;border:none;color:#fff;font-weight:700;opacity:.5" disabled onclick="doDeleteAccount()">Delete Forever</button>
+    </div>
+  </div>
+</div>
+
 <div id="feature-locked-modal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeLockedModal()">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:28px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)" onclick="event.stopPropagation()">
     <button onclick="closeLockedModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;color:var(--tx3);cursor:pointer;line-height:1">✕</button>

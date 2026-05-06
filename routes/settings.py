@@ -244,3 +244,73 @@ async def set_watermark(request: Request, current_user: dict = _Depends(_get_cur
     store["profile"] = profile
     save_store()
     return {"ok": True, "watermark_enabled": enabled}
+
+
+@router.delete("/api/user/delete")
+async def delete_user_account(request: Request, current_user: dict = _Depends(_get_current_user)):
+    """Permanently delete the authenticated user's account and all associated data."""
+    import os as _os
+    from services.store import _load_user_store, _save_user_store, USER_DATA_DIR
+    from services.users import load_users, save_users
+
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+    if body.get("confirm") != "DELETE":
+        raise HTTPException(status_code=400, detail="Confirmation required: send {confirm: 'DELETE'}")
+
+    uid   = current_user["id"]
+    email = current_user.get("email", "")
+    name  = current_user.get("name", "")
+
+    # Remove from users.json
+    try:
+        users_data = load_users()
+        users_data["users"] = [u for u in users_data.get("users", []) if u.get("id") != uid]
+        save_users(users_data)
+    except Exception:
+        pass
+
+    # Remove user_data/{uid}.json
+    user_file = _os.path.join(USER_DATA_DIR, f"{uid}.json")
+    try:
+        if _os.path.exists(user_file):
+            _os.remove(user_file)
+    except Exception:
+        pass
+
+    # Send deletion confirmation email
+    try:
+        from routes.email import send_system_email
+        first = (name or email.split("@")[0]).split(" ")[0].capitalize()
+        html_body = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body{{margin:0;padding:0;background:#080c18;font-family:Arial,sans-serif}}
+  .wrap{{max-width:560px;margin:40px auto;background:#0d1526;border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden}}
+  .hdr{{padding:28px 36px;text-align:center;border-bottom:1px solid rgba(255,255,255,.07)}}
+  .logo{{font-size:20px;font-weight:800;color:#f0f4f8}}.logo span{{color:#00e5ff}}
+  .body{{padding:28px 36px;color:#a0b0c0;font-size:14px;line-height:1.6}}
+  .footer{{padding:16px 36px;font-size:11px;color:#3d4f61;border-top:1px solid rgba(255,255,255,.05);text-align:center}}
+</style></head><body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="logo">Ugoin<span>g</span>Viral</div>
+    <div style="font-size:20px;font-weight:800;color:#f0f4f8;margin-top:12px">Account deleted</div>
+  </div>
+  <div class="body">
+    <p>Hi {first},</p>
+    <p>Your UgoingViral account has been permanently deleted as requested.</p>
+    <p>All your data — content, connections, billing history — has been removed from our systems.</p>
+    <p>If this was a mistake or you have questions, contact us at <a href="mailto:support@ugoingviral.com" style="color:#00e5ff">support@ugoingviral.com</a>.</p>
+  </div>
+  <div class="footer">© 2026 UgoingViral</div>
+</div>
+</body></html>"""
+        send_system_email(email, "Your UgoingViral account has been deleted", html_body)
+    except Exception:
+        pass
+
+    return {"ok": True, "message": "Account permanently deleted"}

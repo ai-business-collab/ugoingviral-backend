@@ -541,6 +541,17 @@ footer p { font-size: 13px; color: var(--text2); }
   .cta-section { padding: 60px 24px; }
   footer { padding: 28px 24px; flex-direction: column; gap: 16px; text-align: center; }
 }
+
+/* ── FAQ ─────────────────────────────────────────────── */
+.faq-section { max-width: 760px; margin: 0 auto; padding: 80px 24px; }
+.faq-section h2 { font-size: clamp(28px,5vw,40px); font-weight: 800; text-align: center; margin-bottom: 48px; }
+.faq-item { border: 1px solid rgba(255,255,255,.1); border-radius: 14px; margin-bottom: 12px; overflow: hidden; transition: border-color .2s; }
+.faq-item:hover { border-color: rgba(0,229,255,.3); }
+.faq-q { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; cursor: pointer; font-size: 15px; font-weight: 600; gap: 12px; }
+.faq-q .faq-icon { font-size: 18px; transition: transform .3s; flex-shrink: 0; color: var(--accent); }
+.faq-item.open .faq-icon { transform: rotate(45deg); }
+.faq-a { display: none; padding: 0 24px 20px; font-size: 14px; line-height: 1.7; color: rgba(255,255,255,.65); }
+.faq-item.open .faq-a { display: block; }
 </style>
 </head>
 <body>
@@ -724,6 +735,63 @@ footer p { font-size: 13px; color: var(--text2); }
     </div>
   </div>
 </section>
+
+
+<!-- FAQ -->
+<section style="background:rgba(255,255,255,.02);border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07)">
+  <div class="faq-section">
+    <h2>Frequently Asked Questions</h2>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+        How does UgoingViral work?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">You connect your social media accounts, and our AI generates content, schedules posts, and grows your audience automatically. No technical knowledge required — just connect and let it run.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+        Which platforms do you support?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">Instagram, TikTok, YouTube, X (Twitter), and Facebook — with more platforms coming soon. Connect as many as your plan allows and post everywhere from one dashboard.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+        Can I try it for free?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">Yes — the free plan includes 3 AI-generated videos and 50 credits to get started. No payment required. You can upgrade anytime when you're ready to scale.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+        How do credits work?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">Credits are used for AI content generation — captions, hooks, video scripts, hashtags, and more. Each action costs a small amount of credits. Your plan includes a monthly credit allowance, and you can top up anytime from the billing page.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+        Is my content safe?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">Yes — your content and account data are stored securely and are never shared with third parties. We do not sell your data. Your social media credentials are stored encrypted and only used to post on your behalf.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+        Can I cancel anytime?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">Yes — you can cancel your subscription anytime directly from your billing settings. No lock-in, no cancellation fees. Your account moves to the free plan and your content history is preserved.</div>
+    </div>
+  </div>
+</section>
+
 
 <!-- CTA -->
 <section class="cta-section">
