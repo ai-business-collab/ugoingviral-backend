@@ -46,6 +46,70 @@ def _log_api_call(provider: str, model: str, action: str,
     except Exception:
         pass
 
+# ── Content performance insights ──────────────────────────────────────────────
+
+def _get_content_insights(user_id: str) -> dict:
+    """Analyse content_performance to discover what works best for this user."""
+    ustore = _load_user_store(user_id)
+    perf   = [p for p in ustore.get("content_performance", [])
+               if p.get("engagement_rate") is not None]
+    if not perf:
+        return {}
+
+    sorted_desc = sorted(perf, key=lambda x: x.get("engagement_rate", 0), reverse=True)
+    top3   = sorted_desc[:3]
+    worst3 = sorted_desc[-3:]
+
+    # Average per platform
+    plat_er: dict = {}
+    for p in perf:
+        pl = p.get("platform", "")
+        if pl:
+            plat_er.setdefault(pl, []).append(p.get("engagement_rate", 0))
+    best_platform = max(plat_er, key=lambda k: sum(plat_er[k]) / len(plat_er[k])) if plat_er else None
+
+    # Average per content type
+    type_er: dict = {}
+    for p in perf:
+        ct = p.get("content_type", "")
+        if ct:
+            type_er.setdefault(ct, []).append(p.get("engagement_rate", 0))
+    best_content_type = max(type_er, key=lambda k: sum(type_er[k]) / len(type_er[k])) if type_er else None
+
+    # Average per posting hour
+    hour_er: dict = {}
+    for p in perf:
+        ts = p.get("posted_at", "")
+        try:
+            hour = int(ts[11:13]) if len(ts) >= 13 else -1
+            if 0 <= hour < 24:
+                hour_er.setdefault(hour, []).append(p.get("engagement_rate", 0))
+        except Exception:
+            pass
+    best_hour = max(hour_er, key=lambda h: sum(hour_er[h]) / len(hour_er[h])) if hour_er else None
+
+    avg_er = round(sum(p.get("engagement_rate", 0) for p in perf) / len(perf), 4) if perf else 0.0
+
+    return {
+        "top_posts": [
+            {"platform": p.get("platform"), "content_type": p.get("content_type"),
+             "engagement_rate": p.get("engagement_rate"),
+             "caption_snippet": (p.get("caption") or "")[:80]}
+            for p in top3
+        ],
+        "worst_posts": [
+            {"platform": p.get("platform"), "engagement_rate": p.get("engagement_rate")}
+            for p in worst3
+        ],
+        "best_platform":      best_platform,
+        "best_content_type":  best_content_type,
+        "best_posting_hour":  best_hour,
+        "total_tracked":      len(perf),
+        "avg_engagement_rate": avg_er,
+    }
+
+
+
 # ── Context builder ────────────────────────────────────────────────────────────
 
 def _build_context(user_id: str, current_page: str = "") -> str:
@@ -104,6 +168,39 @@ def _build_context(user_id: str, current_page: str = "") -> str:
     if plan == "agency":
         clients = ustore.get("client_accounts", [])
         ctx += f"\n- Agency clients: {len(clients)}"
+
+    # ── Content performance insights ──────────────────────────────────────────
+    insights = _get_content_insights(user_id)
+    if insights.get("total_tracked", 0) > 0:
+        avg_pct = round(insights["avg_engagement_rate"] * 100, 1)
+        ctx += (
+            f"\n\nCONTENT PERFORMANCE INSIGHTS ({insights['total_tracked']} posts tracked):"
+        )
+        if insights.get("best_platform"):
+            ctx += f"\n- Best performing platform: {insights['best_platform']}"
+        if insights.get("best_content_type"):
+            ctx += f"\n- Best content type: {insights['best_content_type']}"
+        if insights.get("best_posting_hour") is not None:
+            ctx += f"\n- Best posting hour: {insights['best_posting_hour']:02d}:00"
+        ctx += f"\n- Average engagement rate: {avg_pct}%"
+        if insights.get("top_posts"):
+            t = insights["top_posts"][0]
+            er_pct = round((t.get("engagement_rate") or 0) * 100, 1)
+            ctx += (
+                f"\n- Top post: {t.get('content_type','')} on {t.get('platform','')}"
+                f" ({er_pct}% ER) — \"{t.get('caption_snippet','')}...\""
+            )
+    else:
+        # Fallback: use platform defaults from OPTIMAL_TIMES
+        from routes.growth import OPTIMAL_TIMES
+        connected_platforms = [p for p, v in
+                               store.get("connections", {}).items()
+                               if isinstance(v, dict) and v.get("username")]
+        if connected_platforms:
+            main_plat = connected_platforms[0]
+            best_times = OPTIMAL_TIMES.get(main_plat, ["09:00", "13:00", "18:00"])
+            ctx += f"\n- Recommended posting times ({main_plat}): {', '.join(best_times)}"
+            ctx += "\n- No personal performance data yet — track your posts to get personalised insights"
 
     return ctx
 

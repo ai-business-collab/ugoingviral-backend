@@ -1016,3 +1016,125 @@ def scheduler_status():
         "last_posts": store.get("scheduler_log", {}),
         "upcoming": upcoming
     }
+
+
+
+# == DAILY CONTENT REFRESH (06:00 CET = 05:00 UTC) ==
+
+# == DAILY CONTENT REFRESH (06:00 CET = 05:00 UTC) ==
+async def run_content_refresh():
+    import asyncio as _aio, httpx as _httpx, os as _os
+    from datetime import datetime as _dt
+    from services.store import get_all_user_ids as _uids, _load_user_store as _lus, _save_user_store as _sus
+    from services.users import load_users as _lu
+    from routes.agent import _get_content_insights
+    BOT_TOKEN = _os.getenv('TELEGRAM_BOT_TOKEN', '')
+    async def _tg(chat_id, text):
+        if not BOT_TOKEN or not chat_id: return
+        try:
+            async with _httpx.AsyncClient(timeout=8) as c:
+                await c.post('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage',
+                             json={'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'})
+        except Exception: pass
+    async def _ai_suggestion(insights, api_keys, niche):
+        best_plat = insights.get('best_platform') or 'instagram'
+        best_ct   = insights.get('best_content_type') or 'caption'
+        best_hour = insights.get('best_posting_hour')
+        time_hint = ' Schedule for {:02d}:00.'.format(best_hour) if best_hour is not None else ''
+        prompt = 'Suggest ONE content idea for {}. Type: {}. Niche: {}. 2 sentences max.{}'.format(
+            best_plat, best_ct, niche or 'general', time_hint)
+        ak = api_keys.get('anthropic_key', '') or _os.getenv('ANTHROPIC_API_KEY', '')
+        if ak and '\u2022\u2022' not in ak:
+            try:
+                async with _httpx.AsyncClient(timeout=15) as c:
+                    r = await c.post('https://api.anthropic.com/v1/messages',
+                        headers={'x-api-key': ak, 'anthropic-version': '2023-06-01',
+                                 'content-type': 'application/json'},
+                        json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 120,
+                              'messages': [{'role': 'user', 'content': prompt}]})
+                    r.raise_for_status()
+                    return r.json()['content'][0]['text'].strip()
+            except Exception: pass
+        ok = api_keys.get('openai_key', '') or _os.getenv('OPENAI_API_KEY', '')
+        if ok and '\u2022\u2022' not in ok:
+            try:
+                async with _httpx.AsyncClient(timeout=15) as c:
+                    r = await c.post('https://api.openai.com/v1/chat/completions',
+                        headers={'Authorization': 'Bearer ' + ok, 'content-type': 'application/json'},
+                        json={'model': 'gpt-4o-mini', 'max_tokens': 100,
+                              'messages': [{'role': 'user', 'content': prompt}]})
+                    r.raise_for_status()
+                    return r.json()['choices'][0]['message']['content'].strip()
+            except Exception: pass
+        return 'Try a {} on {} - your audience responds best to this.'.format(best_ct, best_plat)
+    _fired_today = ''
+    while True:
+        await _aio.sleep(60)
+        now_utc = _dt.utcnow()
+        today   = now_utc.strftime('%Y-%m-%d')
+        if not (now_utc.hour == 5 and now_utc.minute < 2): continue
+        if _fired_today == today: continue
+        _fired_today = today
+        try:
+            users_data = _lu()
+            uid_list   = _uids()
+        except Exception: continue
+        users_by_id = {u['id']: u for u in users_data.get('users', [])}
+        for uid in uid_list:
+            try:
+                ustore   = _lus(uid)
+                auto_cfg = ustore.get('automation', {})
+                if not auto_cfg.get('active', False) or not ustore.get('content_performance'): continue
+                history = ustore.get('history', [])
+                last_ts = None
+                for h in history:
+                    ts_str = h.get('timestamp', h.get('created_at', ''))
+                    try:
+                        ts = _dt.fromisoformat(ts_str[:19])
+                        if last_ts is None or ts > last_ts: last_ts = ts
+                    except Exception: pass
+                if last_ts and (_dt.utcnow() - last_ts).days < 3: continue
+                insights = _get_content_insights(uid)
+                if not insights: continue
+                settings = ustore.get('settings', {})
+                api_keys = {'anthropic_key': settings.get('anthropic_key', ''),
+                            'openai_key':    settings.get('openai_key', '')}
+                niche = auto_cfg.get('niche', '')
+                suggestion_text = await _ai_suggestion(insights, api_keys, niche)
+                suggestions = ustore.setdefault('pending_suggestions', [])
+                suggestions.append({
+                    'id':           'sug_' + today + '_' + uid[:8],
+                    'created_at':   _dt.utcnow().isoformat(),
+                    'platform':     insights.get('best_platform', 'instagram'),
+                    'content_type': insights.get('best_content_type', 'caption'),
+                    'suggestion':   suggestion_text,
+                    'best_hour':    insights.get('best_posting_hour'),
+                    'source':       'auto_refresh',
+                    'seen':         False,
+                })
+                ustore['pending_suggestions'] = suggestions[-20:]
+                _sus(uid, ustore)
+                user_rec = users_by_id.get(uid, {})
+                tg_chat  = user_rec.get('telegram_id') or ustore.get('telegram_chat_id')
+                if tg_chat:
+                    best_plat = insights.get('best_platform', 'your platform')
+                    msg = ('\U0001F4CA *UgoingViral \u2014 New Content Idea Ready*\n\n'
+                           'Based on your best performing content on ' + best_plat + ', I have a new idea ready.\n\n'
+                           '\U0001F4A1 _' + suggestion_text + '_\n\n'
+                           'Check your dashboard to review and schedule it! \U0001F680')
+                    await _tg(tg_chat, msg)
+            except Exception: continue
+
+
+@router.get('/api/content/suggestions')
+def get_pending_suggestions(current_user: dict = Depends(get_current_user)):
+    from services.store import _load_user_store, _save_user_store
+    ustore      = _load_user_store(current_user['id'])
+    suggestions = ustore.get('pending_suggestions', [])
+    changed     = False
+    for s in suggestions:
+        if not s.get('seen'):
+            s['seen'] = True
+            changed   = True
+    if changed: _save_user_store(current_user['id'], ustore)
+    return {'suggestions': list(reversed(suggestions))}

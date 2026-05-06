@@ -144,10 +144,29 @@ async def _call_ai(prompt: str) -> str:
 # ── Content ───────────────────────────────────────────────────────────────────
 @router.post("/api/content/generate")
 async def generate_content(req: ContentRequest):
+    from routes.viral_score import _rule_score
+
     result = await _call_ai(_build_prompt(req))
+
+    # Score content — auto-regenerate once if score is too low
+    def _quick_score(text: str) -> int:
+        hashtags = [w for w in text.split() if w.startswith("#")]
+        try:
+            return _rule_score(text, hashtags, req.platform or "instagram", "")["score"]
+        except Exception:
+            return 50
+
+    score = _quick_score(result)
+    if score < 40:
+        regen = await _call_ai(_build_prompt(req))
+        regen_score = _quick_score(regen)
+        if regen_score > score:
+            result, score = regen, regen_score
+
     item = {"id": datetime.now().isoformat(), "type": req.content_type, "platform": req.platform,
             "product_id": req.product_id, "product": req.product_title,
-            "creator_id": req.creator_id, "content": result, "created": datetime.now().isoformat()}
+            "creator_id": req.creator_id, "content": result,
+            "content_score": score, "created": datetime.now().isoformat()}
     store.get("content_history", {}).insert(0, item)
     if len(store.get("content_history", {})) > 200: store["content_history"] = store.get("content_history", {})[:200]
     if req.product_id:
@@ -155,26 +174,46 @@ async def generate_content(req: ContentRequest):
         if pid_str not in store.get("product_content", {}): store.get("product_content", {})[pid_str] = []
         store.get("product_content", {})[pid_str].insert(0, item)
     save_store()
-    return {"content": result, "id": item["id"]}
+    return {"content": result, "id": item["id"], "content_score": score}
 
 @router.post("/api/content/generate_all")
 async def generate_all(req: ContentRequest):
+    from routes.viral_score import _rule_score
+
+    def _quick_score(text: str, ctype: str) -> int:
+        if ctype not in ("caption", "hook", "reel_script", "tweet"):
+            return 50
+        hashtags = [w for w in text.split() if w.startswith("#")]
+        try:
+            return _rule_score(text, hashtags, req.platform or "instagram", "")["score"]
+        except Exception:
+            return 50
+
     results = {}
+    scores  = {}
     types = ["caption", "hook", "hashtags", "reel_script"]
     if req.platform == "twitter": types = ["tweet", "hashtags"]
     for ctype in types:
         req.content_type = ctype
-        results[ctype] = await _call_ai(_build_prompt(req))
+        text = await _call_ai(_build_prompt(req))
+        sc   = _quick_score(text, ctype)
+        if sc < 40 and ctype in ("caption", "tweet"):
+            regen    = await _call_ai(_build_prompt(req))
+            regen_sc = _quick_score(regen, ctype)
+            if regen_sc > sc:
+                text, sc = regen, regen_sc
+        results[ctype] = text
+        scores[ctype]  = sc
         item = {"id": f"{datetime.now().isoformat()}-{ctype}", "type": ctype, "platform": req.platform,
                 "product_id": req.product_id, "product": req.product_title,
-                "content": results[ctype], "created": datetime.now().isoformat()}
+                "content": text, "content_score": sc, "created": datetime.now().isoformat()}
         store.get("content_history", {}).insert(0, item)
         if req.product_id:
             pid_str = str(req.product_id)
             if pid_str not in store.get("product_content", {}): store.get("product_content", {})[pid_str] = []
             store.get("product_content", {})[pid_str].insert(0, item)
     save_store()
-    return results
+    return {**results, "scores": scores}
 
 @router.get("/api/content/history")
 def get_history(): return {"history": store.get("content_history", {})}

@@ -4,9 +4,9 @@ GET /api/analytics/dashboard — full analytics for authenticated user
 """
 from datetime import datetime, timedelta
 from collections import defaultdict
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from routes.auth import get_current_user
-from services.store import store
+from services.store import store, _load_user_store, _save_user_store
 
 router = APIRouter()
 
@@ -96,4 +96,68 @@ def analytics_dashboard(current_user: dict = Depends(get_current_user)):
         "hour_heatmap": {str(h): hour_counts.get(h, 0) for h in range(24)},
         "best_post": bp_data,
         "day_labels": day_labels,
+    }
+
+
+@router.post("/api/analytics/update_performance")
+async def update_performance(request: Request, current_user: dict = Depends(get_current_user)):
+    """Record or update engagement metrics for a posted piece of content."""
+    body     = await request.json()
+    post_id  = str(body.get("post_id", ""))
+    platform = str(body.get("platform", "")).lower()
+    views    = max(0, int(body.get("views",    0)))
+    likes    = max(0, int(body.get("likes",    0)))
+    comments = max(0, int(body.get("comments", 0)))
+    shares   = max(0, int(body.get("shares",   0)))
+
+    engagement_rate = round((likes + comments + shares) / views, 4) if views > 0 else 0.0
+
+    uid    = current_user["id"]
+    ustore = _load_user_store(uid)
+    perf   = ustore.setdefault("content_performance", [])
+
+    existing = next((p for p in perf if p.get("post_id") == post_id), None)
+    if existing:
+        existing.update({
+            "views": views, "likes": likes, "comments": comments,
+            "shares": shares, "engagement_rate": engagement_rate,
+            "updated_at": datetime.now().isoformat(),
+        })
+    else:
+        perf.append({
+            "post_id":        post_id,
+            "platform":       platform,
+            "content_type":   str(body.get("content_type", "")),
+            "caption":        str(body.get("caption", ""))[:300],
+            "hashtags":       body.get("hashtags", []),
+            "posted_at":      str(body.get("posted_at", datetime.now().isoformat())),
+            "views":          views,
+            "likes":          likes,
+            "comments":       comments,
+            "shares":         shares,
+            "engagement_rate": engagement_rate,
+        })
+
+    ustore["content_performance"] = perf[-500:]
+    _save_user_store(uid, ustore)
+    return {"ok": True, "post_id": post_id, "engagement_rate": engagement_rate}
+
+
+@router.get("/api/analytics/performance")
+def get_performance(current_user: dict = Depends(get_current_user)):
+    """Return all tracked performance data for the current user."""
+    ustore = _load_user_store(current_user["id"])
+    perf   = ustore.get("content_performance", [])
+    if not perf:
+        return {"performance": [], "summary": {}}
+
+    sorted_p = sorted(perf, key=lambda x: x.get("engagement_rate", 0), reverse=True)
+    avg_er   = round(sum(p.get("engagement_rate", 0) for p in perf) / len(perf), 4)
+    return {
+        "performance": sorted_p[:50],
+        "summary": {
+            "total_tracked":   len(perf),
+            "avg_engagement":  avg_er,
+            "best_post":       sorted_p[0] if sorted_p else None,
+        },
     }
