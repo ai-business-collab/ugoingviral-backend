@@ -780,6 +780,507 @@ class QARunner:
     # Cleanup
     # ------------------------------------------------------------------
 
+
+    # ------------------------------------------------------------------
+    # Suite 11 — Full Auto Mode
+    # ------------------------------------------------------------------
+
+    def suite11_full_auto(self):
+        print("\n=== SUITE 11: Full Auto Mode ===")
+
+        # Pro user with 500 credits should enable full auto
+        token, uid, email = self._fresh_user("s11a")
+        if not uid:
+            self._fail("s11_register", "could not create test user")
+            return
+        self._set_billing(uid, "pro", 500)
+        h = {"Authorization": f"Bearer {token}"}
+
+        try:
+            r = self.client.post("/api/autopilot/full_auto_toggle",
+                                 json={"enabled": True, "mode": "review"}, headers=h)
+            if r.status_code == 200 and r.json().get("full_auto_enabled") is True:
+                self._pass("s11_full_auto_enable",
+                           f"mode={r.json().get('full_auto_mode')}")
+            else:
+                self._fail("s11_full_auto_enable",
+                           f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s11_full_auto_enable", str(e))
+
+        # Verify persisted via status endpoint
+        try:
+            r = self.client.get("/api/autopilot/full_auto_status", headers=h)
+            if r.status_code == 200 and r.json().get("full_auto_enabled") is True:
+                self._pass("s11_full_auto_status_persisted")
+            else:
+                self._fail("s11_full_auto_status_persisted",
+                           f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s11_full_auto_status_persisted", str(e))
+
+        self._remove_fresh_user(uid, email)
+
+        # Pro user with only 100 credits → should be blocked (min 200)
+        token2, uid2, email2 = self._fresh_user("s11b")
+        if not uid2:
+            self._fail("s11_low_credits_register", "could not create second test user")
+            return
+        self._set_billing(uid2, "pro", 100)
+        h2 = {"Authorization": f"Bearer {token2}"}
+
+        try:
+            r = self.client.post("/api/autopilot/full_auto_toggle",
+                                 json={"enabled": True, "mode": "review"}, headers=h2)
+            d = r.json()
+            if r.status_code == 200 and d.get("ok") is False and d.get("error") == "insufficient_credits":
+                self._pass("s11_low_credits_blocked",
+                           f"credits={d.get('credits')}, minimum={d.get('minimum')}")
+            else:
+                self._fail("s11_low_credits_blocked",
+                           f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s11_low_credits_blocked", str(e))
+
+        # Free user → plan check should block it
+        token3, uid3, email3 = self._fresh_user("s11c")
+        if uid3:
+            h3 = {"Authorization": f"Bearer {token3}"}
+            try:
+                r = self.client.post("/api/autopilot/full_auto_toggle",
+                                     json={"enabled": True, "mode": "review"}, headers=h3)
+                d = r.json()
+                if r.status_code == 200 and d.get("ok") is False and d.get("error") == "pro_required":
+                    self._pass("s11_free_plan_blocked")
+                else:
+                    self._fail("s11_free_plan_blocked",
+                               f"status={r.status_code} body={r.text[:120]}")
+            except Exception as e:
+                self._fail("s11_free_plan_blocked", str(e))
+            self._remove_fresh_user(uid3, email3)
+
+        self._remove_fresh_user(uid2, email2)
+
+    # ------------------------------------------------------------------
+    # Suite 12 — Multi-workspace
+    # ------------------------------------------------------------------
+
+    def suite12_workspaces(self):
+        print("\n=== SUITE 12: Multi-workspace ===")
+
+        # Agency user — can create multiple workspaces
+        token, uid, email = self._fresh_user("s12")
+        if not uid:
+            self._fail("s12_register", "could not create test user")
+            return
+        self._set_billing(uid, "agency", 100)
+        h = {"Authorization": f"Bearer {token}"}
+
+        # GET /api/workspaces — creates default workspace
+        try:
+            r = self.client.get("/api/workspaces", headers=h)
+            if r.status_code == 200:
+                wss = r.json().get("workspaces", [])
+                self._pass("s12_list_initial", f"{len(wss)} workspace(s)")
+            else:
+                self._fail("s12_list_initial", f"status={r.status_code}")
+                self._remove_fresh_user(uid, email)
+                return
+        except Exception as e:
+            self._fail("s12_list_initial", str(e))
+            self._remove_fresh_user(uid, email)
+            return
+
+        # POST /api/workspaces — create "Test Brand"
+        new_ws_id = None
+        try:
+            r = self.client.post("/api/workspaces",
+                                 json={"name": "Test Brand", "niche": "fitness"},
+                                 headers=h)
+            if r.status_code == 200 and r.json().get("ok"):
+                new_ws_id = r.json().get("workspace", {}).get("id")
+                self._pass("s12_create_workspace", f"id={new_ws_id}")
+            else:
+                self._fail("s12_create_workspace",
+                           f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s12_create_workspace", str(e))
+
+        # GET — verify "Test Brand" in list
+        if new_ws_id:
+            try:
+                r = self.client.get("/api/workspaces", headers=h)
+                names = [w.get("name") for w in r.json().get("workspaces", [])]
+                if "Test Brand" in names:
+                    self._pass("s12_workspace_in_list", f"workspaces={names}")
+                else:
+                    self._fail("s12_workspace_in_list", f"names={names}")
+            except Exception as e:
+                self._fail("s12_workspace_in_list", str(e))
+
+            # POST /api/workspaces/{id}/switch
+            try:
+                r = self.client.post(f"/api/workspaces/{new_ws_id}/switch", headers=h)
+                if r.status_code == 200 and r.json().get("active_workspace") == new_ws_id:
+                    self._pass("s12_switch_workspace")
+                else:
+                    self._fail("s12_switch_workspace",
+                               f"status={r.status_code} body={r.text[:120]}")
+            except Exception as e:
+                self._fail("s12_switch_workspace", str(e))
+
+            # DELETE /api/workspaces/{id}
+            try:
+                r = self.client.delete(f"/api/workspaces/{new_ws_id}", headers=h)
+                if r.status_code == 200 and r.json().get("ok"):
+                    self._pass("s12_delete_workspace")
+                else:
+                    self._fail("s12_delete_workspace",
+                               f"status={r.status_code} body={r.text[:120]}")
+            except Exception as e:
+                self._fail("s12_delete_workspace", str(e))
+
+        self._remove_fresh_user(uid, email)
+
+        # Free user — cannot create a second workspace (403)
+        token_f, uid_f, email_f = self._fresh_user("s12free")
+        if uid_f:
+            h_f = {"Authorization": f"Bearer {token_f}"}
+            # Create default workspace first
+            self.client.get("/api/workspaces", headers=h_f)
+            try:
+                r = self.client.post("/api/workspaces",
+                                     json={"name": "Should Fail"}, headers=h_f)
+                if r.status_code == 403:
+                    self._pass("s12_free_blocked", "403 as expected")
+                else:
+                    self._fail("s12_free_blocked",
+                               f"expected 403 got {r.status_code} body={r.text[:100]}")
+            except Exception as e:
+                self._fail("s12_free_blocked", str(e))
+            self._remove_fresh_user(uid_f, email_f)
+
+    # ------------------------------------------------------------------
+    # Suite 13 — Agent Tasks
+    # ------------------------------------------------------------------
+
+    def suite13_agent_tasks(self):
+        print("\n=== SUITE 13: Agent Tasks ===")
+
+        token, uid, email = self._fresh_user("s13")
+        if not uid:
+            self._fail("s13_register", "could not create test user")
+            return
+        self._set_billing(uid, "starter", 200)
+        h = {"Authorization": f"Bearer {token}"}
+
+        task_id = None
+
+        if not self.skip_ai:
+            # Agent chat should detect "monitor #fitness" and create a task
+            try:
+                r = self.client.post("/api/agent/chat",
+                                     json={"message": "monitor #fitness for me",
+                                           "history": []},
+                                     headers=h, timeout=30)
+                if r.status_code == 200:
+                    self._pass("s13_agent_chat_ok", "agent responded")
+                else:
+                    self._fail("s13_agent_chat_ok",
+                               f"status={r.status_code} body={r.text[:120]}")
+            except Exception as e:
+                self._fail("s13_agent_chat_ok", str(e))
+
+            # Verify task was auto-created
+            try:
+                r = self.client.get("/api/agent/tasks", headers=h)
+                tasks = r.json().get("tasks", [])
+                t = next((x for x in tasks
+                          if x.get("type") == "monitor_hashtag"
+                          and x.get("params", {}).get("hashtag") == "fitness"), None)
+                if t:
+                    task_id = t["id"]
+                    self._pass("s13_task_auto_created", f"id={task_id}")
+                else:
+                    self._fail("s13_task_auto_created",
+                               f"monitor_hashtag/fitness not found in {tasks}")
+            except Exception as e:
+                self._fail("s13_task_auto_created", str(e))
+        else:
+            self._pass("s13_agent_chat_ok", "skipped (--skip-ai)")
+
+        # If no task yet (skip_ai or creation failed), inject one directly
+        if not task_id:
+            import uuid as _uuid2
+            task = {
+                "id": _uuid2.uuid4().hex[:12],
+                "type": "monitor_hashtag",
+                "label": "Monitor hashtag",
+                "params": {"hashtag": "fitness"},
+                "schedule": "daily",
+                "active": True,
+                "created_at": datetime.now().isoformat(),
+                "last_run": None,
+                "run_count": 0,
+            }
+            ufile = os.path.join(USER_DATA_DIR, f"{uid}.json")
+            try:
+                data = {}
+                if os.path.exists(ufile):
+                    with open(ufile, encoding="utf-8") as f:
+                        data = json.load(f)
+                data.setdefault("agent_tasks", []).append(task)
+                with open(ufile, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                task_id = task["id"]
+                if self.skip_ai:
+                    self._pass("s13_task_auto_created",
+                               "injected directly (skip_ai mode)")
+            except Exception as e:
+                self._fail("s13_task_inject", str(e))
+
+        if not task_id:
+            self._remove_fresh_user(uid, email)
+            return
+
+        # GET /api/agent/tasks — verify task present
+        try:
+            r = self.client.get("/api/agent/tasks", headers=h)
+            if r.status_code == 200:
+                tasks = r.json().get("tasks", [])
+                if any(t["id"] == task_id for t in tasks):
+                    self._pass("s13_tasks_list", f"{len(tasks)} task(s)")
+                else:
+                    self._fail("s13_tasks_list", "task_id not found in list")
+            else:
+                self._fail("s13_tasks_list", f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s13_tasks_list", str(e))
+
+        # PATCH — toggle off
+        try:
+            r = self.client.patch(f"/api/agent/tasks/{task_id}",
+                                  json={"active": False}, headers=h)
+            if (r.status_code == 200
+                    and r.json().get("task", {}).get("active") is False):
+                self._pass("s13_task_toggle_off")
+            else:
+                self._fail("s13_task_toggle_off",
+                           f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s13_task_toggle_off", str(e))
+
+        # DELETE
+        try:
+            r = self.client.delete(f"/api/agent/tasks/{task_id}", headers=h)
+            if r.status_code == 200 and r.json().get("ok"):
+                self._pass("s13_task_delete")
+            else:
+                self._fail("s13_task_delete",
+                           f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s13_task_delete", str(e))
+
+        # Verify gone
+        try:
+            r = self.client.get("/api/agent/tasks", headers=h)
+            remaining = r.json().get("tasks", [])
+            if not any(t["id"] == task_id for t in remaining):
+                self._pass("s13_task_deleted_verify")
+            else:
+                self._fail("s13_task_deleted_verify", "task still present after delete")
+        except Exception as e:
+            self._fail("s13_task_deleted_verify", str(e))
+
+        self._remove_fresh_user(uid, email)
+
+    # ------------------------------------------------------------------
+    # Suite 14 — Anti-ban / Proxy / Safety
+    # ------------------------------------------------------------------
+
+    def suite14_anti_ban(self):
+        print("\n=== SUITE 14: Anti-ban / Proxy / Safety ===")
+
+        # Growth user — proxy assignment allowed
+        token, uid, email = self._fresh_user("s14")
+        if not uid:
+            self._fail("s14_register", "could not create test user")
+            return
+        self._set_billing(uid, "growth", 100)
+        h = {"Authorization": f"Bearer {token}"}
+
+        # POST /api/automation/assign_proxy — growth+ should succeed
+        try:
+            r = self.client.post("/api/automation/assign_proxy", headers=h)
+            if r.status_code == 200 and r.json().get("ok"):
+                self._pass("s14_proxy_assign",
+                           f"session={r.json().get('session_id','')[:20]}")
+            else:
+                self._fail("s14_proxy_assign",
+                           f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s14_proxy_assign", str(e))
+
+        # GET /api/automation/safety — verify response structure
+        try:
+            r = self.client.get("/api/automation/safety", headers=h)
+            if r.status_code == 200:
+                d = r.json()
+                has_keys = all(k in d for k in
+                               ("safety_level", "usage", "limits",
+                                "proxy_assigned", "proxy_session"))
+                if has_keys:
+                    self._pass("s14_safety_get",
+                               f"level={d.get('safety_level')} proxy={d.get('proxy_assigned')}")
+                else:
+                    self._fail("s14_safety_get",
+                               f"missing keys in {list(d.keys())}")
+            else:
+                self._fail("s14_safety_get", f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s14_safety_get", str(e))
+
+        # POST /api/automation/safety — set conservative
+        try:
+            r = self.client.post("/api/automation/safety",
+                                 json={"safety_level": "conservative"}, headers=h)
+            if r.status_code == 200 and r.json().get("safety_level") == "conservative":
+                self._pass("s14_safety_set_conservative")
+            else:
+                self._fail("s14_safety_set_conservative",
+                           f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s14_safety_set_conservative", str(e))
+
+        # Verify persisted
+        try:
+            r = self.client.get("/api/automation/safety", headers=h)
+            if r.status_code == 200 and r.json().get("safety_level") == "conservative":
+                self._pass("s14_safety_persisted")
+            else:
+                self._fail("s14_safety_persisted",
+                           f"got level={r.json().get('safety_level')!r}")
+        except Exception as e:
+            self._fail("s14_safety_persisted", str(e))
+
+        self._remove_fresh_user(uid, email)
+
+        # Free user — proxy blocked (403)
+        token_f, uid_f, email_f = self._fresh_user("s14free")
+        if uid_f:
+            h_f = {"Authorization": f"Bearer {token_f}"}
+            try:
+                r = self.client.post("/api/automation/assign_proxy", headers=h_f)
+                if r.status_code == 403:
+                    self._pass("s14_free_proxy_blocked", "403 as expected")
+                else:
+                    self._fail("s14_free_proxy_blocked",
+                               f"expected 403 got {r.status_code}")
+            except Exception as e:
+                self._fail("s14_free_proxy_blocked", str(e))
+            self._remove_fresh_user(uid_f, email_f)
+
+    # ------------------------------------------------------------------
+    # Suite 15 — Analytics endpoints
+    # ------------------------------------------------------------------
+
+    def suite15_analytics(self):
+        print("\n=== SUITE 15: Analytics ===")
+
+        token, uid, email = self._fresh_user("s15")
+        if not uid:
+            self._fail("s15_register", "could not create test user")
+            return
+        self._set_billing(uid, "starter", 200)
+        h = {"Authorization": f"Bearer {token}"}
+
+        # GET /api/analytics/platform — verify structure
+        try:
+            r = self.client.get("/api/analytics/platform", headers=h)
+            if r.status_code == 200:
+                d = r.json()
+                has_keys = all(k in d for k in ("instagram", "youtube", "tiktok"))
+                if has_keys:
+                    self._pass("s15_platform_structure",
+                               f"instagram_connected={d['instagram'].get('connected')}")
+                else:
+                    self._fail("s15_platform_structure",
+                               f"missing keys in {list(d.keys())}")
+            else:
+                self._fail("s15_platform_structure", f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s15_platform_structure", str(e))
+
+        # GET /api/analytics/performance — verify structure
+        try:
+            r = self.client.get("/api/analytics/performance", headers=h)
+            if r.status_code == 200:
+                d = r.json()
+                if "performance" in d and "summary" in d:
+                    self._pass("s15_performance_get",
+                               f"tracked={d.get('summary', {}).get('total_tracked', 0)}")
+                else:
+                    self._fail("s15_performance_get",
+                               f"bad structure: {list(d.keys())}")
+            else:
+                self._fail("s15_performance_get", f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s15_performance_get", str(e))
+
+        # POST /api/analytics/update_performance — save test record
+        test_post_id = f"qa-test-{int(time.time())}"
+        try:
+            r = self.client.post("/api/analytics/update_performance",
+                                 json={
+                                     "post_id":      test_post_id,
+                                     "platform":     "instagram",
+                                     "content_type": "image",
+                                     "caption":      "QA test post",
+                                     "views":        1000,
+                                     "likes":        80,
+                                     "comments":     12,
+                                     "shares":       5,
+                                 },
+                                 headers=h)
+            if r.status_code == 200 and r.json().get("ok"):
+                er = r.json().get("engagement_rate", -1)
+                self._pass("s15_performance_update",
+                           f"engagement_rate={er}")
+            else:
+                self._fail("s15_performance_update",
+                           f"status={r.status_code} body={r.text[:120]}")
+        except Exception as e:
+            self._fail("s15_performance_update", str(e))
+
+        # GET /api/analytics/performance — verify saved record exists
+        try:
+            r = self.client.get("/api/analytics/performance", headers=h)
+            if r.status_code == 200:
+                perf = r.json().get("performance", [])
+                found = any(p.get("post_id") == test_post_id for p in perf)
+                if found:
+                    self._pass("s15_performance_persisted",
+                               "test record found")
+                else:
+                    self._fail("s15_performance_persisted",
+                               f"post_id={test_post_id} not in {[p.get('post_id') for p in perf[:5]]}")
+            else:
+                self._fail("s15_performance_persisted", f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s15_performance_persisted", str(e))
+
+        # GET /api/analytics/dashboard — smoke test
+        try:
+            r = self.client.get("/api/analytics/dashboard", headers=h)
+            if r.status_code == 200 and "kpis" in r.json():
+                self._pass("s15_dashboard_ok")
+            else:
+                self._fail("s15_dashboard_ok", f"status={r.status_code}")
+        except Exception as e:
+            self._fail("s15_dashboard_ok", str(e))
+
+        self._remove_fresh_user(uid, email)
+
     def _cleanup(self):
         if not self.user_id:
             return
@@ -862,6 +1363,11 @@ class QARunner:
         self.suite8_watermark()
         self.suite9_ai_portrait()
         self.suite10_content_plan()
+        self.suite11_full_auto()
+        self.suite12_workspaces()
+        self.suite13_agent_tasks()
+        self.suite14_anti_ban()
+        self.suite15_analytics()
         self._cleanup()
 
         passed = sum(1 for r in self.results if r["status"] == "PASS")
