@@ -1199,15 +1199,30 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
     <!-- ── SYSTEM ── -->
     <div class="nav-section" data-i18n="nav.system">System</div>
-    <div class="ni" id="ni-connect" onclick="nav('connect')"><span class="ico">🔗</span><span data-i18n="nav.connect">Connect</span></div>
-    <div class="ni has-sub" id="ni-settings" onclick="toggleSubMenu('settings-sub')"><span class="ico">⚙️</span><span data-i18n="nav.settings">Indstillinger</span><span class="chevron">›</span></div>
+
+    <!-- Connect (with Telegram sub) -->
+    <div class="ni has-sub" id="ni-connect" onclick="toggleSubMenu('connect-sub')"><span class="ico">🔗</span><span data-i18n="nav.connect">Connect</span><span class="chevron">›</span></div>
+    <div class="submenu" id="connect-sub">
+      <div class="sub-item" onclick="nav('connect')">🔗 <span>Platforms</span></div>
+      <div class="sub-item" id="ni-telegram-agent" onclick="nav('telegram-agent')">🤖 <span>Telegram Agent</span></div>
+    </div>
+
+    <!-- Billing (with sub-items) -->
+    <div class="ni has-sub" id="ni-billing" onclick="toggleSubMenu('billing-sub')"><span class="ico">💳</span><span data-i18n="nav.billing">Plan & Credits</span><span class="chevron">›</span></div>
+    <div class="submenu" id="billing-sub">
+      <div class="sub-item" onclick="nav('billing')">💳 <span>Plan & Credits</span></div>
+      <div class="sub-item" onclick="nav('billing');setTimeout(function(){document.getElementById('topup-section')?.scrollIntoView({behavior:'smooth'})},400)">💰 <span>Top Up Credits</span></div>
+      <div class="sub-item" onclick="nav('subaccounts')">👥 <span>Extra Profiles</span></div>
+      <div class="sub-item" onclick="nav('studio')">🎬 <span>Studio</span></div>
+    </div>
+
+    <!-- Settings (clean) -->
+    <div class="ni has-sub" id="ni-settings" onclick="toggleSubMenu('settings-sub')"><span class="ico">⚙️</span><span data-i18n="nav.settings">Settings</span><span class="chevron">›</span></div>
     <div class="submenu" id="settings-sub">
-      <div class="sub-item" onclick="nav('settings')">⚙️ <span data-i18n="nav.settings">Indstillinger</span></div>
+      <div class="sub-item" onclick="nav('settings')">⚙️ <span data-i18n="nav.settings">Account & Interface</span></div>
       <div class="sub-item" id="ni-agency-dash-sub" style="display:none" onclick="nav('agency-dashboard')">🏢 <span>Agency Dashboard</span></div>
-      <div class="sub-item" onclick="nav('subaccounts')">👥 <span>Extra Profile</span></div>
       <div class="sub-item" style="color:var(--red)" onclick="logout()">🚪 <span data-i18n="nav.logout">Log ud</span></div>
     </div>
-    <div class="ni" onclick="nav('billing')"><span class="ico">💳</span><span data-i18n="nav.billing">Plan & Credits</span></div>
   </nav>
 
   <div class="sbfoot">
@@ -2678,6 +2693,83 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 </div>
 
 <!-- ══ INDSTILLINGER ══════════════════════════════════════════════════════ -->
+
+  <!-- ══ TELEGRAM AGENT ══════════════════════════════════════════════════════ -->
+  <div id="page-telegram-agent" class="page">
+    <div style="max-width:640px">
+      <div class="card" style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <div style="font-size:36px">🤖</div>
+          <div>
+            <div class="ctitle" style="margin:0">Telegram Agent</div>
+            <div style="font-size:12px;color:var(--tx3)">Control UgoingViral from Telegram — commands, daily reports, natural language scheduling</div>
+          </div>
+        </div>
+
+        <!-- Connection status -->
+        <div id="tg-user-status" style="margin-bottom:16px;padding:12px 14px;border-radius:10px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.12);font-size:13px;color:var(--tx3)">
+          <div style="display:flex;align-items:center;gap:8px"><div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Checking...</div>
+        </div>
+
+        <!-- Connect panel (when NOT connected) -->
+        <div id="tg-connect-panel">
+          <div style="font-size:13px;color:var(--tx2);margin-bottom:12px">Click the button below — Telegram will open and your account links automatically.</div>
+          <button class="btn bp" id="tg-connect-btn" onclick="connectUserTelegram()" style="margin-bottom:12px">🤖 Connect Telegram</button>
+          <div id="tg-deeplink-box" style="display:none;margin-top:10px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px">
+            <div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Open this on your phone — account links automatically:</div>
+            <a id="tg-deeplink-url" href="#" target="_blank" class="btn bp" style="display:inline-block;margin-bottom:8px;text-decoration:none">📱 Open in Telegram</a>
+            <div style="font-size:11px;color:var(--tx3);margin-top:6px">Or send to the bot: <code id="tg-deeplink-cmd" style="background:rgba(0,0,0,.2);padding:2px 6px;border-radius:4px;color:var(--ac)"></code></div>
+          </div>
+        </div>
+
+        <!-- Settings panel (when connected) -->
+        <div id="tg-prefs-panel" style="display:none">
+          <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:16px">
+            <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:10px">Daily Report</div>
+            <div class="fg" style="margin-bottom:8px">
+              <label class="fl">Send report at (UTC hour)</label>
+              <select class="fs" id="tg-report-hour" style="max-width:180px">
+                <option value="6">06:00 UTC</option>
+                <option value="7">07:00 UTC</option>
+                <option value="8" selected>08:00 UTC (default)</option>
+                <option value="9">09:00 UTC</option>
+                <option value="10">10:00 UTC</option>
+                <option value="12">12:00 UTC</option>
+                <option value="18">18:00 UTC</option>
+                <option value="20">20:00 UTC</option>
+              </select>
+            </div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:10px">Notifications</div>
+          <div class="trow"><div><div class="tname">Daily summary</div><div class="tdesc">Posts, credits, today's schedule</div></div><div class="tog on" id="tog-tg-daily" onclick="togIt(this)"></div></div>
+          <div class="trow"><div><div class="tname">Low credit alert</div><div class="tdesc">When credits drop below 100</div></div><div class="tog on" id="tog-tg-low-cr" onclick="togIt(this)"></div></div>
+          <div class="trow"><div><div class="tname">Post success</div><div class="tdesc">When a post is published</div></div><div class="tog" id="tog-tg-post-ok" onclick="togIt(this)"></div></div>
+          <div class="trow"><div><div class="tname">Post failure</div><div class="tdesc">When a post fails to publish</div></div><div class="tog on" id="tog-tg-post-fail" onclick="togIt(this)"></div></div>
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn bp bsm" onclick="saveTelegramPrefs()">Save Settings</button>
+            <button class="btn bsm" style="color:#f87171;border-color:rgba(239,68,68,.3)" onclick="disconnectUserTelegram()">Disconnect Telegram</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bot commands reference -->
+      <div class="card">
+        <div class="ctitle">Bot Commands</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px;margin-top:8px">
+          <code style="color:var(--ac)">/status</code><span style="color:var(--tx3)">Account overview — plan, credits, autopilot, platforms</span>
+          <code style="color:var(--ac)">/stats</code><span style="color:var(--tx3)">Last 7 days: posts, content generated, credits used</span>
+          <code style="color:var(--ac)">/plan</code><span style="color:var(--tx3)">Your current AI content plan</span>
+          <code style="color:var(--ac)">/credits</code><span style="color:var(--tx3)">Credit balance with top-up link</span>
+          <code style="color:var(--ac)">/pause</code><span style="color:var(--tx3)">Pause autopilot</span>
+          <code style="color:var(--ac)">/resume</code><span style="color:var(--tx3)">Resume autopilot</span>
+        </div>
+        <div style="margin-top:12px;padding:10px 12px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.1);border-radius:8px;font-size:12px;color:var(--tx2)">
+          💬 <strong>Natural language:</strong> <em>"post my latest product tomorrow at 9am"</em> — the bot understands plain English commands too.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="page-settings" class="page">
     <div style="max-width:760px">
 
@@ -2748,146 +2840,18 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div><div class="tname">Save content history</div><div class="tdesc">All generated content is saved in your history</div></div>
           <div class="tog on"></div>
         </div>
-        <button class="btn bg bsm" style="margin-top:14px" onclick="obReset()">👋 Show onboarding guide</button>
-      </div>
-
-      <!-- PLAN FEATURES -->
-      <div class="card" style="margin-bottom:20px">
-        <div class="ctitle">💎 Plan Features</div>
-        <div id="settings-plan-features"><div style="color:var(--tx3);font-size:13px;padding:8px 0">Loading...</div></div>
-      </div>
-
-      <!-- REFERRAL -->
-      <div class="card" style="margin-bottom:20px">
-        <div class="ctitle">🎁 Refer a Friend</div>
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Earn <strong style="color:var(--ac)">50 bonus credits</strong> every time someone you invite upgrades to a paid plan.</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px" id="ref-stats-grid">
-          <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:22px;font-weight:700;color:var(--ac)" id="ref-invited">–</div>
-            <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Invited</div>
-          </div>
-          <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:22px;font-weight:700;color:#22c55e" id="ref-upgraded">–</div>
-            <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Upgraded</div>
-          </div>
-          <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:22px;font-weight:700;color:#f59e0b" id="ref-credits">–</div>
-            <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Credits Earned</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <input class="fi" id="ref-link-input" readonly style="font-size:12px;font-family:monospace;flex:1;cursor:pointer" onclick="this.select()" value="Loading...">
-          <button class="btn bg bsm" onclick="copyRefLink()">Copy</button>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn bg bsm" onclick="shareRefTwitter()">Share on X</button>
-          <button class="btn bg bsm" onclick="shareRefLinkedIn()">Share on LinkedIn</button>
-          <a href="/affiliate" target="_blank" style="font-size:12px;color:var(--ac);text-decoration:none;display:flex;align-items:center;margin-left:auto">Become an affiliate →</a>
-        </div>
-      </div>
-
-      <!-- CONTENT LANGUAGE -->
-      <div class="card" style="margin-bottom:20px">
-        <div class="ctitle">🌐 Content Language</div>
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:14px">AI will generate all captions and hashtags in the selected language.</div>
-        <div class="fg">
-          <label class="fl">Language</label>
+        <div class="fg" style="margin-top:12px">
+          <label class="fl">AI content language</label>
           <select class="fi" id="content-lang-select" style="max-width:240px">
             <option value="english">🇬🇧 English</option>
+            <option value="danish">🇩🇰 Danish</option>
             <option value="spanish">🇪🇸 Spanish</option>
             <option value="french">🇫🇷 French</option>
             <option value="german">🇩🇪 German</option>
             <option value="portuguese">🇧🇷 Portuguese</option>
           </select>
         </div>
-        <button class="btn bp bsm" style="margin-top:12px" onclick="saveContentLanguage()">Save language</button>
-      </div>
-
-      <!-- NOTIFICATION PREFS -->
-      <div class="card" id="notif-prefs-card" style="margin-bottom:20px">
-        <div class="ctitle">🔔 Notification Preferences</div>
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Choose which in-app notifications you receive.</div>
-        <div id="notif-prefs-list"><div style="color:var(--tx3);font-size:13px">Loading…</div></div>
-        <button class="btn bp bsm" style="margin-top:14px" onclick="saveNotifPrefs()">Save preferences</button>
-      </div>
-
-      <!-- TELEGRAM CONNECT -->
-      <div class="card" id="tg-settings-card" style="margin-bottom:20px">
-        <div class="ctitle">🤖 Telegram Agent</div>
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Connect your personal Telegram to control UgoingViral with commands and receive daily reports.</div>
-
-        <!-- Status -->
-        <div id="tg-user-status" style="margin-bottom:16px;padding:12px 14px;border-radius:10px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.12);font-size:13px;color:var(--tx3)">
-          <div style="display:flex;align-items:center;gap:8px"><div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Checking...</div>
-        </div>
-
-        <!-- Connect panel (shown when NOT connected) -->
-        <div id="tg-connect-panel">
-          <div style="font-size:13px;color:var(--tx2);margin-bottom:12px">Click the button below to open the bot in Telegram — your account will link automatically.</div>
-          <button class="btn bp" id="tg-connect-btn" onclick="connectUserTelegram()" style="margin-bottom:12px">
-            🤖 Connect Telegram
-          </button>
-          <div id="tg-deeplink-box" style="display:none;margin-top:10px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px">
-            <div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Open this link in your phone — Telegram will link your account automatically:</div>
-            <a id="tg-deeplink-url" href="#" target="_blank" class="btn bp" style="display:inline-block;margin-bottom:8px;text-decoration:none">📱 Open in Telegram</a>
-            <div style="font-size:11px;color:var(--tx3);margin-top:6px">Or send this to the bot manually: <code id="tg-deeplink-cmd" style="background:rgba(0,0,0,.2);padding:2px 6px;border-radius:4px;color:var(--ac)"></code></div>
-          </div>
-        </div>
-
-        <!-- Settings panel (shown when connected) -->
-        <div id="tg-prefs-panel" style="display:none">
-          <div style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:16px">
-            <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:10px">Daily Report Settings</div>
-            <div class="fg" style="margin-bottom:8px">
-              <label class="fl">Send daily report at (UTC hour)</label>
-              <select class="fs" id="tg-report-hour" style="max-width:180px">
-                <option value="6">06:00 UTC (early morning)</option>
-                <option value="7">07:00 UTC</option>
-                <option value="8" selected>08:00 UTC (default)</option>
-                <option value="9">09:00 UTC</option>
-                <option value="10">10:00 UTC</option>
-                <option value="12">12:00 UTC (noon)</option>
-                <option value="18">18:00 UTC (evening)</option>
-                <option value="20">20:00 UTC</option>
-              </select>
-            </div>
-          </div>
-          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:10px">Notifications</div>
-          <div class="trow" style="padding:8px 0">
-            <div><div class="tname" style="font-size:13px">Daily summary</div><div class="tdesc">Posts, credits, today's schedule</div></div>
-            <div class="tog on" id="tog-tg-daily" onclick="togIt(this)"></div>
-          </div>
-          <div class="trow" style="padding:8px 0">
-            <div><div class="tname" style="font-size:13px">Low credit alert</div><div class="tdesc">Alert when credits drop below 100</div></div>
-            <div class="tog on" id="tog-tg-low-cr" onclick="togIt(this)"></div>
-          </div>
-          <div class="trow" style="padding:8px 0">
-            <div><div class="tname" style="font-size:13px">Post success</div><div class="tdesc">Notify when a post is published</div></div>
-            <div class="tog" id="tog-tg-post-ok" onclick="togIt(this)"></div>
-          </div>
-          <div class="trow" style="padding:8px 0">
-            <div><div class="tname" style="font-size:13px">Post failure</div><div class="tdesc">Notify when a post fails to publish</div></div>
-            <div class="tog on" id="tog-tg-post-fail" onclick="togIt(this)"></div>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-            <button class="btn bp bsm" onclick="saveTelegramPrefs()">Save Settings</button>
-            <button class="btn bsm" style="color:#f87171;border-color:rgba(239,68,68,.3)" onclick="disconnectUserTelegram()">Disconnect Telegram</button>
-          </div>
-        </div>
-
-        <!-- Bot commands reference -->
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-          <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Bot Commands</div>
-          <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px">
-            <code style="color:var(--ac)">/status</code><span style="color:var(--tx3)">Account overview, plan, credits, autopilot</span>
-            <code style="color:var(--ac)">/stats</code><span style="color:var(--tx3)">Last 7 days: posts, engagement, credits used</span>
-            <code style="color:var(--ac)">/plan</code><span style="color:var(--tx3)">Your current content plan</span>
-            <code style="color:var(--ac)">/credits</code><span style="color:var(--tx3)">Credit balance with top-up link</span>
-            <code style="color:var(--ac)">/pause</code><span style="color:var(--tx3)">Pause autopilot</span>
-            <code style="color:var(--ac)">/resume</code><span style="color:var(--tx3)">Resume autopilot</span>
-          </div>
-          <div style="margin-top:8px;font-size:11px;color:var(--tx3);font-style:italic">Natural language: "post my latest product tomorrow at 9am"</div>
-        </div>
+        <button class="btn bg bsm" style="margin-top:14px" onclick="obReset()">👋 Show onboarding guide</button>
       </div>
 
       <!-- DANGER ZONE -->
@@ -2979,6 +2943,41 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
 
+      <!-- PLAN FEATURES & EXTRA PROFILES (moved from Settings) -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">💎 Plan Features</div>
+        <div id="settings-plan-features"><div style="color:var(--tx3);font-size:13px;padding:8px 0">Loading...</div></div>
+      </div>
+
+      <!-- REFER A FRIEND (moved from Settings) -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">🎁 Refer a Friend</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Earn <strong style="color:var(--ac)">50 bonus credits</strong> every time someone you invite upgrades to a paid plan.</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px" id="ref-stats-grid">
+          <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:22px;font-weight:700;color:var(--ac)" id="ref-invited">–</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Invited</div>
+          </div>
+          <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:22px;font-weight:700;color:#22c55e" id="ref-upgraded">–</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Upgraded</div>
+          </div>
+          <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:22px;font-weight:700;color:#f59e0b" id="ref-credits">–</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Credits Earned</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <input class="fi" id="ref-link-input" readonly style="font-size:12px;font-family:monospace;flex:1;cursor:pointer" onclick="this.select()" value="Loading...">
+          <button class="btn bg bsm" onclick="copyRefLink()">Copy</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn bg bsm" onclick="shareRefTwitter()">Share on X</button>
+          <button class="btn bg bsm" onclick="shareRefLinkedIn()">Share on LinkedIn</button>
+          <a href="/affiliate" target="_blank" style="font-size:12px;color:var(--ac);text-decoration:none;display:flex;align-items:center;margin-left:auto">Become an affiliate →</a>
+        </div>
+      </div>
+
       <!-- BONUS CREDITS -->
       <div class="card" style="margin-bottom:20px">
         <div class="ctitle">🎁 Bonus credits — awarded automatically
@@ -3048,6 +3047,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div style="font-size:11px;color:var(--tx3);margin-top:-8px;margin-bottom:14px">Secure Payment processes in USD — displayed prices are for reference</div>
       
         <!-- Auto Top-Up -->
+        <div id="topup-section"></div>
         <div class="card" style="margin-bottom:20px" id="auto-topup-card">
           <div class="ctitle">Auto Top-Up</div>
           <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">Automatically add credits when your balance runs low</div>
@@ -5971,7 +5971,7 @@ const titles = {
   history:'📚 Content Historik', library:'🖼️ Medie Bibliotek',
   'content-library':'🗂️ Content Bibliotek',
   posting:'📤 Post & Schedule', inbox:'💬 Inbox, DM & Email',
-  automation:'🤖 Automation', connect:'🔗 Connect', settings:'⚙️ Indstillinger', billing:'💳 Plan & Credits',
+  automation:'🤖 Automation', connect:'🔗 Connect', settings:'⚙️ Indstillinger', billing:'💳 Plan & Credits', 'telegram-agent':'🤖 Telegram Agent',
   'influencer-products':'🛍️ Reklame Produkter',
   'growth-accounts':'📈 Growth Konti',
   pipeline:'🎬 Content Pipeline',
@@ -6008,9 +6008,10 @@ function nav(p) {
   if (p === 'products' && !allProducts.length) loadProducts();
   if (p === 'pipeline') { loadPipeline(); loadPipeHistory(); pipeLoadCredits(); }
   if (p === 'stats') { loadStats(); }
-  if (p === 'billing') { loadBilling(); detectBillingCurrency(); loadAutoTopup(); }
+  if (p === 'billing') { loadReferralStats(); loadSettingsPage();  loadBilling(); detectBillingCurrency(); loadAutoTopup(); }
   if (p === 'billing') { setTimeout(checkLowCredits, 800); }
-  if (p === 'settings') { loadUserTelegramStatus(); loadSettingsPage(); loadReferralStats(); loadNotifPrefs(); loadContentLanguage(); }
+  if (p === 'settings') { loadSettingsPage(); loadContentLanguage(); }
+  if (p === 'telegram-agent') { loadUserTelegramStatus(); }
   if (p === 'posting') { if (!allProducts.length) { loadProducts().then(function() { renderPostingProductGrid(); loadAutoGroups(); }); } else { renderPostingProductGrid(); loadAutoGroups(); } loadRecentPosts(); loadGroups(); }
   if (p === 'library') { loadLibFolders(); renderLibrary(libFiles); }
   if (p === 'content-library') { loadClib(); }
@@ -6058,7 +6059,7 @@ function toggleSubMenu(id) {
   const niMap = {
     'products-sub':'ni-products', 'content-sub':'ni-content',
     'webshop-sub':'ni-webshop', 'influencer-sub':'ni-influencer',
-    'growth-sub':'ni-growth', 'settings-sub':'ni-settings'
+    'growth-sub':'ni-growth', 'settings-sub':'ni-settings', 'connect-sub':'ni-connect', 'billing-sub':'ni-billing'
   };
   const ni = document.getElementById(niMap[id]);
   document.querySelectorAll('.submenu').forEach(s => {
@@ -10779,6 +10780,26 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
 </button>
 
 <!-- Panel -->
+<!-- ══ FEATURE LOCKED MODAL ══════════════════════════════════════════════ -->
+<div id="feature-locked-modal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeLockedModal()">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:28px 24px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)" onclick="event.stopPropagation()">
+    <button onclick="closeLockedModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;color:var(--tx3);cursor:pointer;line-height:1">✕</button>
+    <div style="font-size:40px;margin-bottom:12px" id="flm-icon">🔒</div>
+    <div style="font-size:17px;font-weight:700;color:var(--tx);margin-bottom:8px" id="flm-title">Feature Locked</div>
+    <div style="font-size:13px;color:var(--tx3);margin-bottom:20px;line-height:1.5" id="flm-desc">This feature requires a higher plan.</div>
+    <div id="flm-extra-profiles" style="display:none;margin-bottom:20px;padding:14px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:12px;text-align:left">
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:4px">Current extra profiles: <strong id="flm-ep-current">0</strong></div>
+      <div style="font-size:13px;font-weight:700;color:var(--ac);margin-bottom:10px">$19 one-time per extra profile</div>
+      <button class="btn bp" style="width:100%" onclick="buyExtraProfileNow()">Buy Extra Profile — $19</button>
+      <div style="font-size:11px;color:var(--tx3);margin-top:8px;text-align:center">Credits cannot be used for extra profiles — purchase only</div>
+    </div>
+    <div id="flm-actions" style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn bp" style="width:100%" onclick="nav('billing');closeLockedModal()">Upgrade Plan →</button>
+      <button id="flm-credits-btn" class="btn bg" style="width:100%;display:none" onclick="unlockWithCreditsNow()">Unlock with <span id="flm-credits-cost">–</span> credits</button>
+    </div>
+  </div>
+</div>
+
 <div id="agent-panel">
   <!-- Header -->
   <div id="ag-header">
@@ -10805,7 +10826,7 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
   <!-- Messages -->
   <div id="ag-msgs">
     <div class="ag-msg bot">
-      <div class="ag-bubble">Hey! 👋 I am your AI assistant on UgoingViral.<br><br>I can help with content, strategy, platform guidance and much more. You can also talk to me by pressing 🎤<br><br>What can I do for you?</div>
+      <div class="ag-bubble">Hey! 👋 I'm your AI assistant on UgoingViral. I can help with content ideas, strategy, platform guidance and much more. What can I help you with today?</div>
     </div>
   </div>
 
@@ -10827,6 +10848,67 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════
+//   FEATURE LOCKED MODAL
+// ═══════════════════════════════════════════════════════
+var _flm = { creditsCost: 0, feature: '' };
+
+function showLockedFeatureModal(config) {
+  // config: { title, desc, icon, credits, isExtraProfile }
+  var modal = document.getElementById('feature-locked-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  document.getElementById('flm-title').textContent = config.title || 'Feature Locked';
+  document.getElementById('flm-desc').textContent = config.desc || 'This feature requires a higher plan.';
+  document.getElementById('flm-icon').textContent = config.icon || '🔒';
+  var epSection = document.getElementById('flm-extra-profiles');
+  var crBtn = document.getElementById('flm-credits-btn');
+  if (config.isExtraProfile) {
+    epSection.style.display = '';
+    crBtn.style.display = 'none';
+    apiFetch('/api/subaccounts').then(function(d) {
+      var ep = document.getElementById('flm-ep-current');
+      if (ep) ep.textContent = (d.sub_accounts || []).length;
+    }).catch(function(){});
+  } else {
+    epSection.style.display = 'none';
+    if (config.credits) {
+      _flm.creditsCost = config.credits;
+      crBtn.style.display = '';
+      document.getElementById('flm-credits-cost').textContent = config.credits;
+    } else {
+      crBtn.style.display = 'none';
+    }
+  }
+  _flm.feature = config.feature || '';
+}
+
+function closeLockedModal() {
+  var modal = document.getElementById('feature-locked-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function buyExtraProfileNow() {
+  closeLockedModal();
+  nav('subaccounts');
+}
+
+function unlockWithCreditsNow() {
+  closeLockedModal();
+  // Feature-specific unlock logic can be added here
+  toast('Feature unlock via credits — go to Billing to top up', 'info');
+}
+
+// Convenience wrapper for Extra Profiles
+function showExtraProfileModal() {
+  showLockedFeatureModal({
+    title: 'Extra Profiles',
+    desc: 'Add separate profiles each with their own connected platforms, content and schedule.',
+    icon: '👥',
+    isExtraProfile: true,
+  });
+}
+
 // ═══════════════════════════════════════════════════════
 //   FLOATING AI AGENT — improved
 // ═══════════════════════════════════════════════════════
@@ -10971,19 +11053,6 @@ async function agInit() {
     sg.appendChild(extra);
   }
 
-  // First login: auto-open panel and ask for agent name
-  if (!localStorage.getItem('ag_name_asked') && !savedName) {
-    setTimeout(function() {
-      agPositionPanel();
-      var panel = document.getElementById('agent-panel');
-      panel.classList.add('ag-open');
-      _ag.open = true;
-      document.getElementById('ag-fab-ico').textContent = '✕';
-      _ag.awaitingName = true;
-      localStorage.setItem('ag_name_asked', '1');
-      agAddMsg('bot', 'Hi! I\'m your personal AI assistant on UgoingViral. 👋\n\nWhat would you like to call me? Type a name (e.g. **"Aria"**, **"Max"**, **"Nova"**) or say **"you choose"** and I\'ll pick one!');
-    }, 2000);
-  }
 }
 
 // ── Toggle open/close ─────────────────────────────────────────────────────────
@@ -11072,48 +11141,6 @@ async function agSend(fromVoice) {
 
   // Detect language from user input
   agDetectLang(text);
-
-  // First-time name prompt (fallback: if panel opened manually before agInit auto-prompt)
-  if (!localStorage.getItem('ag_name_asked') && !_ag.awaitingName) {
-    localStorage.setItem('ag_name_asked', '1');
-    _ag.pendingFirstMsg = text;
-    _ag.awaitingName = true;
-    agAddMsg('user', text);
-    agAddMsg('bot', 'Hi! I\'m your personal AI assistant on UgoingViral. 👋\n\nWhat would you like to call me? Type a name (e.g. **"Aria"**, **"Max"**, **"Nova"**) or say **"you choose"** and I\'ll pick one!');
-    return;
-  }
-
-  // Handle name input
-  if (_ag.awaitingName) {
-    _ag.awaitingName = false;
-    var lower = text.toLowerCase().trim();
-    agAddMsg('user', text);
-    var agentName;
-    var _agNames = ['Aria','Nova','Sage','Max','Luna','Zoe','Eli','Kai','Scout','Mira'];
-    if (lower === 'you choose' || lower === 'you pick' || lower === 'surprise me' || lower === 'pick one' || lower === 'choose') {
-      agentName = _agNames[Math.floor(Math.random() * _agNames.length)];
-      agAddMsg('bot', 'Great choice! I\'ll go by **' + agentName + '**! 🎉\n\nNice to meet you! How can I help you today?');
-    } else if (lower !== 'skip' && lower !== 'no' && lower !== 'none' && text.length > 0 && text.length < 30) {
-      agentName = text.trim();
-      agAddMsg('bot', 'Perfect! I\'ll be **' + agentName + '** from now on. 🎉\n\nHow can I help you today?');
-    } else {
-      agAddMsg('bot', 'No problem! You can rename me anytime. What can I help with?');
-    }
-    if (agentName) {
-      localStorage.setItem('ag_agent_name', agentName);
-      document.getElementById('ag-hname').textContent = agentName;
-      apiFetch('/api/agent/name', 'PATCH', {name: agentName}).catch(function(){});
-    }
-    if (_ag.pendingFirstMsg) {
-      var pending = _ag.pendingFirstMsg;
-      _ag.pendingFirstMsg = null;
-      setTimeout(function() {
-        document.getElementById('ag-input').value = pending;
-        agSend();
-      }, 700);
-    }
-    return;
-  }
 
   agAddMsg('user', text);
   _ag.history.push({role:'user', content:text});
