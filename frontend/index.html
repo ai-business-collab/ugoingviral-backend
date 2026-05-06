@@ -10774,7 +10774,10 @@ function renderPipeContent() {
 #ag-send { background:var(--ac); color:#000; }
 #ag-send:hover { background:var(--ac2); transform:scale(1.05); }
 #ag-mic { background:#111d35; border:1px solid rgba(255,255,255,.1); color:var(--tx2); }
-#ag-mic.listening { background:rgba(239,68,68,.2); border-color:#ef4444; color:#ef4444; }
+#ag-mic.listening { background:rgba(239,68,68,.2); border-color:#ef4444; color:#ef4444; animation:ag-pulse 1s infinite; }
+@keyframes ag-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }
+.ag-speaker { background:none;border:none;cursor:pointer;font-size:13px;opacity:.5;padding:1px 4px;margin-left:4px;vertical-align:middle }
+.ag-speaker:hover { opacity:1 }
 body.light #agent-panel { background:#eef1f5; border-color:rgba(0,0,0,.1); box-shadow:0 20px 70px rgba(0,0,0,.2); }
 body.light #ag-msgs { background:#eef1f5; }
 body.light .ag-msg.bot .ag-bubble { background:#fff; color:#0f1923; border-color:rgba(0,0,0,.09); }
@@ -10835,6 +10838,7 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
     </div>
     <span class="ag-hbadge free" id="ag-badge">AI</span>
     <button class="ag-hbtn" onclick="agClearHistory()" title="Clear history">🗑</button>
+    <button class="ag-hbtn" id="ag-voice-settings-btn" onclick="agToggleVoiceSettings()" title="Voice settings">🔊</button>
     <button class="ag-hbtn" id="ag-auto-toggle-btn" onclick="agToggleAuto()" title="Auto mode">🤖</button>
     <button class="ag-hbtn" onclick="agToggle()">✕</button>
   </div>
@@ -10860,6 +10864,20 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
     <span style="font-size:13px">🤖</span>
     <span class="ag-auto-lbl" id="ag-auto-lbl">Auto mode: disabled</span>
     <div class="tog" id="ag-auto-tog" onclick="agToggleAuto()"></div>
+  </div>
+
+  <!-- Voice settings panel -->
+  <div id="ag-voice-panel" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:var(--glass-b)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:12px;font-weight:700;color:var(--tx2)">🔊 Voice responses (ElevenLabs)</span>
+      <div class="tog" id="ag-voice-tog" onclick="agToggleVoicePref(this)"></div>
+    </div>
+    <div id="ag-voice-selector-row" style="display:none">
+      <select id="ag-voice-select" class="fi" style="font-size:11px;padding:4px 8px;height:28px;width:100%" onchange="agSetVoiceId(this.value)">
+        <option value="">Loading voices…</option>
+      </select>
+    </div>
+    <div style="font-size:10px;color:var(--tx3);margin-top:6px">When enabled, agent replies are spoken aloud. Mic input always uses Whisper (5 credits).</div>
   </div>
 
   <!-- Input -->
@@ -11156,6 +11174,9 @@ var _ag = {
   listening: false,
   recog: null,
   voiceMode: false,
+  voiceEnabled: false,
+  voiceId: '',
+  _mediaRecorder: null,
   autoEnabled: false,
   plan: 'free',
   unread: 0,
@@ -11282,6 +11303,9 @@ async function agInit() {
     _agUpdateAutoUI();
   } catch(e) {}
 
+  // Load voice settings
+  await agLoadVoiceSettings();
+
   // Extra chip for pro users
   if (['pro','elite','personal'].includes(_ag.plan)) {
     var sg = document.getElementById('ag-suggestions');
@@ -11311,13 +11335,20 @@ function agToggle() {
 }
 
 // ── Add message bubble ────────────────────────────────────────────────────────
-function agAddMsg(role, text, actions, escalate) {
+function agPlayAudio(src) {
+  try { new Audio(src).play(); } catch(e) {}
+}
+
+function agAddMsg(role, text, actions, escalate, audioUrl) {
   var msgs = document.getElementById('ag-msgs');
   var wrap = document.createElement('div');
   wrap.className = 'ag-msg ' + (role === 'user' ? 'user' : 'bot');
   var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
                  .replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  wrap.innerHTML = '<div class="ag-bubble">' + safe + '</div>';
+  var speakerBtn = (role === 'bot' && audioUrl)
+    ? '<button class="ag-speaker" onclick="agPlayAudio('' + audioUrl.replace(/'/g,"\'").replace(/"/g,'&quot;') + '')" title="Replay">🔊</button>'
+    : '';
+  wrap.innerHTML = '<div class="ag-bubble">' + safe + speakerBtn + '</div>';
 
   if (actions && actions.length) {
     var actRow = document.createElement('div');
@@ -11393,23 +11424,22 @@ async function agSend(fromVoice) {
       message: text,
       history: _ag.history.slice(-10),
       context: curPage + langHint + (agentName ? ' [Agent name: ' + agentName + ']' : ''),
-      voice_mode: !!fromVoice,
+      voice_mode: !!(fromVoice || _ag.voiceEnabled),
     });
     agRemoveTyping();
     var reply = d.response || '…';
-    agAddMsg('bot', reply, d.actions || [], d.escalate);
+    var audioUrl = d.voice_url || null;
+    agAddMsg('bot', reply, d.actions || [], d.escalate, audioUrl);
     _ag.history.push({role:'assistant', content:reply});
     document.getElementById('ag-hstatus').textContent = 'Ready to help';
 
-    if (fromVoice || _ag.voiceMode) {
-      if (d.voice_url) {
-        new Audio(d.voice_url).play().catch(function(){});
-      } else if (window.speechSynthesis) {
-        var utt = new SpeechSynthesisUtterance(reply.replace(/<[^>]+>/g,'').slice(0,300));
-        utt.lang = _ag.detectedLang === 'da' ? 'da-DK' : 'en-US';
-        utt.rate = 1.05;
-        window.speechSynthesis.speak(utt);
-      }
+    if (audioUrl && (fromVoice || _ag.voiceEnabled)) {
+      new Audio(audioUrl).play().catch(function(){});
+    } else if ((fromVoice || _ag.voiceMode) && !audioUrl && window.speechSynthesis) {
+      var utt = new SpeechSynthesisUtterance(reply.replace(/<[^>]+>/g,'').slice(0,300));
+      utt.lang = _ag.detectedLang === 'da' ? 'da-DK' : 'en-US';
+      utt.rate = 1.05;
+      window.speechSynthesis.speak(utt);
     }
   } catch(e) {
     agRemoveTyping();
@@ -11424,44 +11454,119 @@ function agChip(text) {
   agSend();
 }
 
-// ── Mic / voice input ─────────────────────────────────────────────────────────
+// ── Mic / voice input (MediaRecorder → Whisper) ───────────────────────────────
 function agMicToggle() {
   var btn = document.getElementById('ag-mic');
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    agAddMsg('bot', '⚠️ Your browser does not support voice input. Use Chrome or Edge.');
+  if (_ag.listening) {
+    if (_ag._mediaRecorder && _ag._mediaRecorder.state !== 'inactive') {
+      _ag._mediaRecorder.stop();
+    }
     return;
   }
-  if (_ag.listening) { _ag.recog && _ag.recog.stop(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    agAddMsg('bot', '⚠️ Microphone not available in this browser.');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
+    var chunks = [];
+    var mr = new MediaRecorder(stream, {mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm'});
+    _ag._mediaRecorder = mr;
+    _ag.listening = true;
+    btn.classList.add('listening');
+    document.getElementById('ag-hstatus').textContent = '🎤 Recording… (click to stop)';
+    mr.ondataavailable = function(e) { if (e.data.size > 0) chunks.push(e.data); };
+    mr.onstop = function() {
+      _ag.listening = false;
+      btn.classList.remove('listening');
+      document.getElementById('ag-hstatus').textContent = 'Transcribing…';
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      var blob = new Blob(chunks, {type: mr.mimeType || 'audio/webm'});
+      var fd = new FormData();
+      fd.append('file', blob, 'audio.webm');
+      fetch('/api/agent/transcribe', {
+        method: 'POST',
+        headers: {Authorization: 'Bearer ' + (localStorage.getItem('ugv_token') || '')},
+        body: fd,
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        document.getElementById('ag-hstatus').textContent = 'Ready to help';
+        if (d.transcript && d.transcript.trim()) {
+          document.getElementById('ag-input').value = d.transcript.trim();
+          agSend(true);
+        } else if (d.detail) {
+          agAddMsg('bot', '⚠️ ' + d.detail);
+        } else {
+          agAddMsg('bot', '⚠️ Could not transcribe audio. Try speaking more clearly.');
+        }
+      }).catch(function(err) {
+        document.getElementById('ag-hstatus').textContent = 'Ready to help';
+        agAddMsg('bot', '⚠️ Transcription failed. Please try again.');
+      });
+    };
+    mr.start();
+  }).catch(function(err) {
+    agAddMsg('bot', '⚠️ Microphone access denied: ' + err.message);
+  });
+}
 
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  _ag.recog = new SR();
-  _ag.recog.continuous = false;
-  _ag.recog.interimResults = true;
-  _ag.recog.lang = _ag.detectedLang === 'da' ? 'da-DK' : 'en-US';
-  _ag.listening = true; _ag.voiceMode = true;
-  btn.classList.add('listening');
-  document.getElementById('ag-hstatus').textContent = '🎤 Listening…';
+// ── Voice settings UI ─────────────────────────────────────────────────────────
+function agToggleVoiceSettings() {
+  var panel = document.getElementById('ag-voice-panel');
+  var isVisible = panel.style.display !== 'none';
+  panel.style.display = isVisible ? 'none' : '';
+  if (!isVisible) agLoadVoices();
+}
 
-  _ag.recog.onresult = function(e) {
-    var interim = '';
-    for (var r of e.results) {
-      if (r.isFinal) document.getElementById('ag-input').value = r[0].transcript;
-      else interim += r[0].transcript;
+async function agLoadVoiceSettings() {
+  try {
+    var d = await apiFetch('/api/agent/voice_settings', 'GET', null, false);
+    _ag.voiceEnabled = !!d.voice_enabled;
+    _ag.voiceId      = d.voice_id || '';
+    var tog = document.getElementById('ag-voice-tog');
+    if (tog) tog.classList.toggle('on', _ag.voiceEnabled);
+    var selRow = document.getElementById('ag-voice-selector-row');
+    if (selRow) selRow.style.display = _ag.voiceEnabled ? '' : 'none';
+    var btn = document.getElementById('ag-voice-settings-btn');
+    if (btn) btn.style.color = _ag.voiceEnabled ? 'var(--ac)' : '';
+  } catch(e) {}
+}
+
+async function agLoadVoices() {
+  var sel = document.getElementById('ag-voice-select');
+  if (!sel) return;
+  try {
+    var d = await apiFetch('/api/agent/voices', 'GET', null, false);
+    var voices = d.voices || [];
+    if (!voices.length) { sel.innerHTML = '<option value="">No voices available</option>'; return; }
+    sel.innerHTML = voices.map(function(v) {
+      var selected = v.id === _ag.voiceId ? ' selected' : '';
+      return '<option value="' + v.id + '"' + selected + '>' + v.name + (v.category ? ' (' + v.category + ')' : '') + '</option>';
+    }).join('');
+    if (!_ag.voiceId && voices.length) {
+      _ag.voiceId = voices[0].id;
     }
-    if (interim) document.getElementById('ag-input').value = interim;
-  };
-  _ag.recog.onend = function() {
-    _ag.listening = false; btn.classList.remove('listening');
-    document.getElementById('ag-hstatus').textContent = 'Ready to help';
-    var val = document.getElementById('ag-input').value.trim();
-    if (val) agSend(true);
-  };
-  _ag.recog.onerror = function(e) {
-    _ag.listening = false; btn.classList.remove('listening');
-    document.getElementById('ag-hstatus').textContent = 'Ready to help';
-    if (e.error !== 'aborted') agAddMsg('bot', '⚠️ Mic error: ' + e.error);
-  };
-  _ag.recog.start();
+  } catch(e) {
+    sel.innerHTML = '<option value="">Could not load voices</option>';
+  }
+}
+
+async function agToggleVoicePref(tog) {
+  _ag.voiceEnabled = !tog.classList.contains('on');
+  tog.classList.toggle('on', _ag.voiceEnabled);
+  var selRow = document.getElementById('ag-voice-selector-row');
+  if (selRow) selRow.style.display = _ag.voiceEnabled ? '' : 'none';
+  if (_ag.voiceEnabled) agLoadVoices();
+  var btn = document.getElementById('ag-voice-settings-btn');
+  if (btn) btn.style.color = _ag.voiceEnabled ? 'var(--ac)' : '';
+  try {
+    await apiFetch('/api/agent/voice_settings', 'POST', {voice_enabled: _ag.voiceEnabled, voice_id: _ag.voiceId});
+  } catch(e) {}
+}
+
+async function agSetVoiceId(vid) {
+  _ag.voiceId = vid;
+  try {
+    await apiFetch('/api/agent/voice_settings', 'POST', {voice_id: vid, voice_enabled: _ag.voiceEnabled});
+  } catch(e) {}
 }
 
 // ── Auto-mode with guided workflow ───────────────────────────────────────────

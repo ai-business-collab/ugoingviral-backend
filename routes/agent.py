@@ -249,7 +249,7 @@ async def _call_claude_heavy(system: str, messages: list, action: str = "content
 
 # ── ElevenLabs TTS ────────────────────────────────────────────────────────────
 
-async def _tts(text: str) -> Optional[str]:
+async def _tts(text: str, voice_id: str = "") -> Optional[str]:
     if not ELEVENLABS_KEY:
         return None
     clean = text
@@ -257,10 +257,11 @@ async def _tts(text: str) -> Optional[str]:
     clean = re.sub(r'\[\[.*?\]\]', '', clean).strip()
     if not clean:
         return None
+    vid = voice_id or ELEVENLABS_VOICE
     try:
         async with httpx.AsyncClient(timeout=20) as client:
             r = await client.post(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE}",
+                f"https://api.elevenlabs.io/v1/text-to-speech/{vid}",
                 headers={"xi-api-key": ELEVENLABS_KEY, "content-type": "application/json"},
                 json={"text": clean[:800], "model_id": "eleven_multilingual_v2",
                       "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}},
@@ -326,10 +327,12 @@ async def agent_chat(req: AgentRequest, current_user: dict = Depends(get_current
     stored.append({"role": "assistant", "content": parsed["text"]})
     _save_history(uid, stored)
 
-    # TTS if voice mode
+    # TTS — use voice if client requested it OR user preference is enabled
     voice_url = None
-    if req.voice_mode and ELEVENLABS_KEY:
-        voice_url = await _tts(parsed["text"])
+    voice_enabled = ustore.get("agent_voice_enabled", False)
+    voice_id      = ustore.get("agent_voice_id", "")
+    if (req.voice_mode or voice_enabled) and ELEVENLABS_KEY:
+        voice_url = await _tts(parsed["text"], voice_id)
 
     return {
         "response":  parsed["text"],
@@ -347,6 +350,17 @@ async def agent_voice(
     """Transcribe audio via OpenAI Whisper, then route through agent chat."""
     if not OPENAI_API_KEY and not CLAUDE_API_KEY:
         return {"response": "Not configured.", "voice_url": None}
+
+    # Deduct 5 credits for voice message
+    from services.store import save_store as _ss
+    billing = store.setdefault("billing", {})
+    credits = billing.get("credits", 0)
+    if credits < 5:
+        raise HTTPException(status_code=402, detail="Not enough credits for voice message (5 required)")
+    billing["credits"] = credits - 5
+    store["billing"] = billing
+    _log_api_call("openai", "whisper-1", "voice_transcription_credit", 5, 0)
+    _ss()
 
     transcript = ""
     if OPENAI_API_KEY:
@@ -415,3 +429,85 @@ async def set_agent_name(req: Request, current_user: dict = Depends(get_current_
     ustore["agent_name"] = name
     _save_user_store(current_user["id"], ustore)
     return {"ok": True, "name": name}
+
+
+@router.post("/api/agent/transcribe")
+async def agent_transcribe(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Transcribe audio via Whisper — returns text only, costs 5 credits."""
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=503, detail="OPENAI_API_KEY not configured")
+
+    billing = store.setdefault("billing", {})
+    credits = billing.get("credits", 0)
+    if credits < 5:
+        raise HTTPException(status_code=402, detail="Not enough credits (5 required for transcription)")
+    billing["credits"] = credits - 5
+    store["billing"] = billing
+    save_store()
+
+    audio_bytes = await file.read()
+    fname = file.filename or "audio.webm"
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+                files={"file": (fname, audio_bytes, file.content_type or "audio/webm")},
+                data={"model": "whisper-1"},
+            )
+        if r.status_code == 200:
+            transcript = r.json().get("text", "")
+            _log_api_call("openai", "whisper-1", "agent_transcribe",
+                          len(audio_bytes) // 100, 0)
+            return {"transcript": transcript, "credits_used": 5,
+                    "credits_left": billing["credits"]}
+        raise HTTPException(status_code=500, detail=f"Whisper error {r.status_code}: {r.text[:200]}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)[:120]}")
+
+
+@router.get("/api/agent/voices")
+async def get_voices(current_user: dict = Depends(get_current_user)):
+    """Return available ElevenLabs voices."""
+    if not ELEVENLABS_KEY:
+        return {"voices": []}
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                "https://api.elevenlabs.io/v1/voices",
+                headers={"xi-api-key": ELEVENLABS_KEY},
+            )
+        if r.status_code == 200:
+            raw = r.json().get("voices", [])
+            voices = [{"id": v["voice_id"], "name": v["name"],
+                       "category": v.get("category", "")} for v in raw]
+            return {"voices": voices}
+    except Exception:
+        pass
+    return {"voices": []}
+
+
+@router.get("/api/agent/voice_settings")
+def get_voice_settings(current_user: dict = Depends(get_current_user)):
+    ustore = _load_user_store(current_user["id"])
+    return {
+        "voice_enabled": ustore.get("agent_voice_enabled", False),
+        "voice_id":      ustore.get("agent_voice_id", ELEVENLABS_VOICE),
+    }
+
+
+@router.post("/api/agent/voice_settings")
+async def save_voice_settings(req: Request, current_user: dict = Depends(get_current_user)):
+    body = await req.json()
+    ustore = _load_user_store(current_user["id"])
+    if "voice_enabled" in body:
+        ustore["agent_voice_enabled"] = bool(body["voice_enabled"])
+    if "voice_id" in body:
+        ustore["agent_voice_id"] = str(body["voice_id"])[:60]
+    _save_user_store(current_user["id"], ustore)
+    return {"ok": True}
