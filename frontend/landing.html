@@ -974,7 +974,7 @@ footer p { font-size: 13px; color: var(--text2); }
   <div class="pricing-grid">
     <div class="price-card">
       <div class="price-name">Free</div>
-      <div class="price-amount" data-usd="0">$0<span>/mo</span></div>
+      <div class="price-amount" data-usd="0">Free<span>/mo</span></div><div style="font-size:12px;color:var(--text2);margin-top:4px">50 credits + 3 free videos</div>
       <div class="price-credits">3 videos lifetime</div>
       <ul class="price-features">
         <li>3 videos lifetime</li>
@@ -1559,7 +1559,7 @@ var EU_CC = ['AT','BE','BG','HR','CY','CZ','EE','FI','FR','DE','GR','HU','IE',
 var _currency = localStorage.getItem('ugv_currency') || 'USD';
 
 function fmtPrice(usd) {
-  if (usd === 0) return '$0';
+  if (usd === 0) return 'Free';
   var rate = CURRENCY_RATES[_currency] || 1;
   var val  = Math.round(usd * rate);
   if (_currency === 'DKK') return val.toLocaleString('da-DK') + ' kr';
