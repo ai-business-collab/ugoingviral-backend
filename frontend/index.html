@@ -1737,6 +1737,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div style="display:flex;gap:6px;flex-wrap:wrap" id="post-plat-chips">
               <div class="ptab active" data-p="instagram" onclick="togglePostPlat(this)">📸 Instagram</div>
               <div class="ptab" data-p="tiktok" onclick="togglePostPlat(this)">🎵 TikTok</div>
+              <div class="ptab" data-p="youtube" onclick="togglePostPlat(this)">▶️ YouTube</div>
               <div class="ptab" data-p="facebook" onclick="togglePostPlat(this)">📘 Facebook</div>
               <div class="ptab" data-p="twitter" onclick="togglePostPlat(this)">🐦 X</div>
             </div>
@@ -1814,6 +1815,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <span style="font-size:11px;color:var(--tx3);font-weight:600">POSTING TO:</span>
             <span id="auto-plat-instagram" style="display:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(225,48,108,.15);color:#e1306c">📸 Instagram</span>
             <span id="auto-plat-tiktok" style="display:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(255,0,80,.15);color:#ff0050">🎵 TikTok</span>
+            <span id="auto-plat-youtube" style="display:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(255,0,0,.15);color:#ff4444">▶️ YouTube</span>
             <span id="auto-plat-facebook" style="display:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(24,119,242,.15);color:#1877f2">📘 Facebook</span>
             <span id="auto-plat-twitter" style="display:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(29,161,242,.15);color:#1da1f2">🐦 X</span>
             <span id="auto-plat-none" style="font-size:11px;color:var(--tx3)">No platforms selected — enable in Platforms tab</span>
@@ -7096,7 +7098,7 @@ async function loadQueue() {
   const qc = document.getElementById('qcount'); if (qc) qc.textContent = posts.length+' planlagt';
   const q = document.getElementById('post-queue'); if (!q) return;
   if (!posts.length) { q.innerHTML = '<div style="color:var(--tx3);font-size:12px;text-align:center;padding:24px">Ingen planlagte posts</div>'; return; }
-  const ico = {instagram:'📸',tiktok:'🎵',facebook:'📘',twitter:'🐦'};
+  const ico = {instagram:'📸',tiktok:'🎵',youtube:'▶️',facebook:'📘',twitter:'🐦'};
   q.innerHTML = posts.map(p => `
     <div class="pqitem" onclick="showPostDetail('${p.id}')" style="cursor:pointer" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''">
       <div class="pqico">${ico[p.platform]||'📤'}</div>
@@ -7434,6 +7436,7 @@ async function genDM() {
 // ── Automation ────────────────────────────────────────────────────────────────
 const PLAT_CONFIG = [
   {id:'instagram',name:'Instagram',ico:'📸'},{id:'tiktok',name:'TikTok',ico:'🎵'},
+  {id:'youtube',name:'YouTube',ico:'▶️'},
   {id:'facebook',name:'Facebook',ico:'📘'},{id:'twitter',name:'X / Twitter',ico:'🐦'},
 ];
 function buildAutoPlatGrid() {
@@ -7664,7 +7667,7 @@ function togAutoMain(el) {
 }
 function updatePlatformIndicator() {
   // Show which platforms auto-post is enabled on
-  const plats = ['instagram','tiktok','facebook','twitter'];
+  const plats = ['instagram','tiktok','youtube','facebook','twitter'];
   let anyActive = false;
   plats.forEach(p => {
     const tog = document.getElementById('tog-' + p + '-post');
@@ -9107,7 +9110,7 @@ function showPostDetail(id) {
   const posts_cache = window._posts_cache || [];
   const p = posts_cache.find(x => x.id === id);
   if (!p) return;
-  const ico = {instagram:'📸',tiktok:'🎵',facebook:'📘',twitter:'🐦'};
+  const ico = {instagram:'📸',tiktok:'🎵',youtube:'▶️',facebook:'📘',twitter:'🐦'};
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center';
   modal.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border-b);border-radius:16px;padding:24px;width:460px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.7)">
