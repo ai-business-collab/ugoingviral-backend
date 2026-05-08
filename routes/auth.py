@@ -9,6 +9,15 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 
 from services.users import create_user, get_user_by_email, get_user_by_id, update_user, verify_password
+from services.security import (
+    limiter,
+    sanitize_string,
+    is_sqli_suspicious,
+    is_ip_blocked,
+    record_login_failure,
+    record_login_success,
+    client_ip,
+)
 
 router = APIRouter()
 
@@ -78,11 +87,19 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 
 
 @router.post("/api/auth/register")
-async def register(req: RegisterRequest):
+@limiter.limit("5/minute")
+async def register(request: Request, req: RegisterRequest):
     if not req.email or "@" not in req.email:
         raise HTTPException(status_code=400, detail="Ugyldig email-adresse")
     if len(req.password) < 6:
         raise HTTPException(status_code=400, detail="Adgangskode skal være mindst 6 tegn")
+    # Sanitize free-text fields and reject obvious injection attempts on email
+    if is_sqli_suspicious(req.email) or is_sqli_suspicious(req.name) or is_sqli_suspicious(req.company):
+        raise HTTPException(status_code=400, detail="Ugyldigt input")
+    req.email   = sanitize_string(req.email).lower()
+    req.name    = sanitize_string(req.name)
+    req.company = sanitize_string(req.company)
+    req.niche   = sanitize_string(req.niche)
     if get_user_by_email(req.email):
         raise HTTPException(status_code=400, detail="Email er allerede i brug")
     user = create_user(req.email, req.password, req.name, req.company, req.niche)
@@ -116,10 +133,16 @@ async def register(req: RegisterRequest):
 
 
 @router.post("/api/auth/login")
-async def login(req: LoginRequest):
+@limiter.limit("10/minute")
+async def login(request: Request, req: LoginRequest):
+    ip = client_ip(request)
+    if is_ip_blocked(ip):
+        raise HTTPException(status_code=429, detail="Too many failed attempts — try again later")
     user = get_user_by_email(req.email)
     if not user or not verify_password(req.password, user["hashed_password"]):
+        record_login_failure(ip, req.email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    record_login_success(ip, req.email)
     token = _create_token(user["id"], user["email"])
     # Auto daily login bonus — requires user store context
     from services.store import _load_user_store, _save_user_store

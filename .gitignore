@@ -17,3 +17,4 @@ reset*.py
 *secret*
 *password*
 *credentials*
+security_log.json

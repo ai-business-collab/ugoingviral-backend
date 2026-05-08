@@ -5,6 +5,7 @@ from typing import List, Optional
 from datetime import datetime
 from routes.auth import get_current_user
 from services.store import store, save_store, _load_user_store, _save_user_store
+from services.security import limiter
 
 router = APIRouter()
 
@@ -496,7 +497,8 @@ def _parse_actions(text: str) -> dict:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/api/agent/chat")
-async def agent_chat(req: AgentRequest, current_user: dict = Depends(get_current_user)):
+@limiter.limit("30/minute")
+async def agent_chat(request: Request, req: AgentRequest, current_user: dict = Depends(get_current_user)):
     uid = current_user["id"]
     ustore = _load_user_store(uid)
     billing = ustore.get("billing", store.get("billing", {}))

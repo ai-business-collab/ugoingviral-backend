@@ -4,6 +4,7 @@ import httpx, os, json, asyncio, shutil, subprocess, uuid, tempfile
 from datetime import datetime
 from pydantic import BaseModel
 from services.store import store, save_store, add_log
+from services.security import limiter
 from models import Settings, ApiToggle, PlatformAutomation, ContentRequest, PostRequest, DMReplyRequest, AutomationSettings, DMSettings, ManualProduct, Creator, PlaywrightPost
 
 router = APIRouter()
@@ -143,7 +144,8 @@ async def _call_ai(prompt: str) -> str:
 
 # ── Content ───────────────────────────────────────────────────────────────────
 @router.post("/api/content/generate")
-async def generate_content(req: ContentRequest):
+@limiter.limit("20/minute")
+async def generate_content(request: Request, req: ContentRequest):
     from routes.viral_score import _rule_score
 
     result = await _call_ai(_build_prompt(req))
