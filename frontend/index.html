@@ -11271,11 +11271,7 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
   </div>
 
   <!-- Messages -->
-  <div id="ag-msgs">
-    <div class="ag-msg bot">
-      <div class="ag-bubble">Hey! 👋 I'm your AI assistant on UgoingViral. I can help with content ideas, strategy, platform guidance and much more. What can I help you with today?</div>
-    </div>
-  </div>
+  <div id="ag-msgs"></div>
 
   <!-- Auto-mode bar -->
   <div id="ag-auto-bar" style="display:none">
@@ -11677,7 +11673,6 @@ var _ag = {
       right:  window.innerWidth  - rect.right,
     };
     fab.setPointerCapture(e.pointerId);
-    e.preventDefault();
   });
 
   fab.addEventListener('pointermove', function(e) {
@@ -11693,13 +11688,16 @@ var _ag = {
   });
 
   fab.addEventListener('pointerup', function(e) {
-    if (!moved) {
-      agToggle();
-    } else {
+    if (moved) {
       var b = parseFloat(fab.style.bottom), r = parseFloat(fab.style.right);
       localStorage.setItem('ag_fab_pos', JSON.stringify({bottom: b, right: r}));
     }
-    dragging = false; moved = false; dragStart = null; fabStart = null;
+    dragging = false; dragStart = null; fabStart = null;
+  });
+
+  fab.addEventListener('click', function(e) {
+    if (moved) { moved = false; return; }
+    agToggle();
   });
 })();
 
@@ -11797,10 +11795,15 @@ function agToggle() {
     _ag.unread = 0;
     document.getElementById('ag-unread').style.display = 'none';
     setTimeout(function() { document.getElementById('ag-input').focus(); }, 150);
-    if (_ag.awaitingName && !_ag.welcomeSent) {
+    if (!_ag.welcomeSent) {
       _ag.welcomeSent = true;
       setTimeout(function() {
-        agAddMsg('bot', "Hey! 👋 I'm your personal AI assistant on UgoingViral. What would you like to call me? Type a name or say 'you choose' and I'll pick one!");
+        if (_ag.awaitingName) {
+          agAddMsg('bot', "Hey! 👋 I'm your personal AI assistant on UgoingViral. What would you like to call me? Type a name or say 'you choose' and I'll pick one!");
+        } else {
+          var nm = (document.getElementById('ag-hname').textContent || '').trim() || 'your assistant';
+          agAddMsg('bot', "Hey! 👋 I'm " + nm + ", your AI assistant on UgoingViral. What can I help you with today?");
+        }
       }, 400);
     }
   }

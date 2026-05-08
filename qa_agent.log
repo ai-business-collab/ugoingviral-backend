@@ -727,3 +727,349 @@ RESULT: 73/73 passed OK
 ========================================
 
 [report] Nexcore → status=405
+/root/ugoingviral-backend/qa_agent.py:1353: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  print(f"UgoingViral QA Agent — {datetime.utcnow().isoformat()}Z")
+/root/ugoingviral-backend/qa_agent.py:1378: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp":  datetime.utcnow().isoformat() + "Z",
+UgoingViral QA Agent — 2026-05-08T04:00:02.212652Z
+skip_ai=True
+
+=== SUITE 1: Signup / Login ===
+  [PASS] register — status=400
+  [PASS] login — user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683
+  [PASS] jwt_validation
+
+=== SUITE 2: Free Plan Limits ===
+  [PASS] plan_is_free
+  [PASS] max_credits_50
+  [PASS] free_videos_3
+  [PASS] download_locked
+  [PASS] gated_api/studio — status=404
+  [PASS] gated_api/generate — status=404
+
+=== SUITE 3: Content Generation ===
+  [PASS] content_gen_skipped — --skip-ai flag set
+
+=== SUITE 4: Billing Verification ===
+  [PASS] plan_price_free — $0
+  [PASS] plan_price_starter — $49
+  [PASS] plan_price_basic — $79
+  [PASS] plan_price_growth — $89
+  [PASS] plan_price_pro — $149
+  [PASS] plan_price_elite — $229
+  [PASS] plan_price_personal — $459
+  [PASS] plan_price_agency — $199
+  [PASS] credit_pkg_100 — $8
+  [PASS] credit_pkg_350 — $24
+  [PASS] credit_pkg_700 — $44
+  [PASS] credit_pkg_1500 — $79
+  [PASS] yearly_math_pro — $149 * 0.8 = $119
+
+=== SUITE 5: Platform Health ===
+  [PASS] health_root — status=200 4ms
+  [PASS] health_health — status=200 2ms
+  [PASS] health_api/auth/login — status=422 2ms
+  [PASS] health_api/billing/plan — status=401 2ms
+  [PASS] health_api/billing/usage — status=401 2ms
+
+=== SUITE 6: Agent Welcome Flow ===
+  [PASS] s6_name_empty — name is empty for new user
+  [PASS] s6_first_message — --skip-ai (chat call skipped)
+  [PASS] s6_name_saved — name=Nova
+  [PASS] s6_name_persisted
+  [PASS] s6_name_in_response — --skip-ai (chat verification skipped)
+
+=== SUITE 7: Voice Features ===
+  [PASS] s7_voices_list — 0 voices returned
+  [PASS] s7_voice_settings_defaults — voice_enabled=False voice_id present
+  [PASS] s7_voice_enable — voice_enabled=true saved
+  [PASS] s7_voice_enabled_persisted
+
+=== SUITE 8: Watermark ===
+  [PASS] s8_free_watermark_on — watermark=True on free plan
+  [PASS] s8_free_watermark_locked — correctly blocked with 403
+  [PASS] s8_paid_watermark_off — watermark=False by default on paid plan
+  [PASS] s8_paid_watermark_toggle — watermark toggled on successfully
+
+=== SUITE 9: AI Portrait ===
+  [PASS] s9_free_blocked — 403 on free plan
+  [PASS] s9_paid_low_credits — 402 on insufficient credits (need 50, have 20)
+  [PASS] s9_endpoint_exists — 6 presets, cost=50
+
+=== SUITE 10: Content Plan ===
+  [PASS] s10_free_blocked — 403 on free plan
+  [PASS] s10_plan_gen — --skip-ai (content plan generation skipped)
+  [PASS] s10_credits_deducted — --skip-ai (credit check skipped)
+
+=== SUITE 11: Full Auto Mode ===
+  [PASS] s11_full_auto_enable — mode=review
+  [PASS] s11_full_auto_status_persisted
+  [PASS] s11_low_credits_blocked — credits=100, minimum=200
+  [PASS] s11_free_plan_blocked
+
+=== SUITE 12: Multi-workspace ===
+  [FAIL] s12_list_initial — [Errno 111] Connection refused
+
+=== SUITE 13: Agent Tasks ===
+  [FAIL] s13_register — could not create test user
+
+=== SUITE 14: Anti-ban / Proxy / Safety ===
+  [FAIL] s14_register — could not create test user
+
+=== SUITE 15: Analytics ===
+  [FAIL] s15_register — could not create test user
+
+[cleanup] Reset credits to 50 for user e7ffa80f-39cd-4cf8-904d-fea0b380e683
+
+========================================
+RESULT: 51/55 passed FAILURES
+========================================
+
+[report] Nexcore → status=405
+/root/ugoingviral-backend/qa_agent.py:1353: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  print(f"UgoingViral QA Agent — {datetime.utcnow().isoformat()}Z")
+/root/ugoingviral-backend/qa_agent.py:1378: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp":  datetime.utcnow().isoformat() + "Z",
+UgoingViral QA Agent — 2026-05-08T10:00:01.446751Z
+skip_ai=True
+
+=== SUITE 1: Signup / Login ===
+  [PASS] register — status=400
+  [PASS] login — user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683
+  [PASS] jwt_validation
+
+=== SUITE 2: Free Plan Limits ===
+  [PASS] plan_is_free
+  [PASS] max_credits_50
+  [PASS] free_videos_3
+  [PASS] download_locked
+  [PASS] gated_api/studio — status=404
+  [PASS] gated_api/generate — status=404
+
+=== SUITE 3: Content Generation ===
+  [PASS] content_gen_skipped — --skip-ai flag set
+
+=== SUITE 4: Billing Verification ===
+  [PASS] plan_price_free — $0
+  [PASS] plan_price_starter — $49
+  [PASS] plan_price_basic — $79
+  [PASS] plan_price_growth — $89
+  [PASS] plan_price_pro — $149
+  [PASS] plan_price_elite — $229
+  [PASS] plan_price_personal — $459
+  [PASS] plan_price_agency — $199
+  [PASS] credit_pkg_100 — $8
+  [PASS] credit_pkg_350 — $24
+  [PASS] credit_pkg_700 — $44
+  [PASS] credit_pkg_1500 — $79
+  [PASS] yearly_math_pro — $149 * 0.8 = $119
+
+=== SUITE 5: Platform Health ===
+  [PASS] health_root — status=200 5ms
+  [PASS] health_health — status=200 2ms
+  [PASS] health_api/auth/login — status=422 2ms
+  [PASS] health_api/billing/plan — status=401 2ms
+  [PASS] health_api/billing/usage — status=401 2ms
+
+=== SUITE 6: Agent Welcome Flow ===
+  [PASS] s6_name_empty — name is empty for new user
+  [PASS] s6_first_message — --skip-ai (chat call skipped)
+  [PASS] s6_name_saved — name=Nova
+  [PASS] s6_name_persisted
+  [PASS] s6_name_in_response — --skip-ai (chat verification skipped)
+
+=== SUITE 7: Voice Features ===
+  [PASS] s7_voices_list — 0 voices returned
+  [PASS] s7_voice_settings_defaults — voice_enabled=False voice_id present
+  [PASS] s7_voice_enable — voice_enabled=true saved
+  [PASS] s7_voice_enabled_persisted
+
+=== SUITE 8: Watermark ===
+  [PASS] s8_free_watermark_on — watermark=True on free plan
+  [PASS] s8_free_watermark_locked — correctly blocked with 403
+  [PASS] s8_paid_watermark_off — watermark=False by default on paid plan
+  [PASS] s8_paid_watermark_toggle — watermark toggled on successfully
+
+=== SUITE 9: AI Portrait ===
+  [PASS] s9_free_blocked — 403 on free plan
+  [PASS] s9_paid_low_credits — 402 on insufficient credits (need 50, have 20)
+  [PASS] s9_endpoint_exists — 6 presets, cost=50
+
+=== SUITE 10: Content Plan ===
+  [PASS] s10_free_blocked — 403 on free plan
+  [PASS] s10_plan_gen — --skip-ai (content plan generation skipped)
+  [PASS] s10_credits_deducted — --skip-ai (credit check skipped)
+
+=== SUITE 11: Full Auto Mode ===
+  [PASS] s11_full_auto_enable — mode=review
+  [PASS] s11_full_auto_status_persisted
+  [PASS] s11_low_credits_blocked — credits=100, minimum=200
+  [PASS] s11_free_plan_blocked
+
+=== SUITE 12: Multi-workspace ===
+  [FAIL] s12_list_initial — [Errno 111] Connection refused
+
+=== SUITE 13: Agent Tasks ===
+  [FAIL] s13_register — could not create test user
+
+=== SUITE 14: Anti-ban / Proxy / Safety ===
+  [FAIL] s14_register — could not create test user
+
+=== SUITE 15: Analytics ===
+  [FAIL] s15_register — could not create test user
+
+[cleanup] Reset credits to 50 for user e7ffa80f-39cd-4cf8-904d-fea0b380e683
+
+========================================
+RESULT: 51/55 passed FAILURES
+========================================
+
+[report] Nexcore → status=405
+/root/ugoingviral-backend/qa_agent.py:1353: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  print(f"UgoingViral QA Agent — {datetime.utcnow().isoformat()}Z")
+UgoingViral QA Agent — 2026-05-08T16:00:02.004111Z
+skip_ai=True
+
+=== SUITE 1: Signup / Login ===
+  [PASS] register — status=400
+  [PASS] login — user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683
+  [PASS] jwt_validation
+
+=== SUITE 2: Free Plan Limits ===
+  [PASS] plan_is_free
+  [PASS] max_credits_50
+  [PASS] free_videos_3
+  [PASS] download_locked
+  [PASS] gated_api/studio — status=404
+  [PASS] gated_api/generate — status=404
+
+=== SUITE 3: Content Generation ===
+  [PASS] content_gen_skipped — --skip-ai flag set
+
+=== SUITE 4: Billing Verification ===
+  [PASS] plan_price_free — $0
+  [PASS] plan_price_starter — $49
+  [PASS] plan_price_basic — $79
+  [PASS] plan_price_growth — $89
+  [PASS] plan_price_pro — $149
+  [PASS] plan_price_elite — $229
+  [PASS] plan_price_personal — $459
+  [PASS] plan_price_agency — $199
+  [PASS] credit_pkg_100 — $8
+  [PASS] credit_pkg_350 — $24
+  [PASS] credit_pkg_700 — $44
+  [PASS] credit_pkg_1500 — $79
+  [PASS] yearly_math_pro — $149 * 0.8 = $119
+
+=== SUITE 5: Platform Health ===
+  [PASS] health_root — status=200 4ms
+  [PASS] health_health — status=200 2ms
+  [PASS] health_api/auth/login — status=422 2ms
+  [PASS] health_api/billing/plan — status=401 2ms
+  [PASS] health_api/billing/usage — status=401 2ms
+
+=== SUITE 6: Agent Welcome Flow ===
+  [PASS] s6_name_empty — name is empty for new user
+  [PASS] s6_first_message — --skip-ai (chat call skipped)
+  [PASS] s6_name_saved — name=Nova
+  [PASS] s6_name_persisted
+  [PASS] s6_name_in_response — --skip-ai (chat verification skipped)
+
+=== SUITE 7: Voice Features ===
+  [PASS] s7_voices_list — 0 voices returned
+  [PASS] s7_voice_settings_defaults — voice_enabled=False voice_id present
+  [PASS] s7_voice_enable — voice_enabled=true saved
+  [PASS] s7_voice_enabled_persisted
+
+=== SUITE 8: Watermark ===
+  [PASS] s8_free_watermark_on — watermark=True on free plan
+  [PASS] s8_free_watermark_locked — correctly blocked with 403
+  [PASS] s8_paid_watermark_off — watermark=False by default on paid plan
+  [PASS] s8_paid_watermark_toggle — watermark toggled on successfully
+
+=== SUITE 9: AI Portrait ===
+  [PASS] s9_free_blocked — 403 on free plan
+  [PASS] s9_paid_low_credits — 402 on insufficient credits (need 50, have 20)
+  [PASS] s9_endpoint_exists — 6 presets, cost=50
+
+=== SUITE 10: Content Plan ===
+  [PASS] s10_free_blocked — 403 on free plan
+  [PASS] s10_plan_gen — --skip-ai (content plan generation skipped)
+  [PASS] s10_credits_deducted — --skip-ai (credit check skipped)
+
+=== SUITE 11: Full Auto Mode ===
+  [PASS] s11_full_auto_enable — mode=review
+  [PASS] s11_full_auto_status_persisted
+  [PASS] s11_low_credits_blocked — credits=100, minimum=200
+  [PASS] s11_free_plan_blocked
+
+=== SUITE 12: Multi-workspace ===
+  [PASS] s12_list_initial — 1 workspace(s)
+  [PASS] s12_create_workspace — id=ws_9048bc2b
+  [PASS] s12_workspace_in_list — workspaces=['My Workspace', 'Test Brand']
+  [PASS] s12_switch_workspace
+  [PASS] s12_delete_workspace
+Traceback (most recent call last):
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_transports/default.py", line 72, in map_httpcore_exceptions
+    yield
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_transports/default.py", line 236, in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/ugoingviral-backend/qa_agent.py", line 1410, in <module>
+    main()
+  File "/root/ugoingviral-backend/qa_agent.py", line 1405, in main
+    ok = runner.run()
+         ^^^^^^^^^^^^
+  File "/root/ugoingviral-backend/qa_agent.py", line 1367, in run
+    self.suite12_workspaces()
+  File "/root/ugoingviral-backend/qa_agent.py", line 950, in suite12_workspaces
+    self.client.get("/api/workspaces", headers=h_f)
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_client.py", line 1066, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_client.py", line 837, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_client.py", line 926, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_client.py", line 954, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_client.py", line 991, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_client.py", line 1027, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_transports/default.py", line 235, in handle_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/opt/ugoingviral/lib/python3.12/site-packages/httpx/_transports/default.py", line 89, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [Errno 111] Connection refused
