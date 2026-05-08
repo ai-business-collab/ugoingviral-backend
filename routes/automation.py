@@ -208,14 +208,35 @@ async def assign_user_proxy(current_user: dict = Depends(get_current_user)):
     oxy_pass   = os.getenv("OXYLABS_PASSWORD", "Ugoingviral2026:")
     oxy_user   = f"customer-ugoingviral_1reRN-sessid-{session_id}-sesstime-1440"
     proxy_url  = f"http://{oxy_user}:{oxy_pass}@pr.oxylabs.io:7777"
+    proxy_country = ""
+    proxy_ip      = ""
+    try:
+        # Best-effort exit-IP geolocation through the proxy. ~2s timeout so a
+        # slow proxy can't block the assign call.
+        async with httpx.AsyncClient(proxy=proxy_url, timeout=2.5) as _c:
+            _r = await _c.get("https://ipinfo.io/json")
+            if _r.status_code == 200:
+                _j = _r.json()
+                proxy_country = (_j.get("country") or "").upper()[:2]
+                proxy_ip      = _j.get("ip") or ""
+    except Exception:
+        pass
     ustore["proxy_config"] = {
-        "assigned":    True,
-        "proxy_url":   proxy_url,
-        "session_id":  session_id,
-        "assigned_at": datetime.utcnow().isoformat(),
+        "assigned":      True,
+        "proxy_url":     proxy_url,
+        "session_id":    session_id,
+        "assigned_at":   datetime.utcnow().isoformat(),
+        "proxy_ip":      proxy_ip,
+        "proxy_country": proxy_country,
     }
     _save_user_store(uid, ustore)
-    return {"ok": True, "session_id": session_id, "assigned_at": ustore["proxy_config"]["assigned_at"]}
+    return {
+        "ok":            True,
+        "session_id":    session_id,
+        "assigned_at":   ustore["proxy_config"]["assigned_at"],
+        "proxy_country": proxy_country,
+        "proxy_ip":      proxy_ip,
+    }
 
 
 @router.get("/api/automation/safety")
@@ -237,6 +258,8 @@ def get_safety_status(current_user: dict = Depends(get_current_user)):
         "proxy_assigned":    proxy.get("assigned", False),
         "proxy_session":     proxy.get("session_id", ""),
         "proxy_assigned_at": proxy.get("assigned_at", ""),
+        "proxy_country":     proxy.get("proxy_country", ""),
+        "proxy_ip":          proxy.get("proxy_ip", ""),
     }
 
 

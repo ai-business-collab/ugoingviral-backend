@@ -2517,8 +2517,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <div style="font-weight:700;color:#e1306c;margin-bottom:4px">✅ Instagram Graph API forbundet</div>
               <div style="color:var(--tx2)">Konto: <span id="ig-api-username" style="font-weight:600"></span></div>
               <div style="color:var(--tx3);font-size:11px" id="ig-api-expires"></div>
+              <div style="color:var(--tx3);font-size:11px" id="ig-api-synced"></div>
               <div style="display:flex;gap:8px;margin-top:8px">
                 <button class="btn bg bsm" onclick="checkInstagramAPIStatus()">↻ Tjek status</button>
+                <button class="btn bp bsm" onclick="connectInstagramAPI()">🔄 Reconnect</button>
               </div>
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectInstagramAPI()">📸 Forbind Instagram via officiel API</button>
@@ -2549,8 +2551,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div id="tt-api-status" style="display:none;background:rgba(255,0,80,.08);border:1px solid rgba(255,0,80,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
               <div style="font-weight:700;color:#ff0050;margin-bottom:4px">✅ TikTok API forbundet</div>
               <div style="color:var(--tx2)">Konto: <span id="tt-api-username" style="font-weight:600"></span></div>
+              <div style="color:var(--tx3);font-size:11px" id="tt-api-synced"></div>
               <div style="display:flex;gap:8px;margin-top:8px">
                 <button class="btn bg bsm" onclick="checkTikTokAPIStatus()">↻ Tjek status</button>
+                <button class="btn bp bsm" onclick="connectTikTokAPI()">🔄 Reconnect</button>
                 <button class="btn br bsm" onclick="disconnectTikTokAPI()">Afbryd API</button>
               </div>
             </div>
@@ -2598,6 +2602,15 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
           <div class="conbody">
+            <div id="tw-api-status" style="display:none;background:rgba(29,161,242,.08);border:1px solid rgba(29,161,242,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
+              <div style="font-weight:700;color:#1da1f2;margin-bottom:4px">✅ X / Twitter API forbundet</div>
+              <div style="color:var(--tx2)">Konto: <span id="tw-api-username" style="font-weight:600"></span></div>
+              <div style="color:var(--tx3);font-size:11px;margin-top:2px" id="tw-api-synced"></div>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="btn bg bsm" onclick="checkTwitterAPIStatus()">↻ Tjek status</button>
+                <button class="btn bp bsm" onclick="window.location.href='/api/twitter/connect'">🔄 Reconnect</button>
+              </div>
+            </div>
             <div class="info-box" style="margin-bottom:12px">🤖 UgoingViral automatically handles the connection via our platform.</div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="window.location.href='/api/twitter/connect'">🐦 Forbind X / Twitter via officiel API</button>
             <div class="fg"><label class="fl">Brugernavn / Email</label><input class="fi" id="tw-user" placeholder="@brugernavn"></div>
@@ -2622,7 +2635,12 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div id="yt-api-status" style="display:none;background:rgba(255,0,0,.08);border:1px solid rgba(255,0,0,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
               <div style="color:#f87171;font-weight:600;margin-bottom:4px">▶️ YouTube Data API v3 forbundet</div>
               <div style="color:var(--tx2)">Kanal: <span id="yt-api-channel" style="color:#fff"></span></div>
-              <button class="btn br bsm" style="margin-top:8px" onclick="disconnectYouTubeAPI()">Afbryd API</button>
+              <div style="color:var(--tx3);font-size:11px" id="yt-api-synced"></div>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="btn bg bsm" onclick="checkYouTubeAPIStatus()">↻ Tjek status</button>
+                <button class="btn bp bsm" onclick="connectYouTubeAPI()">🔄 Reconnect</button>
+                <button class="btn br bsm" onclick="disconnectYouTubeAPI()">Afbryd API</button>
+              </div>
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px;background:rgba(255,0,0,.15);border-color:rgba(255,0,0,.4)" onclick="connectYouTubeAPI()">▶️ Forbind YouTube via Data API v3</button>
             <details style="margin-bottom:12px">
@@ -2692,8 +2710,21 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div id="safety-pause-banner" style="display:none;padding:8px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:11px;color:#ef4444;margin-bottom:12px">🚫 Automation paused until <span id="safety-pause-until"></span></div>
           <div style="border-top:1px solid var(--border);padding-top:12px">
             <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Proxy Isolation</div>
-            <div id="safety-proxy-status" style="font-size:12px;color:var(--tx3);margin-bottom:8px">Not assigned</div>
-            <button class="btn bg bsm" onclick="assignProxy()">🌐 Assign Dedicated Session</button>
+            <div id="proxy-empty" style="font-size:12px;color:var(--tx3);margin-bottom:8px">Not assigned — automation runs from the shared server IP.</div>
+            <div id="proxy-info" style="display:none;font-size:12px;margin-bottom:8px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span id="proxy-flag" style="font-size:18px">🌐</span>
+                <span style="font-weight:600">Oxylabs residential</span>
+                <span id="proxy-country" style="color:var(--tx3);font-size:11px"></span>
+              </div>
+              <div style="color:var(--tx3);font-size:11px">Session: <span id="proxy-session-id" style="font-family:monospace;color:var(--tx2)">–</span></div>
+              <div style="color:var(--tx3);font-size:11px">Time remaining: <span id="proxy-time-left" style="color:var(--tx2)">–</span></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn bg bsm" id="btn-assign-proxy" onclick="assignProxy()" style="display:none">🌐 Assign Proxy</button>
+              <button class="btn bp bsm" id="btn-refresh-proxy" onclick="refreshProxy()" style="display:none">🔄 Refresh proxy session</button>
+              <span id="proxy-plan-locked" style="display:none;font-size:11px;color:var(--tx3);align-self:center">🔒 Proxy isolation requires Growth+ plan</span>
+            </div>
           </div>
         </div>
 
@@ -4998,7 +5029,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSidebarUser();
   checkHealth(); loadConnections(); loadSafetyStatus(); loadWorkspaces(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus(); _loadWatermarkSettings();
   loadBilling(); loadSubAccounts();
-  checkTikTokAPIStatus(); checkYouTubeAPIStatus();
+  checkTikTokAPIStatus(); checkYouTubeAPIStatus(); checkTwitterAPIStatus();
   if(typeof checkInstagramToken==='function') checkInstagramToken();
   apiFetch('/api/auth/me').then(function(u){ if(typeof checkNicheModal==='function') checkNicheModal(u||{}); }).catch(function(){});
   const _urlp = new URLSearchParams(window.location.search);
@@ -6346,6 +6377,23 @@ async function loadConnections() {
     }
   } catch {}
 }
+function _countryFlag(cc) {
+  if (!cc || cc.length !== 2) return "🌐";
+  var c = cc.toUpperCase();
+  return String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65) +
+         String.fromCodePoint(0x1F1E6 + c.charCodeAt(1) - 65);
+}
+function _proxyTimeLeft(assignedAt) {
+  if (!assignedAt) return "";
+  var t0 = new Date(assignedAt).getTime();
+  if (isNaN(t0)) return "";
+  var msLeft = (t0 + 1440 * 60 * 1000) - Date.now();
+  if (msLeft <= 0) return "expired";
+  var mins = Math.floor(msLeft / 60000);
+  var hrs  = Math.floor(mins / 60);
+  var rem  = mins % 60;
+  return hrs > 0 ? (hrs + "h " + rem + "m") : (rem + "m");
+}
 async function loadSafetyStatus() {
   try {
     const d = await apiFetch("/api/automation/safety");
@@ -6365,11 +6413,43 @@ async function loadSafetyStatus() {
     const pb=document.getElementById("safety-pause-banner"), pu=document.getElementById("safety-pause-until");
     if (d.paused_until) { if(pb)pb.style.display=""; if(pu)pu.textContent=d.paused_until.slice(0,16)+" UTC"; }
     else { if(pb)pb.style.display="none"; }
-    const ps=document.getElementById("safety-proxy-status");
-    if (ps) ps.textContent = d.proxy_assigned
-      ? "Session: "+d.proxy_session+" ("+((d.proxy_assigned_at||"").slice(0,10))+")"
-      : "Not assigned";
+    // Proxy display
+    var emptyEl   = document.getElementById("proxy-empty");
+    var infoEl    = document.getElementById("proxy-info");
+    var assignBtn = document.getElementById("btn-assign-proxy");
+    var refreshBtn= document.getElementById("btn-refresh-proxy");
+    var lockedEl  = document.getElementById("proxy-plan-locked");
+    var plan = (window._currentPlan || "free").toLowerCase();
+    var growthPlus = ["growth","pro","elite","personal","agency"].indexOf(plan) >= 0;
+    if (d.proxy_assigned) {
+      if (emptyEl)    emptyEl.style.display = "none";
+      if (infoEl)     infoEl.style.display = "block";
+      if (assignBtn)  assignBtn.style.display = "none";
+      if (refreshBtn) refreshBtn.style.display = growthPlus ? "" : "none";
+      if (lockedEl)   lockedEl.style.display = "none";
+      var sid  = document.getElementById("proxy-session-id");
+      var tlEl = document.getElementById("proxy-time-left");
+      var fl   = document.getElementById("proxy-flag");
+      var cou  = document.getElementById("proxy-country");
+      if (sid)  sid.textContent  = (d.proxy_session || "–").slice(0, 32);
+      if (tlEl) tlEl.textContent = _proxyTimeLeft(d.proxy_assigned_at) || "–";
+      if (fl)   fl.textContent   = _countryFlag(d.proxy_country || "");
+      if (cou)  cou.textContent  = d.proxy_country ? d.proxy_country.toUpperCase() : "";
+    } else {
+      if (infoEl)     infoEl.style.display = "none";
+      if (emptyEl)    emptyEl.style.display = "";
+      if (refreshBtn) refreshBtn.style.display = "none";
+      if (assignBtn)  assignBtn.style.display = growthPlus ? "" : "none";
+      if (lockedEl)   lockedEl.style.display = growthPlus ? "none" : "";
+    }
   } catch(e) {}
+}
+async function refreshProxy() {
+  try {
+    const d = await apiFetch("/api/automation/assign_proxy", "POST", {});
+    if (d && d.ok) { toast("🔄 Proxy session refreshed", "success"); loadSafetyStatus(); }
+    else toast(d && d.detail ? d.detail : "Could not refresh proxy", "error");
+  } catch(e) { toast("Error refreshing proxy", "error"); }
 }
 async function setSafetyLevel(level) {
   try {
@@ -7505,9 +7585,16 @@ async function checkYouTubeAPIStatus() {
       if (statusEl) statusEl.style.display = 'block';
       const ch = document.getElementById('yt-api-channel');
       if (ch) ch.textContent = r.channel_name || r.channel_id || 'YouTube';
+      const sy = document.getElementById('yt-api-synced');
+      if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
       const cs = document.getElementById('cs-youtube');
-      if (cs) { cs.textContent = '✅ API forbundet'; cs.className = 'constatus yes'; }
+      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
       document.getElementById('con-youtube')?.classList.add('ok');
+    } else {
+      if (statusEl) statusEl.style.display = 'none';
+      const cs = document.getElementById('cs-youtube');
+      if (cs) { cs.textContent = '❌ Not connected'; cs.className = 'constatus no'; }
+      document.getElementById('con-youtube')?.classList.remove('ok');
     }
   } catch(e) {}
 }
@@ -7546,9 +7633,29 @@ async function checkInstagramAPIStatus() {
       const u = document.getElementById('ig-api-username');
       if (u) u.textContent = '@' + r.username;
       const e = document.getElementById('ig-api-expires');
-      if (e && r.expires_at) e.textContent = 'Token expires: ' + r.expires_at.split('T')[0];
+      var expired = false;
+      if (e) {
+        if (r.expires_at) {
+          e.textContent = 'Token expires: ' + r.expires_at.split('T')[0];
+          expired = new Date(r.expires_at).getTime() < Date.now();
+          if (expired) e.style.color = '#ef4444';
+        } else {
+          e.textContent = '';
+        }
+      }
+      const sy = document.getElementById('ig-api-synced');
+      if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
       const cs = document.getElementById('cs-instagram');
-      if (cs) { cs.textContent = '✅ API forbundet'; cs.className = 'constatus yes'; }
+      if (cs) {
+        cs.textContent = expired ? '⚠️ Token expired — reconnect' : '✅ Connected';
+        cs.className = 'constatus ' + (expired ? 'no' : 'yes');
+      }
+      document.getElementById('con-instagram')?.classList.toggle('ok', !expired);
+    } else {
+      if (statusEl) statusEl.style.display = 'none';
+      const cs = document.getElementById('cs-instagram');
+      if (cs) { cs.textContent = '❌ Not connected'; cs.className = 'constatus no'; }
+      document.getElementById('con-instagram')?.classList.remove('ok');
     }
   } catch(e) {}
 }
@@ -7566,10 +7673,39 @@ async function checkTikTokAPIStatus() {
       if (statusEl) statusEl.style.display = 'block';
       const u = document.getElementById('tt-api-username');
       if (u) u.textContent = '@' + (r.username || r.open_id || 'TikTok');
+      const sy = document.getElementById('tt-api-synced');
+      if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
       const cs = document.getElementById('cs-tiktok');
-      if (cs) { cs.textContent = '✅ API forbundet'; cs.className = 'constatus yes'; }
+      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
       const card = document.getElementById('con-tiktok');
       if (card) card.classList.add('ok');
+    } else {
+      if (statusEl) statusEl.style.display = 'none';
+      const cs = document.getElementById('cs-tiktok');
+      if (cs) { cs.textContent = '❌ Not connected'; cs.className = 'constatus no'; }
+      document.getElementById('con-tiktok')?.classList.remove('ok');
+    }
+  } catch(e) {}
+}
+
+async function checkTwitterAPIStatus() {
+  try {
+    const r = await apiFetch('/api/twitter/status');
+    const statusEl = document.getElementById('tw-api-status');
+    if (r.connected) {
+      if (statusEl) statusEl.style.display = 'block';
+      const u = document.getElementById('tw-api-username');
+      if (u) u.textContent = '@' + (r.username || 'X');
+      const sy = document.getElementById('tw-api-synced');
+      if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
+      const cs = document.getElementById('cs-twitter');
+      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
+      document.getElementById('con-twitter')?.classList.add('ok');
+    } else {
+      if (statusEl) statusEl.style.display = 'none';
+      const cs = document.getElementById('cs-twitter');
+      if (cs) { cs.textContent = '❌ Not connected'; cs.className = 'constatus no'; }
+      document.getElementById('con-twitter')?.classList.remove('ok');
     }
   } catch(e) {}
 }
