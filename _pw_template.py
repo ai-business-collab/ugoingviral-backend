@@ -117,11 +117,12 @@ with sync_playwright() as p:
     _profile_dir = os.path.join(SESSION_DIR, f"{PLATFORM}_chrome_profile")
     os.makedirs(_profile_dir, exist_ok=True)
 
-    # Bright Data residential proxy
+    # Oxylabs residential proxy — sticky session for 1440 minutes (24h)
+    _oxy_session = os.getenv("OXYLABS_SESSION_ID") or f"ugv_{PLATFORM[:8]}_{int(time.time())}"
     _proxy = {
-        "server": "brd.superproxy.io:33335",
-        "username": os.getenv("BRD_USER", "brd-customer-hl_4b594f83-zone-ugoingviral_main"),
-        "password": os.getenv("BRD_PASS", "vj8bursge8o5"),
+        "server": "pr.oxylabs.io:7777",
+        "username": f"customer-ugoingviral_1reRN-sessid-{_oxy_session}-sesstime-1440",
+        "password": os.getenv("OXYLABS_PASSWORD", "Ugoingviral2026:"),
     }
 
     ctx = p.chromium.launch_persistent_context(

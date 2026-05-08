@@ -204,11 +204,10 @@ async def assign_user_proxy(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Proxy requires Growth+ plan")
     ts         = int(datetime.utcnow().timestamp())
     session_id = "ugv_" + uid[:8] + "_" + str(ts)
-    p_user     = os.getenv("PROXY_USER", "brd-customer-hl_4b594f83-zone-ugoingviral_main")
-    p_pass     = os.getenv("PROXY_PASS", "")
-    p_host     = os.getenv("PROXY_HOST", "brd.superproxy.io")
-    p_port     = os.getenv("PROXY_PORT", "33335")
-    proxy_url  = "http://" + p_user + "-session-" + session_id + ":" + p_pass + "@" + p_host + ":" + p_port
+    # Oxylabs residential proxy — sticky session for 1440 minutes (24h) per user
+    oxy_pass   = os.getenv("OXYLABS_PASSWORD", "Ugoingviral2026:")
+    oxy_user   = f"customer-ugoingviral_1reRN-sessid-{session_id}-sesstime-1440"
+    proxy_url  = f"http://{oxy_user}:{oxy_pass}@pr.oxylabs.io:7777"
     ustore["proxy_config"] = {
         "assigned":    True,
         "proxy_url":   proxy_url,
