@@ -9,6 +9,31 @@ from models import Settings, ApiToggle, PlatformAutomation, ContentRequest, Post
 router = APIRouter()
 
 
+# ── Oxylabs country endpoints ─────────────────────────────────────────────────
+# Whitelist auth is configured on the Oxylabs side, so no session-id is needed
+# in the username. Each entry is (host, port).
+OXYLABS_COUNTRY_ENDPOINTS = {
+    "DK": ("dk-pr.oxylabs.io", 19000),
+    "SE": ("se-pr.oxylabs.io", 30000),
+    "NO": ("no-pr.oxylabs.io", 34000),
+    "GB": ("gb-pr.oxylabs.io", 20000),
+    "US": ("us-pr.oxylabs.io", 10000),
+    "DE": ("de-pr.oxylabs.io", 30000),
+    "NL": ("nl-pr.oxylabs.io", 20000),
+    "FR": ("fr-pr.oxylabs.io", 40000),
+    "ES": ("es-pr.oxylabs.io", 10000),
+    "IT": ("it-pr.oxylabs.io", 20000),
+    "AU": ("au-pr.oxylabs.io", 40000),
+    "CA": ("ca-pr.oxylabs.io", 30000),
+}
+DEFAULT_ENDPOINT = ("pr.oxylabs.io", 7777)
+
+
+def _oxylabs_endpoint(country_code: str):
+    cc = (country_code or "").upper()[:2]
+    return OXYLABS_COUNTRY_ENDPOINTS.get(cc, DEFAULT_ENDPOINT)
+
+
 # ── Automation ────────────────────────────────────────────────────────────────
 @router.get("/api/automation/log")
 def get_log(): return {"log": store.get("automation_log", {})}
@@ -202,40 +227,45 @@ async def assign_user_proxy(current_user: dict = Depends(get_current_user)):
     plan   = ustore.get("billing", {}).get("plan", "free")
     if plan not in {"growth", "pro", "elite", "personal", "agency"}:
         raise HTTPException(status_code=403, detail="Proxy requires Growth+ plan")
-    ts         = int(datetime.utcnow().timestamp())
-    session_id = "ugv_" + uid[:8] + "_" + str(ts)
-    # Oxylabs residential proxy — sticky session for 1440 minutes (24h) per user
-    oxy_pass   = os.getenv("OXYLABS_PASSWORD", "Ugoingviral2026:")
-    oxy_user   = f"customer-ugoingviral_1reRN-sessid-{session_id}-sesstime-1440"
-    proxy_url  = f"http://{oxy_user}:{oxy_pass}@pr.oxylabs.io:7777"
-    proxy_country = ""
-    proxy_ip      = ""
+
+    # Country selection — honor the user's stored choice, default to DK.
+    existing_country = (ustore.get("proxy_config", {}).get("proxy_country") or "DK").upper()
+    if existing_country not in OXYLABS_COUNTRY_ENDPOINTS:
+        existing_country = "DK"
+    host, port = _oxylabs_endpoint(existing_country)
+
+    # Whitelist auth → username is just the customer prefix, no session-id suffix.
+    oxy_user  = "customer-ugoingviral_1reRN"
+    oxy_pass  = os.getenv("OXYLABS_PASSWORD", "Ugoingviral2026:")
+    proxy_url = f"http://{oxy_user}:{oxy_pass}@{host}:{port}"
+
+    proxy_ip = ""
     try:
-        # Best-effort exit-IP geolocation through the proxy. ~2s timeout so a
-        # slow proxy can't block the assign call.
+        # Best-effort exit-IP capture so the UI can show the live IP.
         async with httpx.AsyncClient(proxy=proxy_url, timeout=2.5) as _c:
             _r = await _c.get("https://ipinfo.io/json")
             if _r.status_code == 200:
-                _j = _r.json()
-                proxy_country = (_j.get("country") or "").upper()[:2]
-                proxy_ip      = _j.get("ip") or ""
+                proxy_ip = _r.json().get("ip") or ""
     except Exception:
         pass
+
     ustore["proxy_config"] = {
         "assigned":      True,
         "proxy_url":     proxy_url,
-        "session_id":    session_id,
-        "assigned_at":   datetime.utcnow().isoformat(),
+        "proxy_host":    host,
+        "proxy_port":    port,
+        "proxy_country": existing_country,
         "proxy_ip":      proxy_ip,
-        "proxy_country": proxy_country,
+        "assigned_at":   datetime.utcnow().isoformat(),
     }
     _save_user_store(uid, ustore)
     return {
         "ok":            True,
-        "session_id":    session_id,
-        "assigned_at":   ustore["proxy_config"]["assigned_at"],
-        "proxy_country": proxy_country,
+        "proxy_country": existing_country,
+        "proxy_host":    host,
+        "proxy_port":    port,
         "proxy_ip":      proxy_ip,
+        "assigned_at":   ustore["proxy_config"]["assigned_at"],
     }
 
 
@@ -260,6 +290,8 @@ def get_safety_status(current_user: dict = Depends(get_current_user)):
         "proxy_assigned_at": proxy.get("assigned_at", ""),
         "proxy_country":     proxy.get("proxy_country", ""),
         "proxy_ip":          proxy.get("proxy_ip", ""),
+        "proxy_host":        proxy.get("proxy_host", ""),
+        "proxy_port":        proxy.get("proxy_port", 0),
     }
 
 

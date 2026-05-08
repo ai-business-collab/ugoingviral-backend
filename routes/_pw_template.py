@@ -117,11 +117,20 @@ with sync_playwright() as p:
     _profile_dir = os.path.join(SESSION_DIR, f"{PLATFORM}_chrome_profile")
     os.makedirs(_profile_dir, exist_ok=True)
 
-    # Oxylabs residential proxy — sticky session for 1440 minutes (24h)
-    _oxy_session = os.getenv("OXYLABS_SESSION_ID") or f"ugv_{PLATFORM[:8]}_{int(time.time())}"
+    # Oxylabs residential proxy — country-specific endpoint, whitelist auth.
+    _OXY_COUNTRY_ENDPOINTS = {
+        "DK": ("dk-pr.oxylabs.io", 19000), "SE": ("se-pr.oxylabs.io", 30000),
+        "NO": ("no-pr.oxylabs.io", 34000), "GB": ("gb-pr.oxylabs.io", 20000),
+        "US": ("us-pr.oxylabs.io", 10000), "DE": ("de-pr.oxylabs.io", 30000),
+        "NL": ("nl-pr.oxylabs.io", 20000), "FR": ("fr-pr.oxylabs.io", 40000),
+        "ES": ("es-pr.oxylabs.io", 10000), "IT": ("it-pr.oxylabs.io", 20000),
+        "AU": ("au-pr.oxylabs.io", 40000), "CA": ("ca-pr.oxylabs.io", 30000),
+    }
+    _oxy_country = (os.getenv("OXYLABS_COUNTRY") or "DK").upper()[:2]
+    _oxy_host, _oxy_port = _OXY_COUNTRY_ENDPOINTS.get(_oxy_country, ("pr.oxylabs.io", 7777))
     _proxy = {
-        "server": "pr.oxylabs.io:7777",
-        "username": f"customer-ugoingviral_1reRN-sessid-{_oxy_session}-sesstime-1440",
+        "server":   f"{_oxy_host}:{_oxy_port}",
+        "username": "customer-ugoingviral_1reRN",
         "password": os.getenv("OXYLABS_PASSWORD", "Ugoingviral2026:"),
     }
 
