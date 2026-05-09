@@ -18,8 +18,10 @@ complete, persist cookies via `ctx.storage_state(path=COOKIE_FILE)`, mark
 the session done, and tear the browser down.
 """
 import asyncio
+import gc
 import logging
 import os
+import re
 import secrets
 from datetime import datetime
 from typing import Optional
@@ -27,7 +29,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from routes.auth import get_current_user
-from services.store import _load_user_store
+from services.store import _load_user_store, _save_user_store
 
 logger = logging.getLogger(__name__)
 router  = APIRouter()
@@ -206,3 +208,243 @@ async def cancel_session(session_id: str, current_user: dict = Depends(get_curre
     if sess and sess.get("user_id") == current_user["id"]:
         sess["status"] = "cancelled"
     return {"ok": True}
+
+
+# ── Batch Instagram login via CSV ─────────────────────────────────────────────
+# Charge 5 credits per *successful* connect. Failed accounts (wrong password,
+# 2FA challenge, suspicious-login wall) cost nothing. Single batch in flight
+# per user; max 50 accounts per batch (rate-limit hygiene + UX cap).
+
+BATCH_CREDIT_COST   = 5
+BATCH_MAX_ACCOUNTS  = 50
+BATCH_PER_ACCOUNT_S = 60  # hard timeout per account
+_BATCHES: dict[str, dict] = {}
+
+
+def _safe_filename(s: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", s)[:80]
+
+
+@router.post("/api/automation/playwright/batch_connect")
+async def batch_connect(body: dict, current_user: dict = Depends(get_current_user)):
+    if not _is_growth_plus(current_user["id"]):
+        raise HTTPException(status_code=403, detail="Batch connect requires the Growth plan or higher")
+
+    raw = body.get("accounts") or []
+    if not isinstance(raw, list) or not raw:
+        raise HTTPException(status_code=400, detail="No accounts provided")
+    if len(raw) > BATCH_MAX_ACCOUNTS:
+        raise HTTPException(status_code=400, detail=f"Max {BATCH_MAX_ACCOUNTS} accounts per batch")
+
+    accounts = []
+    for a in raw:
+        if not isinstance(a, dict):
+            raise HTTPException(status_code=400, detail="Bad account format")
+        u = (a.get("username") or "").strip().lstrip("@")
+        p = (a.get("password") or "")
+        if not u or not p:
+            raise HTTPException(status_code=400, detail="Each account needs both username and password")
+        accounts.append({"username": u, "password": p})
+
+    # Single batch in flight per user.
+    for bid, b in list(_BATCHES.items()):
+        if b.get("user_id") == current_user["id"] and b.get("status") == "running":
+            raise HTTPException(status_code=409, detail="A batch is already running")
+
+    # Upfront credit pre-flight check (we charge per success, but if the user
+    # can't afford the WHOLE batch we refuse to start so they don't get half-done).
+    ustore  = _load_user_store(current_user["id"])
+    billing = ustore.setdefault("billing", {})
+    needed  = BATCH_CREDIT_COST * len(accounts)
+    have    = int(billing.get("credits") or 0)
+    if have < needed:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Need {needed} credits ({BATCH_CREDIT_COST} × {len(accounts)}), you have {have}",
+        )
+
+    batch_id = secrets.token_urlsafe(12)
+    _BATCHES[batch_id] = {
+        "user_id":          current_user["id"],
+        "status":           "running",
+        "total":            len(accounts),
+        "completed":        0,
+        "current_index":    0,
+        "current_username": "",
+        "results":          [],
+        "started_at":       datetime.utcnow().isoformat(),
+    }
+    asyncio.create_task(_run_batch(batch_id, accounts))
+    return {
+        "batch_id": batch_id,
+        "total":    len(accounts),
+        "status":   "running",
+        "credits_per_account": BATCH_CREDIT_COST,
+        "credits_reserved":    needed,
+    }
+
+
+async def _login_one(p, account: dict, sessions_dir: str) -> dict:
+    """Run a single Instagram headless login behind the DK proxy and persist
+    cookies on success. Returns a result dict; mutates `account` to wipe the
+    password as soon as it's no longer needed."""
+    proxy = {
+        "server":   "dk-pr.oxylabs.io:19000",
+        "username": "customer-ugoingviral_1reRN",
+        "password": os.getenv("OXYLABS_PASSWORD", "Ugoingviral2026:"),
+    }
+    username = account["username"]
+    result   = {"username": username, "status": "pending"}
+    browser  = ctx = None
+    try:
+        browser = await p.chromium.launch(
+            headless=True,
+            proxy=proxy,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-blink-features=AutomationControlled",
+            ],
+        )
+        ctx = await browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            locale="en-US",
+            ignore_https_errors=True,
+        )
+        page = await ctx.new_page()
+        await page.goto("https://www.instagram.com/accounts/login/", timeout=45_000)
+
+        # Cookie banner / GDPR overlay — best-effort dismiss.
+        for sel in ('button:has-text("Allow all cookies")', 'button:has-text("Only allow essential cookies")'):
+            try:
+                await page.click(sel, timeout=2_500)
+                break
+            except Exception:
+                pass
+
+        await page.fill('input[name="username"]', username, timeout=10_000)
+        # Password lives in a single local variable for the minimum time possible,
+        # then is overwritten + dropped from the input dict before we do anything else.
+        await page.fill('input[name="password"]', account["password"], timeout=10_000)
+        account["password"] = ""  # wipe the dict slot
+        try:
+            await page.click('button[type="submit"]', timeout=10_000)
+        except Exception:
+            await page.keyboard.press("Enter")
+
+        # Watch for success or known dead-ends.
+        deadline = asyncio.get_event_loop().time() + BATCH_PER_ACCOUNT_S
+        while asyncio.get_event_loop().time() < deadline:
+            url = page.url
+            if "/challenge/" in url or "/two_factor/" in url:
+                result["status"] = "needs_verification"
+                result["error"]  = "Instagram requires extra verification (2FA / suspicious login)"
+                break
+            cookies = await ctx.cookies()
+            if any(c.get("name") == "sessionid" and c.get("value") for c in cookies):
+                if "/accounts/login" not in url and "/accounts/onetap" not in url:
+                    cookie_path = os.path.join(sessions_dir, f"instagram_{_safe_filename(username)}_session.json")
+                    await ctx.storage_state(path=cookie_path)
+                    result["status"]      = "connected"
+                    result["cookie_file"] = cookie_path
+                    break
+            await asyncio.sleep(1.5)
+        else:
+            result["status"] = "failed"
+            result["error"]  = "Login did not complete in time (wrong credentials or rate-limited)"
+
+        # Belt-and-braces: handle the case where the loop broke without a status set.
+        if result["status"] == "pending":
+            result["status"] = "failed"
+            result["error"]  = "Unknown — no success indicator"
+    except Exception as exc:
+        logger.exception("batch_connect login error for %s", username)
+        result["status"] = "error"
+        result["error"]  = str(exc)[:200]
+    finally:
+        try:
+            if ctx is not None:     await ctx.close()
+        except Exception: pass
+        try:
+            if browser is not None: await browser.close()
+        except Exception: pass
+    return result
+
+
+async def _run_batch(batch_id: str, accounts: list) -> None:
+    state = _BATCHES.get(batch_id)
+    if not state:
+        return
+    user_id = state["user_id"]
+    os.makedirs(SESSIONS_DIR, exist_ok=True)
+
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError:
+        state["status"] = "error"
+        state["error"]  = "Playwright not installed in the Python environment"
+        return
+
+    try:
+        async with async_playwright() as p:
+            for i, acct in enumerate(accounts):
+                state["current_index"]    = i + 1
+                state["current_username"] = acct["username"]
+
+                result = await _login_one(p, acct, SESSIONS_DIR)
+                # Drop the password reference even if _login_one already cleared it.
+                acct["password"] = ""
+
+                # Charge per success.
+                if result.get("status") == "connected":
+                    try:
+                        ustore = _load_user_store(user_id)
+                        bil    = ustore.setdefault("billing", {})
+                        bil["credits"] = max(0, int(bil.get("credits") or 0) - BATCH_CREDIT_COST)
+                        ustore["billing"] = bil
+                        # Track connected IG handles per user so the UI can list them.
+                        connected = ustore.setdefault("connected_instagram_growth", [])
+                        if acct["username"] not in connected:
+                            connected.append(acct["username"])
+                        ustore["connected_instagram_growth"] = connected
+                        _save_user_store(user_id, ustore)
+                    except Exception:
+                        logger.exception("batch_connect: credit deduction failed")
+
+                state["results"].append(result)
+                state["completed"] = i + 1
+                # Force GC so the just-cleared password references actually get reclaimed.
+                gc.collect()
+
+        state["status"] = "done"
+        state["finished_at"] = datetime.utcnow().isoformat()
+    except Exception as exc:
+        logger.exception("batch_connect: top-level crash")
+        state["status"] = "error"
+        state["error"]  = str(exc)[:200]
+    finally:
+        # Final defensive wipe — the input list may still be referenced by GC roots.
+        for a in accounts:
+            a["password"] = ""
+        gc.collect()
+
+
+@router.get("/api/automation/playwright/batch_status/{batch_id}")
+async def batch_status(batch_id: str, current_user: dict = Depends(get_current_user)):
+    state = _BATCHES.get(batch_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Unknown batch")
+    if state.get("user_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not your batch")
+    return {
+        "batch_id":         batch_id,
+        "status":           state.get("status"),
+        "total":            state.get("total"),
+        "completed":        state.get("completed"),
+        "current_index":    state.get("current_index"),
+        "current_username": state.get("current_username"),
+        "results":          state.get("results", []),
+        "error":            state.get("error"),
+        "started_at":       state.get("started_at"),
+        "finished_at":      state.get("finished_at"),
+    }

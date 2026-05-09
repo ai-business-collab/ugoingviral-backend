@@ -1317,14 +1317,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     </div>
   </nav>
 
-  <div class="sbfoot">
-    
-    <div class="status-item"><span class="sdot off" id="dot-pw"></span><span id="txt-pw">Playwright</span></div>
-    <div class="status-item"><span class="sdot off" id="dot-api"></span><span id="txt-api">Backend offline</span></div>
-    <div class="status-item"><span class="sdot off" id="dot-shop"></span><span id="txt-shop">Shopify</span></div>
-    
-    
-  </div>
+  <div class="sbfoot"></div>
 </aside>
 <div id="mob-sb-overlay" onclick="sbClose()"></div>
 
@@ -2524,7 +2517,31 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               </div>
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Forbind Instagram via officiel API</button>
-            <button class="btn bg" id="ig-growth-connect-btn" style="width:100%;margin-bottom:12px;font-size:13px;background:linear-gradient(135deg,rgba(225,48,108,.18),rgba(193,53,132,.18));border-color:rgba(225,48,108,.4);color:#e1306c" onclick="openInstagramGrowthConnect()">📈 Connect via Growth (Playwright session)</button>
+            <button class="btn bg" id="ig-growth-connect-btn" style="width:100%;margin-bottom:8px;font-size:13px;background:linear-gradient(135deg,rgba(225,48,108,.18),rgba(193,53,132,.18));border-color:rgba(225,48,108,.4);color:#e1306c" onclick="openInstagramGrowthConnect()">📈 Connect via Growth (Playwright session)</button>
+
+            <div id="ig-batch-section" style="display:none;margin-bottom:12px;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <div style="font-size:12px;font-weight:700">📦 Batch connect multiple accounts</div>
+                <span style="font-size:10px;color:var(--tx3)">Growth+ only</span>
+              </div>
+              <div style="font-size:11px;color:var(--tx3);line-height:1.5;margin-bottom:8px">
+                Upload a CSV — one account per line as <code style="background:var(--bg);padding:1px 4px;border-radius:3px">username,password</code>. Costs <strong>5 credits per successful connect</strong>. Failed accounts (wrong password / 2FA) cost nothing. Max 50 per batch.
+              </div>
+              <input type="file" id="ig-batch-csv" accept=".csv,text/csv" style="display:none" onchange="onIgBatchFilePicked(event)">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn bg bsm" onclick="document.getElementById('ig-batch-csv').click()" style="flex:1;min-width:120px">📄 Choose CSV…</button>
+                <button class="btn bp bsm" id="ig-batch-go-btn" onclick="startIgBatchConnect()" disabled style="flex:1;min-width:120px">▶ Start batch</button>
+              </div>
+              <div id="ig-batch-preview" style="font-size:11px;color:var(--tx2);margin-top:8px;display:none"></div>
+              <div id="ig-batch-progress" style="display:none;margin-top:10px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px">
+                <div id="ig-batch-progress-line" style="font-size:12px;font-weight:600;margin-bottom:6px">Starting…</div>
+                <div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden">
+                  <div id="ig-batch-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#e1306c,#c13584);transition:width .3s"></div>
+                </div>
+                <div id="ig-batch-results" style="font-size:11px;margin-top:8px;display:grid;gap:3px;max-height:160px;overflow-y:auto"></div>
+              </div>
+            </div>
+
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Official API for Business/Creator accounts. <strong>Growth+ users</strong> can also connect a personal account via a remote browser session for full automation (likes, follows, DMs).</div>
             <details style="margin-bottom:10px">
               <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Playwright login (fallback)</summary>
@@ -6602,6 +6619,142 @@ function _igGrowthStartPolling() {
     } catch (e) { /* keep polling */ }
   }, 3000);
 }
+
+// ── Batch Instagram login (CSV) ──────────────────────────────────────────────
+window._igBatch = {accounts: [], filename: '', poll: null, batchId: null};
+
+function _igBatchPlanOk() {
+  var plan = (window._currentPlan || 'free').toLowerCase();
+  return ['growth','pro','elite','personal','agency'].indexOf(plan) >= 0;
+}
+
+function _refreshIgBatchSection() {
+  var el = document.getElementById('ig-batch-section');
+  if (el) el.style.display = _igBatchPlanOk() ? 'block' : 'none';
+}
+
+function onIgBatchFilePicked(ev) {
+  var file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function() {
+    var text = String(reader.result || '');
+    var accounts = [];
+    text.split(/\r?\n/).forEach(function(line) {
+      var s = line.trim();
+      if (!s || s.toLowerCase().startsWith('username,')) return; // skip header / blank
+      // Allow comma OR semicolon separators; password may legitimately contain neither.
+      var idx = s.indexOf(',');
+      if (idx < 0) idx = s.indexOf(';');
+      if (idx <= 0) return;
+      var u = s.slice(0, idx).trim().replace(/^@/, '');
+      var p = s.slice(idx + 1).trim();
+      if (u && p) accounts.push({username: u, password: p});
+    });
+    window._igBatch.accounts = accounts;
+    window._igBatch.filename = file.name;
+    var n = accounts.length;
+    var prev = document.getElementById('ig-batch-preview');
+    var btn  = document.getElementById('ig-batch-go-btn');
+    if (n === 0) {
+      prev.textContent  = '⚠️ No valid rows found in ' + file.name + ' — expected `username,password` per line.';
+      prev.style.display = 'block';
+      btn.disabled = true;
+    } else if (n > 50) {
+      prev.textContent  = '⚠️ ' + file.name + ' has ' + n + ' rows — max 50 per batch. Trim the file and try again.';
+      prev.style.display = 'block';
+      btn.disabled = true;
+    } else {
+      prev.textContent  = '📄 ' + file.name + ' → Connect ' + n + ' account' + (n>1?'s':'') + ' = ' + (n*5) + ' credits';
+      prev.style.display = 'block';
+      btn.disabled = false;
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function startIgBatchConnect() {
+  var accts = window._igBatch.accounts || [];
+  if (!accts.length) { toast('Choose a CSV first', 'error'); return; }
+  if (!_igBatchPlanOk()) { toast('Batch connect requires Growth+', 'error'); return; }
+  var cost = accts.length * 5;
+  if (!confirm('Connect ' + accts.length + ' account' + (accts.length>1?'s':'') + ' = ' + cost + ' credits.\n\nFailed logins (wrong password / 2FA) cost nothing — only successful connects are charged.\n\nProceed?')) return;
+
+  document.getElementById('ig-batch-go-btn').disabled = true;
+  document.getElementById('ig-batch-progress').style.display = 'block';
+  document.getElementById('ig-batch-progress-line').textContent = 'Starting…';
+  document.getElementById('ig-batch-bar').style.width = '0%';
+  document.getElementById('ig-batch-results').innerHTML = '';
+
+  try {
+    var r = await apiFetch('/api/automation/playwright/batch_connect', 'POST', {accounts: accts});
+    if (!r || !r.batch_id) throw new Error((r && r.detail) || 'Failed to start batch');
+    window._igBatch.batchId = r.batch_id;
+    // Don't keep the parsed accounts (with passwords) in JS memory once the request is gone.
+    window._igBatch.accounts = [];
+    document.getElementById('ig-batch-csv').value = '';
+    _pollIgBatch();
+  } catch (e) {
+    toast(e.message || 'Batch failed to start', 'error');
+    document.getElementById('ig-batch-go-btn').disabled = false;
+  }
+}
+
+function _pollIgBatch() {
+  if (window._igBatch.poll) clearInterval(window._igBatch.poll);
+  window._igBatch.poll = setInterval(async function() {
+    var bid = window._igBatch.batchId;
+    if (!bid) return;
+    try {
+      var s = await apiFetch('/api/automation/playwright/batch_status/' + bid);
+      var line = document.getElementById('ig-batch-progress-line');
+      var bar  = document.getElementById('ig-batch-bar');
+      var pct  = s.total ? Math.round((s.completed || 0) / s.total * 100) : 0;
+      bar.style.width = pct + '%';
+
+      if (s.status === 'running') {
+        line.textContent = 'Connecting account ' + (s.current_index || 1) + '/' + s.total +
+                           (s.current_username ? ' — @' + s.current_username : '') + '…';
+      } else if (s.status === 'done') {
+        line.textContent = '✅ Done — ' + (s.results || []).filter(function(r){return r.status==='connected';}).length +
+                           '/' + s.total + ' connected';
+        clearInterval(window._igBatch.poll); window._igBatch.poll = null;
+        document.getElementById('ig-batch-go-btn').disabled = false;
+        try { await loadBilling(); } catch(e) {}
+      } else if (s.status === 'error') {
+        line.textContent = '⚠️ ' + (s.error || 'Batch crashed');
+        clearInterval(window._igBatch.poll); window._igBatch.poll = null;
+        document.getElementById('ig-batch-go-btn').disabled = false;
+      }
+
+      // Render results
+      var box = document.getElementById('ig-batch-results');
+      box.innerHTML = (s.results || []).map(function(r) {
+        var icon = r.status === 'connected' ? '✅' :
+                   r.status === 'needs_verification' ? '⚠️' :
+                   r.status === 'failed' ? '❌' : '⚠️';
+        var color = r.status === 'connected' ? 'var(--ac3)' :
+                    r.status === 'needs_verification' ? '#f59e0b' : '#ef4444';
+        var note = r.error ? ' — <span style="color:var(--tx3)">' + r.error + '</span>' : '';
+        return '<div style="color:' + color + '">' + icon + ' @' + r.username + ' (' + r.status + ')' + note + '</div>';
+      }).join('');
+    } catch (e) {
+      // keep polling
+    }
+  }, 2500);
+}
+
+// Show/hide the batch section once we know the user's plan.
+(function() {
+  var oldLoad = window.loadBilling;
+  if (typeof oldLoad === 'function') {
+    window.loadBilling = async function() {
+      var r = await oldLoad.apply(this, arguments);
+      _refreshIgBatchSection();
+      return r;
+    };
+  }
+})();
 
 // Mirror flow for client accounts (TASK 2) — one-time, no country picker.
 async function buyClientAccounts(quantity) {
