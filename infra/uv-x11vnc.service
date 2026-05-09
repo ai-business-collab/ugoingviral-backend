@@ -1,0 +1,13 @@
+[Unit]
+Description=UV x11vnc bridging Xvfb :99 to localhost:5900
+After=uv-xvfb.service
+Requires=uv-xvfb.service
+
+[Service]
+Environment=DISPLAY=:99
+ExecStart=/usr/bin/x11vnc -display :99 -forever -localhost -nopw -shared -rfbport 5900 -quiet
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=UV websockify localhost:6080 -> 127.0.0.1:5900
+After=uv-x11vnc.service
+Requires=uv-x11vnc.service
+
+[Service]
+ExecStart=/usr/bin/websockify --heartbeat=30 127.0.0.1:6080 127.0.0.1:5900
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

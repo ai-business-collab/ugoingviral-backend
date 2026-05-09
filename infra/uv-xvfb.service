@@ -1,0 +1,11 @@
+[Unit]
+Description=UV Xvfb on :99 for Playwright + VNC
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/Xvfb :99 -screen 0 1280x800x24 -nolisten tcp
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

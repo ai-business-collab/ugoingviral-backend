@@ -1,0 +1,80 @@
+server {
+    server_name ugoingviral.com www.ugoingviral.com;
+
+    # ── Block sensitive files ──────────────────────────────────────────────
+    location ~ /\.env {
+        deny all;
+        return 404;
+    }
+    location ~ \.py$ {
+        deny all;
+        return 404;
+    }
+    location ~* /_index\.json$ {
+        deny all;
+        return 404;
+    }
+    location ~* ^/user_data/ {
+        deny all;
+        return 404;
+    }
+    location ~ /users\.json$ {
+        deny all;
+        return 404;
+    }
+
+    # ── Rate-limited login (5 req/min per IP) ─────────────────────────────
+    location = /api/auth/login {
+        limit_req zone=login_limit burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+
+    # ── noVNC for Instagram Growth connect ────────────────────────────────
+    location /vnc-static/ {
+        alias /usr/share/novnc/;
+        autoindex off;
+    }
+    location /vnc-ws/ {
+        proxy_pass http://127.0.0.1:6080/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+    }
+
+    # ── Default proxy ──────────────────────────────────────────────────────
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 60s;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/ugoingviral.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/ugoingviral.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}
+
+server {
+    if ($host = www.ugoingviral.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    if ($host = ugoingviral.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    listen 80;
+    server_name ugoingviral.com www.ugoingviral.com;
+    return 404; # managed by Certbot
+}

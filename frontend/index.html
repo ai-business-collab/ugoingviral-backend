@@ -2523,8 +2523,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
                 <button class="btn bp bsm" onclick="connectInstagramAPI()">🔄 Reconnect</button>
               </div>
             </div>
-            <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectInstagramAPI()">📸 Forbind Instagram via officiel API</button>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Requires an Instagram Business/Creator account connected to a Facebook page.</div>
+            <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Forbind Instagram via officiel API</button>
+            <button class="btn bg" id="ig-growth-connect-btn" style="width:100%;margin-bottom:12px;font-size:13px;background:linear-gradient(135deg,rgba(225,48,108,.18),rgba(193,53,132,.18));border-color:rgba(225,48,108,.4);color:#e1306c" onclick="openInstagramGrowthConnect()">📈 Connect via Growth (Playwright session)</button>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Official API for Business/Creator accounts. <strong>Growth+ users</strong> can also connect a personal account via a remote browser session for full automation (likes, follows, DMs).</div>
             <details style="margin-bottom:10px">
               <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Playwright login (fallback)</summary>
               <div style="margin-top:10px">
@@ -6507,6 +6508,99 @@ async function submitGrowthBuy() {
   } finally {
     btn.disabled = false; btn.textContent = '📈 Continue to Stripe checkout';
   }
+}
+
+// ── Instagram Growth connect (Playwright + noVNC) ────────────────────────────
+window._igGrowth = {sessionId: null, poll: null, timer: null, deadline: 0};
+
+async function openInstagramGrowthConnect() {
+  // Plan check is enforced server-side too; this just gives a clearer UX.
+  var plan = (window._currentPlan || 'free').toLowerCase();
+  if (['growth','pro','elite','personal','agency'].indexOf(plan) < 0) {
+    toast('Instagram Growth connect requires the Growth plan or higher','error');
+    return;
+  }
+  // Open modal with overlay; iframe loads after backend returns vnc_url.
+  var modal   = document.getElementById('ig-growth-modal');
+  var overlay = document.getElementById('ig-growth-overlay');
+  var iframe  = document.getElementById('ig-growth-iframe');
+  var status  = document.getElementById('ig-growth-status');
+  modal.style.display   = 'flex';
+  overlay.style.display = 'flex';
+  iframe.src            = 'about:blank';
+  status.textContent    = 'Starting browser through DK proxy…';
+
+  try {
+    var r = await apiFetch('/api/automation/playwright/instagram_connect', 'POST', {});
+    if (!r || !r.session_id) throw new Error(r && r.detail || 'Could not start session');
+    window._igGrowth.sessionId = r.session_id;
+    window._igGrowth.deadline  = Date.now() + (r.session_timeout || 600) * 1000;
+
+    // Give the browser a couple of seconds to start before pointing the iframe at noVNC.
+    setTimeout(function() {
+      iframe.src            = r.vnc_url;
+      overlay.style.display = 'none';
+      status.textContent    = 'Browser ready — log in to Instagram.';
+    }, 2500);
+
+    _igGrowthStartTimer();
+    _igGrowthStartPolling();
+  } catch (e) {
+    overlay.innerHTML = '<div style="color:#ef4444">⚠️ ' + (e.message || 'Failed to start') + '</div>';
+  }
+}
+
+function closeInstagramGrowthConnect() {
+  var sid = window._igGrowth.sessionId;
+  if (sid) {
+    apiFetch('/api/automation/playwright/cancel_session/' + sid, 'POST', {}).catch(function(){});
+  }
+  if (window._igGrowth.poll)  { clearInterval(window._igGrowth.poll);  window._igGrowth.poll  = null; }
+  if (window._igGrowth.timer) { clearInterval(window._igGrowth.timer); window._igGrowth.timer = null; }
+  window._igGrowth.sessionId = null;
+  document.getElementById('ig-growth-modal').style.display = 'none';
+  document.getElementById('ig-growth-iframe').src = 'about:blank';
+}
+
+function _igGrowthStartTimer() {
+  if (window._igGrowth.timer) clearInterval(window._igGrowth.timer);
+  var el = document.getElementById('ig-growth-timer');
+  function tick() {
+    var ms = Math.max(0, window._igGrowth.deadline - Date.now());
+    var s  = Math.floor(ms / 1000);
+    var m  = Math.floor(s / 60), r = s % 60;
+    el.textContent = m + ':' + (r < 10 ? '0' + r : r);
+  }
+  tick();
+  window._igGrowth.timer = setInterval(tick, 1000);
+}
+
+function _igGrowthStartPolling() {
+  if (window._igGrowth.poll) clearInterval(window._igGrowth.poll);
+  window._igGrowth.poll = setInterval(async function() {
+    var sid = window._igGrowth.sessionId;
+    if (!sid) return;
+    try {
+      var s = await apiFetch('/api/automation/playwright/session_status/' + sid);
+      var statusEl = document.getElementById('ig-growth-status');
+      if (s.status === 'logged_in') {
+        statusEl.textContent = '✅ Connected — saving cookies…';
+        toast('✅ Instagram connected via Growth session', 'success');
+        try { await checkInstagramAPIStatus(); } catch(e) {}
+        try { await loadConnections(); } catch(e) {}
+        setTimeout(closeInstagramGrowthConnect, 1500);
+      } else if (s.status === 'error') {
+        statusEl.textContent = '⚠️ ' + (s.error || 'Browser error');
+      } else if (s.status === 'timeout') {
+        statusEl.textContent = '⏱ Timed out — try again';
+        setTimeout(closeInstagramGrowthConnect, 2000);
+      } else if (s.status === 'cancelled') {
+        closeInstagramGrowthConnect();
+      } else {
+        statusEl.textContent = 'Waiting for login…';
+      }
+    } catch (e) { /* keep polling */ }
+  }, 3000);
 }
 
 // Mirror flow for client accounts (TASK 2) — one-time, no country picker.
@@ -11431,6 +11525,34 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
     <div style="display:flex;gap:10px">
       <button class="btn bg" style="flex:1" onclick="closeDeleteAccountModal()">Cancel</button>
       <button id="delete-confirm-btn" class="btn bsm" style="flex:1;background:#ef4444;border:none;color:#fff;font-weight:700;opacity:.5" disabled onclick="doDeleteAccount()">Delete Forever</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INSTAGRAM GROWTH CONNECT (noVNC) ══════════════════════════════════ -->
+<div id="ig-growth-modal" style="display:none;position:fixed;inset:0;z-index:9903;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeInstagramGrowthConnect()">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;width:100%;max-width:1080px;height:92vh;max-height:760px;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.6);position:relative" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--tx)">📸 Connect Instagram (Growth)</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px" id="ig-growth-status">Starting browser through DK proxy…</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="ig-growth-timer" style="font-size:11px;color:var(--tx3);font-family:monospace">10:00</span>
+        <button class="btn br bsm" onclick="closeInstagramGrowthConnect()">✕ Cancel</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;line-height:1.5;padding:8px 10px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.15);border-radius:8px">
+      💡 A real Chrome window is running on our server behind a Danish residential IP — log in with your Instagram credentials below as if it were your own browser. We'll capture the session cookies automatically when you're in. <strong>We never see your password.</strong>
+    </div>
+    <div style="flex:1;background:#000;border-radius:10px;overflow:hidden;border:1px solid var(--border);position:relative">
+      <iframe id="ig-growth-iframe" src="about:blank" style="width:100%;height:100%;border:0;display:block"></iframe>
+      <div id="ig-growth-overlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);color:#fff;font-size:14px;text-align:center;padding:24px">
+        <div>
+          <div class="spin" style="margin:0 auto 12px;width:32px;height:32px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite"></div>
+          Booting headless browser through DK proxy…
+        </div>
+      </div>
     </div>
   </div>
 </div>
