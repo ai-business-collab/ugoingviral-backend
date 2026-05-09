@@ -2982,6 +2982,15 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <button class="btn bp bsm" onclick="changePasswordSettings()">Update password</button>
       </div>
 
+      <!-- PERSONAL ASSISTANT VOICE -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">🎙️ Personal Assistant</div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Choose how your AI assistant sounds when you enable voice replies in chat.</div>
+        <div id="set-voice-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"></div>
+        <audio id="set-voice-audio" preload="none" style="display:none"></audio>
+        <button class="btn bp bsm" onclick="saveAgentVoiceSettings()">💾 Save voice</button>
+      </div>
+
       <!-- INTERFACE -->
       <div class="card" style="margin-bottom:20px">
         <div class="ctitle">🎨 Interface &amp; Language</div>
@@ -6081,6 +6090,8 @@ async function loadSettingsPage() {
     if (d.username && document.getElementById('set-username')) document.getElementById('set-username').value = d.username;
     if (d.email && document.getElementById('set-email')) document.getElementById('set-email').value = d.email;
   } catch(e) {}
+  // Load agent voice options
+  try { await renderAgentVoiceCard(); } catch(e) {}
   // Load plan features
   try {
     const d = await apiFetch('/api/billing/plan');
@@ -12357,6 +12368,7 @@ function agAddMsg(role, text, actions, escalate, audioUrl) {
           if (a.action === 'workflow_restart') { agStartWorkflow(); }
           else if (a.action === 'workflow_stop') { agAddMsg('bot', 'Great work! Come back anytime. 🚀'); _ag.workflow.active = false; }
           else if (a.action.startsWith('nav:')) { nav(a.action.slice(4)); agToggle(); if (_ag.workflow.active) agWorkflowAdvance(); }
+          else if (a.action.startsWith('set_voice:')) { setAgentVoice(a.action.slice(10)); }
           else agChip(a.label);
         };
       }
@@ -12560,6 +12572,95 @@ async function agLoadVoices() {
     }
   } catch(e) {
     sel.innerHTML = '<option value="">Could not load voices</option>';
+  }
+}
+
+// ── Agent voice picker (Settings + chat-action handler) ──────────────────────
+window._voicePicker = {voices: [], selected: '', currentId: ''};
+
+async function renderAgentVoiceCard() {
+  var grid = document.getElementById('set-voice-grid');
+  if (!grid) return;
+  var d;
+  try { d = await apiFetch('/api/agent/voice_options'); }
+  catch(e) { grid.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--tx3)">Could not load voices</div>'; return; }
+  window._voicePicker.voices    = d.voices || [];
+  window._voicePicker.currentId = d.current_id || '';
+  window._voicePicker.selected  = d.current_key || (d.voices[0] && d.voices[0].key) || '';
+  _drawVoiceGrid();
+}
+
+function _drawVoiceGrid() {
+  var grid = document.getElementById('set-voice-grid');
+  if (!grid) return;
+  var cur = window._voicePicker.selected;
+  grid.innerHTML = (window._voicePicker.voices || []).map(function(v) {
+    var active = v.key === cur;
+    return '<div onclick="selectAgentVoice(\'' + v.key + '\')" ' +
+           'style="cursor:pointer;padding:14px;border-radius:12px;border:2px solid ' +
+           (active ? 'var(--ac)' : 'var(--border)') + ';background:' +
+           (active ? 'rgba(0,229,255,.06)' : 'var(--s2)') + ';transition:all .15s">' +
+           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+             '<div style="font-weight:700;font-size:14px;color:var(--tx)">🎙️ ' + v.name + '</div>' +
+             (active ? '<span style="font-size:10px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.5px">Selected</span>' : '') +
+           '</div>' +
+           '<div style="font-size:11px;color:var(--tx3);margin-bottom:8px">' + v.description + '</div>' +
+           '<button class="btn bg bsm" style="width:100%;font-size:11px" onclick="event.stopPropagation();previewAgentVoice(\'' + v.key + '\', this)">▶ Preview</button>' +
+           '</div>';
+  }).join('');
+}
+
+function selectAgentVoice(key) {
+  window._voicePicker.selected = key;
+  _drawVoiceGrid();
+}
+
+async function previewAgentVoice(key, btn) {
+  var orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Loading…';
+  try {
+    var r = await apiFetch('/api/agent/voice_preview/' + encodeURIComponent(key));
+    if (r && r.voice_url) {
+      var audio = document.getElementById('set-voice-audio');
+      audio.pause(); audio.src = r.voice_url; audio.play();
+    } else {
+      toast('Preview unavailable', 'error');
+    }
+  } catch (e) {
+    toast(e.message || 'Preview failed', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+async function saveAgentVoiceSettings() {
+  var key = window._voicePicker.selected;
+  if (!key) return;
+  try {
+    var r = await apiFetch('/api/agent/voice_settings', 'POST', {voice_key: key});
+    if (r && r.ok) {
+      toast('✅ Voice saved', 'success');
+      window._voicePicker.currentId = r.voice_id || '';
+      // Reflect in the agent chat panel state if it's open.
+      if (window._ag) _ag.voiceId = r.voice_id || _ag.voiceId;
+    }
+  } catch (e) { toast('Save failed', 'error'); }
+}
+
+// Called from inside the agent chat when the user clicks a `set_voice:<key>`
+// button on a bot message.
+async function setAgentVoice(key) {
+  try {
+    var r = await apiFetch('/api/agent/voice_settings', 'POST', {voice_key: key});
+    if (r && r.ok) {
+      var label = key === 'aria' ? 'Aria (professional & clear)' : 'Nova (warm & friendly)';
+      agAddMsg('bot', '✅ Got it — I\'ll use ' + label + ' from now on.');
+      if (window._ag) _ag.voiceId = r.voice_id || _ag.voiceId;
+    } else {
+      agAddMsg('bot', '⚠️ Could not switch voice — try again from Settings.');
+    }
+  } catch (e) {
+    agAddMsg('bot', '⚠️ ' + (e.message || 'Voice switch failed'));
   }
 }
 

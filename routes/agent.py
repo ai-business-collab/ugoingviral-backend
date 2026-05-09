@@ -17,7 +17,40 @@ ELEVENLABS_KEY   = os.getenv("ELEVENLABS_API_KEY", "")
 OPENAI_AGENT_MODEL  = "gpt-4o-mini"
 CLAUDE_HEAVY_MODEL  = "claude-sonnet-4-6"
 CLAUDE_LIGHT_MODEL  = "claude-haiku-4-5-20251001"
-ELEVENLABS_VOICE    = "EXAVITQu4vr4xnSDxMaL"   # "Bella" — warm female voice
+ELEVENLABS_VOICE    = "EXAVITQu4vr4xnSDxMaL"   # "Bella" — warm female voice (legacy default)
+
+# User-facing agent voice catalog. Two curated options the user can switch
+# between via chat ("change voice" / "skift stemme") or in Settings.
+VOICE_OPTIONS = {
+    "nova": {"id": "EXAVITQu4vr4xnSDxMaL", "name": "Nova", "description": "Warm & friendly"},
+    "aria": {"id": "9BWtsMINqrJLrRacOk9x", "name": "Aria", "description": "Professional & clear"},
+}
+DEFAULT_VOICE_KEY = "nova"
+
+
+def _voice_key_from_id(voice_id: str) -> str:
+    """Reverse lookup: ElevenLabs voice_id -> our short key, or empty."""
+    for k, v in VOICE_OPTIONS.items():
+        if v["id"] == voice_id:
+            return k
+    return ""
+
+
+# Detects "change voice" intent across DA + EN. Conservative — only fires on
+# clearly-voice-related phrases so we don't hijack normal chat about audio.
+_VOICE_INTENT_PATTERNS = (
+    "change voice", "switch voice", "choose voice", "pick voice",
+    "select voice", "different voice", "another voice",
+    "skift stemme", "skifte stemme", "byt stemme", "vælg stemme",
+    "anden stemme", "ny stemme",
+)
+
+
+def _detect_voice_intent(text: str) -> bool:
+    if not text:
+        return False
+    low = text.lower().strip()
+    return any(p in low for p in _VOICE_INTENT_PATTERNS)
 
 # ── Agent background task config ──────────────────────────────────────────────
 TASK_LIMITS = {"free": 0, "starter": 2, "pro": 5, "agency": -1}
@@ -504,6 +537,31 @@ async def agent_chat(request: Request, req: AgentRequest, current_user: dict = D
     billing = ustore.get("billing", store.get("billing", {}))
     plan = billing.get("plan", "free")
 
+    # ── Voice-change intent — short-circuit before the LLM call ───────────────
+    # Catch DA + EN phrases like "change voice" / "skift stemme" and reply
+    # directly with the two clickable options. The frontend dispatches
+    # `set_voice:<key>` actions to /api/agent/voice_settings.
+    if _detect_voice_intent(req.message or ""):
+        nova = VOICE_OPTIONS["nova"]; aria = VOICE_OPTIONS["aria"]
+        text = (
+            f"I have two voices available: {nova['name']} ({nova['description']}) "
+            f"or {aria['name']} ({aria['description']}). Which do you prefer?"
+        )
+        # Save to history so the conversation reads naturally next time.
+        _stored = _load_history(uid)
+        _stored.append({"role": "user", "content": req.message})
+        _stored.append({"role": "assistant", "content": text})
+        _save_history(uid, _stored)
+        return {
+            "response":  text,
+            "actions":   [
+                {"type": "button", "label": f"🎙️ {nova['name']} — {nova['description']}", "action": "set_voice:nova"},
+                {"type": "button", "label": f"🎙️ {aria['name']} — {aria['description']}", "action": "set_voice:aria"},
+            ],
+            "escalate":  False,
+            "voice_url": None,
+        }
+
     agent_name = ustore.get("agent_name", "")
     ctx = _build_context(uid, req.context)
     system = _build_system(plan, ctx, agent_name)
@@ -739,10 +797,51 @@ async def save_voice_settings(req: Request, current_user: dict = Depends(get_cur
     ustore = _load_user_store(current_user["id"])
     if "voice_enabled" in body:
         ustore["agent_voice_enabled"] = bool(body["voice_enabled"])
-    if "voice_id" in body:
+    # Accept either a short key ("nova"/"aria") or a raw ElevenLabs voice_id.
+    if "voice_key" in body:
+        key = str(body["voice_key"]).lower().strip()
+        if key in VOICE_OPTIONS:
+            ustore["agent_voice_id"] = VOICE_OPTIONS[key]["id"]
+    elif "voice_id" in body:
         ustore["agent_voice_id"] = str(body["voice_id"])[:60]
     _save_user_store(current_user["id"], ustore)
-    return {"ok": True}
+    new_id  = ustore.get("agent_voice_id", "")
+    new_key = _voice_key_from_id(new_id)
+    return {"ok": True, "voice_id": new_id, "voice_key": new_key}
+
+
+@router.get("/api/agent/voice_options")
+def get_voice_options(current_user: dict = Depends(get_current_user)):
+    """Return the curated voice catalog plus the user's current selection."""
+    ustore = _load_user_store(current_user["id"])
+    current_id  = ustore.get("agent_voice_id", VOICE_OPTIONS[DEFAULT_VOICE_KEY]["id"])
+    current_key = _voice_key_from_id(current_id) or DEFAULT_VOICE_KEY
+    return {
+        "current_key": current_key,
+        "current_id":  current_id,
+        "voices": [
+            {"key": k, "id": v["id"], "name": v["name"], "description": v["description"]}
+            for k, v in VOICE_OPTIONS.items()
+        ],
+    }
+
+
+@router.get("/api/agent/voice_preview/{voice_key}")
+async def get_voice_preview(voice_key: str, current_user: dict = Depends(get_current_user)):
+    """Generate a short TTS sample for the given voice so the Settings UI
+    can play a preview without committing the change."""
+    key = (voice_key or "").lower().strip()
+    if key not in VOICE_OPTIONS:
+        raise HTTPException(status_code=400, detail="Unknown voice")
+    if not ELEVENLABS_KEY:
+        raise HTTPException(status_code=503, detail="Voice preview unavailable — ElevenLabs key not set")
+    sample = (
+        f"Hi, I'm {VOICE_OPTIONS[key]['name']}. I'll be your AI assistant on UgoingViral."
+    )
+    url = await _tts(sample, VOICE_OPTIONS[key]["id"])
+    if not url:
+        raise HTTPException(status_code=502, detail="TTS generation failed")
+    return {"voice_key": key, "voice_url": url}
 
 
 # ── Agent task endpoints ───────────────────────────────────────────────────────
