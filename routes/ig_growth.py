@@ -284,17 +284,63 @@ async def batch_connect(body: dict, current_user: dict = Depends(get_current_use
     }
 
 
+async def _human_pause(min_s: float, max_s: float) -> None:
+    """Async-friendly randomized pause; replaces blocking time.sleep so the
+    event loop keeps spinning while Playwright waits."""
+    import random
+    await asyncio.sleep(random.uniform(min_s, max_s))
+
+
+async def _human_type(page, selector: str, text: str, focus_first: bool = True) -> None:
+    """Type one character at a time with 50–150ms jitter, just like a human
+    using the keyboard. Falls back to page.fill if focus fails."""
+    import random
+    if focus_first:
+        try:
+            await page.click(selector, timeout=10_000, delay=random.randint(20, 80))
+        except Exception:
+            pass
+    for ch in text:
+        try:
+            await page.keyboard.type(ch, delay=int(random.uniform(50, 150)))
+        except Exception:
+            await page.fill(selector, text, timeout=10_000)
+            return
+
+
+async def _human_post_login_scroll(page) -> None:
+    """A couple of small, randomized scrolls + idle pauses after login —
+    mirrors the natural 'land on feed, look around' behavior."""
+    import random
+    try:
+        for _ in range(random.randint(2, 4)):
+            await page.mouse.wheel(0, random.randint(120, 480))
+            await asyncio.sleep(random.uniform(0.6, 1.4))
+        # Occasional upward scroll
+        if random.random() < 0.4:
+            await page.mouse.wheel(0, -random.randint(80, 200))
+            await asyncio.sleep(random.uniform(0.4, 1.0))
+    except Exception:
+        pass
+
+
 async def _login_one(p, account: dict, sessions_dir: str) -> dict:
-    """Run a single Instagram headless login behind the DK proxy and persist
-    cookies on success. Returns a result dict; mutates `account` to wipe the
-    password as soon as it's no longer needed."""
+    """Run a single Instagram headless login behind a per-account sticky DK
+    proxy session and persist cookies on success. Each account gets its own
+    sessid (derived from the username) so each login emerges from a distinct
+    Oxylabs residential IP — Instagram never sees two of our accounts come
+    from the same exit. Mutates `account` to wipe the password ASAP."""
+    username    = account["username"]
+    safe_user   = _safe_filename(username)
+    # Per-account sticky session — `sesstime-1440` keeps the same exit IP
+    # for 24h so a re-run of the same handle reuses its assigned IP.
+    proxy_user  = f"customer-ugoingviral_1reRN-sessid-{safe_user}-sesstime-1440"
     proxy = {
         "server":   "dk-pr.oxylabs.io:19000",
-        "username": "customer-ugoingviral_1reRN",
+        "username": proxy_user,
         "password": os.getenv("OXYLABS_PASSWORD", "Ugoingviral2026:"),
     }
-    username = account["username"]
-    result   = {"username": username, "status": "pending"}
+    result   = {"username": username, "status": "pending", "proxy_session": safe_user}
     browser  = ctx = None
     try:
         browser = await p.chromium.launch(
@@ -322,11 +368,18 @@ async def _login_one(p, account: dict, sessions_dir: str) -> dict:
             except Exception:
                 pass
 
-        await page.fill('input[name="username"]', username, timeout=10_000)
-        # Password lives in a single local variable for the minimum time possible,
-        # then is overwritten + dropped from the input dict before we do anything else.
-        await page.fill('input[name="password"]', account["password"], timeout=10_000)
+        # ── Human behavior simulation ─────────────────────────────────────────
+        # Pause "looking at the form", then type the username one char at a
+        # time, pause, type the password, pause, click submit.
+        await _human_pause(1.5, 3.0)
+        await _human_type(page, 'input[name="username"]', username)
+
+        await _human_pause(0.8, 1.5)
+        # Password kept in scope only across the typing call, then wiped.
+        await _human_type(page, 'input[name="password"]', account["password"], focus_first=True)
         account["password"] = ""  # wipe the dict slot
+
+        await _human_pause(0.5, 1.2)
         try:
             await page.click('button[type="submit"]', timeout=10_000)
         except Exception:
@@ -343,7 +396,12 @@ async def _login_one(p, account: dict, sessions_dir: str) -> dict:
             cookies = await ctx.cookies()
             if any(c.get("name") == "sessionid" and c.get("value") for c in cookies):
                 if "/accounts/login" not in url and "/accounts/onetap" not in url:
-                    cookie_path = os.path.join(sessions_dir, f"instagram_{_safe_filename(username)}_session.json")
+                    # A real human would land on the feed and scroll a bit
+                    # before "leaving" the tab. Doing so before saving the
+                    # storage state means the cookie set is more representative
+                    # of an active session.
+                    await _human_post_login_scroll(page)
+                    cookie_path = os.path.join(sessions_dir, f"instagram_{safe_user}_session.json")
                     await ctx.storage_state(path=cookie_path)
                     result["status"]      = "connected"
                     result["cookie_file"] = cookie_path

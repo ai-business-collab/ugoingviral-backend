@@ -394,8 +394,24 @@ nav {
 .price-features li.plus::before { content: ""; display: none; }
 .price-features-extra { max-height: 0; overflow: hidden; transition: max-height .35s ease, opacity .3s ease; opacity: 0; }
 .price-card:hover .price-features-extra { max-height: 200px; opacity: 1; }
-.price-card-growth { border-color: rgba(34,197,94,.2); }
+.price-card-growth { border-color: rgba(34,197,94,.2); position: relative; overflow: hidden; }
 .price-card-growth:hover { border-color: rgba(34,197,94,.5) !important; box-shadow: 0 20px 60px rgba(34,197,94,.1), 0 8px 30px rgba(0,0,0,.4) !important; }
+.growth-extras-overlay {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.92));
+  color: rgba(255,255,255,.85); padding: 14px 18px;
+  font-size: 11px; line-height: 1.7;
+  transform: translateY(100%); opacity: 0;
+  transition: transform .3s ease, opacity .25s ease;
+  pointer-events: none;
+}
+.growth-extras-overlay ul { list-style: none; margin: 0; padding: 0; }
+.growth-extras-overlay li { margin: 0; }
+.growth-extras-overlay .ge-title {
+  font-size: 10px; letter-spacing: .8px; text-transform: uppercase;
+  color: rgba(34,197,94,.85); font-weight: 700; margin-bottom: 4px;
+}
+.price-card-growth:hover .growth-extras-overlay { transform: translateY(0); opacity: 1; }
 .price-cta {
   display: block; margin-top: 18px; text-align: center;
   background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
@@ -1025,6 +1041,16 @@ footer p { font-size: 13px; color: var(--text2); }
         <li>Anti-ban system</li>
       </ul>
       <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)">Choose Growth &#8594;</a>
+      <div class="growth-extras-overlay" aria-hidden="true">
+        <div class="ge-title">Built-in safety</div>
+        <ul>
+          <li>🛡️ Anti-ban AI system</li>
+          <li>🌍 Dedicated country IP per account</li>
+          <li>⏰ Smart activity limits</li>
+          <li>😴 Rest periods — no suspicious activity</li>
+          <li>🔄 Human behavior simulation</li>
+        </ul>
+      </div>
     </div>
     <div class="price-card">
       <div class="price-name">Basic</div>
@@ -1176,6 +1202,7 @@ footer p { font-size: 13px; color: var(--text2); }
       <p>UgoingViral is built by a team with experience in e-commerce, content creation and AI automation.</p>
       <p>We saw brands spending hours manually creating and posting content. The solution was simple: build one platform that does it all automatically — from script to finished video to scheduled post.</p>
       <p>Today we help webshops and brands grow on social media without sacrificing time.</p>
+      <p style="font-size:11px;color:rgba(255,255,255,.32);margin-top:24px;line-height:1.5">Platform built and powered by NexCore Development — <a href="https://nex-core.tech" target="_blank" rel="noopener" style="color:rgba(255,255,255,.45);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.15)">nex-core.tech</a></p>
     </div>
     <div class="about-stats">
       <div class="about-stat">
