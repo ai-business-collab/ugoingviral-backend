@@ -40,9 +40,17 @@ PLANS = {
         "features": ["Everything in Elite +", "5,000 credits/mo", "5 growth accounts", "Dedicated AI assistant", "White-label", "Custom integrations", "SLA"],
     },
     "growth": {
-        "name": "Growth", "price": 89, "credits": 500,
-        "growth_accounts": 2, "sub_accounts": 0, "video": False, "live_support": False, "free_videos": 10,
-        "features": ["Everything in Starter +", "500 credits/mo", "2 growth accounts", "Auto DM replies", "Auto comment replies", "Engagement targeting", "Follower growth", "Anti-ban system"],
+        "name": "Growth", "price": 299, "credits": 2000,
+        "growth_accounts": 10, "sub_accounts": 0, "video": False, "live_support": False, "free_videos": 10,
+        "proxy": True,
+        "features": [
+            "10 growth accounts included",
+            "Dedicated proxy per account",
+            "Anti-ban AI system",
+            "Auto DM/likes/comments",
+            "Replace your mobile farm",
+            "Priority support",
+        ],
     },
     "agency": {
         "name": "Agency", "price": 199, "credits": 2000,
@@ -67,6 +75,34 @@ BONUS_CREDITS = {
     "first_post":      15,
     "daily_login":      5,
     "invite_friend":   50,
+}
+
+# Tiered pricing for buying extra slots à la carte. Returned by the *_quote
+# endpoints so the UI can render a breakdown before checkout.
+def _client_accounts_unit_price(qty: int) -> int:
+    """One-time $/account for extra agency client accounts."""
+    if qty >= 100: return 15
+    if qty >= 50:  return 19
+    if qty >= 10:  return 22
+    return 29
+
+
+def _growth_accounts_unit_price(qty: int) -> int:
+    """Monthly $/account for extra growth accounts (proxy included)."""
+    if qty >= 100: return 8
+    if qty >= 50:  return 9
+    if qty >= 10:  return 11
+    return 14
+
+
+# Countries we have Oxylabs endpoints for (must stay in sync with
+# routes/automation.py::OXYLABS_COUNTRY_ENDPOINTS).
+SUPPORTED_PROXY_COUNTRIES = {
+    "DK": "Denmark",  "SE": "Sweden",        "NO": "Norway",
+    "GB": "United Kingdom", "US": "United States",
+    "DE": "Germany",  "NL": "Netherlands",   "FR": "France",
+    "ES": "Spain",    "IT": "Italy",         "AU": "Australia",
+    "CA": "Canada",
 }
 
 BASE_URL = "https://ugoingviral.com"
@@ -362,6 +398,232 @@ async def create_addon_checkout(body: dict, current_user: dict = Depends(get_cur
         locale="en",
     )
     return {"url": session.url}
+
+
+# ── Tiered slot purchases (TASK 2 + TASK 3) ──────────────────────────────────
+
+@router.get("/api/billing/client_accounts_quote")
+def client_accounts_quote(quantity: int = 1, current_user: dict = Depends(get_current_user)):
+    """Price preview for extra agency client accounts — one-time."""
+    qty = max(1, min(int(quantity or 1), 1000))
+    unit = _client_accounts_unit_price(qty)
+    return {
+        "quantity":   qty,
+        "unit_price": unit,
+        "total":      unit * qty,
+        "tier_label": (
+            "100+ accounts" if qty >= 100 else
+            "50–99 accounts" if qty >= 50 else
+            "10–49 accounts" if qty >= 10 else
+            "1–9 accounts"
+        ),
+        "tiers": [
+            {"min": 1,   "max": 9,   "unit": 29},
+            {"min": 10,  "max": 49,  "unit": 22},
+            {"min": 50,  "max": 99,  "unit": 19},
+            {"min": 100, "max": None,"unit": 15},
+        ],
+    }
+
+
+@router.get("/api/billing/growth_accounts_quote")
+def growth_accounts_quote(quantity: int = 1, current_user: dict = Depends(get_current_user)):
+    """Price preview for extra growth accounts — monthly subscription, proxy included."""
+    qty = max(1, min(int(quantity or 1), 1000))
+    unit = _growth_accounts_unit_price(qty)
+    return {
+        "quantity":   qty,
+        "unit_price": unit,
+        "total":      unit * qty,
+        "billing_period": "monthly",
+        "tier_label": (
+            "100+ accounts" if qty >= 100 else
+            "50–99 accounts" if qty >= 50 else
+            "10–49 accounts" if qty >= 10 else
+            "1–9 accounts"
+        ),
+        "tiers": [
+            {"min": 1,   "max": 9,   "unit": 14},
+            {"min": 10,  "max": 49,  "unit": 11},
+            {"min": 50,  "max": 99,  "unit": 9},
+            {"min": 100, "max": None,"unit": 8},
+        ],
+    }
+
+
+@router.post("/api/billing/buy_client_accounts")
+async def buy_client_accounts(body: dict, current_user: dict = Depends(get_current_user)):
+    """One-time tiered checkout for extra agency client account slots."""
+    import stripe
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+    if not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
+
+    qty = int(body.get("quantity") or 0)
+    if qty < 1 or qty > 1000:
+        raise HTTPException(status_code=400, detail="Quantity must be 1–1000")
+
+    unit  = _client_accounts_unit_price(qty)
+    total = unit * qty
+    uid   = current_user["id"]
+
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        mode="payment",
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": f"UgoingViral — {qty} Extra Client Account{'s' if qty > 1 else ''}",
+                    "description": f"${unit}/account × {qty} (one-time)",
+                },
+                "unit_amount": total * 100,
+            },
+            "quantity": 1,
+        }],
+        client_reference_id=uid,
+        customer_email=current_user["email"],
+        success_url=f"{BASE_URL}/app?payment=success&type=client_accounts&qty={qty}",
+        cancel_url=f"{BASE_URL}/app?payment=cancelled",
+        metadata={
+            "type":      "client_accounts_extra",
+            "quantity":  str(qty),
+            "unit_price": str(unit),
+            "total":      str(total),
+            "user_id":    uid,
+        },
+        locale="en",
+    )
+    return {
+        "url":        session.url,
+        "quantity":   qty,
+        "unit_price": unit,
+        "total":      total,
+    }
+
+
+@router.post("/api/billing/buy_growth_accounts")
+async def buy_growth_accounts(body: dict, current_user: dict = Depends(get_current_user)):
+    """Monthly recurring tiered checkout for extra growth accounts (proxy included)."""
+    import stripe
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+    if not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
+
+    qty = int(body.get("quantity") or 0)
+    if qty < 1 or qty > 1000:
+        raise HTTPException(status_code=400, detail="Quantity must be 1–1000")
+
+    # Honor an explicitly passed country, otherwise fall back to whatever the
+    # user already saved via /save_growth_country (defaults DK in proxy assign).
+    country = (body.get("country") or "").strip().upper()[:2]
+    if country and country not in SUPPORTED_PROXY_COUNTRIES:
+        raise HTTPException(status_code=400, detail=f"Unsupported country: {country}")
+
+    unit  = _growth_accounts_unit_price(qty)
+    total = unit * qty
+    uid   = current_user["id"]
+
+    # Persist the country choice immediately so the proxy assignment after
+    # webhook confirmation will pick it up regardless of metadata roundtripping.
+    if country:
+        ustore = _load_user_store(uid)
+        ustore.setdefault("proxy_config", {})["proxy_country"] = country
+        _save_user_store(uid, ustore)
+
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        mode="subscription",
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": f"UgoingViral — {qty} Extra Growth Account{'s' if qty > 1 else ''}",
+                },
+                "unit_amount": total * 100,
+                "recurring":   {"interval": "month"},
+            },
+            "quantity": 1,
+        }],
+        client_reference_id=uid,
+        customer_email=current_user["email"],
+        success_url=f"{BASE_URL}/app?payment=success&type=growth_accounts&qty={qty}",
+        cancel_url=f"{BASE_URL}/app?payment=cancelled",
+        metadata={
+            "type":       "growth_accounts_sub",
+            "quantity":   str(qty),
+            "unit_price": str(unit),
+            "country":    country,
+            "user_id":    uid,
+        },
+        subscription_data={"metadata": {
+            "type":      "growth_accounts_sub",
+            "quantity":  str(qty),
+            "country":   country,
+            "user_id":   uid,
+        }},
+        locale="en",
+    )
+    return {
+        "url":        session.url,
+        "quantity":   qty,
+        "unit_price": unit,
+        "total":      total,
+        "country":    country,
+    }
+
+
+# ── Proxy country picker (TASK 4) ─────────────────────────────────────────────
+
+@router.get("/api/billing/detect_country")
+async def detect_country(request: Request, current_user: dict = Depends(get_current_user)):
+    """Best-effort IP geolocation for the country picker UI. Returns the
+    auto-detected country plus the supported list so the dropdown can render."""
+    import httpx
+    xff = request.headers.get("x-forwarded-for", "")
+    ip  = (xff.split(",")[0].strip() or
+           (request.client.host if request.client else ""))
+
+    cc, name = "", ""
+    if ip and not ip.startswith(("127.", "10.", "192.168.")):
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                r = await client.get(f"https://ipapi.co/{ip}/json/")
+                if r.status_code == 200:
+                    j = r.json() or {}
+                    cc   = (j.get("country_code") or "").upper()[:2]
+                    name = j.get("country_name") or ""
+        except Exception:
+            pass
+
+    if cc not in SUPPORTED_PROXY_COUNTRIES:
+        # Fall back to the user's saved choice if the detected country isn't
+        # one we offer; otherwise default to DK.
+        ustore = _load_user_store(current_user["id"])
+        saved  = (ustore.get("proxy_config", {}).get("proxy_country") or "").upper()
+        if saved in SUPPORTED_PROXY_COUNTRIES:
+            cc, name = saved, SUPPORTED_PROXY_COUNTRIES[saved]
+        else:
+            cc, name = "DK", "Denmark"
+
+    return {
+        "ip":           ip,
+        "country":      cc,
+        "country_name": name or SUPPORTED_PROXY_COUNTRIES.get(cc, ""),
+        "supported":    [{"code": k, "name": v} for k, v in sorted(SUPPORTED_PROXY_COUNTRIES.items())],
+    }
+
+
+@router.post("/api/billing/save_growth_country")
+async def save_growth_country(body: dict, current_user: dict = Depends(get_current_user)):
+    """Persist the user's proxy-country choice. Read by the proxy-assign step."""
+    cc = (body.get("country") or "").strip().upper()[:2]
+    if cc not in SUPPORTED_PROXY_COUNTRIES:
+        raise HTTPException(status_code=400, detail=f"Unsupported country: {cc}")
+    ustore = _load_user_store(current_user["id"])
+    ustore.setdefault("proxy_config", {})["proxy_country"] = cc
+    _save_user_store(current_user["id"], ustore)
+    return {"ok": True, "country": cc, "country_name": SUPPORTED_PROXY_COUNTRIES[cc]}
 
 
 @router.get("/api/billing/plan")
@@ -763,6 +1025,32 @@ async def stripe_webhook(request: Request):
                 billing = user_store.setdefault("billing", {})
                 billing["extra_agency_client_slots"] = billing.get("extra_agency_client_slots", 0) + slots
                 user_store["billing"] = billing
+                _save_user_store(user_id, user_store)
+
+        # TASK 2 — extra client accounts (one-time, tiered)
+        elif user_id and payment_type == "client_accounts_extra":
+            qty = int(meta.get("quantity", 0))
+            if qty > 0:
+                user_store = _load_user_store(user_id)
+                billing = user_store.setdefault("billing", {})
+                billing["extra_agency_client_slots"] = billing.get("extra_agency_client_slots", 0) + qty
+                user_store["billing"] = billing
+                _save_user_store(user_id, user_store)
+
+        # TASK 3 — extra growth accounts (monthly subscription, tiered)
+        # Initial slot grant happens here on checkout completion. Subsequent
+        # invoice.payment_succeeded events keep the subscription active but do
+        # NOT re-add slots (they're a one-time grant per checkout).
+        elif user_id and payment_type == "growth_accounts_sub":
+            qty = int(meta.get("quantity", 0))
+            country = (meta.get("country") or "").strip().upper()[:2]
+            if qty > 0:
+                user_store = _load_user_store(user_id)
+                billing = user_store.setdefault("billing", {})
+                billing["extra_growth_slots"] = billing.get("extra_growth_slots", 0) + qty
+                user_store["billing"] = billing
+                if country:
+                    user_store.setdefault("proxy_config", {})["proxy_country"] = country
                 _save_user_store(user_id, user_store)
 
         elif user_id and payment_type in ("credits", "studio_package", "custom_topup"):

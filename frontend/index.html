@@ -6451,6 +6451,75 @@ async function refreshProxy() {
     else toast(d && d.detail ? d.detail : "Could not refresh proxy", "error");
   } catch(e) { toast("Error refreshing proxy", "error"); }
 }
+
+// ── Growth-account buy + country picker (TASK 4) ─────────────────────────────
+window._gaDetected = {country:'', country_name:''};
+
+async function openGrowthBuyModal() {
+  document.getElementById('ga-qty').value = 1;
+  document.getElementById('ga-buy-btn').disabled = false;
+  // 1. Hit the country detector + load supported list in parallel with the quote.
+  try {
+    var d = await apiFetch('/api/billing/detect_country');
+    window._gaDetected = {country: d.country || '', country_name: d.country_name || ''};
+    document.getElementById('ga-detected-flag').textContent = _countryFlag(d.country || '');
+    document.getElementById('ga-detected-name').textContent = d.country_name || d.country || '—';
+    var sel = document.getElementById('ga-country-select');
+    sel.innerHTML = (d.supported || []).map(function(c) {
+      return '<option value="' + c.code + '"' + (c.code === d.country ? ' selected' : '') + '>' + _countryFlag(c.code) + ' ' + c.name + '</option>';
+    }).join('');
+  } catch(e) { /* keep modal open even if detect fails */ }
+  await refreshGrowthQuote();
+  document.getElementById('growth-buy-modal').style.display = 'flex';
+}
+
+function closeGrowthBuyModal() {
+  document.getElementById('growth-buy-modal').style.display = 'none';
+}
+
+async function refreshGrowthQuote() {
+  var qty = Math.max(1, Math.min(1000, parseInt(document.getElementById('ga-qty').value, 10) || 1));
+  document.getElementById('ga-qty').value = qty;
+  try {
+    var d = await apiFetch('/api/billing/growth_accounts_quote?quantity=' + qty);
+    document.getElementById('ga-tier').textContent  = d.tier_label || '–';
+    document.getElementById('ga-unit').textContent  = '$' + d.unit_price + '/mo';
+    document.getElementById('ga-total').textContent = '$' + d.total + '/mo';
+  } catch(e) {
+    document.getElementById('ga-total').textContent = 'error';
+  }
+}
+
+async function submitGrowthBuy() {
+  var btn = document.getElementById('ga-buy-btn');
+  btn.disabled = true; btn.textContent = '⏳ Redirecting…';
+  try {
+    var qty     = Math.max(1, Math.min(1000, parseInt(document.getElementById('ga-qty').value, 10) || 1));
+    var country = document.getElementById('ga-country-select').value || '';
+    if (country) {
+      try { await apiFetch('/api/billing/save_growth_country', 'POST', {country: country}); } catch(e) {}
+    }
+    var r = await apiFetch('/api/billing/buy_growth_accounts', 'POST', {quantity: qty, country: country});
+    if (r && r.url) { window.location.href = r.url; return; }
+    toast('Could not start checkout', 'error');
+  } catch(e) {
+    toast(e.message || 'Checkout error', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '📈 Continue to Stripe checkout';
+  }
+}
+
+// Mirror flow for client accounts (TASK 2) — one-time, no country picker.
+async function buyClientAccounts(quantity) {
+  var qty = Math.max(1, Math.min(1000, parseInt(quantity, 10) || 1));
+  try {
+    var q = await apiFetch('/api/billing/client_accounts_quote?quantity=' + qty);
+    if (!confirm('Buy ' + qty + ' extra client account' + (qty > 1 ? 's' : '') + ' for $' + q.total + ' (' + q.tier_label + ', $' + q.unit_price + '/account, one-time)?')) return;
+    var r = await apiFetch('/api/billing/buy_client_accounts', 'POST', {quantity: qty});
+    if (r && r.url) { window.location.href = r.url; return; }
+    toast('Could not start checkout', 'error');
+  } catch(e) { toast(e.message || 'Checkout error', 'error'); }
+}
 async function setSafetyLevel(level) {
   try {
     await apiFetch("/api/automation/safety","POST",{safety_level:level});
@@ -11363,6 +11432,38 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
       <button class="btn bg" style="flex:1" onclick="closeDeleteAccountModal()">Cancel</button>
       <button id="delete-confirm-btn" class="btn bsm" style="flex:1;background:#ef4444;border:none;color:#fff;font-weight:700;opacity:.5" disabled onclick="doDeleteAccount()">Delete Forever</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ GROWTH ACCOUNT COUNTRY PICKER (TASK 4) ════════════════════════════ -->
+<div id="growth-buy-modal" style="display:none;position:fixed;inset:0;z-index:9902;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeGrowthBuyModal()">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative" onclick="event.stopPropagation()">
+    <button onclick="closeGrowthBuyModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;color:var(--tx3);cursor:pointer;line-height:1">✕</button>
+    <div style="font-size:18px;font-weight:700;color:var(--tx);margin-bottom:6px">📈 Buy Growth Accounts</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:16px;line-height:1.5">Monthly subscription — proxy included. Each account gets its own dedicated residential IP.</div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase">Quantity</label>
+      <input id="ga-qty" type="number" class="inp" min="1" max="1000" value="1" oninput="refreshGrowthQuote()" style="margin-top:4px;width:100%;font-size:15px;font-weight:700;text-align:center">
+    </div>
+
+    <div id="ga-quote-box" style="margin-bottom:16px;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--tx3)">Tier:</span> <span id="ga-tier" style="font-weight:600">–</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--tx3)">Per account:</span> <span id="ga-unit" style="font-weight:600">$–/mo</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;padding-top:6px;border-top:1px solid var(--border);margin-top:6px"><span style="font-weight:700">Total:</span> <span id="ga-total" style="font-weight:700;color:var(--ac)">$–/mo</span></div>
+    </div>
+
+    <div id="ga-country-box" style="margin-bottom:16px;padding:12px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);border-radius:10px">
+      <div style="font-size:13px;margin-bottom:8px">
+        🌍 We detected you're in <span id="ga-detected-flag" style="font-size:18px;vertical-align:middle">🌐</span> <strong id="ga-detected-name">–</strong>.
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">Your growth account will connect from this country. Want to change?</div>
+      <select id="ga-country-select" class="fs" style="width:100%"></select>
+      <div style="font-size:10px;color:var(--tx3);margin-top:8px;line-height:1.5">💡 We recommend choosing the country where you normally use this account — proxies in your real country look more natural to social platforms.</div>
+    </div>
+
+    <button id="ga-buy-btn" class="btn bp" style="width:100%;font-size:14px;font-weight:700" onclick="submitGrowthBuy()">📈 Continue to Stripe checkout</button>
+    <div style="font-size:10px;color:var(--tx3);text-align:center;margin-top:8px">Cancel anytime — Stripe handles billing.</div>
   </div>
 </div>
 
