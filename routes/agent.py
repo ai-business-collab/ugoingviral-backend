@@ -22,8 +22,8 @@ ELEVENLABS_VOICE    = "EXAVITQu4vr4xnSDxMaL"   # "Bella" — warm female voice (
 # User-facing agent voice catalog. Two curated options the user can switch
 # between via chat ("change voice" / "skift stemme") or in Settings.
 VOICE_OPTIONS = {
-    "nova": {"id": "EXAVITQu4vr4xnSDxMaL", "name": "Nova", "description": "Warm & friendly"},
-    "aria": {"id": "9BWtsMINqrJLrRacOk9x", "name": "Aria", "description": "Professional & clear"},
+    "nova": {"id": "lcMyyd2HUfFzxdCaC4Ta", "name": "Nova", "description": "Warm & friendly female"},
+    "max":  {"id": "y0s2ExEMuum3muUnA6Zd", "name": "Max",  "description": "Professional & clear male"},
 }
 DEFAULT_VOICE_KEY = "nova"
 
@@ -542,10 +542,10 @@ async def agent_chat(request: Request, req: AgentRequest, current_user: dict = D
     # directly with the two clickable options. The frontend dispatches
     # `set_voice:<key>` actions to /api/agent/voice_settings.
     if _detect_voice_intent(req.message or ""):
-        nova = VOICE_OPTIONS["nova"]; aria = VOICE_OPTIONS["aria"]
+        nova = VOICE_OPTIONS["nova"]; max_ = VOICE_OPTIONS["max"]
         text = (
             f"I have two voices available: {nova['name']} ({nova['description']}) "
-            f"or {aria['name']} ({aria['description']}). Which do you prefer?"
+            f"or {max_['name']} ({max_['description']}). Which do you prefer?"
         )
         # Save to history so the conversation reads naturally next time.
         _stored = _load_history(uid)
@@ -556,7 +556,7 @@ async def agent_chat(request: Request, req: AgentRequest, current_user: dict = D
             "response":  text,
             "actions":   [
                 {"type": "button", "label": f"🎙️ {nova['name']} — {nova['description']}", "action": "set_voice:nova"},
-                {"type": "button", "label": f"🎙️ {aria['name']} — {aria['description']}", "action": "set_voice:aria"},
+                {"type": "button", "label": f"🎙️ {max_['name']} — {max_['description']}", "action": "set_voice:max"},
             ],
             "escalate":  False,
             "voice_url": None,
@@ -797,7 +797,7 @@ async def save_voice_settings(req: Request, current_user: dict = Depends(get_cur
     ustore = _load_user_store(current_user["id"])
     if "voice_enabled" in body:
         ustore["agent_voice_enabled"] = bool(body["voice_enabled"])
-    # Accept either a short key ("nova"/"aria") or a raw ElevenLabs voice_id.
+    # Accept either a short key ("nova"/"max") or a raw ElevenLabs voice_id.
     if "voice_key" in body:
         key = str(body["voice_key"]).lower().strip()
         if key in VOICE_OPTIONS:

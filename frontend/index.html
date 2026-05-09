@@ -12653,7 +12653,7 @@ async function setAgentVoice(key) {
   try {
     var r = await apiFetch('/api/agent/voice_settings', 'POST', {voice_key: key});
     if (r && r.ok) {
-      var label = key === 'aria' ? 'Aria (professional & clear)' : 'Nova (warm & friendly)';
+      var label = key === 'max' ? 'Max (professional & clear male)' : 'Nova (warm & friendly female)';
       agAddMsg('bot', '✅ Got it — I\'ll use ' + label + ' from now on.');
       if (window._ag) _ag.voiceId = r.voice_id || _ag.voiceId;
     } else {

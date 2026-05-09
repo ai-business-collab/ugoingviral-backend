@@ -80,9 +80,14 @@ async def _watch_and_run(session_id: str) -> None:
     # Ensure DISPLAY is exported for the Chromium child process.
     os.environ["DISPLAY"] = DISPLAY
 
+    # Per-user sticky session so the same operator hits Instagram from a
+    # stable exit IP every time they re-open the connect modal. 24h sticky.
+    user_id    = sess.get("user_id") or ""
+    sess_tag   = (user_id[:8] or "anon").lower()
+    proxy_user = f"customer-ugoingviral_1reRN-sessid-{sess_tag}-sesstime-1440"
     proxy = {
         "server":   "dk-pr.oxylabs.io:19000",
-        "username": "customer-ugoingviral_1reRN",
+        "username": proxy_user,
         "password": os.getenv("OXYLABS_PASSWORD", "Ugoingviral2026:"),
     }
     try:
