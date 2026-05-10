@@ -103,6 +103,7 @@ async def _watch_and_run(session_id: str) -> None:
             ctx = await p.chromium.launch_persistent_context(
                 PROFILE_DIR,
                 headless=False,
+                env={"DISPLAY": ":99"},
                 proxy=proxy,
                 viewport={"width": 1280, "height": 800},
                 locale="en-US",

@@ -1361,3 +1361,195 @@ RESULT: 46/52 passed FAILURES
 ========================================
 
 [report] Nexcore → status=405
+/root/ugoingviral-backend/qa_agent.py:1353: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  print(f"UgoingViral QA Agent — {datetime.utcnow().isoformat()}Z")
+/root/ugoingviral-backend/qa_agent.py:1378: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp":  datetime.utcnow().isoformat() + "Z",
+UgoingViral QA Agent — 2026-05-09T16:00:01.232262Z
+skip_ai=True
+
+=== SUITE 1: Signup / Login ===
+  [PASS] register — status=400
+  [PASS] login — user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683
+  [PASS] jwt_validation
+
+=== SUITE 2: Free Plan Limits ===
+  [PASS] plan_is_free
+  [PASS] max_credits_50
+  [PASS] free_videos_3
+  [PASS] download_locked
+  [PASS] gated_api/studio — status=404
+  [PASS] gated_api/generate — status=404
+
+=== SUITE 3: Content Generation ===
+  [PASS] content_gen_skipped — --skip-ai flag set
+
+=== SUITE 4: Billing Verification ===
+  [PASS] plan_price_free — $0
+  [PASS] plan_price_starter — $49
+  [PASS] plan_price_basic — $79
+  [FAIL] plan_price_growth — expected $89 got $299
+  [PASS] plan_price_pro — $149
+  [PASS] plan_price_elite — $229
+  [PASS] plan_price_personal — $459
+  [PASS] plan_price_agency — $199
+  [PASS] credit_pkg_100 — $8
+  [PASS] credit_pkg_350 — $24
+  [PASS] credit_pkg_700 — $44
+  [PASS] credit_pkg_1500 — $79
+  [PASS] yearly_math_pro — $149 * 0.8 = $119
+
+=== SUITE 5: Platform Health ===
+  [PASS] health_root — status=200 5ms
+  [PASS] health_health — status=200 5ms
+  [PASS] health_api/auth/login — status=422 5ms
+  [PASS] health_api/billing/plan — status=401 5ms
+  [PASS] health_api/billing/usage — status=401 5ms
+
+=== SUITE 6: Agent Welcome Flow ===
+  [PASS] s6_name_empty — name is empty for new user
+  [PASS] s6_first_message — --skip-ai (chat call skipped)
+  [PASS] s6_name_saved — name=Nova
+  [PASS] s6_name_persisted
+  [PASS] s6_name_in_response — --skip-ai (chat verification skipped)
+
+=== SUITE 7: Voice Features ===
+  [PASS] s7_voices_list — 0 voices returned
+  [PASS] s7_voice_settings_defaults — voice_enabled=False voice_id present
+  [PASS] s7_voice_enable — voice_enabled=true saved
+  [PASS] s7_voice_enabled_persisted
+
+=== SUITE 8: Watermark ===
+  [PASS] s8_free_watermark_on — watermark=True on free plan
+  [PASS] s8_free_watermark_locked — correctly blocked with 403
+  [PASS] s8_paid_watermark_off — watermark=False by default on paid plan
+  [PASS] s8_paid_watermark_toggle — watermark toggled on successfully
+
+=== SUITE 9: AI Portrait ===
+  [PASS] s9_free_blocked — 403 on free plan
+  [PASS] s9_paid_low_credits — 402 on insufficient credits (need 50, have 20)
+  [PASS] s9_endpoint_exists — 6 presets, cost=50
+
+=== SUITE 10: Content Plan ===
+  [PASS] s10_free_blocked — 403 on free plan
+  [PASS] s10_plan_gen — --skip-ai (content plan generation skipped)
+  [PASS] s10_credits_deducted — --skip-ai (credit check skipped)
+
+=== SUITE 11: Full Auto Mode ===
+  [FAIL] s11_register — could not create test user
+
+=== SUITE 12: Multi-workspace ===
+  [FAIL] s12_register — could not create test user
+
+=== SUITE 13: Agent Tasks ===
+  [FAIL] s13_register — could not create test user
+
+=== SUITE 14: Anti-ban / Proxy / Safety ===
+  [FAIL] s14_register — could not create test user
+
+=== SUITE 15: Analytics ===
+  [FAIL] s15_register — could not create test user
+
+[cleanup] Reset credits to 50 for user e7ffa80f-39cd-4cf8-904d-fea0b380e683
+
+========================================
+RESULT: 46/52 passed FAILURES
+========================================
+
+[report] Nexcore → status=405
+/root/ugoingviral-backend/qa_agent.py:1353: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  print(f"UgoingViral QA Agent — {datetime.utcnow().isoformat()}Z")
+/root/ugoingviral-backend/qa_agent.py:1378: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp":  datetime.utcnow().isoformat() + "Z",
+UgoingViral QA Agent — 2026-05-09T22:00:01.666886Z
+skip_ai=True
+
+=== SUITE 1: Signup / Login ===
+  [PASS] register — status=400
+  [PASS] login — user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683
+  [PASS] jwt_validation
+
+=== SUITE 2: Free Plan Limits ===
+  [PASS] plan_is_free
+  [PASS] max_credits_50
+  [PASS] free_videos_3
+  [PASS] download_locked
+  [PASS] gated_api/studio — status=404
+  [PASS] gated_api/generate — status=404
+
+=== SUITE 3: Content Generation ===
+  [PASS] content_gen_skipped — --skip-ai flag set
+
+=== SUITE 4: Billing Verification ===
+  [PASS] plan_price_free — $0
+  [PASS] plan_price_starter — $49
+  [PASS] plan_price_basic — $79
+  [FAIL] plan_price_growth — expected $89 got $299
+  [PASS] plan_price_pro — $149
+  [PASS] plan_price_elite — $229
+  [PASS] plan_price_personal — $459
+  [PASS] plan_price_agency — $199
+  [PASS] credit_pkg_100 — $8
+  [PASS] credit_pkg_350 — $24
+  [PASS] credit_pkg_700 — $44
+  [PASS] credit_pkg_1500 — $79
+  [PASS] yearly_math_pro — $149 * 0.8 = $119
+
+=== SUITE 5: Platform Health ===
+  [PASS] health_root — status=200 5ms
+  [PASS] health_health — status=200 6ms
+  [PASS] health_api/auth/login — status=422 5ms
+  [PASS] health_api/billing/plan — status=401 5ms
+  [PASS] health_api/billing/usage — status=401 4ms
+
+=== SUITE 6: Agent Welcome Flow ===
+  [PASS] s6_name_empty — name is empty for new user
+  [PASS] s6_first_message — --skip-ai (chat call skipped)
+  [PASS] s6_name_saved — name=Nova
+  [PASS] s6_name_persisted
+  [PASS] s6_name_in_response — --skip-ai (chat verification skipped)
+
+=== SUITE 7: Voice Features ===
+  [PASS] s7_voices_list — 0 voices returned
+  [PASS] s7_voice_settings_defaults — voice_enabled=False voice_id present
+  [PASS] s7_voice_enable — voice_enabled=true saved
+  [PASS] s7_voice_enabled_persisted
+
+=== SUITE 8: Watermark ===
+  [PASS] s8_free_watermark_on — watermark=True on free plan
+  [PASS] s8_free_watermark_locked — correctly blocked with 403
+  [PASS] s8_paid_watermark_off — watermark=False by default on paid plan
+  [PASS] s8_paid_watermark_toggle — watermark toggled on successfully
+
+=== SUITE 9: AI Portrait ===
+  [PASS] s9_free_blocked — 403 on free plan
+  [PASS] s9_paid_low_credits — 402 on insufficient credits (need 50, have 20)
+  [PASS] s9_endpoint_exists — 6 presets, cost=50
+
+=== SUITE 10: Content Plan ===
+  [PASS] s10_free_blocked — 403 on free plan
+  [PASS] s10_plan_gen — --skip-ai (content plan generation skipped)
+  [PASS] s10_credits_deducted — --skip-ai (credit check skipped)
+
+=== SUITE 11: Full Auto Mode ===
+  [FAIL] s11_register — could not create test user
+
+=== SUITE 12: Multi-workspace ===
+  [FAIL] s12_register — could not create test user
+
+=== SUITE 13: Agent Tasks ===
+  [FAIL] s13_register — could not create test user
+
+=== SUITE 14: Anti-ban / Proxy / Safety ===
+  [FAIL] s14_register — could not create test user
+
+=== SUITE 15: Analytics ===
+  [FAIL] s15_register — could not create test user
+
+[cleanup] Reset credits to 50 for user e7ffa80f-39cd-4cf8-904d-fea0b380e683
+
+========================================
+RESULT: 46/52 passed FAILURES
+========================================
+
+[report] Nexcore → status=405
