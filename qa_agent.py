@@ -32,7 +32,7 @@ TG_BOT_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TG_ALERT_CHAT = os.getenv("TELEGRAM_ALERT_CHAT_ID", "")
 
 EXPECTED_PLAN_PRICES = {
-    "free": 0, "starter": 49, "basic": 79, "growth": 89,
+    "free": 0, "starter": 49, "basic": 79, "growth": 299,
     "pro": 149, "elite": 229, "personal": 459, "agency": 199,
 }
 EXPECTED_CREDIT_PACKAGES = {100: 8, 350: 24, 700: 44, 1500: 79}
@@ -62,6 +62,7 @@ class QARunner:
         return {"Authorization": f"Bearer {self.token}"}
 
     def _fresh_user(self, label: str):
+        time.sleep(0.5)  # avoid rate limiting
         """Register a disposable test user. Returns (token, user_id, email)."""
         ts = int(time.time() * 1000)
         email = f"qa-{label}-{ts}@ugoingviral.com"
