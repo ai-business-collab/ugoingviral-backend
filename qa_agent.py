@@ -62,7 +62,7 @@ class QARunner:
         return {"Authorization": f"Bearer {self.token}"}
 
     def _fresh_user(self, label: str):
-        time.sleep(0.5)  # avoid rate limiting
+        time.sleep(13)  # avoid rate limiting — 5 per min = 12s between
         """Register a disposable test user. Returns (token, user_id, email)."""
         ts = int(time.time() * 1000)
         email = f"qa-{label}-{ts}@ugoingviral.com"
