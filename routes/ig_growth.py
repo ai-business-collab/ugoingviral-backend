@@ -79,6 +79,7 @@ async def _watch_and_run(session_id: str) -> None:
     os.makedirs(PROFILE_DIR,  exist_ok=True)
     # Ensure DISPLAY is exported for the Chromium child process.
     os.environ["DISPLAY"] = DISPLAY
+    os.putenv("DISPLAY", DISPLAY)
 
     # Per-user sticky session so the same operator hits Instagram from a
     # stable exit IP every time they re-open the connect modal. 24h sticky.
@@ -103,7 +104,6 @@ async def _watch_and_run(session_id: str) -> None:
             ctx = await p.chromium.launch_persistent_context(
                 PROFILE_DIR,
                 headless=False,
-                env={"DISPLAY": ":99"},
                 proxy=proxy,
                 viewport={"width": 1280, "height": 800},
                 locale="en-US",
