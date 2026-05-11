@@ -65,9 +65,9 @@ def _public_vnc_url(token: str) -> str:
     `&encrypt=1` forces wss when the page is loaded over https."""
     return (
         f"/vnc-static/vnc.html"
-        f"#path=vnc-ws/{token}/"
-        f"&autoconnect=true&resize=remote&encrypt=1&reconnect=false"
-        f"&show_dot=true&view_only=false"
+        f"?host=ugoingviral.com&port=443"
+        f"&path=vnc-ws/{token}/"
+        f"&encrypt=1&autoconnect=true&resize=remote"
     )
 
 
