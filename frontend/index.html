@@ -6230,7 +6230,7 @@ async function doDeleteAccount() {
   try {
     await apiFetch('/api/user/delete', 'DELETE', {confirm: 'DELETE'});
     toast('Account deleted. Goodbye.', 'info');
-    setTimeout(() => { localStorage.clear(); window.location.href = '/'; }, 2500);
+    setTimeout(() => { localStorage.clear(); window.location.href = '/'; }, 5000);
   } catch(e) {
     toast('Error: ' + (e.message || 'Could not delete account'), 'error');
     btn.textContent = 'Delete Forever'; btn.disabled = false;
@@ -6569,7 +6569,7 @@ async function openInstagramGrowthConnect() {
       iframe.src            = r.vnc_url;
       overlay.style.display = 'none';
       status.textContent    = 'Browser ready — log in to Instagram.';
-    }, 2500);
+    }, 5000);
 
     _igGrowthStartTimer();
     _igGrowthStartPolling();
@@ -6752,7 +6752,7 @@ function _pollIgBatch() {
     } catch (e) {
       // keep polling
     }
-  }, 2500);
+  }, 5000);
 }
 
 // Show/hide the batch section once we know the user's plan.
