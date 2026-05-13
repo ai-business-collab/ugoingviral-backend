@@ -1,1842 +1,5 @@
 [
   {
-    "timestamp": "2026-05-06T16:13:15.098182Z",
-    "platform": "ugoingviral",
-    "passed": 47,
-    "failed": 0,
-    "total": 47,
-    "all_pass": true,
-    "results": [
-      {
-        "name": "register",
-        "status": "PASS",
-        "detail": "status=400"
-      },
-      {
-        "name": "login",
-        "status": "PASS",
-        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
-      },
-      {
-        "name": "jwt_validation",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "plan_is_free",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "max_credits_50",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "free_videos_3",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "download_locked",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "gated_api/studio",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "gated_api/generate",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "content_gen_skipped",
-        "status": "PASS",
-        "detail": "--skip-ai flag set"
-      },
-      {
-        "name": "plan_price_free",
-        "status": "PASS",
-        "detail": "$0"
-      },
-      {
-        "name": "plan_price_starter",
-        "status": "PASS",
-        "detail": "$49"
-      },
-      {
-        "name": "plan_price_basic",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "plan_price_growth",
-        "status": "PASS",
-        "detail": "$89"
-      },
-      {
-        "name": "plan_price_pro",
-        "status": "PASS",
-        "detail": "$149"
-      },
-      {
-        "name": "plan_price_elite",
-        "status": "PASS",
-        "detail": "$229"
-      },
-      {
-        "name": "plan_price_personal",
-        "status": "PASS",
-        "detail": "$459"
-      },
-      {
-        "name": "plan_price_agency",
-        "status": "PASS",
-        "detail": "$199"
-      },
-      {
-        "name": "credit_pkg_100",
-        "status": "PASS",
-        "detail": "$8"
-      },
-      {
-        "name": "credit_pkg_350",
-        "status": "PASS",
-        "detail": "$24"
-      },
-      {
-        "name": "credit_pkg_700",
-        "status": "PASS",
-        "detail": "$44"
-      },
-      {
-        "name": "credit_pkg_1500",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "yearly_math_pro",
-        "status": "PASS",
-        "detail": "$149 * 0.8 = $119"
-      },
-      {
-        "name": "health_root",
-        "status": "PASS",
-        "detail": "status=200 2ms"
-      },
-      {
-        "name": "health_health",
-        "status": "PASS",
-        "detail": "status=200 2ms"
-      },
-      {
-        "name": "health_api/auth/login",
-        "status": "PASS",
-        "detail": "status=422 2ms"
-      },
-      {
-        "name": "health_api/billing/plan",
-        "status": "PASS",
-        "detail": "status=401 1ms"
-      },
-      {
-        "name": "health_api/billing/usage",
-        "status": "PASS",
-        "detail": "status=401 1ms"
-      },
-      {
-        "name": "s6_name_empty",
-        "status": "PASS",
-        "detail": "name is empty for new user"
-      },
-      {
-        "name": "s6_first_message",
-        "status": "PASS",
-        "detail": "--skip-ai (chat call skipped)"
-      },
-      {
-        "name": "s6_name_saved",
-        "status": "PASS",
-        "detail": "name=Nova"
-      },
-      {
-        "name": "s6_name_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s6_name_in_response",
-        "status": "PASS",
-        "detail": "--skip-ai (chat verification skipped)"
-      },
-      {
-        "name": "s7_voices_list",
-        "status": "PASS",
-        "detail": "0 voices returned"
-      },
-      {
-        "name": "s7_voice_settings_defaults",
-        "status": "PASS",
-        "detail": "voice_enabled=False voice_id present"
-      },
-      {
-        "name": "s7_voice_enable",
-        "status": "PASS",
-        "detail": "voice_enabled=true saved"
-      },
-      {
-        "name": "s7_voice_enabled_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s8_free_watermark_on",
-        "status": "PASS",
-        "detail": "watermark=True on free plan"
-      },
-      {
-        "name": "s8_free_watermark_locked",
-        "status": "PASS",
-        "detail": "correctly blocked with 403"
-      },
-      {
-        "name": "s8_paid_watermark_off",
-        "status": "PASS",
-        "detail": "watermark=False by default on paid plan"
-      },
-      {
-        "name": "s8_paid_watermark_toggle",
-        "status": "PASS",
-        "detail": "watermark toggled on successfully"
-      },
-      {
-        "name": "s9_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s9_paid_low_credits",
-        "status": "PASS",
-        "detail": "402 on insufficient credits (need 50, have 20)"
-      },
-      {
-        "name": "s9_endpoint_exists",
-        "status": "PASS",
-        "detail": "6 presets, cost=50"
-      },
-      {
-        "name": "s10_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s10_plan_gen",
-        "status": "PASS",
-        "detail": "--skip-ai (content plan generation skipped)"
-      },
-      {
-        "name": "s10_credits_deducted",
-        "status": "PASS",
-        "detail": "--skip-ai (credit check skipped)"
-      }
-    ]
-  },
-  {
-    "timestamp": "2026-05-06T16:14:03.158396Z",
-    "platform": "ugoingviral",
-    "passed": 47,
-    "failed": 0,
-    "total": 47,
-    "all_pass": true,
-    "results": [
-      {
-        "name": "register",
-        "status": "PASS",
-        "detail": "status=400"
-      },
-      {
-        "name": "login",
-        "status": "PASS",
-        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
-      },
-      {
-        "name": "jwt_validation",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "plan_is_free",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "max_credits_50",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "free_videos_3",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "download_locked",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "gated_api/studio",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "gated_api/generate",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "content_generate",
-        "status": "PASS",
-        "detail": "status=200"
-      },
-      {
-        "name": "plan_price_free",
-        "status": "PASS",
-        "detail": "$0"
-      },
-      {
-        "name": "plan_price_starter",
-        "status": "PASS",
-        "detail": "$49"
-      },
-      {
-        "name": "plan_price_basic",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "plan_price_growth",
-        "status": "PASS",
-        "detail": "$89"
-      },
-      {
-        "name": "plan_price_pro",
-        "status": "PASS",
-        "detail": "$149"
-      },
-      {
-        "name": "plan_price_elite",
-        "status": "PASS",
-        "detail": "$229"
-      },
-      {
-        "name": "plan_price_personal",
-        "status": "PASS",
-        "detail": "$459"
-      },
-      {
-        "name": "plan_price_agency",
-        "status": "PASS",
-        "detail": "$199"
-      },
-      {
-        "name": "credit_pkg_100",
-        "status": "PASS",
-        "detail": "$8"
-      },
-      {
-        "name": "credit_pkg_350",
-        "status": "PASS",
-        "detail": "$24"
-      },
-      {
-        "name": "credit_pkg_700",
-        "status": "PASS",
-        "detail": "$44"
-      },
-      {
-        "name": "credit_pkg_1500",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "yearly_math_pro",
-        "status": "PASS",
-        "detail": "$149 * 0.8 = $119"
-      },
-      {
-        "name": "health_root",
-        "status": "PASS",
-        "detail": "status=200 3ms"
-      },
-      {
-        "name": "health_health",
-        "status": "PASS",
-        "detail": "status=200 2ms"
-      },
-      {
-        "name": "health_api/auth/login",
-        "status": "PASS",
-        "detail": "status=422 2ms"
-      },
-      {
-        "name": "health_api/billing/plan",
-        "status": "PASS",
-        "detail": "status=401 2ms"
-      },
-      {
-        "name": "health_api/billing/usage",
-        "status": "PASS",
-        "detail": "status=401 2ms"
-      },
-      {
-        "name": "s6_name_empty",
-        "status": "PASS",
-        "detail": "name is empty for new user"
-      },
-      {
-        "name": "s6_first_message",
-        "status": "PASS",
-        "detail": "got 207 chars"
-      },
-      {
-        "name": "s6_name_saved",
-        "status": "PASS",
-        "detail": "name=Nova"
-      },
-      {
-        "name": "s6_name_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s6_name_in_response",
-        "status": "PASS",
-        "detail": "response contains 'Nova'"
-      },
-      {
-        "name": "s7_voices_list",
-        "status": "PASS",
-        "detail": "0 voices returned"
-      },
-      {
-        "name": "s7_voice_settings_defaults",
-        "status": "PASS",
-        "detail": "voice_enabled=False voice_id present"
-      },
-      {
-        "name": "s7_voice_enable",
-        "status": "PASS",
-        "detail": "voice_enabled=true saved"
-      },
-      {
-        "name": "s7_voice_enabled_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s8_free_watermark_on",
-        "status": "PASS",
-        "detail": "watermark=True on free plan"
-      },
-      {
-        "name": "s8_free_watermark_locked",
-        "status": "PASS",
-        "detail": "correctly blocked with 403"
-      },
-      {
-        "name": "s8_paid_watermark_off",
-        "status": "PASS",
-        "detail": "watermark=False by default on paid plan"
-      },
-      {
-        "name": "s8_paid_watermark_toggle",
-        "status": "PASS",
-        "detail": "watermark toggled on successfully"
-      },
-      {
-        "name": "s9_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s9_paid_low_credits",
-        "status": "PASS",
-        "detail": "402 on insufficient credits (need 50, have 20)"
-      },
-      {
-        "name": "s9_endpoint_exists",
-        "status": "PASS",
-        "detail": "6 presets, cost=50"
-      },
-      {
-        "name": "s10_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s10_plan_returned",
-        "status": "PASS",
-        "detail": "7 days, 7 posts total"
-      },
-      {
-        "name": "s10_credits_deducted",
-        "status": "PASS",
-        "detail": "100\u219290 (-10)"
-      }
-    ]
-  },
-  {
-    "timestamp": "2026-05-06T20:33:03.441427Z",
-    "platform": "ugoingviral",
-    "passed": 73,
-    "failed": 0,
-    "total": 73,
-    "all_pass": true,
-    "results": [
-      {
-        "name": "register",
-        "status": "PASS",
-        "detail": "status=400"
-      },
-      {
-        "name": "login",
-        "status": "PASS",
-        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
-      },
-      {
-        "name": "jwt_validation",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "plan_is_free",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "max_credits_50",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "free_videos_3",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "download_locked",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "gated_api/studio",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "gated_api/generate",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "content_gen_skipped",
-        "status": "PASS",
-        "detail": "--skip-ai flag set"
-      },
-      {
-        "name": "plan_price_free",
-        "status": "PASS",
-        "detail": "$0"
-      },
-      {
-        "name": "plan_price_starter",
-        "status": "PASS",
-        "detail": "$49"
-      },
-      {
-        "name": "plan_price_basic",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "plan_price_growth",
-        "status": "PASS",
-        "detail": "$89"
-      },
-      {
-        "name": "plan_price_pro",
-        "status": "PASS",
-        "detail": "$149"
-      },
-      {
-        "name": "plan_price_elite",
-        "status": "PASS",
-        "detail": "$229"
-      },
-      {
-        "name": "plan_price_personal",
-        "status": "PASS",
-        "detail": "$459"
-      },
-      {
-        "name": "plan_price_agency",
-        "status": "PASS",
-        "detail": "$199"
-      },
-      {
-        "name": "credit_pkg_100",
-        "status": "PASS",
-        "detail": "$8"
-      },
-      {
-        "name": "credit_pkg_350",
-        "status": "PASS",
-        "detail": "$24"
-      },
-      {
-        "name": "credit_pkg_700",
-        "status": "PASS",
-        "detail": "$44"
-      },
-      {
-        "name": "credit_pkg_1500",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "yearly_math_pro",
-        "status": "PASS",
-        "detail": "$149 * 0.8 = $119"
-      },
-      {
-        "name": "health_root",
-        "status": "PASS",
-        "detail": "status=200 3ms"
-      },
-      {
-        "name": "health_health",
-        "status": "PASS",
-        "detail": "status=200 2ms"
-      },
-      {
-        "name": "health_api/auth/login",
-        "status": "PASS",
-        "detail": "status=422 2ms"
-      },
-      {
-        "name": "health_api/billing/plan",
-        "status": "PASS",
-        "detail": "status=401 2ms"
-      },
-      {
-        "name": "health_api/billing/usage",
-        "status": "PASS",
-        "detail": "status=401 2ms"
-      },
-      {
-        "name": "s6_name_empty",
-        "status": "PASS",
-        "detail": "name is empty for new user"
-      },
-      {
-        "name": "s6_first_message",
-        "status": "PASS",
-        "detail": "--skip-ai (chat call skipped)"
-      },
-      {
-        "name": "s6_name_saved",
-        "status": "PASS",
-        "detail": "name=Nova"
-      },
-      {
-        "name": "s6_name_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s6_name_in_response",
-        "status": "PASS",
-        "detail": "--skip-ai (chat verification skipped)"
-      },
-      {
-        "name": "s7_voices_list",
-        "status": "PASS",
-        "detail": "0 voices returned"
-      },
-      {
-        "name": "s7_voice_settings_defaults",
-        "status": "PASS",
-        "detail": "voice_enabled=False voice_id present"
-      },
-      {
-        "name": "s7_voice_enable",
-        "status": "PASS",
-        "detail": "voice_enabled=true saved"
-      },
-      {
-        "name": "s7_voice_enabled_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s8_free_watermark_on",
-        "status": "PASS",
-        "detail": "watermark=True on free plan"
-      },
-      {
-        "name": "s8_free_watermark_locked",
-        "status": "PASS",
-        "detail": "correctly blocked with 403"
-      },
-      {
-        "name": "s8_paid_watermark_off",
-        "status": "PASS",
-        "detail": "watermark=False by default on paid plan"
-      },
-      {
-        "name": "s8_paid_watermark_toggle",
-        "status": "PASS",
-        "detail": "watermark toggled on successfully"
-      },
-      {
-        "name": "s9_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s9_paid_low_credits",
-        "status": "PASS",
-        "detail": "402 on insufficient credits (need 50, have 20)"
-      },
-      {
-        "name": "s9_endpoint_exists",
-        "status": "PASS",
-        "detail": "6 presets, cost=50"
-      },
-      {
-        "name": "s10_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s10_plan_gen",
-        "status": "PASS",
-        "detail": "--skip-ai (content plan generation skipped)"
-      },
-      {
-        "name": "s10_credits_deducted",
-        "status": "PASS",
-        "detail": "--skip-ai (credit check skipped)"
-      },
-      {
-        "name": "s11_full_auto_enable",
-        "status": "PASS",
-        "detail": "mode=review"
-      },
-      {
-        "name": "s11_full_auto_status_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s11_low_credits_blocked",
-        "status": "PASS",
-        "detail": "credits=100, minimum=200"
-      },
-      {
-        "name": "s11_free_plan_blocked",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s12_list_initial",
-        "status": "PASS",
-        "detail": "1 workspace(s)"
-      },
-      {
-        "name": "s12_create_workspace",
-        "status": "PASS",
-        "detail": "id=ws_e93da529"
-      },
-      {
-        "name": "s12_workspace_in_list",
-        "status": "PASS",
-        "detail": "workspaces=['My Workspace', 'Test Brand']"
-      },
-      {
-        "name": "s12_switch_workspace",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s12_delete_workspace",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s12_free_blocked",
-        "status": "PASS",
-        "detail": "403 as expected"
-      },
-      {
-        "name": "s13_agent_chat_ok",
-        "status": "PASS",
-        "detail": "skipped (--skip-ai)"
-      },
-      {
-        "name": "s13_task_auto_created",
-        "status": "PASS",
-        "detail": "injected directly (skip_ai mode)"
-      },
-      {
-        "name": "s13_tasks_list",
-        "status": "PASS",
-        "detail": "1 task(s)"
-      },
-      {
-        "name": "s13_task_toggle_off",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s13_task_delete",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s13_task_deleted_verify",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s14_proxy_assign",
-        "status": "PASS",
-        "detail": "session=ugv_4eaf46da_1778092"
-      },
-      {
-        "name": "s14_safety_get",
-        "status": "PASS",
-        "detail": "level=balanced proxy=True"
-      },
-      {
-        "name": "s14_safety_set_conservative",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s14_safety_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s14_free_proxy_blocked",
-        "status": "PASS",
-        "detail": "403 as expected"
-      },
-      {
-        "name": "s15_platform_structure",
-        "status": "PASS",
-        "detail": "instagram_connected=False"
-      },
-      {
-        "name": "s15_performance_get",
-        "status": "PASS",
-        "detail": "tracked=0"
-      },
-      {
-        "name": "s15_performance_update",
-        "status": "PASS",
-        "detail": "engagement_rate=0.097"
-      },
-      {
-        "name": "s15_performance_persisted",
-        "status": "PASS",
-        "detail": "test record found"
-      },
-      {
-        "name": "s15_dashboard_ok",
-        "status": "PASS",
-        "detail": ""
-      }
-    ]
-  },
-  {
-    "run_id": "20260506T220001Z",
-    "timestamp": "2026-05-06T22:00:01.906295Z",
-    "passed": 8,
-    "failed": 0,
-    "total": 8,
-    "all_pass": true,
-    "tests": [
-      {
-        "name": "health_check",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 6,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "user_signup",
-        "passed": true,
-        "status_code": 400,
-        "response_time": 4,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "user_login",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 298,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "billing_plan",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 4,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "admin_login",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 282,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "autopilot_toggle",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 19,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "content_engine",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 11,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "upload_media",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 10,
-        "error": null,
-        "note": ""
-      }
-    ]
-  },
-  {
-    "timestamp": "2026-05-06T22:00:05.777385Z",
-    "platform": "ugoingviral",
-    "passed": 73,
-    "failed": 0,
-    "total": 73,
-    "all_pass": true,
-    "results": [
-      {
-        "name": "register",
-        "status": "PASS",
-        "detail": "status=400"
-      },
-      {
-        "name": "login",
-        "status": "PASS",
-        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
-      },
-      {
-        "name": "jwt_validation",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "plan_is_free",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "max_credits_50",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "free_videos_3",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "download_locked",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "gated_api/studio",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "gated_api/generate",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "content_gen_skipped",
-        "status": "PASS",
-        "detail": "--skip-ai flag set"
-      },
-      {
-        "name": "plan_price_free",
-        "status": "PASS",
-        "detail": "$0"
-      },
-      {
-        "name": "plan_price_starter",
-        "status": "PASS",
-        "detail": "$49"
-      },
-      {
-        "name": "plan_price_basic",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "plan_price_growth",
-        "status": "PASS",
-        "detail": "$89"
-      },
-      {
-        "name": "plan_price_pro",
-        "status": "PASS",
-        "detail": "$149"
-      },
-      {
-        "name": "plan_price_elite",
-        "status": "PASS",
-        "detail": "$229"
-      },
-      {
-        "name": "plan_price_personal",
-        "status": "PASS",
-        "detail": "$459"
-      },
-      {
-        "name": "plan_price_agency",
-        "status": "PASS",
-        "detail": "$199"
-      },
-      {
-        "name": "credit_pkg_100",
-        "status": "PASS",
-        "detail": "$8"
-      },
-      {
-        "name": "credit_pkg_350",
-        "status": "PASS",
-        "detail": "$24"
-      },
-      {
-        "name": "credit_pkg_700",
-        "status": "PASS",
-        "detail": "$44"
-      },
-      {
-        "name": "credit_pkg_1500",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "yearly_math_pro",
-        "status": "PASS",
-        "detail": "$149 * 0.8 = $119"
-      },
-      {
-        "name": "health_root",
-        "status": "PASS",
-        "detail": "status=200 5ms"
-      },
-      {
-        "name": "health_health",
-        "status": "PASS",
-        "detail": "status=200 2ms"
-      },
-      {
-        "name": "health_api/auth/login",
-        "status": "PASS",
-        "detail": "status=422 2ms"
-      },
-      {
-        "name": "health_api/billing/plan",
-        "status": "PASS",
-        "detail": "status=401 3ms"
-      },
-      {
-        "name": "health_api/billing/usage",
-        "status": "PASS",
-        "detail": "status=401 4ms"
-      },
-      {
-        "name": "s6_name_empty",
-        "status": "PASS",
-        "detail": "name is empty for new user"
-      },
-      {
-        "name": "s6_first_message",
-        "status": "PASS",
-        "detail": "--skip-ai (chat call skipped)"
-      },
-      {
-        "name": "s6_name_saved",
-        "status": "PASS",
-        "detail": "name=Nova"
-      },
-      {
-        "name": "s6_name_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s6_name_in_response",
-        "status": "PASS",
-        "detail": "--skip-ai (chat verification skipped)"
-      },
-      {
-        "name": "s7_voices_list",
-        "status": "PASS",
-        "detail": "0 voices returned"
-      },
-      {
-        "name": "s7_voice_settings_defaults",
-        "status": "PASS",
-        "detail": "voice_enabled=False voice_id present"
-      },
-      {
-        "name": "s7_voice_enable",
-        "status": "PASS",
-        "detail": "voice_enabled=true saved"
-      },
-      {
-        "name": "s7_voice_enabled_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s8_free_watermark_on",
-        "status": "PASS",
-        "detail": "watermark=True on free plan"
-      },
-      {
-        "name": "s8_free_watermark_locked",
-        "status": "PASS",
-        "detail": "correctly blocked with 403"
-      },
-      {
-        "name": "s8_paid_watermark_off",
-        "status": "PASS",
-        "detail": "watermark=False by default on paid plan"
-      },
-      {
-        "name": "s8_paid_watermark_toggle",
-        "status": "PASS",
-        "detail": "watermark toggled on successfully"
-      },
-      {
-        "name": "s9_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s9_paid_low_credits",
-        "status": "PASS",
-        "detail": "402 on insufficient credits (need 50, have 20)"
-      },
-      {
-        "name": "s9_endpoint_exists",
-        "status": "PASS",
-        "detail": "6 presets, cost=50"
-      },
-      {
-        "name": "s10_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s10_plan_gen",
-        "status": "PASS",
-        "detail": "--skip-ai (content plan generation skipped)"
-      },
-      {
-        "name": "s10_credits_deducted",
-        "status": "PASS",
-        "detail": "--skip-ai (credit check skipped)"
-      },
-      {
-        "name": "s11_full_auto_enable",
-        "status": "PASS",
-        "detail": "mode=review"
-      },
-      {
-        "name": "s11_full_auto_status_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s11_low_credits_blocked",
-        "status": "PASS",
-        "detail": "credits=100, minimum=200"
-      },
-      {
-        "name": "s11_free_plan_blocked",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s12_list_initial",
-        "status": "PASS",
-        "detail": "1 workspace(s)"
-      },
-      {
-        "name": "s12_create_workspace",
-        "status": "PASS",
-        "detail": "id=ws_48b0ecab"
-      },
-      {
-        "name": "s12_workspace_in_list",
-        "status": "PASS",
-        "detail": "workspaces=['My Workspace', 'Test Brand']"
-      },
-      {
-        "name": "s12_switch_workspace",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s12_delete_workspace",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s12_free_blocked",
-        "status": "PASS",
-        "detail": "403 as expected"
-      },
-      {
-        "name": "s13_agent_chat_ok",
-        "status": "PASS",
-        "detail": "skipped (--skip-ai)"
-      },
-      {
-        "name": "s13_task_auto_created",
-        "status": "PASS",
-        "detail": "injected directly (skip_ai mode)"
-      },
-      {
-        "name": "s13_tasks_list",
-        "status": "PASS",
-        "detail": "1 task(s)"
-      },
-      {
-        "name": "s13_task_toggle_off",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s13_task_delete",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s13_task_deleted_verify",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s14_proxy_assign",
-        "status": "PASS",
-        "detail": "session=ugv_78475224_1778097"
-      },
-      {
-        "name": "s14_safety_get",
-        "status": "PASS",
-        "detail": "level=balanced proxy=True"
-      },
-      {
-        "name": "s14_safety_set_conservative",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s14_safety_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s14_free_proxy_blocked",
-        "status": "PASS",
-        "detail": "403 as expected"
-      },
-      {
-        "name": "s15_platform_structure",
-        "status": "PASS",
-        "detail": "instagram_connected=False"
-      },
-      {
-        "name": "s15_performance_get",
-        "status": "PASS",
-        "detail": "tracked=0"
-      },
-      {
-        "name": "s15_performance_update",
-        "status": "PASS",
-        "detail": "engagement_rate=0.097"
-      },
-      {
-        "name": "s15_performance_persisted",
-        "status": "PASS",
-        "detail": "test record found"
-      },
-      {
-        "name": "s15_dashboard_ok",
-        "status": "PASS",
-        "detail": ""
-      }
-    ]
-  },
-  {
-    "run_id": "20260507T040002Z",
-    "timestamp": "2026-05-07T04:00:02.125270Z",
-    "passed": 8,
-    "failed": 0,
-    "total": 8,
-    "all_pass": true,
-    "tests": [
-      {
-        "name": "health_check",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 5,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "user_signup",
-        "passed": true,
-        "status_code": 400,
-        "response_time": 6,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "user_login",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 314,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "billing_plan",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 274,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "admin_login",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 7,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "autopilot_toggle",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 17,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "content_engine",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 9,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "upload_media",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 11,
-        "error": null,
-        "note": ""
-      }
-    ]
-  },
-  {
-    "timestamp": "2026-05-07T04:00:05.951406Z",
-    "platform": "ugoingviral",
-    "passed": 73,
-    "failed": 0,
-    "total": 73,
-    "all_pass": true,
-    "results": [
-      {
-        "name": "register",
-        "status": "PASS",
-        "detail": "status=400"
-      },
-      {
-        "name": "login",
-        "status": "PASS",
-        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
-      },
-      {
-        "name": "jwt_validation",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "plan_is_free",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "max_credits_50",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "free_videos_3",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "download_locked",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "gated_api/studio",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "gated_api/generate",
-        "status": "PASS",
-        "detail": "status=404"
-      },
-      {
-        "name": "content_gen_skipped",
-        "status": "PASS",
-        "detail": "--skip-ai flag set"
-      },
-      {
-        "name": "plan_price_free",
-        "status": "PASS",
-        "detail": "$0"
-      },
-      {
-        "name": "plan_price_starter",
-        "status": "PASS",
-        "detail": "$49"
-      },
-      {
-        "name": "plan_price_basic",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "plan_price_growth",
-        "status": "PASS",
-        "detail": "$89"
-      },
-      {
-        "name": "plan_price_pro",
-        "status": "PASS",
-        "detail": "$149"
-      },
-      {
-        "name": "plan_price_elite",
-        "status": "PASS",
-        "detail": "$229"
-      },
-      {
-        "name": "plan_price_personal",
-        "status": "PASS",
-        "detail": "$459"
-      },
-      {
-        "name": "plan_price_agency",
-        "status": "PASS",
-        "detail": "$199"
-      },
-      {
-        "name": "credit_pkg_100",
-        "status": "PASS",
-        "detail": "$8"
-      },
-      {
-        "name": "credit_pkg_350",
-        "status": "PASS",
-        "detail": "$24"
-      },
-      {
-        "name": "credit_pkg_700",
-        "status": "PASS",
-        "detail": "$44"
-      },
-      {
-        "name": "credit_pkg_1500",
-        "status": "PASS",
-        "detail": "$79"
-      },
-      {
-        "name": "yearly_math_pro",
-        "status": "PASS",
-        "detail": "$149 * 0.8 = $119"
-      },
-      {
-        "name": "health_root",
-        "status": "PASS",
-        "detail": "status=200 2ms"
-      },
-      {
-        "name": "health_health",
-        "status": "PASS",
-        "detail": "status=200 1ms"
-      },
-      {
-        "name": "health_api/auth/login",
-        "status": "PASS",
-        "detail": "status=422 2ms"
-      },
-      {
-        "name": "health_api/billing/plan",
-        "status": "PASS",
-        "detail": "status=401 2ms"
-      },
-      {
-        "name": "health_api/billing/usage",
-        "status": "PASS",
-        "detail": "status=401 2ms"
-      },
-      {
-        "name": "s6_name_empty",
-        "status": "PASS",
-        "detail": "name is empty for new user"
-      },
-      {
-        "name": "s6_first_message",
-        "status": "PASS",
-        "detail": "--skip-ai (chat call skipped)"
-      },
-      {
-        "name": "s6_name_saved",
-        "status": "PASS",
-        "detail": "name=Nova"
-      },
-      {
-        "name": "s6_name_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s6_name_in_response",
-        "status": "PASS",
-        "detail": "--skip-ai (chat verification skipped)"
-      },
-      {
-        "name": "s7_voices_list",
-        "status": "PASS",
-        "detail": "0 voices returned"
-      },
-      {
-        "name": "s7_voice_settings_defaults",
-        "status": "PASS",
-        "detail": "voice_enabled=False voice_id present"
-      },
-      {
-        "name": "s7_voice_enable",
-        "status": "PASS",
-        "detail": "voice_enabled=true saved"
-      },
-      {
-        "name": "s7_voice_enabled_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s8_free_watermark_on",
-        "status": "PASS",
-        "detail": "watermark=True on free plan"
-      },
-      {
-        "name": "s8_free_watermark_locked",
-        "status": "PASS",
-        "detail": "correctly blocked with 403"
-      },
-      {
-        "name": "s8_paid_watermark_off",
-        "status": "PASS",
-        "detail": "watermark=False by default on paid plan"
-      },
-      {
-        "name": "s8_paid_watermark_toggle",
-        "status": "PASS",
-        "detail": "watermark toggled on successfully"
-      },
-      {
-        "name": "s9_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s9_paid_low_credits",
-        "status": "PASS",
-        "detail": "402 on insufficient credits (need 50, have 20)"
-      },
-      {
-        "name": "s9_endpoint_exists",
-        "status": "PASS",
-        "detail": "6 presets, cost=50"
-      },
-      {
-        "name": "s10_free_blocked",
-        "status": "PASS",
-        "detail": "403 on free plan"
-      },
-      {
-        "name": "s10_plan_gen",
-        "status": "PASS",
-        "detail": "--skip-ai (content plan generation skipped)"
-      },
-      {
-        "name": "s10_credits_deducted",
-        "status": "PASS",
-        "detail": "--skip-ai (credit check skipped)"
-      },
-      {
-        "name": "s11_full_auto_enable",
-        "status": "PASS",
-        "detail": "mode=review"
-      },
-      {
-        "name": "s11_full_auto_status_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s11_low_credits_blocked",
-        "status": "PASS",
-        "detail": "credits=100, minimum=200"
-      },
-      {
-        "name": "s11_free_plan_blocked",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s12_list_initial",
-        "status": "PASS",
-        "detail": "1 workspace(s)"
-      },
-      {
-        "name": "s12_create_workspace",
-        "status": "PASS",
-        "detail": "id=ws_70cc8886"
-      },
-      {
-        "name": "s12_workspace_in_list",
-        "status": "PASS",
-        "detail": "workspaces=['My Workspace', 'Test Brand']"
-      },
-      {
-        "name": "s12_switch_workspace",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s12_delete_workspace",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s12_free_blocked",
-        "status": "PASS",
-        "detail": "403 as expected"
-      },
-      {
-        "name": "s13_agent_chat_ok",
-        "status": "PASS",
-        "detail": "skipped (--skip-ai)"
-      },
-      {
-        "name": "s13_task_auto_created",
-        "status": "PASS",
-        "detail": "injected directly (skip_ai mode)"
-      },
-      {
-        "name": "s13_tasks_list",
-        "status": "PASS",
-        "detail": "1 task(s)"
-      },
-      {
-        "name": "s13_task_toggle_off",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s13_task_delete",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s13_task_deleted_verify",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s14_proxy_assign",
-        "status": "PASS",
-        "detail": "session=ugv_259e2b56_1778119"
-      },
-      {
-        "name": "s14_safety_get",
-        "status": "PASS",
-        "detail": "level=balanced proxy=True"
-      },
-      {
-        "name": "s14_safety_set_conservative",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s14_safety_persisted",
-        "status": "PASS",
-        "detail": ""
-      },
-      {
-        "name": "s14_free_proxy_blocked",
-        "status": "PASS",
-        "detail": "403 as expected"
-      },
-      {
-        "name": "s15_platform_structure",
-        "status": "PASS",
-        "detail": "instagram_connected=False"
-      },
-      {
-        "name": "s15_performance_get",
-        "status": "PASS",
-        "detail": "tracked=0"
-      },
-      {
-        "name": "s15_performance_update",
-        "status": "PASS",
-        "detail": "engagement_rate=0.097"
-      },
-      {
-        "name": "s15_performance_persisted",
-        "status": "PASS",
-        "detail": "test record found"
-      },
-      {
-        "name": "s15_dashboard_ok",
-        "status": "PASS",
-        "detail": ""
-      }
-    ]
-  },
-  {
-    "run_id": "20260507T100002Z",
-    "timestamp": "2026-05-07T10:00:02.803218Z",
-    "passed": 8,
-    "failed": 0,
-    "total": 8,
-    "all_pass": true,
-    "tests": [
-      {
-        "name": "health_check",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 17,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "user_signup",
-        "passed": true,
-        "status_code": 400,
-        "response_time": 13,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "user_login",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 581,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "billing_plan",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 7,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "admin_login",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 278,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "autopilot_toggle",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 14,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "content_engine",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 8,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "upload_media",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 9,
-        "error": null,
-        "note": ""
-      }
-    ]
-  },
-  {
     "timestamp": "2026-05-07T10:00:06.630269Z",
     "platform": "ugoingviral",
     "passed": 73,
@@ -10805,6 +8968,1802 @@
         "name": "s12_create_workspace",
         "status": "PASS",
         "detail": "id=ws_fc6f430a"
+      },
+      {
+        "name": "s12_workspace_in_list",
+        "status": "PASS",
+        "detail": "workspaces=['My Workspace', 'Test Brand']"
+      },
+      {
+        "name": "s12_switch_workspace",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_delete_workspace",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_free_blocked",
+        "status": "PASS",
+        "detail": "403 as expected"
+      },
+      {
+        "name": "s13_agent_chat_ok",
+        "status": "PASS",
+        "detail": "skipped (--skip-ai)"
+      },
+      {
+        "name": "s13_task_auto_created",
+        "status": "PASS",
+        "detail": "injected directly (skip_ai mode)"
+      },
+      {
+        "name": "s13_tasks_list",
+        "status": "PASS",
+        "detail": "1 task(s)"
+      },
+      {
+        "name": "s13_task_toggle_off",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s13_task_delete",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s13_task_deleted_verify",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_proxy_assign",
+        "status": "PASS",
+        "detail": "session="
+      },
+      {
+        "name": "s14_safety_get",
+        "status": "PASS",
+        "detail": "level=balanced proxy=True"
+      },
+      {
+        "name": "s14_safety_set_conservative",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_safety_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_free_proxy_blocked",
+        "status": "PASS",
+        "detail": "403 as expected"
+      },
+      {
+        "name": "s15_platform_structure",
+        "status": "PASS",
+        "detail": "instagram_connected=False"
+      },
+      {
+        "name": "s15_performance_get",
+        "status": "PASS",
+        "detail": "tracked=0"
+      },
+      {
+        "name": "s15_performance_update",
+        "status": "PASS",
+        "detail": "engagement_rate=0.097"
+      },
+      {
+        "name": "s15_performance_persisted",
+        "status": "PASS",
+        "detail": "test record found"
+      },
+      {
+        "name": "s15_dashboard_ok",
+        "status": "PASS",
+        "detail": ""
+      }
+    ]
+  },
+  {
+    "run_id": "20260512T040002Z",
+    "timestamp": "2026-05-12T04:00:02.532974Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 8,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "passed": true,
+        "status_code": 400,
+        "response_time": 8,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 335,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 8,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 283,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 20,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 8,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 23,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-12T04:02:43.255755Z",
+    "platform": "ugoingviral",
+    "passed": 73,
+    "failed": 0,
+    "total": 73,
+    "all_pass": true,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_gen_skipped",
+        "status": "PASS",
+        "detail": "--skip-ai flag set"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$299"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 7ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 6ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 5ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 6ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 5ms"
+      },
+      {
+        "name": "s6_name_empty",
+        "status": "PASS",
+        "detail": "name is empty for new user"
+      },
+      {
+        "name": "s6_first_message",
+        "status": "PASS",
+        "detail": "--skip-ai (chat call skipped)"
+      },
+      {
+        "name": "s6_name_saved",
+        "status": "PASS",
+        "detail": "name=Nova"
+      },
+      {
+        "name": "s6_name_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s6_name_in_response",
+        "status": "PASS",
+        "detail": "--skip-ai (chat verification skipped)"
+      },
+      {
+        "name": "s7_voices_list",
+        "status": "PASS",
+        "detail": "31 voices returned"
+      },
+      {
+        "name": "s7_voice_settings_defaults",
+        "status": "PASS",
+        "detail": "voice_enabled=False voice_id present"
+      },
+      {
+        "name": "s7_voice_enable",
+        "status": "PASS",
+        "detail": "voice_enabled=true saved"
+      },
+      {
+        "name": "s7_voice_enabled_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s8_free_watermark_on",
+        "status": "PASS",
+        "detail": "watermark=True on free plan"
+      },
+      {
+        "name": "s8_free_watermark_locked",
+        "status": "PASS",
+        "detail": "correctly blocked with 403"
+      },
+      {
+        "name": "s8_paid_watermark_off",
+        "status": "PASS",
+        "detail": "watermark=False by default on paid plan"
+      },
+      {
+        "name": "s8_paid_watermark_toggle",
+        "status": "PASS",
+        "detail": "watermark toggled on successfully"
+      },
+      {
+        "name": "s9_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s9_paid_low_credits",
+        "status": "PASS",
+        "detail": "402 on insufficient credits (need 50, have 20)"
+      },
+      {
+        "name": "s9_endpoint_exists",
+        "status": "PASS",
+        "detail": "6 presets, cost=50"
+      },
+      {
+        "name": "s10_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s10_plan_gen",
+        "status": "PASS",
+        "detail": "--skip-ai (content plan generation skipped)"
+      },
+      {
+        "name": "s10_credits_deducted",
+        "status": "PASS",
+        "detail": "--skip-ai (credit check skipped)"
+      },
+      {
+        "name": "s11_full_auto_enable",
+        "status": "PASS",
+        "detail": "mode=review"
+      },
+      {
+        "name": "s11_full_auto_status_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s11_low_credits_blocked",
+        "status": "PASS",
+        "detail": "credits=100, minimum=200"
+      },
+      {
+        "name": "s11_free_plan_blocked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_list_initial",
+        "status": "PASS",
+        "detail": "1 workspace(s)"
+      },
+      {
+        "name": "s12_create_workspace",
+        "status": "PASS",
+        "detail": "id=ws_2add80c6"
+      },
+      {
+        "name": "s12_workspace_in_list",
+        "status": "PASS",
+        "detail": "workspaces=['My Workspace', 'Test Brand']"
+      },
+      {
+        "name": "s12_switch_workspace",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_delete_workspace",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_free_blocked",
+        "status": "PASS",
+        "detail": "403 as expected"
+      },
+      {
+        "name": "s13_agent_chat_ok",
+        "status": "PASS",
+        "detail": "skipped (--skip-ai)"
+      },
+      {
+        "name": "s13_task_auto_created",
+        "status": "PASS",
+        "detail": "injected directly (skip_ai mode)"
+      },
+      {
+        "name": "s13_tasks_list",
+        "status": "PASS",
+        "detail": "1 task(s)"
+      },
+      {
+        "name": "s13_task_toggle_off",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s13_task_delete",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s13_task_deleted_verify",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_proxy_assign",
+        "status": "PASS",
+        "detail": "session="
+      },
+      {
+        "name": "s14_safety_get",
+        "status": "PASS",
+        "detail": "level=balanced proxy=True"
+      },
+      {
+        "name": "s14_safety_set_conservative",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_safety_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_free_proxy_blocked",
+        "status": "PASS",
+        "detail": "403 as expected"
+      },
+      {
+        "name": "s15_platform_structure",
+        "status": "PASS",
+        "detail": "instagram_connected=False"
+      },
+      {
+        "name": "s15_performance_get",
+        "status": "PASS",
+        "detail": "tracked=0"
+      },
+      {
+        "name": "s15_performance_update",
+        "status": "PASS",
+        "detail": "engagement_rate=0.097"
+      },
+      {
+        "name": "s15_performance_persisted",
+        "status": "PASS",
+        "detail": "test record found"
+      },
+      {
+        "name": "s15_dashboard_ok",
+        "status": "PASS",
+        "detail": ""
+      }
+    ]
+  },
+  {
+    "run_id": "20260512T100002Z",
+    "timestamp": "2026-05-12T10:00:02.597432Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 12,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "passed": true,
+        "status_code": 400,
+        "response_time": 10,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 326,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 8,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 285,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 22,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 18,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 19,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-12T10:02:43.447634Z",
+    "platform": "ugoingviral",
+    "passed": 73,
+    "failed": 0,
+    "total": 73,
+    "all_pass": true,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_gen_skipped",
+        "status": "PASS",
+        "detail": "--skip-ai flag set"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$299"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 7ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 4ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 6ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 6ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 3ms"
+      },
+      {
+        "name": "s6_name_empty",
+        "status": "PASS",
+        "detail": "name is empty for new user"
+      },
+      {
+        "name": "s6_first_message",
+        "status": "PASS",
+        "detail": "--skip-ai (chat call skipped)"
+      },
+      {
+        "name": "s6_name_saved",
+        "status": "PASS",
+        "detail": "name=Nova"
+      },
+      {
+        "name": "s6_name_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s6_name_in_response",
+        "status": "PASS",
+        "detail": "--skip-ai (chat verification skipped)"
+      },
+      {
+        "name": "s7_voices_list",
+        "status": "PASS",
+        "detail": "31 voices returned"
+      },
+      {
+        "name": "s7_voice_settings_defaults",
+        "status": "PASS",
+        "detail": "voice_enabled=False voice_id present"
+      },
+      {
+        "name": "s7_voice_enable",
+        "status": "PASS",
+        "detail": "voice_enabled=true saved"
+      },
+      {
+        "name": "s7_voice_enabled_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s8_free_watermark_on",
+        "status": "PASS",
+        "detail": "watermark=True on free plan"
+      },
+      {
+        "name": "s8_free_watermark_locked",
+        "status": "PASS",
+        "detail": "correctly blocked with 403"
+      },
+      {
+        "name": "s8_paid_watermark_off",
+        "status": "PASS",
+        "detail": "watermark=False by default on paid plan"
+      },
+      {
+        "name": "s8_paid_watermark_toggle",
+        "status": "PASS",
+        "detail": "watermark toggled on successfully"
+      },
+      {
+        "name": "s9_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s9_paid_low_credits",
+        "status": "PASS",
+        "detail": "402 on insufficient credits (need 50, have 20)"
+      },
+      {
+        "name": "s9_endpoint_exists",
+        "status": "PASS",
+        "detail": "6 presets, cost=50"
+      },
+      {
+        "name": "s10_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s10_plan_gen",
+        "status": "PASS",
+        "detail": "--skip-ai (content plan generation skipped)"
+      },
+      {
+        "name": "s10_credits_deducted",
+        "status": "PASS",
+        "detail": "--skip-ai (credit check skipped)"
+      },
+      {
+        "name": "s11_full_auto_enable",
+        "status": "PASS",
+        "detail": "mode=review"
+      },
+      {
+        "name": "s11_full_auto_status_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s11_low_credits_blocked",
+        "status": "PASS",
+        "detail": "credits=100, minimum=200"
+      },
+      {
+        "name": "s11_free_plan_blocked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_list_initial",
+        "status": "PASS",
+        "detail": "1 workspace(s)"
+      },
+      {
+        "name": "s12_create_workspace",
+        "status": "PASS",
+        "detail": "id=ws_06bae686"
+      },
+      {
+        "name": "s12_workspace_in_list",
+        "status": "PASS",
+        "detail": "workspaces=['My Workspace', 'Test Brand']"
+      },
+      {
+        "name": "s12_switch_workspace",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_delete_workspace",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_free_blocked",
+        "status": "PASS",
+        "detail": "403 as expected"
+      },
+      {
+        "name": "s13_agent_chat_ok",
+        "status": "PASS",
+        "detail": "skipped (--skip-ai)"
+      },
+      {
+        "name": "s13_task_auto_created",
+        "status": "PASS",
+        "detail": "injected directly (skip_ai mode)"
+      },
+      {
+        "name": "s13_tasks_list",
+        "status": "PASS",
+        "detail": "1 task(s)"
+      },
+      {
+        "name": "s13_task_toggle_off",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s13_task_delete",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s13_task_deleted_verify",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_proxy_assign",
+        "status": "PASS",
+        "detail": "session="
+      },
+      {
+        "name": "s14_safety_get",
+        "status": "PASS",
+        "detail": "level=balanced proxy=True"
+      },
+      {
+        "name": "s14_safety_set_conservative",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_safety_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_free_proxy_blocked",
+        "status": "PASS",
+        "detail": "403 as expected"
+      },
+      {
+        "name": "s15_platform_structure",
+        "status": "PASS",
+        "detail": "instagram_connected=False"
+      },
+      {
+        "name": "s15_performance_get",
+        "status": "PASS",
+        "detail": "tracked=0"
+      },
+      {
+        "name": "s15_performance_update",
+        "status": "PASS",
+        "detail": "engagement_rate=0.097"
+      },
+      {
+        "name": "s15_performance_persisted",
+        "status": "PASS",
+        "detail": "test record found"
+      },
+      {
+        "name": "s15_dashboard_ok",
+        "status": "PASS",
+        "detail": ""
+      }
+    ]
+  },
+  {
+    "run_id": "20260512T160002Z",
+    "timestamp": "2026-05-12T16:00:02.516005Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 7,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "passed": true,
+        "status_code": 400,
+        "response_time": 8,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 321,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 16,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 300,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 17,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 13,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 20,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-12T16:02:43.241205Z",
+    "platform": "ugoingviral",
+    "passed": 73,
+    "failed": 0,
+    "total": 73,
+    "all_pass": true,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_gen_skipped",
+        "status": "PASS",
+        "detail": "--skip-ai flag set"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$299"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 8ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 4ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 5ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 5ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 4ms"
+      },
+      {
+        "name": "s6_name_empty",
+        "status": "PASS",
+        "detail": "name is empty for new user"
+      },
+      {
+        "name": "s6_first_message",
+        "status": "PASS",
+        "detail": "--skip-ai (chat call skipped)"
+      },
+      {
+        "name": "s6_name_saved",
+        "status": "PASS",
+        "detail": "name=Nova"
+      },
+      {
+        "name": "s6_name_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s6_name_in_response",
+        "status": "PASS",
+        "detail": "--skip-ai (chat verification skipped)"
+      },
+      {
+        "name": "s7_voices_list",
+        "status": "PASS",
+        "detail": "31 voices returned"
+      },
+      {
+        "name": "s7_voice_settings_defaults",
+        "status": "PASS",
+        "detail": "voice_enabled=False voice_id present"
+      },
+      {
+        "name": "s7_voice_enable",
+        "status": "PASS",
+        "detail": "voice_enabled=true saved"
+      },
+      {
+        "name": "s7_voice_enabled_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s8_free_watermark_on",
+        "status": "PASS",
+        "detail": "watermark=True on free plan"
+      },
+      {
+        "name": "s8_free_watermark_locked",
+        "status": "PASS",
+        "detail": "correctly blocked with 403"
+      },
+      {
+        "name": "s8_paid_watermark_off",
+        "status": "PASS",
+        "detail": "watermark=False by default on paid plan"
+      },
+      {
+        "name": "s8_paid_watermark_toggle",
+        "status": "PASS",
+        "detail": "watermark toggled on successfully"
+      },
+      {
+        "name": "s9_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s9_paid_low_credits",
+        "status": "PASS",
+        "detail": "402 on insufficient credits (need 50, have 20)"
+      },
+      {
+        "name": "s9_endpoint_exists",
+        "status": "PASS",
+        "detail": "6 presets, cost=50"
+      },
+      {
+        "name": "s10_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s10_plan_gen",
+        "status": "PASS",
+        "detail": "--skip-ai (content plan generation skipped)"
+      },
+      {
+        "name": "s10_credits_deducted",
+        "status": "PASS",
+        "detail": "--skip-ai (credit check skipped)"
+      },
+      {
+        "name": "s11_full_auto_enable",
+        "status": "PASS",
+        "detail": "mode=review"
+      },
+      {
+        "name": "s11_full_auto_status_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s11_low_credits_blocked",
+        "status": "PASS",
+        "detail": "credits=100, minimum=200"
+      },
+      {
+        "name": "s11_free_plan_blocked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_list_initial",
+        "status": "PASS",
+        "detail": "1 workspace(s)"
+      },
+      {
+        "name": "s12_create_workspace",
+        "status": "PASS",
+        "detail": "id=ws_2d6ce97b"
+      },
+      {
+        "name": "s12_workspace_in_list",
+        "status": "PASS",
+        "detail": "workspaces=['My Workspace', 'Test Brand']"
+      },
+      {
+        "name": "s12_switch_workspace",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_delete_workspace",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_free_blocked",
+        "status": "PASS",
+        "detail": "403 as expected"
+      },
+      {
+        "name": "s13_agent_chat_ok",
+        "status": "PASS",
+        "detail": "skipped (--skip-ai)"
+      },
+      {
+        "name": "s13_task_auto_created",
+        "status": "PASS",
+        "detail": "injected directly (skip_ai mode)"
+      },
+      {
+        "name": "s13_tasks_list",
+        "status": "PASS",
+        "detail": "1 task(s)"
+      },
+      {
+        "name": "s13_task_toggle_off",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s13_task_delete",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s13_task_deleted_verify",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_proxy_assign",
+        "status": "PASS",
+        "detail": "session="
+      },
+      {
+        "name": "s14_safety_get",
+        "status": "PASS",
+        "detail": "level=balanced proxy=True"
+      },
+      {
+        "name": "s14_safety_set_conservative",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_safety_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s14_free_proxy_blocked",
+        "status": "PASS",
+        "detail": "403 as expected"
+      },
+      {
+        "name": "s15_platform_structure",
+        "status": "PASS",
+        "detail": "instagram_connected=False"
+      },
+      {
+        "name": "s15_performance_get",
+        "status": "PASS",
+        "detail": "tracked=0"
+      },
+      {
+        "name": "s15_performance_update",
+        "status": "PASS",
+        "detail": "engagement_rate=0.097"
+      },
+      {
+        "name": "s15_performance_persisted",
+        "status": "PASS",
+        "detail": "test record found"
+      },
+      {
+        "name": "s15_dashboard_ok",
+        "status": "PASS",
+        "detail": ""
+      }
+    ]
+  },
+  {
+    "run_id": "20260512T220001Z",
+    "timestamp": "2026-05-12T22:00:01.811965Z",
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "all_pass": true,
+    "tests": [
+      {
+        "name": "health_check",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 7,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_signup",
+        "passed": true,
+        "status_code": 400,
+        "response_time": 5,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "user_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 300,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "billing_plan",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 9,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "admin_login",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 284,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "autopilot_toggle",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 16,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "content_engine",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 11,
+        "error": null,
+        "note": ""
+      },
+      {
+        "name": "upload_media",
+        "passed": true,
+        "status_code": 200,
+        "response_time": 24,
+        "error": null,
+        "note": ""
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-12T22:02:42.835450Z",
+    "platform": "ugoingviral",
+    "passed": 73,
+    "failed": 0,
+    "total": 73,
+    "all_pass": true,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_gen_skipped",
+        "status": "PASS",
+        "detail": "--skip-ai flag set"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$299"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 6ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 3ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 4ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 5ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 6ms"
+      },
+      {
+        "name": "s6_name_empty",
+        "status": "PASS",
+        "detail": "name is empty for new user"
+      },
+      {
+        "name": "s6_first_message",
+        "status": "PASS",
+        "detail": "--skip-ai (chat call skipped)"
+      },
+      {
+        "name": "s6_name_saved",
+        "status": "PASS",
+        "detail": "name=Nova"
+      },
+      {
+        "name": "s6_name_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s6_name_in_response",
+        "status": "PASS",
+        "detail": "--skip-ai (chat verification skipped)"
+      },
+      {
+        "name": "s7_voices_list",
+        "status": "PASS",
+        "detail": "31 voices returned"
+      },
+      {
+        "name": "s7_voice_settings_defaults",
+        "status": "PASS",
+        "detail": "voice_enabled=False voice_id present"
+      },
+      {
+        "name": "s7_voice_enable",
+        "status": "PASS",
+        "detail": "voice_enabled=true saved"
+      },
+      {
+        "name": "s7_voice_enabled_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s8_free_watermark_on",
+        "status": "PASS",
+        "detail": "watermark=True on free plan"
+      },
+      {
+        "name": "s8_free_watermark_locked",
+        "status": "PASS",
+        "detail": "correctly blocked with 403"
+      },
+      {
+        "name": "s8_paid_watermark_off",
+        "status": "PASS",
+        "detail": "watermark=False by default on paid plan"
+      },
+      {
+        "name": "s8_paid_watermark_toggle",
+        "status": "PASS",
+        "detail": "watermark toggled on successfully"
+      },
+      {
+        "name": "s9_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s9_paid_low_credits",
+        "status": "PASS",
+        "detail": "402 on insufficient credits (need 50, have 20)"
+      },
+      {
+        "name": "s9_endpoint_exists",
+        "status": "PASS",
+        "detail": "6 presets, cost=50"
+      },
+      {
+        "name": "s10_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s10_plan_gen",
+        "status": "PASS",
+        "detail": "--skip-ai (content plan generation skipped)"
+      },
+      {
+        "name": "s10_credits_deducted",
+        "status": "PASS",
+        "detail": "--skip-ai (credit check skipped)"
+      },
+      {
+        "name": "s11_full_auto_enable",
+        "status": "PASS",
+        "detail": "mode=review"
+      },
+      {
+        "name": "s11_full_auto_status_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s11_low_credits_blocked",
+        "status": "PASS",
+        "detail": "credits=100, minimum=200"
+      },
+      {
+        "name": "s11_free_plan_blocked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s12_list_initial",
+        "status": "PASS",
+        "detail": "1 workspace(s)"
+      },
+      {
+        "name": "s12_create_workspace",
+        "status": "PASS",
+        "detail": "id=ws_74fee2b6"
       },
       {
         "name": "s12_workspace_in_list",
