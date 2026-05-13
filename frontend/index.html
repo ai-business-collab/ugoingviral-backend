@@ -3441,6 +3441,54 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     </div>
     <div id="studio-root"></div>
     <div id="studio-portrait-root" style="display:none"></div>
+
+    <!-- ══ Premium video providers (Higgsfield + Pika Labs) — Pro+ only ══ -->
+    <div id="studio-premium-card" style="display:none;margin-top:18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(0,229,255,.04));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--tx)">✨ Premium video providers</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Higgsfield + Pika Labs — Pro plan or higher · 25 credits per generation</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('higgsfield')" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Higgsfield</button>
+          <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" style="background:rgba(255,255,255,.05);color:var(--tx3);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Pika Labs</button>
+        </div>
+      </div>
+      <div id="sp-locked" style="display:none;padding:18px;background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:10px;text-align:center;font-size:13px;color:var(--tx3)">
+        🔒 Premium providers require <strong style="color:var(--ac)">Pro plan or higher</strong>. <a onclick="nav('billing')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Upgrade →</a>
+      </div>
+      <div id="sp-form" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 120px 120px;gap:10px;margin-bottom:10px">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Prompt</label>
+            <textarea id="sp-prompt" class="fta" placeholder="Cinematic shot of a wave breaking on a beach at golden hour…" style="margin-top:4px;width:100%;min-height:72px;font-size:13px"></textarea>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Duration</label>
+            <select id="sp-duration" class="fs" style="margin-top:4px;width:100%">
+              <option value="3">3 s</option>
+              <option value="5" selected>5 s</option>
+              <option value="8">8 s</option>
+              <option value="10">10 s</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Aspect</label>
+            <select id="sp-aspect" class="fs" style="margin-top:4px;width:100%">
+              <option value="16:9">16:9 widescreen</option>
+              <option value="9:16" selected>9:16 vertical</option>
+              <option value="1:1">1:1 square</option>
+              <option value="4:5">4:5 portrait</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="font-size:11px;color:var(--tx3)">Provider: <span id="sp-provider-lbl" style="color:#a78bfa;font-weight:700">Higgsfield</span> · Cost: <strong style="color:var(--ac)">25 credits</strong></div>
+          <button class="btn bp bsm" id="sp-gen-btn" onclick="spGenerate()" style="font-size:13px;padding:8px 18px">✨ Generate video</button>
+        </div>
+        <div id="sp-result" style="display:none;margin-top:14px;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:12px;font-family:monospace;white-space:pre-wrap;max-height:260px;overflow:auto"></div>
+      </div>
+    </div>
       <!-- Watermark notice for free users -->
       <div id="studio-watermark-notice" style="display:none;background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;margin-top:12px;font-size:12px;color:var(--tx2)">
         🔖 <strong>Free plan:</strong> Your generated videos will include a "Made with UgoingViral" watermark. <span style="cursor:pointer;color:var(--ac);text-decoration:underline" onclick="nav('billing')">Upgrade to remove it →</span>
@@ -3711,11 +3759,67 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <div id="page-content-engine" class="page" style="display:none">
     <div style="max-width:960px">
+
+      <!-- ── Quick post generator — single AI post ────────────────────── -->
+      <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(0,229,255,.04),rgba(124,58,237,.04));border:1px solid rgba(0,229,255,.2)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div class="ctitle" style="margin:0;display:flex;align-items:center;gap:8px">✨ Quick post generator</div>
+            <div style="font-size:12px;color:var(--tx3);margin-top:4px">One-off caption + hashtags for a single platform. Need a full month? Use the calendar below.</div>
+          </div>
+          <div style="font-size:11px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.25);color:var(--ac);border-radius:8px;padding:4px 10px;font-weight:700">5 credits</div>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:12px">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Topic / Product</label>
+            <input id="qg-topic" class="fi" placeholder="e.g. wireless earbuds, new collection drop" style="margin-top:4px">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Platform</label>
+            <select id="qg-platform" class="fs" style="margin-top:4px;width:100%">
+              <option value="instagram">📸 Instagram</option>
+              <option value="tiktok">🎵 TikTok</option>
+              <option value="youtube">▶️ YouTube</option>
+              <option value="facebook">📘 Facebook</option>
+              <option value="twitter">🐦 X / Twitter</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Tone</label>
+            <select id="qg-tone" class="fs" style="margin-top:4px;width:100%">
+              <option value="friendly">Friendly</option>
+              <option value="professional">Professional</option>
+              <option value="funny">Funny</option>
+              <option value="inspirational">Inspirational</option>
+              <option value="bold">Bold</option>
+              <option value="educational">Educational</option>
+            </select>
+          </div>
+          <button class="btn bp" onclick="quickGenerate()" id="qg-btn" style="padding:10px 18px;white-space:nowrap">✨ Generate</button>
+        </div>
+        <div id="qg-status" style="font-size:11px;color:var(--tx3);margin-bottom:8px"></div>
+        <div id="qg-output-wrap" style="display:none">
+          <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span>Generated content</span>
+            <span id="qg-score" style="font-size:10px;color:var(--ac);font-weight:600"></span>
+          </label>
+          <textarea id="qg-output" class="fta" style="width:100%;min-height:140px;font-size:13px;line-height:1.6"></textarea>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn bg bsm" onclick="quickCopyOutput()">📋 Copy</button>
+            <button class="btn bg bsm" onclick="quickGenerate()">🔄 Regenerate</button>
+            <button class="btn bp bsm" onclick="quickSendToScheduler()">📅 Send to Scheduler</button>
+            <div style="flex:1"></div>
+            <span style="font-size:11px;color:var(--tx3);align-self:center" id="qg-meta"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 30-day calendar (existing) ────────────────────────────────── -->
       <div class="card" style="margin-bottom:18px">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
           <div style="font-size:28px">📅</div>
           <div>
-            <div class="ctitle" style="margin:0">Content Engine</div>
+            <div class="ctitle" style="margin:0">30-day Content Calendar</div>
             <div style="font-size:12px;color:var(--tx3)">Generate 30 days of AI content ideas tailored to your niche</div>
           </div>
         </div>
@@ -3801,7 +3905,29 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ═══ CONTENT PLAN ══════════════════════════════════════════════════════ -->
   <div id="page-content-plan" class="page">
-    <div style="max-width:800px">
+    <div style="max-width:1100px">
+
+      <!-- ── Weekly calendar — scheduled posts overview ───────────────── -->
+      <div class="card" style="margin-bottom:18px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div class="ctitle" style="margin:0">🗓️ This week's posts</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:2px" id="cp-week-range">Loading…</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn bg bsm" onclick="cpWeekShift(-1)" title="Previous week">‹</button>
+            <button class="btn bg bsm" onclick="cpWeekShift(0)" style="font-size:11px">Today</button>
+            <button class="btn bg bsm" onclick="cpWeekShift(1)" title="Next week">›</button>
+            <button class="btn bp bsm" onclick="nav('posting')" style="margin-left:8px;font-size:11px">+ New post</button>
+          </div>
+        </div>
+        <div id="cp-week-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px"></div>
+        <div style="display:flex;gap:14px;margin-top:12px;font-size:11px;color:var(--tx3);flex-wrap:wrap">
+          <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ac);display:inline-block"></span> Scheduled</span>
+          <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block"></span> Posted</span>
+          <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block"></span> Failed</span>
+        </div>
+      </div>
 
       <!-- Upgrade modal for free users -->
       <div id="cp-upgrade-banner" style="display:none;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:14px;padding:20px 24px;margin-bottom:20px;text-align:center">
@@ -4526,6 +4652,8 @@ async function loadBilling() {
     // Single source of truth: also refresh the pipeline credits widget so
     // the header and the pipeline page can't drift apart.
     if (typeof pipeUpdateCreditsUI === 'function') pipeUpdateCreditsUI(d.credits, d.max_credits);
+    // Premium-provider card visibility (Higgsfield/Pika — Pro+).
+    if (typeof refreshStudioPremiumGate === 'function') refreshStudioPremiumGate();
     // billing page
     window._currentPlan = d.plan || 'free';
     renderBillingPage(d);
@@ -12805,6 +12933,73 @@ setTimeout(agInit, 1200);
 var _ceIdeas = [];
 var _ceActiveIdea = null;
 
+// ── Quick post generator (Content Engine) ────────────────────────────────────
+async function quickGenerate() {
+  var btn      = document.getElementById('qg-btn');
+  var status   = document.getElementById('qg-status');
+  var wrap     = document.getElementById('qg-output-wrap');
+  var output   = document.getElementById('qg-output');
+  var score    = document.getElementById('qg-score');
+  var meta     = document.getElementById('qg-meta');
+  var topic    = (document.getElementById('qg-topic').value || '').trim();
+  var platform = document.getElementById('qg-platform').value;
+  var tone     = document.getElementById('qg-tone').value;
+
+  if (!topic) { toast('Enter a topic or product', 'error'); return; }
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  status.textContent = 'Generating ' + tone + ' ' + platform + ' content…';
+
+  try {
+    var r = await apiFetch('/api/content/generate', 'POST', {
+      product_title: topic,
+      platform:      platform,
+      content_type:  'caption',
+      tone:          tone,
+      language:      (currentLang || 'en'),
+    });
+    output.value = r.content || '';
+    wrap.style.display = 'block';
+    score.textContent  = r.content_score ? ('Viral score: ' + r.content_score + '/100') : '';
+    meta.textContent   = platform + ' · ' + tone + ' · 5 credits charged';
+    status.textContent = '';
+    // Refresh credits everywhere.
+    try { await loadBilling(); } catch(e) {}
+    toast('✅ Generated', 'success');
+  } catch (e) {
+    status.textContent = '⚠️ ' + (e.message || 'Generation failed');
+    toast(e.message || 'Failed', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '✨ Generate';
+  }
+}
+
+function quickCopyOutput() {
+  var ta = document.getElementById('qg-output');
+  if (!ta || !ta.value) return;
+  navigator.clipboard.writeText(ta.value);
+  toast('📋 Copied to clipboard', 'success');
+}
+
+function quickSendToScheduler() {
+  var ta = document.getElementById('qg-output');
+  if (!ta || !ta.value) { toast('Nothing to send', 'error'); return; }
+  var content = ta.value;
+  var platform = document.getElementById('qg-platform').value;
+  nav('posting');
+  setTimeout(function() {
+    try {
+      var contentEl = document.getElementById('post-content');
+      if (contentEl) contentEl.value = content;
+      // Pre-select the platform chip if togglePostPlat exists.
+      var chip = document.querySelector('#post-plat-chips .ptab[data-p="' + platform + '"]');
+      if (chip && typeof togglePostPlat === 'function' && !chip.classList.contains('active')) {
+        togglePostPlat(chip);
+      }
+      toast('Sent to Scheduler — set the time and hit Schedule', 'success');
+    } catch (e) {}
+  }, 250);
+}
+
 async function generateContentCalendar() {
   var btn = document.getElementById('ce-gen-btn');
   var status = document.getElementById('ce-status');
@@ -13819,6 +14014,61 @@ function _renderAnBestPost(bp) {
     + '</div>';
 }
 
+
+// ── Studio premium providers (Higgsfield + Pika Labs) ────────────────────────
+window._spProvider = 'higgsfield';
+
+function refreshStudioPremiumGate() {
+  var card = document.getElementById('studio-premium-card');
+  if (!card) return;
+  card.style.display = 'block';
+  var plan = (window._currentPlan || 'free').toLowerCase();
+  var allowed = ['pro','elite','personal','agency','growth'].indexOf(plan) >= 0;
+  document.getElementById('sp-locked').style.display = allowed ? 'none' : 'block';
+  document.getElementById('sp-form').style.display   = allowed ? 'block' : 'none';
+}
+
+function spSwitchProvider(provider) {
+  window._spProvider = provider;
+  var higgs = document.getElementById('sp-tab-higgs');
+  var pika  = document.getElementById('sp-tab-pika');
+  var lbl   = document.getElementById('sp-provider-lbl');
+  function setActive(el, active) {
+    el.style.background = active ? 'rgba(124,58,237,.18)' : 'rgba(255,255,255,.05)';
+    el.style.color      = active ? '#a78bfa' : 'var(--tx3)';
+    el.style.borderColor = active ? 'rgba(124,58,237,.4)' : 'var(--border)';
+  }
+  setActive(higgs, provider === 'higgsfield');
+  setActive(pika,  provider === 'pika');
+  if (lbl) lbl.textContent = provider === 'pika' ? 'Pika Labs' : 'Higgsfield';
+}
+
+async function spGenerate() {
+  var btn = document.getElementById('sp-gen-btn');
+  var out = document.getElementById('sp-result');
+  var prompt = (document.getElementById('sp-prompt').value || '').trim();
+  if (!prompt) { toast('Enter a prompt', 'error'); return; }
+  var duration     = parseInt(document.getElementById('sp-duration').value, 10) || 5;
+  var aspect_ratio = document.getElementById('sp-aspect').value || '9:16';
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  out.style.display = 'block';
+  out.textContent   = 'Sending request to ' + (window._spProvider === 'pika' ? 'Pika Labs' : 'Higgsfield') + '…';
+  try {
+    var endpoint = window._spProvider === 'pika' ? '/api/studio/pika' : '/api/studio/higgsfield';
+    var r = await apiFetch(endpoint, 'POST', {prompt: prompt, duration: duration, aspect_ratio: aspect_ratio});
+    out.textContent = JSON.stringify(r, null, 2);
+    if (r && typeof r.credits_left === 'number') {
+      var cr = document.getElementById('billing-credits');
+      if (cr) cr.textContent = r.credits_left;
+    }
+    toast('✅ Generation queued — 25 credits charged', 'success');
+  } catch (e) {
+    out.textContent = '⚠️ ' + (e.message || 'Generation failed');
+    toast(e.message || 'Generation failed', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '✨ Generate video';
+  }
+}
 
 // ── Video Studio Enhancements ─────────────────────────────────────────────────
 var STUDIO_PRESETS = [
@@ -14870,7 +15120,104 @@ var _cpPlatforms = [];
 
 var _cpContext = {products: [], mediaCount: 0, historyCount: 0};
 
+// ── Weekly scheduled-posts calendar (top of Content Plan page) ───────────────
+window._cpWeekOffset = 0;  // 0 = current week, -1 = previous, +1 = next
+
+function _cpWeekStart(offsetWeeks) {
+  var d = new Date();
+  // Monday as start of week.
+  var dow = (d.getDay() + 6) % 7;          // 0 = Mon, 6 = Sun
+  d.setDate(d.getDate() - dow + (offsetWeeks || 0) * 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function cpWeekShift(delta) {
+  window._cpWeekOffset = delta === 0 ? 0 : (window._cpWeekOffset + delta);
+  cpRenderWeek();
+}
+
+async function cpRenderWeek() {
+  var grid = document.getElementById('cp-week-grid');
+  var label = document.getElementById('cp-week-range');
+  if (!grid) return;
+  var start = _cpWeekStart(window._cpWeekOffset);
+  var end   = new Date(start); end.setDate(end.getDate() + 6);
+  if (label) {
+    var fmt = function(d) { return d.toLocaleDateString(currentLang === 'da' ? 'da-DK' : 'en-US', {day:'numeric', month:'short'}); };
+    label.textContent = fmt(start) + ' — ' + fmt(end);
+  }
+
+  // Fetch scheduled posts (existing endpoint).
+  var posts = [];
+  try {
+    var r = await apiFetch('/api/posts/scheduled');
+    posts = (r && r.posts) ? r.posts : [];
+  } catch(e) { /* render empty grid */ }
+
+  var byDay = [[], [], [], [], [], [], []];
+  posts.forEach(function(p) {
+    var t = p.scheduled_time ? new Date(p.scheduled_time) : null;
+    if (!t || isNaN(t.getTime())) return;
+    if (t < start || t > new Date(end.getTime() + 86400000 - 1)) return;
+    var idx = Math.floor((t - start) / 86400000);
+    if (idx >= 0 && idx <= 6) byDay[idx].push(p);
+  });
+
+  var dayNames = currentLang === 'da'
+    ? ['Man','Tir','Ons','Tor','Fre','Lør','Søn']
+    : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var today = new Date(); today.setHours(0,0,0,0);
+  var platIco = {instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'📘', twitter:'🐦'};
+  var statusColor = {
+    scheduled: 'var(--ac)',
+    queued:    'var(--ac)',
+    posted:    '#22c55e',
+    published: '#22c55e',
+    failed:    '#ef4444',
+    error:     '#ef4444',
+  };
+
+  grid.innerHTML = byDay.map(function(dayPosts, i) {
+    var d  = new Date(start); d.setDate(d.getDate() + i);
+    var isToday = d.getTime() === today.getTime();
+    var head = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+                 '<div style="font-size:10px;font-weight:700;color:' + (isToday ? 'var(--ac)' : 'var(--tx3)') + ';letter-spacing:.5px;text-transform:uppercase">' +
+                   dayNames[i] +
+                 '</div>' +
+                 '<div style="font-size:11px;font-weight:700;color:' + (isToday ? 'var(--ac)' : 'var(--tx)') + '">' +
+                   d.getDate() +
+                 '</div>' +
+               '</div>';
+    var cards;
+    if (!dayPosts.length) {
+      cards = '<div style="font-size:10px;color:var(--tx3);text-align:center;padding:14px 4px;opacity:.55">—</div>';
+    } else {
+      cards = dayPosts.map(function(p) {
+        var status = (p.status || 'scheduled').toLowerCase();
+        var color  = statusColor[status] || statusColor.scheduled;
+        var time   = new Date(p.scheduled_time).toLocaleTimeString(currentLang === 'da' ? 'da-DK' : 'en-US', {hour:'2-digit', minute:'2-digit'});
+        var ico    = platIco[(p.platform || '').toLowerCase()] || '📤';
+        var preview = (p.content || '').replace(/[<>]/g, '').slice(0, 50);
+        return '<div onclick="showPostDetail(\'' + p.id + '\')" style="cursor:pointer;background:var(--s2);border:1px solid var(--border);border-left:3px solid ' + color + ';border-radius:8px;padding:7px 8px;margin-bottom:5px;font-size:11px">' +
+                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
+                   '<span style="font-weight:700">' + ico + ' ' + time + '</span>' +
+                   '<span style="width:6px;height:6px;border-radius:50%;background:' + color + ';display:inline-block" title="' + status + '"></span>' +
+                 '</div>' +
+                 '<div style="color:var(--tx2);line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + preview + '</div>' +
+               '</div>';
+      }).join('');
+    }
+    var bg = isToday ? 'rgba(0,229,255,.03)' : 'var(--card)';
+    var borderColor = isToday ? 'rgba(0,229,255,.3)' : 'var(--border)';
+    return '<div style="background:' + bg + ';border:1px solid ' + borderColor + ';border-radius:10px;padding:10px 8px;min-height:130px">' +
+             head + cards +
+           '</div>';
+  }).join('');
+}
+
 function loadContentPlanPage() {
+  cpRenderWeek();
   _cpPlatforms = [];
   var platDisplay  = document.getElementById('cp-platforms-display');
   var ctxInfo      = document.getElementById('cp-context-info');

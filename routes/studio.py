@@ -18,6 +18,21 @@ router = APIRouter()
 RUNWAY_API_KEY    = os.getenv("RUNWAY_API_KEY", "")
 LUMA_API_KEY      = os.getenv("LUMA_API_KEY", "")
 REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
+# Higgsfield + Pika Labs (Pro+ video providers). Base URLs are env-configurable
+# because both providers gate their public APIs and the canonical endpoint may
+# move; defaults below are the documented v1 paths as of May 2026.
+HIGGSFIELD_API_KEY = os.getenv("HIGGSFIELD_API_KEY", "")
+HIGGSFIELD_API_URL = os.getenv("HIGGSFIELD_API_URL", "https://api.higgsfield.ai/v1/generations")
+PIKA_API_KEY       = os.getenv("PIKA_API_KEY", "")
+PIKA_API_URL       = os.getenv("PIKA_API_URL", "https://api.pika.art/v1/generate")
+
+# Plans that may use the premium video providers.
+_PRO_PLUS = {"pro", "elite", "personal", "agency", "growth"}
+
+
+def _is_pro_plus(user_id: str) -> bool:
+    plan = (_load_user_store(user_id).get("billing", {}).get("plan") or "").lower()
+    return plan in _PRO_PLUS
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ELEVENLABS_KEY    = os.getenv("ELEVENLABS_API_KEY", "")
 
@@ -926,3 +941,118 @@ def _log_face_scene(credits: int):
 @router.get("/api/studio/face-scene/presets")
 def face_scene_presets(current_user: dict = Depends(get_current_user)):
     return {"presets": FACE_SCENE_PRESETS, "cost": FACE_SCENE_COST}
+
+
+# ── Higgsfield + Pika Labs (Pro+ premium video providers) ────────────────────
+# Both follow a similar request shape: POST {prompt, duration, aspect_ratio}
+# with Bearer auth and return a JSON job descriptor. Provider URLs are
+# env-configurable so they can be retargeted without a code change.
+
+_VIDEO_CREDIT_COST = 25  # generation cost — same order of magnitude as Runway/Luma
+_ASPECT_OK         = {"16:9", "9:16", "1:1", "4:5"}
+_DUR_MIN, _DUR_MAX = 1, 10
+
+
+async def _call_video_provider(url: str, api_key: str, payload: dict, *, label: str) -> dict:
+    """POST `payload` to a Bearer-auth video provider and return its JSON.
+    Raises an HTTPException with the provider name on non-2xx."""
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            r = await client.post(
+                url,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=payload,
+            )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"{label}: {str(exc)[:160]}")
+    if r.status_code >= 400:
+        raise HTTPException(status_code=r.status_code, detail=f"{label}: {r.text[:240]}")
+    try:
+        return r.json()
+    except Exception:
+        return {"raw": r.text[:500]}
+
+
+def _validate_video_payload(body: dict) -> tuple[str, int, str]:
+    prompt = (body.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt required")
+    if len(prompt) > 1500:
+        raise HTTPException(status_code=400, detail="prompt too long (max 1500 chars)")
+    try:
+        duration = int(body.get("duration") or 5)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="duration must be an integer")
+    if not _DUR_MIN <= duration <= _DUR_MAX:
+        raise HTTPException(status_code=400, detail=f"duration must be {_DUR_MIN}–{_DUR_MAX} seconds")
+    aspect = (body.get("aspect_ratio") or "16:9").strip()
+    if aspect not in _ASPECT_OK:
+        raise HTTPException(status_code=400, detail=f"aspect_ratio must be one of {sorted(_ASPECT_OK)}")
+    return prompt, duration, aspect
+
+
+def _charge_or_402(uid: str, amount: int) -> int:
+    """Deduct `amount` credits from the user's billing or raise 402."""
+    ustore = _load_user_store(uid)
+    billing = ustore.setdefault("billing", {})
+    have = int(billing.get("credits") or 0)
+    if have < amount:
+        raise HTTPException(status_code=402, detail=f"Not enough credits (need {amount}, have {have})")
+    billing["credits"] = have - amount
+    ustore["billing"] = billing
+    _save_user_store(uid, ustore)
+    return billing["credits"]
+
+
+@router.post("/api/studio/higgsfield")
+async def higgsfield_generate(body: dict, current_user: dict = Depends(get_current_user)):
+    if not _is_pro_plus(current_user["id"]):
+        raise HTTPException(status_code=403, detail="Higgsfield generation requires Pro plan or higher")
+    if not HIGGSFIELD_API_KEY:
+        raise HTTPException(status_code=503, detail="HIGGSFIELD_API_KEY not configured on the server")
+    prompt, duration, aspect = _validate_video_payload(body)
+
+    credits_left = _charge_or_402(current_user["id"], _VIDEO_CREDIT_COST)
+    payload = {
+        "prompt":       prompt,
+        "duration":     duration,
+        "aspect_ratio": aspect,
+        "metadata":     {"user_id": current_user["id"], "source": "ugoingviral"},
+    }
+    result = await _call_video_provider(
+        HIGGSFIELD_API_URL, HIGGSFIELD_API_KEY, payload, label="Higgsfield"
+    )
+    return {
+        "provider":     "higgsfield",
+        "credits_left": credits_left,
+        "credits_used": _VIDEO_CREDIT_COST,
+        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect},
+        "result":       result,
+    }
+
+
+@router.post("/api/studio/pika")
+async def pika_generate(body: dict, current_user: dict = Depends(get_current_user)):
+    if not _is_pro_plus(current_user["id"]):
+        raise HTTPException(status_code=403, detail="Pika Labs generation requires Pro plan or higher")
+    if not PIKA_API_KEY:
+        raise HTTPException(status_code=503, detail="PIKA_API_KEY not configured on the server")
+    prompt, duration, aspect = _validate_video_payload(body)
+
+    credits_left = _charge_or_402(current_user["id"], _VIDEO_CREDIT_COST)
+    payload = {
+        "prompt":       prompt,
+        "duration":     duration,
+        "aspect_ratio": aspect,
+        "user_id":      current_user["id"],
+    }
+    result = await _call_video_provider(
+        PIKA_API_URL, PIKA_API_KEY, payload, label="Pika Labs"
+    )
+    return {
+        "provider":     "pika",
+        "credits_left": credits_left,
+        "credits_used": _VIDEO_CREDIT_COST,
+        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect},
+        "result":       result,
+    }

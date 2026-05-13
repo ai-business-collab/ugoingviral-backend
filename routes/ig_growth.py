@@ -112,6 +112,11 @@ async def _watch_and_run(session_id: str) -> None:
                     "--no-sandbox",
                     "--disable-dev-shm-usage",
                     "--disable-blink-features=AutomationControlled",
+                    # No GPU available on the Xvfb display — force software
+                    # rendering off too so Chrome paints with CPU/SwiftShader
+                    # and we don't get a black canvas in noVNC.
+                    "--disable-gpu",
+                    "--disable-software-rasterizer",
                 ],
             )
             sess["status"] = "waiting_login"
@@ -356,6 +361,8 @@ async def _login_one(p, account: dict, sessions_dir: str) -> dict:
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-blink-features=AutomationControlled",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
             ],
         )
         ctx = await browser.new_context(
