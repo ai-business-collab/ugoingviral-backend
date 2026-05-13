@@ -1222,8 +1222,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <span class="ico">🛍️</span><span id="shop-nav-name">Webshop</span><span class="chevron">›</span><button class="shop-pencil" onclick="event.stopPropagation();editShopName()" title="Rename shop">✏️</button>
     </div>
     <div class="submenu" id="webshop-sub">
-      <div class="sub-item" id="sub-prod-list" onclick="nav('products');switchProdTab('list')">📋 <span data-i18n="nav.products">Produkter</span></div>
-      <div class="sub-item" id="sub-prod-groups" onclick="nav('products');switchProdTab('groups')">🏷️ <span data-i18n="nav.groups">Grupper</span></div>
+      <div class="sub-item" id="sub-prod-list" onclick="nav('products');switchProdTab('list')">📋 <span data-i18n="nav.products">Products</span></div>
+      <div class="sub-item" id="sub-prod-groups" onclick="nav('products');switchProdTab('groups')">🏷️ <span data-i18n="nav.groups">Groups</span></div>
     </div>
 
     <!-- ── CONTENT ── -->
@@ -1430,34 +1430,34 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
       <div class="card" style="padding:14px;text-align:center;cursor:default">
         <div style="font-size:22px;font-weight:700;color:var(--tx)" id="ps-total">0</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">Produkter</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">Products</div>
       </div>
       <div class="card" style="padding:14px;text-align:center;cursor:default">
         <div style="font-size:22px;font-weight:700;color:var(--ac3)" id="ps-with-content">0</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">Med content</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">With content</div>
       </div>
-      <div class="card" style="padding:14px;text-align:center;cursor:pointer" onclick="batchGenerate()" title="Klik for at generere content til alle">
+      <div class="card" style="padding:14px;text-align:center;cursor:pointer" onclick="batchGenerate()" title="Click to generate content for all">
         <div style="font-size:22px;font-weight:700;color:var(--br)" id="ps-no-content">0</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">Mangler content ✨</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">Missing content ✨</div>
       </div>
-      <div class="card" style="padding:14px;text-align:center;cursor:pointer" onclick="nav('posting')" title="Se planlagte opslag">
+      <div class="card" style="padding:14px;text-align:center;cursor:pointer" onclick="nav('posting')" title="See scheduled posts">
         <div style="font-size:22px;font-weight:700;color:var(--ac)" id="ps-scheduled">0</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">Planlagte opslag</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">Scheduled posts</div>
       </div>
     </div>
 
     <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--glass-b);padding:5px;border-radius:14px;width:fit-content;border:1px solid var(--border)">
-      <div class="ptab active" id="ptab-list" onclick="switchProdTab('list')" data-p="instagram" style="border-radius:10px">📋 Produktliste</div>
-      <div class="ptab" id="ptab-groups" onclick="switchProdTab('groups')" data-p="tiktok" style="border-radius:10px">🏷️ Grupper</div>
+      <div class="ptab active" id="ptab-list" onclick="switchProdTab('list')" data-p="instagram" style="border-radius:10px">📋 Product list</div>
+      <div class="ptab" id="ptab-groups" onclick="switchProdTab('groups')" data-p="tiktok" style="border-radius:10px">🏷️ Groups</div>
     </div>
 
     <div id="prod-tab-list">
       <div class="card">
         <div class="ctitle">
-          <span>🛍️ Produkter</span>
+          <span>🛍️ Products</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <input class="fi" id="prod-search" placeholder="🔍 Search product..." style="width:160px" oninput="applyProductFilters()">
-            <select class="fs" id="prod-group-filter" style="width:140px" onchange="applyProductFilters()"><option value="Alle">📦 Alle grupper</option></select>
+            <select class="fs" id="prod-group-filter" style="width:140px" onchange="applyProductFilters()"><option value="Alle">📦 All groups</option></select>
             <button class="btn bg bsm" onclick="openProdModal()">➕ Add</button>
             <button class="btn bp bsm" onclick="loadProducts()">↻ Shopify</button>
           </div>
@@ -2517,7 +2517,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               </div>
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Forbind Instagram via officiel API</button>
-            <button class="btn bg" id="ig-growth-connect-btn" style="width:100%;margin-bottom:8px;font-size:13px;background:linear-gradient(135deg,rgba(225,48,108,.18),rgba(193,53,132,.18));border-color:rgba(225,48,108,.4);color:#e1306c" onclick="openInstagramGrowthConnect()">📈 Connect via Growth (Playwright session)</button>
+            <button class="btn bg" id="ig-growth-connect-btn" style="width:100%;margin-bottom:8px;font-size:13px;background:linear-gradient(135deg,rgba(225,48,108,.18),rgba(193,53,132,.18));border-color:rgba(225,48,108,.4);color:#e1306c" onclick="openInstagramGrowthConnect()">📈 Connect via Growth Session</button>
 
             <div id="ig-batch-section" style="display:none;margin-bottom:12px;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -2544,7 +2544,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Official API for Business/Creator accounts. <strong>Growth+ users</strong> can also connect a personal account via a remote browser session for full automation (likes, follows, DMs).</div>
             <details style="margin-bottom:10px">
-              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Playwright login (fallback)</summary>
+              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Manual login (fallback)</summary>
               <div style="margin-top:10px">
                 <div class="fg"><label class="fl">Brugernavn</label><input class="fi" id="ig-user" placeholder="@brugernavn"></div>
                 <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="ig-pass" placeholder="Adgangskode"></div>
@@ -2579,7 +2579,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectTikTokAPI()">🎵 Forbind TikTok via officiel API</button>
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Requires a TikTok Business/Creator account. Gives access to direct video posting without browser automation.</div>
             <details style="margin-bottom:10px">
-              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Playwright login (fallback)</summary>
+              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Manual login (fallback)</summary>
               <div style="margin-top:10px">
                 <div class="fg"><label class="fl">Email / Brugernavn</label><input class="fi" id="tt-user" placeholder="email eller @brugernavn"></div>
                 <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="tt-pass" placeholder="Adgangskode"></div>
@@ -2662,7 +2662,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px;background:rgba(255,0,0,.15);border-color:rgba(255,0,0,.4)" onclick="connectYouTubeAPI()">▶️ Forbind YouTube via Data API v3</button>
             <details style="margin-bottom:12px">
-              <summary style="cursor:pointer;font-size:12px;color:var(--tx3);padding:6px 0">Playwright login (fallback)</summary>
+              <summary style="cursor:pointer;font-size:12px;color:var(--tx3);padding:6px 0">Manual login (fallback)</summary>
               <div style="padding-top:8px">
                 <div class="fg"><label class="fl">Email (Google konto)</label><input class="fi" id="yt-user" placeholder="din@gmail.com"></div>
                 <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="yt-pass" placeholder="Adgangskode"></div>
@@ -2849,7 +2849,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 <div id="clib-folder-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal-box" style="width:360px">
     <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px">📁 Ny mappe</div>
-    <div class="fg"><label class="fl">Mappenavn</label><input class="fi" id="clib-new-folder-name" placeholder="F.eks. Produkter, Reels..."></div>
+    <div class="fg"><label class="fl">Folder name</label><input class="fi" id="clib-new-folder-name" placeholder="e.g. Products, Reels..."></div>
     <div class="fg"><label class="fl">Standard type</label>
       <select class="fs" id="clib-new-folder-type">
         <option value="all">📦 Alle typer</option>
@@ -4523,6 +4523,9 @@ async function loadBilling() {
     if (dc) { dc.textContent = d.credits; dc.style.color = col; }
     if (dm) dm.textContent = '/ ' + d.max_credits;
     if (db) { db.style.width = pct + '%'; db.style.background = `linear-gradient(90deg,${col},var(--ac2))`; }
+    // Single source of truth: also refresh the pipeline credits widget so
+    // the header and the pipeline page can't drift apart.
+    if (typeof pipeUpdateCreditsUI === 'function') pipeUpdateCreditsUI(d.credits, d.max_credits);
     // billing page
     window._currentPlan = d.plan || 'free';
     renderBillingPage(d);
@@ -6983,7 +6986,7 @@ async function loadGroups() {
 }
 function updateGroupSelects() {
   const filter = document.getElementById('prod-group-filter');
-  if (filter) filter.innerHTML = allGroups.map(g => `<option value="${g}">${g === 'Alle' ? '📦 Alle grupper' : '🏷️ ' + g}</option>`).join('');
+  if (filter) filter.innerHTML = allGroups.map(g => `<option value="${g}">${g === 'Alle' ? '📦 All groups' : '🏷️ ' + g}</option>`).join('');
   const modal = document.getElementById('mp-group');
   if (modal) { const cur = modal.value; modal.innerHTML = allGroups.map(g => `<option value="${g}">${g}</option>`).join(''); if (allGroups.includes(cur)) modal.value = cur; }
   const move = document.getElementById('move-to-group');
@@ -8845,7 +8848,7 @@ var TOUR_STEPS = [
   },
   {
     id: 'ni-webshop', navTo: 'products', openSub: 'webshop-sub',
-    title: '🛍️ Webshop & Produkter',
+    title: '🛍️ Webshop & Products',
     desc: 'Add your products manually or sync from Shopify. AI uses product data to write targeted content.',
   },
   {
@@ -10349,7 +10352,7 @@ function sendQueueToPost(id) {
 <div id="lib-folder-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal-box" style="width:380px">
     <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px">📁 Ny mappe</div>
-    <div class="fg"><label class="fl">Mappenavn</label><input class="fi" id="lib-new-folder" placeholder="F.eks. Produkter, Stories..."></div>
+    <div class="fg"><label class="fl">Folder name</label><input class="fi" id="lib-new-folder" placeholder="e.g. Products, Stories..."></div>
     <div style="display:flex;gap:8px">
       <button class="btn bp" style="flex:1" onclick="createLibFolder()">Opret</button>
       <button class="btn bg" onclick="document.getElementById('lib-folder-modal').style.display='none'">Annuller</button>
@@ -10570,8 +10573,12 @@ var _pipeSessionCredits = 0;
 // ── Credits widget ────────────────────────────────────────────────────────────
 async function pipeLoadCredits() {
   try {
-    const d = await apiFetch('/api/billing/usage');
-    pipeUpdateCreditsUI(d.credits_left, d.max_credits);
+    // Use the same endpoint as the header so credits never disagree.
+    const d = await apiFetch('/api/billing/plan');
+    pipeUpdateCreditsUI(d.credits, d.max_credits);
+    // Also refresh the header in case it was stale.
+    const cr = document.getElementById('billing-credits');
+    if (cr) cr.textContent = d.credits;
   } catch(e) {}
 }
 
@@ -11663,8 +11670,10 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
   </div>
 </div>
 
-<!-- FAB — draggable -->
-<button id="agent-fab" title="AI Assistant">
+<!-- FAB — draggable. onclick is a fallback if the pointer-event IIFE below
+     fails to attach (e.g. earlier JS error). The IIFE skips agToggle when
+     `moved` is true, and this attribute does the same check via window. -->
+<button id="agent-fab" title="AI Assistant" onclick="if (!window._fabDragged) agToggle(); window._fabDragged = false;">
   <div class="ag-pulse"></div>
   <span id="ag-fab-ico">⚡</span>
   <div class="ag-unread" id="ag-unread">!</div>
@@ -12217,13 +12226,14 @@ var _ag = {
     if (moved) {
       var b = parseFloat(fab.style.bottom), r = parseFloat(fab.style.right);
       localStorage.setItem('ag_fab_pos', JSON.stringify({bottom: b, right: r}));
+      window._fabDragged = true;   // signals the onclick attribute to skip
     }
     dragging = false; dragStart = null; fabStart = null;
   });
 
   fab.addEventListener('click', function(e) {
-    if (moved) { moved = false; return; }
-    agToggle();
+    if (moved) { moved = false; window._fabDragged = false; return; }
+    // The onclick attribute handles the toggle, so don't double-fire here.
   });
 })();
 
@@ -13471,8 +13481,8 @@ async function loadNotifications() {
   var list = document.getElementById('notif-list');
   if (list) list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tx3);font-size:13px">Loading…</div>';
   try {
-    var r = await apiFetch('/api/notifications');
-    var d = await r.json();
+    // apiFetch already returns parsed JSON — no second .json() call.
+    var d = await apiFetch('/api/notifications');
     _renderNotifs(d.notifications || []);
     _setNotifBadge(d.unread || 0);
   } catch(e) {
@@ -13504,8 +13514,7 @@ function _renderNotifs(notifs) {
 async function markNotifRead(id, el) {
   if (el) { el.style.opacity = '.55'; el.style.background = ''; }
   try {
-    var r = await apiFetch('/api/notifications/read/' + id, 'POST');
-    var d = await r.json();
+    var d = await apiFetch('/api/notifications/read/' + id, 'POST');
     _setNotifBadge(d.unread || 0);
   } catch(e) {}
 }
@@ -15179,9 +15188,26 @@ window.addEventListener('beforeinstallprompt', function(e) {
   _pwaPrompt = e;
 });
 
+// Throttle: max 3 shows total, then 14-day cooldown after dismiss.
+var _PWA_MAX_SHOWS    = 3;
+var _PWA_COOLDOWN_MS  = 14 * 24 * 60 * 60 * 1000;
+
+function _pwaShouldShow() {
+  if (sessionStorage.getItem('pwa_dismissed')) return false;
+  if (window.matchMedia('(display-mode: standalone)').matches) return false;
+  var count    = parseInt(localStorage.getItem('pwa_show_count') || '0', 10);
+  var lastDism = parseInt(localStorage.getItem('pwa_dismissed_at') || '0', 10);
+  if (lastDism && (Date.now() - lastDism) < _PWA_COOLDOWN_MS) return false;
+  if (count >= _PWA_MAX_SHOWS) {
+    // Hit the cap with no recent dismissal — wait for cooldown to elapse.
+    if (!lastDism) localStorage.setItem('pwa_dismissed_at', String(Date.now()));
+    return false;
+  }
+  return true;
+}
+
 function initPwaPrompt() {
-  if (sessionStorage.getItem('pwa_dismissed')) return;
-  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  if (!_pwaShouldShow()) return;
   var mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   var titleEl = document.getElementById('pwa-title');
   var bodyEl  = document.getElementById('pwa-body');
@@ -15192,9 +15218,12 @@ function initPwaPrompt() {
     ? 'Quick access from your home screen'
     : 'Quick access without opening your browser';
   setTimeout(function() {
-    if (!sessionStorage.getItem('pwa_dismissed')) {
-      var el = document.getElementById('pwa-popup');
-      if (el) el.style.display = 'block';
+    if (!_pwaShouldShow()) return;
+    var el = document.getElementById('pwa-popup');
+    if (el) {
+      el.style.display = 'block';
+      var c = parseInt(localStorage.getItem('pwa_show_count') || '0', 10) + 1;
+      localStorage.setItem('pwa_show_count', String(c));
     }
   }, 30000);
 }
@@ -15211,6 +15240,7 @@ function pwaInstall() {
 
 function pwaClose() {
   sessionStorage.setItem('pwa_dismissed', '1');
+  localStorage.setItem('pwa_dismissed_at', String(Date.now()));
   var el = document.getElementById('pwa-popup');
   if (el) el.style.display = 'none';
 }

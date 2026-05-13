@@ -397,19 +397,23 @@ nav {
 .price-card-growth { border-color: rgba(34,197,94,.2); position: relative; overflow: hidden; }
 .price-card-growth:hover { border-color: rgba(34,197,94,.5) !important; box-shadow: 0 20px 60px rgba(34,197,94,.1), 0 8px 30px rgba(0,0,0,.4) !important; }
 .growth-extras-overlay {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.92));
-  color: rgba(255,255,255,.85); padding: 14px 18px;
-  font-size: 11px; line-height: 1.7;
+  /* Full-card cover — slides up FROM below and OVER the price/feature list. */
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(13,21,38,.95), rgba(0,0,0,.97));
+  color: rgba(255,255,255,.9);
+  padding: 28px 22px; font-size: 13px; line-height: 1.75;
+  display: flex; flex-direction: column; justify-content: center;
   transform: translateY(100%); opacity: 0;
-  transition: transform .3s ease, opacity .25s ease;
+  transition: transform .35s ease, opacity .25s ease;
   pointer-events: none;
+  border-radius: inherit;
+  z-index: 2;
 }
 .growth-extras-overlay ul { list-style: none; margin: 0; padding: 0; }
-.growth-extras-overlay li { margin: 0; }
+.growth-extras-overlay li { margin: 6px 0; }
 .growth-extras-overlay .ge-title {
-  font-size: 10px; letter-spacing: .8px; text-transform: uppercase;
-  color: rgba(34,197,94,.85); font-weight: 700; margin-bottom: 4px;
+  font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+  color: rgba(34,197,94,.95); font-weight: 800; margin-bottom: 14px;
 }
 .price-card-growth:hover .growth-extras-overlay { transform: translateY(0); opacity: 1; }
 .price-cta {
@@ -1023,35 +1027,6 @@ footer p { font-size: 13px; color: var(--text2); }
       </ul>
       <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Choose Starter &#8594;</a>
     </div>
-    <div class="price-card price-card-growth">
-      <div class="price-tag" style="color:#22c55e">Engagement</div>
-      <div class="price-name">Growth</div>
-      <div class="price-amount" data-usd="299">$299<span>/mo</span></div>
-      <div class="price-credits" style="color:#22c55e">2,000 credits + automation</div>
-      <ul class="price-features">
-        <li class="plus" style="color:#22c55e">Everything in Starter +</li>
-        <li>2,000 credits/mo</li>
-        <li>10 growth accounts included</li>
-        <li>Dedicated proxy per account</li>
-        <li>Anti-ban AI system</li>
-      </ul>
-      <ul class="price-features price-features-extra">
-        <li>Auto DM/likes/comments</li>
-        <li>Replace your mobile farm</li>
-        <li>Priority support</li>
-      </ul>
-      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)">Choose Growth &#8594;</a>
-      <div class="growth-extras-overlay" aria-hidden="true">
-        <div class="ge-title">Built-in safety</div>
-        <ul>
-          <li>🛡️ Anti-ban AI system</li>
-          <li>🌍 Dedicated country IP per account</li>
-          <li>⏰ Smart activity limits</li>
-          <li>😴 Rest periods — no suspicious activity</li>
-          <li>🔄 Human behavior simulation</li>
-        </ul>
-      </div>
-    </div>
     <div class="price-card">
       <div class="price-name">Basic</div>
       <div class="price-amount" data-usd="79">$79<span>/mo</span></div>
@@ -1144,6 +1119,35 @@ footer p { font-size: 13px; color: var(--text2); }
         <li>Bulk scheduling</li>
       </ul>
       <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;background:rgba(167,139,250,.12);color:#a78bfa;border:1px solid rgba(167,139,250,.3)">Choose Agency &#8594;</a>
+    </div>
+    <div class="price-card price-card-growth">
+      <div class="price-tag" style="color:#22c55e">Engagement</div>
+      <div class="price-name">Growth</div>
+      <div class="price-amount" data-usd="299">$299<span>/mo</span></div>
+      <div class="price-credits" style="color:#22c55e">2,000 credits + automation</div>
+      <ul class="price-features">
+        <li class="plus" style="color:#22c55e">Everything in Starter +</li>
+        <li>2,000 credits/mo</li>
+        <li>10 growth accounts included</li>
+        <li>Dedicated proxy per account</li>
+        <li>Anti-ban AI system</li>
+      </ul>
+      <ul class="price-features price-features-extra">
+        <li>Auto DM/likes/comments</li>
+        <li>Replace your mobile farm</li>
+        <li>Priority support</li>
+      </ul>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)">Choose Growth &#8594;</a>
+      <div class="growth-extras-overlay" aria-hidden="true">
+        <div class="ge-title">Built-in safety</div>
+        <ul>
+          <li>🛡️ Anti-ban AI system</li>
+          <li>🌍 Dedicated country IP per account</li>
+          <li>⏰ Smart activity limits</li>
+          <li>😴 Rest periods — no suspicious activity</li>
+          <li>🔄 Human behavior simulation</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
@@ -1580,9 +1584,17 @@ if (new URLSearchParams(window.location.search).get('login') === '1') {
 }
 
 // ── Currency ──────────────────────────────────────────────────────────────────
-var CURRENCY_RATES  = { USD:1, EUR:0.92, DKK:6.9 };
+// Mid-market USD→X rates, refreshed manually. Source: ECB/Yahoo, May 2026.
+var CURRENCY_RATES  = {
+  USD: 1,      // United States, default
+  EUR: 0.92,   // Eurozone
+  DKK: 6.9,    // Denmark
+  SEK: 10.5,   // Sweden
+  NOK: 10.7,   // Norway
+  GBP: 0.79,   // United Kingdom
+};
 var EU_CC = ['AT','BE','BG','HR','CY','CZ','EE','FI','FR','DE','GR','HU','IE',
-             'IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE'];
+             'IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES'];
 var _currency = localStorage.getItem('ugv_currency') || 'USD';
 
 function fmtPrice(usd) {
@@ -1590,6 +1602,9 @@ function fmtPrice(usd) {
   var rate = CURRENCY_RATES[_currency] || 1;
   var val  = Math.round(usd * rate);
   if (_currency === 'DKK') return val.toLocaleString('da-DK') + ' kr';
+  if (_currency === 'SEK') return val.toLocaleString('sv-SE') + ' kr';
+  if (_currency === 'NOK') return val.toLocaleString('nb-NO') + ' kr';
+  if (_currency === 'GBP') return '£' + val.toLocaleString('en-GB');
   var sym  = _currency === 'EUR' ? '€' : '$';
   return sym + val.toLocaleString('en-US');
 }
@@ -1630,7 +1645,10 @@ async function detectCurrency() {
     var res = await fetch('https://ipapi.co/json/');
     var d   = await res.json();
     var cc  = d.country_code || '';
-    if (cc === 'DK') _currency = 'DKK';
+    if (cc === 'DK')      _currency = 'DKK';
+    else if (cc === 'SE') _currency = 'SEK';
+    else if (cc === 'NO') _currency = 'NOK';
+    else if (cc === 'GB') _currency = 'GBP';
     else if (EU_CC.indexOf(cc) > -1) _currency = 'EUR';
     else _currency = 'USD';
     localStorage.setItem('ugv_currency', _currency);

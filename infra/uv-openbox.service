@@ -1,0 +1,13 @@
+[Unit]
+Description=UV openbox WM on :99 (gives Chrome decorations under VNC)
+After=uv-xvfb.service
+Requires=uv-xvfb.service
+
+[Service]
+Environment=DISPLAY=:99
+ExecStart=/usr/bin/openbox --sm-disable
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
