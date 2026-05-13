@@ -417,8 +417,10 @@ body.light #clock {
 .wrap { padding: 28px; flex: 1; }
 
 /* Pages */
-.page { display: none; }
+.page { display: none; padding: 24px 28px; box-sizing: border-box; max-width: 100%; }
 .page.active { display: block; animation: pageIn .3s var(--ease); }
+/* Keep all page content inside the grid column so cards never escape behind the sidebar. */
+.page > * { max-width: 100%; box-sizing: border-box; }
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
@@ -1237,9 +1239,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" id="ni-content-plan" onclick="nav('content-plan')">🗓️ <span>Content Plan</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">AI</span></div>
       <div class="sub-item" id="ni-studio" onclick="nav('studio')">🎬 <span>Video Studio</span> <span style="font-size:9px;background:linear-gradient(90deg,var(--ac),var(--ac2));color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NY</span></div>
       <div class="sub-item" id="ni-pipeline" onclick="nav('pipeline')">⚡ <span data-i18n="nav.pipeline">Pipeline</span></div>
-      <div class="sub-item" id="ni-templates" onclick="nav('templates')">📝 <span>Templates</span> <span style="font-size:9px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">FREE</span></div>
-      <div class="sub-item" id="ni-brand-kit" onclick="nav('brand-kit')">🎨 <span>Brand Kit</span></div>
-      <div class="sub-item" id="ni-hashtags" onclick="nav('hashtags')">🏷️ <span>Hashtag Research</span></div>
       <div class="sub-item" id="ni-video-script" onclick="nav('video-script')">🎬 <span>Video Script</span></div>
       <div class="sub-item" id="ni-reel-templates" onclick="nav('reel-templates')">📱 <span>Reel Templates</span></div>
       <div class="sub-item" onclick="nav('history')">📚 <span data-i18n="nav.history">Historik</span></div>
@@ -1286,8 +1285,18 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="ni" id="ni-analytics" onclick="nav('analytics')"><span class="ico">📈</span><span>Analytics</span></div>
     <div class="ni" id="ni-growth-dash" onclick="nav('growth-dashboard')"><span class="ico">🌱</span><span>Growth Dashboard</span></div>
     <div class="ni" id="ni-stats" onclick="nav('stats')"><span class="ico">📊</span><span data-i18n="nav.stats">Statistik</span></div>
-    <div class="ni" id="ni-competitor" onclick="nav('competitor')"><span class="ico">🔍</span><span>Competitor Spy</span></div>
-    <div class="ni" id="ni-audit" onclick="nav('audit')"><span class="ico">📋</span><span>Account Audit</span></div>
+
+    <!-- ── TOOLS ── -->
+    <div class="nav-section">Tools</div>
+    <div class="ni has-sub" id="ni-tools" onclick="toggleSubMenu('tools-sub')">
+      <span class="ico">🧰</span><span>Tools</span><span class="chevron">›</span>
+    </div>
+    <div class="submenu" id="tools-sub">
+      <div class="sub-item" id="ni-brand-kit" onclick="nav('brand-kit')">🎨 <span>Brand Kit</span></div>
+      <div class="sub-item" id="ni-hashtags" onclick="nav('hashtags')">🏷️ <span>Hashtag Research</span></div>
+      <div class="sub-item" id="ni-competitor" onclick="nav('competitor')">🔍 <span>Competitor Spy</span></div>
+      <div class="sub-item" id="ni-audit" onclick="nav('audit')">📋 <span>Account Audit</span></div>
+    </div>
 
     <!-- ── SYSTEM ── -->
     <div class="nav-section" data-i18n="nav.system">System</div>
@@ -3609,7 +3618,21 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="font-size:22px;font-weight:800;color:var(--tx)">Growth Dashboard</div>
           <div style="font-size:12px;color:var(--tx3)">Last 30 days of content performance</div>
         </div>
-        <button class="btn bg bsm" onclick="loadGrowthDashboard()">Refresh</button>
+        <button class="btn bg bsm" onclick="loadGrowthDashboard();loadGrowthAccounts()">Refresh</button>
+      </div>
+
+      <!-- Connected growth accounts -->
+      <div class="card" style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--tx)">🌱 Connected growth accounts</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:2px" id="gd-accounts-count">Loading…</div>
+          </div>
+          <button class="btn bp bsm" onclick="nav('connect')" style="font-size:12px">+ Connect account</button>
+        </div>
+        <div id="gd-accounts-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+          <div style="font-size:12px;color:var(--tx3);text-align:center;padding:20px;grid-column:1/-1">Loading accounts…</div>
+        </div>
       </div>
 
       <!-- KPI row -->
@@ -10191,9 +10214,32 @@ function sendQueueToPost(id) {
   <!-- ═══════════════════════════════ ACCOUNT AUDIT PAGE ═══════════════════ -->
   <div id="page-audit" class="page" style="display:none">
     <div style="max-width:860px">
+
+      <!-- Intro / what this is -->
+      <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(0,229,255,.04));border:1px solid rgba(124,58,237,.2)">
+        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+          <div style="font-size:40px;line-height:1">📋</div>
+          <div style="flex:1;min-width:240px">
+            <div style="font-size:18px;font-weight:800;color:var(--tx);margin-bottom:6px">What is an Account Audit?</div>
+            <div style="font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:10px">
+              Paste any public social handle and we'll grade the account the way a brand strategist would —
+              bio clarity, posting cadence, hook quality, content variety, and follower-to-engagement health.
+              You get a 0-100 score plus a prioritized action plan: what's working, what's hurting reach, and
+              the three highest-leverage changes to make this week.
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px">
+              <span style="background:rgba(124,58,237,.12);color:#a78bfa;padding:3px 10px;border-radius:8px;font-weight:700">🎯 Profile score</span>
+              <span style="background:rgba(0,229,255,.1);color:var(--ac);padding:3px 10px;border-radius:8px;font-weight:700">📈 Growth gaps</span>
+              <span style="background:rgba(34,197,94,.1);color:#22c55e;padding:3px 10px;border-radius:8px;font-weight:700">✅ Action plan</span>
+              <span style="background:rgba(245,158,11,.1);color:#f59e0b;padding:3px 10px;border-radius:8px;font-weight:700">🪞 Works on competitors too</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom:20px">
-        <div class="ctitle">📋 Social Media Account Audit</div>
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:20px">Get an AI-powered score and action plan for any social media account.</div>
+        <div class="ctitle">📋 Run an audit</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:20px">Fill in the basics — we'll score the account and return a tailored action plan.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
           <div>
             <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Account Handle *</label>
@@ -13266,7 +13312,53 @@ async function reconnectInstagram(){
 
 
 // ===== GROWTH DASHBOARD =====
+async function loadGrowthAccounts() {
+  var grid  = document.getElementById('gd-accounts-grid');
+  var count = document.getElementById('gd-accounts-count');
+  if (!grid) return;
+  try {
+    var d = await apiFetch('/api/automation/connected_growth_accounts');
+    var accs = (d && d.accounts) || [];
+    if (count) count.textContent = accs.length
+      ? (accs.length + ' account' + (accs.length === 1 ? '' : 's') + ' connected via Growth session')
+      : 'No growth accounts connected yet';
+    if (!accs.length) {
+      grid.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:24px;grid-column:1/-1;line-height:1.65">' +
+        '<div style="font-size:32px;margin-bottom:8px;opacity:.4">🌱</div>' +
+        'No growth accounts connected yet.<br>' +
+        '<button class="btn bp bsm" style="margin-top:12px" onclick="nav(\'connect\')">Connect Instagram (Growth) →</button>' +
+        '</div>';
+      return;
+    }
+    var platformIco = {instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'📘', twitter:'🐦'};
+    grid.innerHTML = accs.map(function(a) {
+      var ico    = platformIco[(a.platform || '').toLowerCase()] || '🌐';
+      var status = (a.status || 'active').toLowerCase();
+      var color  = status === 'active' ? '#22c55e' : (status === 'inactive' ? 'var(--tx3)' : '#f59e0b');
+      var dot    = '<span style="width:8px;height:8px;border-radius:50%;background:' + color + ';display:inline-block;margin-right:6px"></span>';
+      var ago    = a.connected_at ? new Date(a.connected_at).toLocaleDateString() : '';
+      return '<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:6px">' +
+               '<div style="display:flex;align-items:center;gap:8px">' +
+                 '<div style="font-size:22px">' + ico + '</div>' +
+                 '<div style="flex:1;min-width:0">' +
+                   '<div style="font-weight:700;font-size:13px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@' + (a.username || '?') + '</div>' +
+                   '<div style="font-size:11px;color:var(--tx3);text-transform:capitalize">' + (a.platform || 'unknown') + '</div>' +
+                 '</div>' +
+               '</div>' +
+               '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--tx3);margin-top:4px">' +
+                 '<span>' + dot + '<span style="color:' + color + ';font-weight:700;text-transform:uppercase;letter-spacing:.5px">' + status + '</span></span>' +
+                 (ago ? '<span title="Connected">' + ago + '</span>' : '') +
+               '</div>' +
+             '</div>';
+    }).join('');
+  } catch (e) {
+    grid.innerHTML = '<div style="font-size:12px;color:var(--tx3);grid-column:1/-1;padding:12px">Could not load accounts.</div>';
+    if (count) count.textContent = '';
+  }
+}
+
 async function loadGrowthDashboard() {
+  loadGrowthAccounts();
   try {
     var d = await apiFetch('/api/growth/overview');
     // KPIs

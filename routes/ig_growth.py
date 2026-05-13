@@ -221,6 +221,75 @@ async def cancel_session(session_id: str, current_user: dict = Depends(get_curre
     return {"ok": True}
 
 
+@router.get("/api/automation/connected_growth_accounts")
+async def list_connected_growth_accounts(current_user: dict = Depends(get_current_user)):
+    """List the user's connected social accounts for the Growth dashboard.
+    Combines:
+      - Instagram handles connected via the noVNC/batch Growth session
+        (`ustore["connected_instagram_growth"]`, plus the cookie files on disk).
+      - Whatever `ustore["growth_accounts"]` already tracks per-platform.
+
+    Each entry: {platform, username, status, connected_at}.
+    """
+    uid    = current_user["id"]
+    ustore = _load_user_store(uid)
+    accounts: list[dict] = []
+    seen: set = set()
+
+    def _add(platform: str, username: str, status: str = "active", connected_at: str = ""):
+        platform = (platform or "").lower()
+        username = (username or "").lstrip("@")
+        if not username:
+            return
+        key = (platform, username.lower())
+        if key in seen:
+            return
+        seen.add(key)
+        accounts.append({
+            "platform":     platform,
+            "username":     username,
+            "status":       status,
+            "connected_at": connected_at,
+        })
+
+    # 1) Instagram handles from Growth sessions (batch + noVNC).
+    for u in ustore.get("connected_instagram_growth", []) or []:
+        ts = ""
+        status = "active"
+        try:
+            safe = re.sub(r"[^A-Za-z0-9_.-]", "_", u)[:80]
+            cookie_path = os.path.join(SESSIONS_DIR, f"instagram_{safe}_session.json")
+            if os.path.exists(cookie_path):
+                ts = datetime.utcfromtimestamp(os.path.getmtime(cookie_path)).isoformat() + "Z"
+            else:
+                status = "inactive"
+        except Exception:
+            pass
+        _add("instagram", u, status, ts)
+
+    # 2) Any pre-existing structured store (e.g. {platform: [{username,...}]}).
+    structured = ustore.get("growth_accounts") or {}
+    if isinstance(structured, dict):
+        for platform, items in structured.items():
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if isinstance(item, dict):
+                    _add(platform, item.get("username", ""),
+                         item.get("status", "active"),
+                         item.get("connected_at", ""))
+                elif isinstance(item, str):
+                    _add(platform, item)
+    elif isinstance(structured, list):
+        for item in structured:
+            if isinstance(item, dict):
+                _add(item.get("platform", ""), item.get("username", ""),
+                     item.get("status", "active"), item.get("connected_at", ""))
+
+    accounts.sort(key=lambda a: (a["platform"], a["username"].lower()))
+    return {"accounts": accounts, "total": len(accounts)}
+
+
 # ── Batch Instagram login via CSV ─────────────────────────────────────────────
 # Charge 5 credits per *successful* connect. Failed accounts (wrong password,
 # 2FA challenge, suspicious-login wall) cost nothing. Single batch in flight
