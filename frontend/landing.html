@@ -397,30 +397,33 @@ nav {
 .price-card-growth { border-color: rgba(34,197,94,.2); position: relative; overflow: hidden; }
 .price-card-growth:hover { border-color: rgba(34,197,94,.5) !important; box-shadow: 0 20px 60px rgba(34,197,94,.1), 0 8px 30px rgba(0,0,0,.4) !important; }
 .growth-extras-overlay {
-  /* Bottom-anchored slide-up panel — covers max 50% of the card height, so
-     the price, top features and "Choose Growth" CTA above stay visible and
-     clickable. Slides up from below on hover. */
-  position: absolute; bottom: 0; left: 0; right: 0;
-  height: auto; max-height: 50%;
-  background: linear-gradient(180deg, rgba(13,21,38,.92), rgba(0,0,0,.96));
-  color: rgba(255,255,255,.9);
-  padding: 14px 18px; font-size: 11px; line-height: 1.55;
-  transform: translateY(100%); opacity: 0;
-  transition: transform .3s ease, opacity .2s ease;
-  pointer-events: none;          /* overlay body never blocks clicks  */
-  border-bottom-left-radius: inherit;
-  border-bottom-right-radius: inherit;
+  /* Slides up from the bottom — covers at most half the card so price,
+     features, and the CTA stay visible. CTA is layered above (z-index: 3). */
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: auto;
+  max-height: 50%;
   overflow: hidden;
-  z-index: 1;                    /* sits behind the CTA's z-index:2   */
+  background: linear-gradient(180deg, rgba(13,21,38,.95), rgba(0,0,0,.97));
+  color: rgba(255,255,255,.9);
+  padding: 16px 22px;
+  font-size: 12px;
+  line-height: 1.55;
+  transform: translateY(100%); opacity: 0;
+  transition: transform .35s ease, opacity .25s ease;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
 }
 .growth-extras-overlay ul { list-style: none; margin: 0; padding: 0; }
-.growth-extras-overlay li { margin: 3px 0; }
+.growth-extras-overlay li { margin: 4px 0; }
 .growth-extras-overlay .ge-title {
-  font-size: 10px; letter-spacing: .8px; text-transform: uppercase;
-  color: rgba(34,197,94,.9); font-weight: 800; margin-bottom: 6px;
+  font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  color: rgba(34,197,94,.95); font-weight: 800; margin-bottom: 8px;
 }
 .price-card-growth:hover .growth-extras-overlay { transform: translateY(0); opacity: 1; }
-/* Make sure the CTA sits ABOVE the overlay and remains clickable. */
 .price-card-growth .price-cta { position: relative; z-index: 3; pointer-events: auto; }
 .price-cta {
   display: block; margin-top: 18px; text-align: center;
