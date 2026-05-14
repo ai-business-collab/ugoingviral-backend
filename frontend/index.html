@@ -3066,6 +3066,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <a href="#sec-password"  onclick="event.preventDefault();document.getElementById('sec-password').scrollIntoView({behavior:'smooth'})"  style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">🔒 Security</a>
           <a href="#sec-assistant" onclick="event.preventDefault();document.getElementById('sec-assistant').scrollIntoView({behavior:'smooth'})" style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">🎙️ Assistant</a>
           <a href="#sec-interface" onclick="event.preventDefault();document.getElementById('sec-interface').scrollIntoView({behavior:'smooth'})" style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">🎨 Interface</a>
+          <a href="#sec-install" onclick="event.preventDefault();document.getElementById('sec-install').scrollIntoView({behavior:'smooth'})" style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">📱 Install App</a>
         </div>
       </div>
 
@@ -3157,6 +3158,45 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </select>
         </div>
         <button class="btn bg bsm" style="margin-top:14px" onclick="obReset()">👋 Show onboarding guide</button>
+      </div>
+
+      <!-- INSTALL APP (PWA) -->
+      <div class="card" id="sec-install" style="margin-bottom:20px;scroll-margin-top:90px">
+        <div class="ctitle">📱 Install App</div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:14px;line-height:1.6">Install UgoingViral as an app on your phone or desktop for one-tap access, full-screen view, and push notifications.</div>
+
+        <div id="pwa-installed-banner" style="display:none;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#22c55e">
+          ✅ <strong>UgoingViral is installed.</strong> You're using the installed app right now.
+        </div>
+
+        <div id="pwa-install-row" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+          <button class="btn bp" id="pwa-install-btn" onclick="settingsInstallPwa()" style="font-size:14px;font-weight:700">📱 Install UgoingViral</button>
+          <div style="font-size:11px;color:var(--tx3);flex:1;min-width:180px" id="pwa-install-hint">Tap to install on this device. If your browser doesn't show a prompt, follow the steps below.</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:14px">
+            <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px">🍎 iPhone / iPad (Safari)</div>
+            <ol style="font-size:12px;color:var(--tx2);padding-left:18px;margin:0;line-height:1.7">
+              <li>Open UgoingViral in <strong>Safari</strong>.</li>
+              <li>Tap the <strong>Share</strong> icon <span style="font-family:monospace">⬆️</span> at the bottom of the screen.</li>
+              <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+              <li>Tap <strong>Add</strong> in the top-right corner.</li>
+            </ol>
+          </div>
+          <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:14px">
+            <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px">🤖 Android (Chrome)</div>
+            <ol style="font-size:12px;color:var(--tx2);padding-left:18px;margin:0;line-height:1.7">
+              <li>Open UgoingViral in <strong>Chrome</strong>.</li>
+              <li>Tap the <strong>⋮</strong> menu in the top-right.</li>
+              <li>Tap <strong>Install app</strong> (or <em>Add to Home screen</em>).</li>
+              <li>Confirm by tapping <strong>Install</strong>.</li>
+            </ol>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:10px;padding:8px 12px;background:rgba(0,229,255,.05);border-radius:8px;border:1px solid rgba(0,229,255,.1)">
+          💡 On desktop, Chrome and Edge show an <strong>install icon</strong> in the address bar — click it for one-click install.
+        </div>
       </div>
 
       <!-- WATERMARK (paid users only) -->
@@ -3506,6 +3546,71 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-top:10px;padding:8px 12px;background:rgba(0,229,255,.05);border-radius:8px;border:1px solid rgba(0,229,255,.1)">
           💡 <strong>Tip:</strong> Fixed packages give the best price per credit. Custom amounts use the same tier rates — more spent means cheaper per credit. A plan subscription is always the most cost-effective for daily use.
+        </div>
+      </div>
+
+      <!-- EXTRA ACCOUNTS — Growth (monthly) + Client (one-time) -->
+      <div style="margin-top:28px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div class="ctitle" style="margin:0">👥 Extra Accounts</div>
+        </div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:14px">Add more accounts to your workspace beyond your plan's included slots. Tier discounts apply automatically as quantity goes up.</div>
+        <div class="g2" id="extra-accounts-grid">
+
+          <!-- Growth accounts (recurring) -->
+          <div class="card" style="padding:18px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="font-size:14px;font-weight:800;color:var(--tx)">📈 Growth Accounts</div>
+              <span style="font-size:9px;background:rgba(0,229,255,.14);color:var(--ac);font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.4px">MONTHLY</span>
+            </div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.5">Recurring monthly billing — proxy + automation included for each account.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;font-size:11px">
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">1–9</strong> · $14/mo</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">10–49</strong> · $11/mo</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">50–99</strong> · $9/mo</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">100+</strong> · $8/mo</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:end;margin-bottom:10px">
+              <div style="flex:1">
+                <label style="font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Quantity</label>
+                <input id="ea-growth-qty" class="fi" type="number" min="1" max="1000" value="1" oninput="updateExtraGrowthPreview()" style="width:100%;text-align:center;font-weight:700">
+              </div>
+              <div style="flex:1;text-align:right">
+                <div style="font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase">Total</div>
+                <div style="font-size:20px;font-weight:900;color:var(--ac)" id="ea-growth-total">$14<span style="font-size:11px;color:var(--tx3);font-weight:600">/mo</span></div>
+                <div style="font-size:10px;color:var(--tx3)" id="ea-growth-tier">1–9 accounts · $14/mo each</div>
+              </div>
+            </div>
+            <button class="btn bp" style="width:100%" onclick="buyExtraGrowthAccounts()">📈 Buy Growth Accounts →</button>
+          </div>
+
+          <!-- Client accounts (one-time) -->
+          <div class="card" style="padding:18px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="font-size:14px;font-weight:800;color:var(--tx)">🧑‍💼 Client Accounts</div>
+              <span style="font-size:9px;background:rgba(34,197,94,.14);color:#22c55e;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.4px">ONE-TIME</span>
+            </div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.5">Pay once, keep forever. Use these slots for agency clients in your workspace.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;font-size:11px">
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">1–9</strong> · $29 ea</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">10–49</strong> · $22 ea</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">50–99</strong> · $19 ea</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">100+</strong> · $15 ea</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:end;margin-bottom:10px">
+              <div style="flex:1">
+                <label style="font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px">Quantity</label>
+                <input id="ea-client-qty" class="fi" type="number" min="1" max="1000" value="1" oninput="updateExtraClientPreview()" style="width:100%;text-align:center;font-weight:700">
+              </div>
+              <div style="flex:1;text-align:right">
+                <div style="font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase">Total</div>
+                <div style="font-size:20px;font-weight:900;color:#22c55e" id="ea-client-total">$29</div>
+                <div style="font-size:10px;color:var(--tx3)" id="ea-client-tier">1–9 accounts · $29 each</div>
+              </div>
+            </div>
+            <button class="btn bp" style="width:100%;background:#22c55e;color:#000" onclick="buyExtraClientAccounts()">🧑‍💼 Buy Client Accounts →</button>
+          </div>
+
         </div>
       </div>
 
@@ -7135,6 +7240,40 @@ async function buyClientAccounts(quantity) {
     if (r && r.url) { window.location.href = r.url; return; }
     toast('Could not start checkout', 'error');
   } catch(e) { toast(e.message || 'Checkout error', 'error'); }
+}
+
+// ── Plan & Credits → Extra Accounts (Growth + Client) ──────────────────
+function _extraGrowthUnit(q) { return q >= 100 ? 8 : q >= 50 ? 9 : q >= 10 ? 11 : 14; }
+function _extraClientUnit(q) { return q >= 100 ? 15 : q >= 50 ? 19 : q >= 10 ? 22 : 29; }
+function _tierLabel(q) {
+  return q >= 100 ? '100+ accounts' : q >= 50 ? '50–99 accounts' : q >= 10 ? '10–49 accounts' : '1–9 accounts';
+}
+function updateExtraGrowthPreview() {
+  var el = document.getElementById('ea-growth-qty');
+  if (!el) return;
+  var qty = Math.max(1, Math.min(1000, parseInt(el.value, 10) || 1));
+  el.value = qty;
+  var u = _extraGrowthUnit(qty);
+  document.getElementById('ea-growth-total').innerHTML = '$' + (u * qty) + '<span style="font-size:11px;color:var(--tx3);font-weight:600">/mo</span>';
+  document.getElementById('ea-growth-tier').textContent = _tierLabel(qty) + ' · $' + u + '/mo each';
+}
+function updateExtraClientPreview() {
+  var el = document.getElementById('ea-client-qty');
+  if (!el) return;
+  var qty = Math.max(1, Math.min(1000, parseInt(el.value, 10) || 1));
+  el.value = qty;
+  var u = _extraClientUnit(qty);
+  document.getElementById('ea-client-total').textContent = '$' + (u * qty);
+  document.getElementById('ea-client-tier').textContent = _tierLabel(qty) + ' · $' + u + ' each';
+}
+async function buyExtraGrowthAccounts() {
+  var qty = Math.max(1, Math.min(1000, parseInt(document.getElementById('ea-growth-qty').value, 10) || 1));
+  document.getElementById('ga-qty').value = qty;
+  await openGrowthBuyModal();
+}
+async function buyExtraClientAccounts() {
+  var qty = Math.max(1, Math.min(1000, parseInt(document.getElementById('ea-client-qty').value, 10) || 1));
+  buyClientAccounts(qty);
 }
 async function setSafetyLevel(level) {
   try {
@@ -15217,16 +15356,22 @@ async function generateVideoScript(templateHint) {
   var result   = document.getElementById('vs-result');
   loading.style.display = 'block';
   result.style.display = 'none';
-  var d = await apiFetch('/api/video-script/generate', 'POST', {
-    topic: topic, niche: niche, duration: _vsDuration,
-    style: style, platform: platform, template_hint: templateHint || ''
-  });
-  loading.style.display = 'none';
-  if (d && d.ok) {
-    renderVideoScript(d.script, d.meta);
-  } else {
+  try {
+    var d = await apiFetch('/api/video-script/generate', 'POST', {
+      topic: topic, niche: niche, duration: _vsDuration,
+      style: style, platform: platform, template_hint: templateHint || ''
+    });
+    if (d && d.ok) {
+      renderVideoScript(d.script, d.meta);
+    } else {
+      result.style.display = 'block';
+      result.innerHTML = '<div style="color:var(--red);padding:16px">' + (d && d.detail ? d.detail : 'Failed to generate script.') + '</div>';
+    }
+  } catch (e) {
     result.style.display = 'block';
-    result.innerHTML = '<div style="color:var(--red);padding:16px">' + (d && d.detail ? d.detail : 'Failed to generate script.') + '</div>';
+    result.innerHTML = '<div style="color:var(--red);padding:16px">' + (e.message || 'Failed to generate script.') + '</div>';
+  } finally {
+    loading.style.display = 'none';
   }
 }
 
@@ -15436,18 +15581,26 @@ async function runAudit() {
   var followers = (document.getElementById('audit-followers') || {value:'1K-10K'}).value;
   var ppw       = parseFloat((document.getElementById('audit-ppw') || {value:'3'}).value);
   var bio       = (document.getElementById('audit-bio') || {value:''}).value;
-  document.getElementById('audit-loading').style.display = 'block';
-  document.getElementById('audit-result').style.display = 'none';
-  var d = await apiFetch('/api/audit/analyze', 'POST', {
-    handle: handle, platform: platform, niche: niche,
-    follower_range: followers, posts_per_week: ppw, bio: bio
-  });
-  document.getElementById('audit-loading').style.display = 'none';
-  if (d && d.ok) {
-    renderAuditReport(d.audit);
-  } else {
-    document.getElementById('audit-result').style.display = 'block';
-    document.getElementById('audit-result').innerHTML = '<div style="color:var(--red);padding:16px">' + (d && d.detail ? d.detail : 'Audit failed.') + '</div>';
+  var loading = document.getElementById('audit-loading');
+  var result  = document.getElementById('audit-result');
+  loading.style.display = 'block';
+  result.style.display = 'none';
+  try {
+    var d = await apiFetch('/api/audit/analyze', 'POST', {
+      handle: handle, platform: platform, niche: niche,
+      follower_range: followers, posts_per_week: ppw, bio: bio
+    });
+    if (d && d.ok) {
+      renderAuditReport(d.audit);
+    } else {
+      result.style.display = 'block';
+      result.innerHTML = '<div style="color:var(--red);padding:16px">' + (d && d.detail ? d.detail : 'Audit failed.') + '</div>';
+    }
+  } catch (e) {
+    result.style.display = 'block';
+    result.innerHTML = '<div style="color:var(--red);padding:16px">' + (e.message || 'Audit failed.') + '</div>';
+  } finally {
+    loading.style.display = 'none';
   }
 }
 
@@ -15972,6 +16125,29 @@ function pwaInstall() {
     toast("Use your browser's menu: 'Add to Home Screen' or 'Install app'", 'info');
   }
 }
+
+// Settings page: install button + installed-state detection
+function settingsInstallPwa() {
+  if (_pwaPrompt) {
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.then(function() { _pwaPrompt = null; refreshPwaInstallSection(); });
+  } else if (window.matchMedia('(display-mode: standalone)').matches) {
+    toast('App is already installed','info');
+  } else {
+    toast("Use your browser's menu: 'Add to Home Screen' or 'Install app'", 'info');
+  }
+}
+function refreshPwaInstallSection() {
+  var banner = document.getElementById('pwa-installed-banner');
+  var row    = document.getElementById('pwa-install-row');
+  if (!banner || !row) return;
+  var installed = window.matchMedia('(display-mode: standalone)').matches
+               || window.navigator.standalone === true;
+  banner.style.display = installed ? '' : 'none';
+  row.style.display    = installed ? 'none' : 'flex';
+}
+document.addEventListener('DOMContentLoaded', refreshPwaInstallSection);
+window.addEventListener('appinstalled', refreshPwaInstallSection);
 
 function pwaClose() {
   sessionStorage.setItem('pwa_dismissed', '1');
