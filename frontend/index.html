@@ -6604,8 +6604,9 @@ function loadSidebarUser() {
 
 // ══ ONBOARDING FLOW ══════════════════════════════════════════════════════════
 var _obfSlide = 1;
-var _obfTotal = 5;
+var _obfTotal = 6;
 var _obfShopMode = 'shopify';
+var _obfGoal = '';
 
 async function obfInit() {
   try {
@@ -6668,14 +6669,36 @@ function obfUpdate() {
   if (backBtn) backBtn.style.display = _obfSlide > 1 ? 'block' : 'none';
   const nextBtn = document.getElementById('obf-next-btn');
   if (nextBtn) {
-    const labels = ['Get started →', 'Sounds good →', 'Save and continue →', 'Continue →', 'Go to dashboard →'];
+    const labels = ['Get started →', 'Continue →', 'Sounds good →', 'Save and continue →', 'Continue →', 'Go to dashboard →'];
     nextBtn.textContent = labels[_obfSlide - 1] || 'Next →';
+    // Disable Continue on the Goal slide until a card is picked
+    if (_obfSlide === 2) {
+      nextBtn.disabled = !_obfGoal;
+      nextBtn.style.opacity = _obfGoal ? '1' : '.45';
+      nextBtn.style.cursor  = _obfGoal ? 'pointer' : 'not-allowed';
+    } else {
+      nextBtn.disabled = false;
+      nextBtn.style.opacity = '1';
+      nextBtn.style.cursor  = 'pointer';
+    }
   }
 }
 
+function obfSelectGoal(el) {
+  _obfGoal = el.getAttribute('data-goal') || '';
+  document.querySelectorAll('.obf-goal-card').forEach(function(c) {
+    c.style.borderColor = (c === el) ? 'var(--ac)' : 'var(--border)';
+    c.style.background  = (c === el) ? 'rgba(var(--ac-rgb),.08)' : 'var(--glass-b)';
+  });
+  var h = document.getElementById('obf-main-goal');
+  if (h) h.value = _obfGoal;
+  obfUpdate();
+}
+
 async function obfNext() {
-  if (_obfSlide === 3) await obfSaveShop();
-  if (_obfSlide === 5) { await obfSaveProfile(); await obfComplete(); return; }
+  if (_obfSlide === 2 && !_obfGoal) { return; } // require a goal pick
+  if (_obfSlide === 4) await obfSaveShop();
+  if (_obfSlide === 6) { await obfSaveProfile(); await obfComplete(); return; }
   _obfSlide++;
   obfUpdate();
 }
@@ -6717,10 +6740,11 @@ async function obfSaveProfile() {
     const name = (document.getElementById('obf-prof-name') || {}).value || '';
     const company = (document.getElementById('obf-prof-company') || {}).value || '';
     const niche = (document.getElementById('obf-prof-niche') || {}).value || '';
-    await apiFetch('/api/onboarding/save_profile', 'POST', {name, company, niche});
+    await apiFetch('/api/onboarding/save_profile', 'POST', {name, company, niche, main_goal: _obfGoal});
     const user = JSON.parse(localStorage.getItem('ugv_user') || '{}');
     if (name) user.name = name;
     if (company) user.company = company;
+    if (_obfGoal) user.main_goal = _obfGoal;
     localStorage.setItem('ugv_user', JSON.stringify(user));
     loadSidebarUser();
   } catch(e) {}
@@ -11143,8 +11167,37 @@ function sendQueueToPost(id) {
       </div>
     </div>
 
-    <!-- SLIDE 2: HOW IT WORKS -->
+    <!-- SLIDE 2: MAIN GOAL -->
     <div class="obf-slide" id="obf-slide-2">
+      <div class="obf-hero-h" style="font-size:clamp(28px,4vw,48px);margin-bottom:10px">What's your main goal?</div>
+      <div class="obf-hero-sub" style="margin-bottom:36px">Pick one — we'll tailor your dashboard, suggestions, and AI tone around it. Change it anytime in Settings.</div>
+      <div class="obf-cards" style="max-width:880px;flex-wrap:wrap">
+        <div class="obf-card obf-goal-card" data-goal="grow_followers" onclick="obfSelectGoal(this)" style="cursor:pointer;flex:1 1 calc(50% - 16px);min-width:240px">
+          <div class="obf-card-icon">📈</div>
+          <div class="obf-card-title">Grow followers</div>
+          <div class="obf-card-desc">Build audience on Instagram, TikTok and YouTube with consistent, on-trend content.</div>
+        </div>
+        <div class="obf-card obf-goal-card" data-goal="sell_products" onclick="obfSelectGoal(this)" style="cursor:pointer;flex:1 1 calc(50% - 16px);min-width:240px">
+          <div class="obf-card-icon">🛍️</div>
+          <div class="obf-card-title">Sell products</div>
+          <div class="obf-card-desc">Drive sales from your webshop with product-focused captions, videos and scheduled drops.</div>
+        </div>
+        <div class="obf-card obf-goal-card" data-goal="build_brand" onclick="obfSelectGoal(this)" style="cursor:pointer;flex:1 1 calc(50% - 16px);min-width:240px">
+          <div class="obf-card-icon">✨</div>
+          <div class="obf-card-title">Build brand</div>
+          <div class="obf-card-desc">Establish a distinctive voice and aesthetic that people instantly recognise.</div>
+        </div>
+        <div class="obf-card obf-goal-card" data-goal="agency" onclick="obfSelectGoal(this)" style="cursor:pointer;flex:1 1 calc(50% - 16px);min-width:240px">
+          <div class="obf-card-icon">🧑‍💼</div>
+          <div class="obf-card-title">Agency / clients</div>
+          <div class="obf-card-desc">Manage multiple brands or creators in one place with per-client workspaces.</div>
+        </div>
+      </div>
+      <input type="hidden" id="obf-main-goal" value="">
+    </div>
+
+    <!-- SLIDE 3: HOW IT WORKS -->
+    <div class="obf-slide" id="obf-slide-3">
       <div class="obf-hero-h" style="font-size:clamp(28px,4vw,48px);margin-bottom:10px">How it works</div>
       <div class="obf-hero-sub" style="margin-bottom:40px">From signup to automatic content in under 5 minutes</div>
       <div class="obf-steps">
@@ -11175,8 +11228,8 @@ function sendQueueToPost(id) {
       </div>
     </div>
 
-    <!-- SLIDE 3: FORBIND DIN BUTIK -->
-    <div class="obf-slide" id="obf-slide-3">
+    <!-- SLIDE 4: FORBIND DIN BUTIK -->
+    <div class="obf-slide" id="obf-slide-4">
       <div class="obf-hero-h" style="font-size:clamp(26px,4vw,44px);margin-bottom:10px">Forbind din butik</div>
       <div class="obf-hero-sub" style="margin-bottom:32px">Optional — you can always do it later under Connect</div>
       <div class="obf-form-wide">
@@ -11202,8 +11255,8 @@ function sendQueueToPost(id) {
       </div>
     </div>
 
-    <!-- SLIDE 4: SOCIALE MEDIER -->
-    <div class="obf-slide" id="obf-slide-4">
+    <!-- SLIDE 5: SOCIALE MEDIER -->
+    <div class="obf-slide" id="obf-slide-5">
       <div class="obf-hero-h" style="font-size:clamp(26px,4vw,44px);margin-bottom:10px">Forbind sociale medier</div>
       <div class="obf-hero-sub" style="margin-bottom:32px">Connect the platforms you want to post on — skip and do it later</div>
       <div class="obf-platforms">
@@ -11238,8 +11291,8 @@ function sendQueueToPost(id) {
       </div>
     </div>
 
-    <!-- SLIDE 5: DIN PROFIL -->
-    <div class="obf-slide" id="obf-slide-5">
+    <!-- SLIDE 6: DIN PROFIL -->
+    <div class="obf-slide" id="obf-slide-6">
       <div class="obf-hero-h" style="font-size:clamp(26px,4vw,44px);margin-bottom:10px">Din profil</div>
       <div class="obf-hero-sub" style="margin-bottom:32px">Tell us a bit about you — it helps AI create better content</div>
       <div class="obf-profile-wrap">

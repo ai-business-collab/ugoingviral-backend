@@ -17,6 +17,7 @@ class SaveProfileRequest(BaseModel):
     name: str = ""
     company: str = ""
     niche: str = ""
+    main_goal: str = ""
 
 
 @router.get("/api/onboarding/status")
@@ -71,6 +72,10 @@ def save_ob_profile(req: SaveProfileRequest, current_user: dict = Depends(get_cu
         updates["name"] = req.name.strip()
     if req.company:
         updates["company"] = req.company.strip()
+    if req.main_goal:
+        goal = req.main_goal.strip().lower()
+        if goal in ("grow_followers", "sell_products", "build_brand", "agency"):
+            updates["main_goal"] = goal
     if updates:
         update_user(current_user["id"], updates)
     if req.niche:
