@@ -1282,6 +1282,260 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 .ws-select:focus{border-color:var(--ac)}
 .fa-mode-btn{padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border-b);background:var(--glass);color:var(--tx2);transition:all .2s;font-family:'Outfit',sans-serif;text-align:left}
 .fa-mode-btn.active{border-color:var(--ac);color:var(--ac);background:rgba(99,102,241,.1)}
+
+/* ═══════════════════════════════════════════════════════
+   PREMIUM REDESIGN — Dashboard / Schedule / Connect / Inbox
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Page hero (greeting / section header) ─────────────── */
+.hero-card {
+  background: linear-gradient(135deg, rgba(var(--ac-rgb),.08), rgba(var(--ac2-rgb),.04) 60%, transparent);
+  border: 1px solid rgba(var(--ac-rgb),.2);
+  border-radius: 18px;
+  padding: 22px 26px;
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.hero-card::before {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--ac-rgb),.22), transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+.hero-title {
+  font-size: 22px; font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--tx);
+  margin-bottom: 4px;
+}
+.hero-sub { font-size: 13px; color: var(--tx2); }
+.hero-actions { display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }
+
+/* ── Premium stat card (gradient + glow + trend) ──────── */
+.pstat {
+  position: relative;
+  background: linear-gradient(135deg, var(--glass), rgba(255,255,255,0.02));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px 22px;
+  overflow: hidden;
+  transition: transform .25s var(--spring), border-color .25s, box-shadow .25s;
+}
+.pstat:hover { transform: translateY(-3px); border-color: var(--border-b); box-shadow: 0 10px 32px rgba(0,0,0,.18); }
+.pstat::before {
+  content: '';
+  position: absolute; top: -50px; right: -50px;
+  width: 160px; height: 160px; border-radius: 50%;
+  filter: blur(50px); opacity: .35;
+  pointer-events: none;
+}
+.pstat::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--ac), var(--ac2));
+  opacity: .35;
+}
+.pstat.p1::before { background: var(--ac); }
+.pstat.p2::before { background: var(--ac2); }
+.pstat.p3::before { background: var(--ac3); }
+.pstat.p4::before { background: #f59e0b; }
+.pstat.p1::after { background: linear-gradient(90deg, var(--ac), rgba(var(--ac-rgb),.2)); }
+.pstat.p2::after { background: linear-gradient(90deg, var(--ac2), rgba(var(--ac2-rgb),.2)); }
+.pstat.p3::after { background: linear-gradient(90deg, var(--ac3), rgba(var(--ac3-rgb),.2)); }
+.pstat.p4::after { background: linear-gradient(90deg, #f59e0b, rgba(245,158,11,.2)); }
+.pstat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; position: relative; z-index: 1; }
+.pstat-icon {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  background: rgba(var(--ac-rgb),.1);
+  font-size: 18px;
+}
+.pstat.p2 .pstat-icon { background: rgba(var(--ac2-rgb),.12); }
+.pstat.p3 .pstat-icon { background: rgba(var(--ac3-rgb),.12); }
+.pstat.p4 .pstat-icon { background: rgba(245,158,11,.12); }
+.pstat-trend {
+  font-size: 11px; font-weight: 700;
+  padding: 3px 9px; border-radius: 10px;
+  background: rgba(34,197,94,.12); color: #22c55e;
+}
+.pstat-trend.down { background: rgba(239,68,68,.12); color: #ef4444; }
+.pstat-trend.flat { background: rgba(148,163,184,.12); color: #94a3b8; }
+.pstat-val {
+  font-size: 30px; font-weight: 800; line-height: 1.05;
+  letter-spacing: -1.2px;
+  color: var(--tx);
+  position: relative; z-index: 1;
+}
+.pstat.p1 .pstat-val { background: linear-gradient(135deg, var(--ac), var(--ac2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.pstat-lbl {
+  font-size: 11px; color: var(--tx3);
+  text-transform: uppercase; letter-spacing: 1.2px;
+  font-weight: 700;
+  margin-top: 4px;
+  position: relative; z-index: 1;
+}
+.pstat-sub { font-size: 11px; color: var(--tx3); margin-top: 8px; position: relative; z-index: 1; }
+
+/* ── Quick action tiles (Dashboard) ──────────────────── */
+.qact {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--glass-b);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  text-decoration: none;
+}
+.qact:hover { border-color: var(--border-ac); background: var(--glass-h); transform: translateY(-1px); }
+.qact-icon { font-size: 22px; flex-shrink: 0; }
+.qact-name { font-size: 13px; font-weight: 700; color: var(--tx); }
+.qact-desc { font-size: 11px; color: var(--tx3); margin-top: 1px; }
+
+/* ── Brand chip (platform badges in status row) ──────── */
+.brand-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--glass-b);
+  font-size: 12px; font-weight: 600;
+  transition: all .2s var(--ease);
+}
+.brand-chip .bc-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--tx3); opacity: .55; flex-shrink: 0;
+  transition: all .2s;
+}
+.brand-chip.connected .bc-dot,
+.brand-chip .bc-dot.on { background: #22c55e; box-shadow: 0 0 8px #22c55e; opacity: 1; }
+.brand-chip.ig.connected { background: linear-gradient(135deg, rgba(225,48,108,.08), rgba(252,176,69,.04)); border-color: rgba(225,48,108,.3); }
+.brand-chip.tt.connected { background: rgba(255,0,80,.06); border-color: rgba(255,0,80,.3); }
+.brand-chip.fb.connected { background: rgba(24,119,242,.06); border-color: rgba(24,119,242,.3); }
+.brand-chip.tw.connected { background: rgba(29,161,242,.06); border-color: rgba(29,161,242,.3); }
+.brand-chip.yt.connected { background: rgba(255,0,0,.06); border-color: rgba(255,0,0,.3); }
+.brand-chip.sh.connected { background: rgba(149,191,29,.06); border-color: rgba(149,191,29,.3); }
+
+/* ── Pill tab bar (Schedule / Inbox / others) ────────── */
+.ptab-bar {
+  display: inline-flex; gap: 4px;
+  padding: 5px;
+  background: var(--glass-b);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 18px;
+  max-width: 100%; overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ptab-btn {
+  background: none; border: none;
+  padding: 9px 16px; border-radius: 10px;
+  font-size: 12px; font-weight: 700;
+  color: var(--tx3);
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  white-space: nowrap;
+}
+.ptab-btn:hover { color: var(--tx2); background: var(--glass-h); }
+.ptab-btn.active {
+  color: var(--ac);
+  background: rgba(var(--ac-rgb),.12);
+  box-shadow: inset 0 0 0 1px rgba(var(--ac-rgb),.25);
+}
+
+/* ── Premium Connect card (refinement of .concard) ───── */
+.concard {
+  background: linear-gradient(135deg, var(--glass), rgba(255,255,255,0.015));
+  position: relative;
+  overflow: hidden;
+}
+.concard::before {
+  content: '';
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 3px;
+  background: var(--border);
+  transition: background .25s;
+}
+.concard.ok::before { background: linear-gradient(180deg, var(--ac3), rgba(var(--ac3-rgb),.4)); }
+.concard:hover { border-color: var(--border-b); }
+.concard .concard-top { padding-left: 6px; }
+
+/* Compact connection status overview bar */
+.conn-status-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(var(--ac-rgb),.06), rgba(var(--ac2-rgb),.03));
+  border: 1px solid rgba(var(--ac-rgb),.18);
+  border-radius: 14px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.conn-progress-track {
+  height: 8px; background: var(--glass-b); border-radius: 4px; flex: 1; min-width: 140px;
+  overflow: hidden;
+}
+.conn-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ac), var(--ac3));
+  border-radius: 4px;
+  transition: width .6s var(--ease);
+}
+
+/* ── Inbox: chat-style preview cards (info banner-style) */
+.inbox-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.inbox-stat {
+  padding: 14px 16px;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.inbox-stat .v { font-size: 22px; font-weight: 800; color: var(--tx); letter-spacing: -0.5px; }
+.inbox-stat .l { font-size: 11px; color: var(--tx3); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-top: 4px; }
+.inbox-stat.unread .v { color: var(--ac); }
+
+/* Section divider with accent */
+.sec-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 14px 0 16px;
+}
+.sec-divider .bar {
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.sec-divider .lbl {
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 2px;
+  color: var(--tx3);
+}
+
+/* Schedule view filter chip group */
+.cal-view-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .hero-card { padding: 16px 18px; }
+  .hero-title { font-size: 18px; }
+  .pstat { padding: 16px 18px; }
+  .pstat-val { font-size: 24px; }
+  .ptab-bar { width: 100%; }
+  .ptab-btn { flex: 1; padding: 8px 10px; font-size: 11px; }
+}
 </style>
 <style>.curr-btn.curr-active{background:rgba(255,255,255,.14)!important;color:#fff!important}</style>
 </head>
@@ -1501,6 +1755,19 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ══ DASHBOARD ══════════════════════════════════════════════════════════ -->
   <div id="page-dashboard" class="page active">
+
+    <!-- Hero greeting -->
+    <div class="hero-card">
+      <div style="position:relative;z-index:1;flex:1;min-width:240px">
+        <div class="hero-title" id="dash-greeting">Welcome back 👋</div>
+        <div class="hero-sub" id="dash-greet-sub">Here's how your social media autopilot is doing today.</div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn bp bsm" onclick="nav('posting')">📅 Schedule a post</button>
+        <button class="btn bg bsm" onclick="nav('generator')">✨ Generate content</button>
+      </div>
+    </div>
+
     <!-- Setup completion widget -->
     <div id="setup-widget" style="display:none">
       <div class="card" style="margin-bottom:20px">
@@ -1508,23 +1775,72 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="setup-widget-items" id="setup-widget-items"></div>
       </div>
     </div>
+
+    <!-- Premium stat cards -->
     <div class="g4" style="margin-bottom:22px">
-      <div class="stat s1"><div class="stat-glow"></div><div class="slbl">Products</div><div class="sval" id="s-prod">0</div><div class="ssub">Added</div></div>
-      <div class="stat s2"><div class="stat-glow"></div><div class="slbl">Content</div><div class="sval" id="s-cont">0</div><div class="ssub">Genereret</div></div>
-      <div class="stat s3"><div class="stat-glow"></div><div class="slbl">Scheduled</div><div class="sval" id="s-sched">0</div><div class="ssub">Posts in queue</div></div>
-      <div class="stat s4"><div class="stat-glow"></div><div class="slbl">Creators</div><div class="sval" id="s-creators">0</div><div class="ssub">Active profiles</div></div>
+      <div class="pstat p1">
+        <div class="pstat-head">
+          <div class="pstat-icon">🛍️</div>
+          <span class="pstat-trend flat">—</span>
+        </div>
+        <div class="pstat-val" id="s-prod">0</div>
+        <div class="pstat-lbl">Products</div>
+        <div class="pstat-sub">In your catalog</div>
+      </div>
+      <div class="pstat p2">
+        <div class="pstat-head">
+          <div class="pstat-icon">✨</div>
+          <span class="pstat-trend flat">—</span>
+        </div>
+        <div class="pstat-val" id="s-cont">0</div>
+        <div class="pstat-lbl">Content</div>
+        <div class="pstat-sub">AI-generated</div>
+      </div>
+      <div class="pstat p3">
+        <div class="pstat-head">
+          <div class="pstat-icon">📅</div>
+          <span class="pstat-trend flat">—</span>
+        </div>
+        <div class="pstat-val" id="s-sched">0</div>
+        <div class="pstat-lbl">Scheduled</div>
+        <div class="pstat-sub">Posts in queue</div>
+      </div>
+      <div class="pstat p4">
+        <div class="pstat-head">
+          <div class="pstat-icon">👤</div>
+          <span class="pstat-trend flat">—</span>
+        </div>
+        <div class="pstat-val" id="s-creators">0</div>
+        <div class="pstat-lbl">Creators</div>
+        <div class="pstat-sub">Active profiles</div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="card" style="margin-bottom:22px">
+      <div class="ctitle">⚡ Quick Actions</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:6px">
+        <a class="qact" onclick="nav('generator')"><div class="qact-icon">✨</div><div><div class="qact-name">Generate content</div><div class="qact-desc">AI captions, hooks, scripts</div></div></a>
+        <a class="qact" onclick="nav('studio')"><div class="qact-icon">🎬</div><div><div class="qact-name">Video Studio</div><div class="qact-desc">AI video + portrait</div></div></a>
+        <a class="qact" onclick="nav('posting')"><div class="qact-icon">📅</div><div><div class="qact-name">Schedule</div><div class="qact-desc">Plan upcoming posts</div></div></a>
+        <a class="qact" onclick="nav('connect')"><div class="qact-icon">🔗</div><div><div class="qact-name">Connect</div><div class="qact-desc">Link your platforms</div></div></a>
+        <a class="qact" onclick="nav('audit')"><div class="qact-icon">📋</div><div><div class="qact-name">Run audit</div><div class="qact-desc">Score any account</div></div></a>
+        <a class="qact" onclick="nav('competitor')"><div class="qact-icon">🔍</div><div><div class="qact-name">Spy competitors</div><div class="qact-desc">Strategy breakdown</div></div></a>
+      </div>
     </div>
 
     <div class="g2">
       <div class="card">
-        <div class="ctitle">📊 Platform Status</div>
-        <div class="trow"><div><div class="tname">🛍️ Shopify</div><div class="tdesc" id="d-shop">Ikke konfigureret</div></div><span class="sdot off" id="dot-s-shop"></span></div>
-        <div class="trow"><div><div class="tname">📸 Instagram</div><div class="tdesc" id="d-ig">Ikke forbundet</div></div><span class="sdot off" id="dot-s-ig"></span></div>
-        <div class="trow"><div><div class="tname">🎵 TikTok</div><div class="tdesc" id="d-tt">Ikke forbundet</div></div><span class="sdot off" id="dot-s-tt"></span></div>
-        <div class="trow"><div><div class="tname">📘 Facebook</div><div class="tdesc" id="d-fb">Ikke forbundet</div></div><span class="sdot off" id="dot-s-fb"></span></div>
-        <div class="trow"><div><div class="tname">🐦 X / Twitter</div><div class="tdesc" id="d-tw">Ikke forbundet</div></div><span class="sdot off" id="dot-s-tw"></span></div>
-        <div class="trow"><div><div class="tname">▶️ YouTube</div><div class="tdesc" id="d-yt">Ikke forbundet</div></div><span class="sdot off" id="dot-s-yt"></span></div>
-        
+        <div class="ctitle">📡 Platform Status</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:6px">
+          <div class="brand-chip sh" id="chip-shop"><span class="bc-dot" id="dot-s-shop"></span>🛍️ Shopify<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-shop">—</span></div>
+          <div class="brand-chip ig" id="chip-ig"><span class="bc-dot" id="dot-s-ig"></span>📸 Instagram<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-ig">—</span></div>
+          <div class="brand-chip tt" id="chip-tt"><span class="bc-dot" id="dot-s-tt"></span>🎵 TikTok<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-tt">—</span></div>
+          <div class="brand-chip fb" id="chip-fb"><span class="bc-dot" id="dot-s-fb"></span>📘 Facebook<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-fb">—</span></div>
+          <div class="brand-chip tw" id="chip-tw"><span class="bc-dot" id="dot-s-tw"></span>🐦 X / Twitter<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-tw">—</span></div>
+          <div class="brand-chip yt" id="chip-yt"><span class="bc-dot" id="dot-s-yt"></span>▶️ YouTube<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-yt">—</span></div>
+        </div>
+        <button class="btn bg bsm" style="margin-top:12px;width:100%" onclick="nav('connect')">🔗 Manage connections →</button>
       </div>
       <div class="card">
         <div class="ctitle">📋 Seneste content</div>
@@ -1831,13 +2147,25 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   <!-- ══ POST & SCHEDULE ════════════════════════════════════════════════════ -->
   <div id="page-posting" class="page">
 
+    <!-- Hero header -->
+    <div class="hero-card">
+      <div style="position:relative;z-index:1;flex:1;min-width:240px">
+        <div class="hero-title">📅 Post &amp; Schedule</div>
+        <div class="hero-sub">Plan, automate, repost — keep every platform fed without lifting a finger.</div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn bp bsm" onclick="switchPostTab('schedule')">✍️ New post</button>
+        <button class="btn bg bsm" onclick="switchPostTab('actions')">📅 Plan ahead</button>
+      </div>
+    </div>
+
     <!-- Post & Schedule tab bar -->
-    <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--bd);padding-bottom:12px;flex-wrap:wrap">
-      <button id="post-tab-schedule" class="btn bp bsm" onclick="switchPostTab('schedule')" style="font-size:12px">📅 Schedule</button>
-      <button id="post-tab-autopost" class="btn bg bsm" onclick="switchPostTab('autopost')" style="font-size:12px">⚙️ Auto-post</button>
-      <button id="post-tab-platforms" class="btn bg bsm" onclick="switchPostTab('platforms')" style="font-size:12px">🔗 Platforms</button>
-      <button id="post-tab-repost" class="btn bg bsm" onclick="switchPostTab('repost')" style="font-size:12px">♻️ Auto Repost</button>
-      <button id="post-tab-actions" class="btn bg bsm" onclick="switchPostTab('actions')" style="font-size:12px">🚀 Actions</button>
+    <div class="ptab-bar" role="tablist" aria-label="Post sections">
+      <button id="post-tab-schedule"  class="ptab-btn active" onclick="switchPostTab('schedule')">📅 Schedule</button>
+      <button id="post-tab-autopost"  class="ptab-btn"        onclick="switchPostTab('autopost')">⚙️ Auto-post</button>
+      <button id="post-tab-platforms" class="ptab-btn"        onclick="switchPostTab('platforms')">🔗 Platforms</button>
+      <button id="post-tab-repost"    class="ptab-btn"        onclick="switchPostTab('repost')">♻️ Auto Repost</button>
+      <button id="post-tab-actions"   class="ptab-btn"        onclick="switchPostTab('actions')">🚀 Actions</button>
     </div>
 
     <!-- TAB: Schedule (create post + calendar) -->
@@ -2260,12 +2588,24 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ══ INBOX & DM ════════════════════════════════════════════════════════ -->
   <div id="page-inbox" class="page">
+
+    <!-- Hero header -->
+    <div class="hero-card">
+      <div style="position:relative;z-index:1;flex:1;min-width:240px">
+        <div class="hero-title">💬 Inbox &amp; DMs</div>
+        <div class="hero-sub">Reply to DMs, comments, and emails — manually or fully on autopilot with Ghost Mode AI.</div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn bp bsm" onclick="switchInboxTab('autodm')">⚙️ Configure Auto DM</button>
+      </div>
+    </div>
+
     <!-- Tabs -->
-    <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--bd);padding-bottom:12px;flex-wrap:wrap">
-      <button id="inbox-tab-dm" class="btn bp bsm" onclick="switchInboxTab('dm')" style="font-size:12px">💬 Messages</button>
-      <button id="inbox-tab-autodm" class="btn bg bsm" onclick="switchInboxTab('autodm')" style="font-size:12px">⚙️ Auto DM</button>
-      <button id="inbox-tab-autocomments" class="btn bg bsm" onclick="switchInboxTab('autocomments')" style="font-size:12px">💭 Auto Comments</button>
-      <button id="inbox-tab-email" class="btn bg bsm" onclick="switchInboxTab('email')" style="font-size:12px">📧 Email</button>
+    <div class="ptab-bar" role="tablist" aria-label="Inbox sections">
+      <button id="inbox-tab-dm"           class="ptab-btn active" onclick="switchInboxTab('dm')">💬 Messages</button>
+      <button id="inbox-tab-autodm"       class="ptab-btn"        onclick="switchInboxTab('autodm')">⚙️ Auto DM</button>
+      <button id="inbox-tab-autocomments" class="ptab-btn"        onclick="switchInboxTab('autocomments')">💭 Auto Comments</button>
+      <button id="inbox-tab-email"        class="ptab-btn"        onclick="switchInboxTab('email')">📧 Email</button>
     </div>
 
     <!-- DM sektion -->
@@ -2619,6 +2959,30 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ══ CONNECT ════════════════════════════════════════════════════════════ -->
   <div id="page-connect" class="page">
+
+    <!-- Hero header -->
+    <div class="hero-card">
+      <div style="position:relative;z-index:1;flex:1;min-width:240px">
+        <div class="hero-title">🔗 Connect your platforms</div>
+        <div class="hero-sub">Link each social network so UgoingViral can post, reply, and grow on your behalf — securely and on-brand.</div>
+      </div>
+    </div>
+
+    <!-- Connection overview bar -->
+    <div class="conn-status-bar">
+      <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:220px">
+        <div style="font-size:32px">🔗</div>
+        <div>
+          <div style="font-size:13px;color:var(--tx3);font-weight:700;letter-spacing:.6px;text-transform:uppercase">Connected</div>
+          <div style="font-size:20px;font-weight:800;color:var(--tx)"><span id="conn-count-num">0</span> <span style="color:var(--tx3);font-weight:600">/ <span id="conn-count-total">7</span> platforms</span></div>
+        </div>
+      </div>
+      <div style="flex:2;min-width:160px">
+        <div class="conn-progress-track"><div class="conn-progress-fill" id="conn-progress-fill" style="width:0%"></div></div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:6px" id="conn-progress-note">Connect at least one to start posting.</div>
+      </div>
+    </div>
+
     <div class="g2">
       <div>
         <div class="concard" id="con-shopify">
@@ -6797,7 +7161,23 @@ function nav(p) {
   if (p === 'video-script') { /* ready */ }
   if (p === 'reel-templates') { loadReelTemplates(); }
   if (p === 'audit') { /* ready */ }
+  if (p === 'dashboard') { updateDashGreeting(); }
   _currentPage = p;
+}
+
+function updateDashGreeting() {
+  var el = document.getElementById('dash-greeting');
+  if (!el) return;
+  var h = new Date().getHours();
+  var time = h < 5 ? 'Working late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 22 ? 'Good evening' : 'Late night';
+  var nm = (document.getElementById('sb-display-name')?.textContent || '').trim();
+  nm = (nm && nm !== '–') ? (', ' + nm.split(' ')[0]) : '';
+  el.textContent = time + nm + ' 👋';
+  var sub = document.getElementById('dash-greet-sub');
+  if (sub) {
+    var d = new Date().toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+    sub.textContent = d + ' · Here\'s how your autopilot is doing.';
+  }
 }
 function toggleSubMenu(id) {
   const sub = document.getElementById(id);
@@ -6842,14 +7222,15 @@ async function loadConnections() {
   try {
     const d = await apiFetch('/api/settings/connections');
     const platMap = {
-      shopify:   ['dot-shop','txt-shop','cs-shopify','ov-shop','ovd-shop','dot-s-shop','d-shop'],
-      instagram: ['','','cs-instagram','ov-ig','ovd-ig','dot-s-ig','d-ig'],
-      tiktok:    ['','','cs-tiktok','ov-tt','ovd-tt','dot-s-tt','d-tt'],
-      facebook:  ['','','cs-facebook','ov-fb','ovd-fb','dot-s-fb','d-fb'],
-      twitter:   ['','','cs-twitter','ov-tw','ovd-tw','dot-s-tw','d-tw'],
-      youtube:   ['','','cs-youtube','ov-yt','ovd-yt','dot-s-yt','d-yt'],
-      ai:        ['dot-ai','txt-ai','cs-ai','ov-ai','ovd-ai','dot-s-ai','d-ai'],
+      shopify:   ['dot-shop','txt-shop','cs-shopify','ov-shop','ovd-shop','dot-s-shop','d-shop','chip-shop'],
+      instagram: ['','','cs-instagram','ov-ig','ovd-ig','dot-s-ig','d-ig','chip-ig'],
+      tiktok:    ['','','cs-tiktok','ov-tt','ovd-tt','dot-s-tt','d-tt','chip-tt'],
+      facebook:  ['','','cs-facebook','ov-fb','ovd-fb','dot-s-fb','d-fb','chip-fb'],
+      twitter:   ['','','cs-twitter','ov-tw','ovd-tw','dot-s-tw','d-tw','chip-tw'],
+      youtube:   ['','','cs-youtube','ov-yt','ovd-yt','dot-s-yt','d-yt','chip-yt'],
+      ai:        ['dot-ai','txt-ai','cs-ai','ov-ai','ovd-ai','dot-s-ai','d-ai',''],
     };
+    var connected = 0, total = 0;
     for (const [k, ids] of Object.entries(platMap)) {
       const ok = d[k]; const label = ok ? 'Forbundet ✓' : 'Ikke forbundet';
       if (ids[0]) setDot(ids[0], ok);
@@ -6861,7 +7242,21 @@ async function loadConnections() {
       if (ids[6]) setText(ids[6], ok ? 'Forbundet' : 'Ikke konfigureret');
       const card = document.getElementById('con-' + k);
       if (card) card.classList.toggle('ok', ok);
+      const chip = ids[7] ? document.getElementById(ids[7]) : null;
+      if (chip) chip.classList.toggle('connected', !!ok);
+      if (k !== 'ai') { total += 1; if (ok) connected += 1; }
     }
+    // Update connect-page progress bar
+    var num = document.getElementById('conn-count-num');
+    var tot = document.getElementById('conn-count-total');
+    var fill = document.getElementById('conn-progress-fill');
+    var note = document.getElementById('conn-progress-note');
+    if (num) num.textContent = connected;
+    if (tot) tot.textContent = total;
+    if (fill) fill.style.width = total ? (Math.round(connected/total*100) + '%') : '0%';
+    if (note) note.textContent = connected === 0
+      ? 'Connect at least one to start posting.'
+      : (connected < total ? (connected + ' of ' + total + ' connected — link more for fuller reach.') : 'All set — every platform is connected. 🎉');
     const ae = d.api_enabled || {};
     for (const p of ['shopify','instagram','tiktok','facebook','twitter']) {
       const el = document.getElementById('tog-api-' + p);
@@ -8829,7 +9224,7 @@ function switchPostTab(tab) {
     var el = document.getElementById('post-panel-' + p);
     if (el) el.style.display = (p === tab) ? 'block' : 'none';
     var btn = document.getElementById('post-tab-' + p);
-    if (btn) btn.className = (p === tab) ? 'btn bp bsm' : 'btn bg bsm';
+    if (btn) btn.classList.toggle('active', p === tab);
   });
   if (tab === 'platforms') buildAutoPlatGrid();
   if (tab === 'repost') loadRepostSettings();
@@ -8944,7 +9339,7 @@ function switchInboxTab(tab) {
     var el = document.getElementById('inbox-panel-' + p);
     if (el) el.style.display = (p === tab) ? 'block' : 'none';
     var btn = document.getElementById('inbox-tab-' + p);
-    if (btn) btn.className = (p === tab) ? 'btn bp bsm' : 'btn bg bsm';
+    if (btn) btn.classList.toggle('active', p === tab);
   });
   // Hide compose card when leaving email tab
   var compose = document.getElementById('email-compose-card');
