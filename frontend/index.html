@@ -1242,7 +1242,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" id="ni-video-script" onclick="nav('video-script')">🎬 <span>Video Script</span></div>
       <div class="sub-item" id="ni-reel-templates" onclick="nav('reel-templates')">📱 <span>Reel Templates</span></div>
       <div class="sub-item" onclick="nav('history')">📚 <span data-i18n="nav.history">Historik</span></div>
-      <div class="sub-item" onclick="nav('content-library')">🗂️ <span data-i18n="nav.library">Bibliotek</span></div>
+      <div class="sub-item" onclick="nav('content-library')">🗂️ <span data-i18n="nav.library">Library</span></div>
       <div class="sub-item" onclick="nav('library')">📁 <span data-i18n="nav.mapper">Content Mapper</span></div>
     </div>
 
@@ -1516,18 +1516,37 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ══ CREATORS ══════════════════════════════════════════════════════════ -->
   <div id="page-creators" class="page">
+
+    <!-- Intro hero -->
+    <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(124,58,237,.05),rgba(0,229,255,.03));border:1px solid rgba(124,58,237,.2)">
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div style="font-size:40px;line-height:1">👤</div>
+        <div style="flex:1;min-width:240px">
+          <div style="font-size:18px;font-weight:800;color:var(--tx);margin-bottom:6px">Influencer Profiles</div>
+          <div style="font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:10px">
+            Add creators and influencers to track and collaborate with. Drop in their Instagram/TikTok handle
+            and a few sample posts — UgoingViral picks up their voice, style and best-performing formats so
+            the AI can generate on-brand content for them (or in collaboration with you) and post on their behalf.
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px">
+            <span style="background:rgba(124,58,237,.12);color:#a78bfa;padding:3px 10px;border-radius:8px;font-weight:700">🎨 Voice + style</span>
+            <span style="background:rgba(0,229,255,.1);color:var(--ac);padding:3px 10px;border-radius:8px;font-weight:700">📊 Track performance</span>
+            <span style="background:rgba(34,197,94,.1);color:#22c55e;padding:3px 10px;border-radius:8px;font-weight:700">🤝 Collaborate</span>
+            <span style="background:rgba(245,158,11,.1);color:#f59e0b;padding:3px 10px;border-radius:8px;font-weight:700">🤖 AI posts on their behalf</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="ctitle">
-        <span style="display:flex;align-items:center">👤 Creator Profiles<span class="tip"><span class="tip-icon">?</span><span class="tip-box">Add Instagram/TikTok profiles that promote your products. AI generates content in their style and posts automatically.</span></span></span>
+        <span style="display:flex;align-items:center">👤 Your creators</span>
         <button class="btn bp bsm" onclick="openCreatorModal()">➕ Add creator</button>
-      </div>
-      <div class="info-box" style="margin-bottom:16px">
-        💡 Creators are Instagram/TikTok profiles that promote your products. Add their images and style — AI generates content in their voice and posts automatically on their behalf.
       </div>
       <div id="creators-list">
         <div style="color:var(--tx3);font-size:13px;text-align:center;padding:40px">
           <div style="font-size:32px;margin-bottom:12px;opacity:.3">👤</div>
-          Ingen creators endnu
+          No creators yet — click <strong style="color:var(--ac)">Add creator</strong> to get started.
         </div>
       </div>
     </div>
@@ -2703,74 +2722,39 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <button class="btn bg bsm">▾</button>
           </div>
           <div class="conbody">
-            <div id="tg-conn-status" style="margin-bottom:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-size:12px;color:var(--tx3)">Checking bot status...</div>
-            <div style="margin-bottom:14px">
-              <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:6px">Step 1 — Get bot token</div>
-              <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">Create a bot at <a href="https://t.me/BotFather" target="_blank" style="color:var(--ac)">@BotFather</a> and add the token to your server <code style="background:var(--bg);padding:1px 4px;border-radius:3px">.env</code>:</div>
-              <div style="font-family:monospace;font-size:11px;background:var(--bg);padding:8px 10px;border-radius:6px;border:1px solid var(--border);color:var(--tx2)">TELEGRAM_BOT_TOKEN=1234567890:ABCdef...</div>
-            </div>
-            <div style="margin-bottom:14px">
-              <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:6px">Step 2 — Register Webhook</div>
-              <button class="btn bp bsm" onclick="registerTelegramWebhook()">Register Webhook</button>
-              <div id="tg-conn-webhook-result" style="margin-top:6px;font-size:11px;color:var(--tx3)"></div>
-            </div>
-            <div style="margin-bottom:14px">
-              <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:6px">Step 3 — Link your account</div>
-              <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">Generate a token and send <code style="background:var(--bg);padding:1px 4px;border-radius:3px">/link TOKEN</code> to your bot:</div>
-              <button class="btn bg bsm" onclick="generateTelegramLinkToken()">Generate Link Token</button>
-              <div id="tg-conn-link-result" style="margin-top:10px;display:none;padding:10px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
-                <div style="font-size:10px;color:var(--tx3);margin-bottom:3px">Send this to your Telegram bot:</div>
-                <div id="tg-conn-link-cmd" style="font-family:monospace;font-size:12px;font-weight:700;color:var(--ac)"></div>
-                <div id="tg-conn-bot-link" style="margin-top:6px;font-size:11px;color:var(--tx3)"></div>
-              </div>
-            </div>
-            <div style="padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--tx3)">Commands: /start /stats /credits /autopilot /help</div>
-          </div>
-        </div>
+            <div id="tg-conn-status" style="margin-bottom:14px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);font-size:12px;color:var(--tx3)">Checking bot status...</div>
 
-        <div class="card" id="safety-card">
-          <div class="ctitle"><span>🛡️ Automation Safety</span><button class="btn bg bsm" onclick="loadSafetyStatus()">↻</button></div>
-          <div style="margin-bottom:14px">
-            <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Safety Level</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="safety-btn" id="sbtn-conservative" onclick="setSafetyLevel('conservative')">🐢 Conservative</button>
-              <button class="safety-btn active" id="sbtn-balanced" onclick="setSafetyLevel('balanced')">⚖️ Balanced</button>
-              <button class="safety-btn" id="sbtn-aggressive" onclick="setSafetyLevel('aggressive')">⚡ Aggressive</button>
+            <!-- 4-step user-facing connect flow -->
+            <ol style="list-style:none;counter-reset:tgstep;padding:0;margin:0 0 14px;display:flex;flex-direction:column;gap:10px">
+              <li style="counter-increment:tgstep;display:flex;gap:10px;align-items:flex-start">
+                <span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:rgba(0,229,255,.12);color:var(--ac);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center" aria-hidden="true">1</span>
+                <div style="font-size:12px;color:var(--tx2);line-height:1.6">Search <a href="https://t.me/Nex_u_agent_bot" target="_blank" rel="noopener" style="color:var(--ac);font-weight:700;text-decoration:none;border-bottom:1px solid rgba(0,229,255,.4)">@Nex_u_agent_bot</a> on Telegram</div>
+              </li>
+              <li style="counter-increment:tgstep;display:flex;gap:10px;align-items:flex-start">
+                <span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:rgba(0,229,255,.12);color:var(--ac);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center" aria-hidden="true">2</span>
+                <div style="font-size:12px;color:var(--tx2);line-height:1.6">Send <code style="background:var(--bg);padding:1px 6px;border-radius:4px;font-family:monospace;color:var(--ac)">/start</code> to the bot</div>
+              </li>
+              <li style="counter-increment:tgstep;display:flex;gap:10px;align-items:flex-start">
+                <span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:rgba(0,229,255,.12);color:var(--ac);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center" aria-hidden="true">3</span>
+                <div style="font-size:12px;color:var(--tx2);line-height:1.6">Copy your <strong style="color:var(--tx)">Chat ID</strong> from the bot's reply</div>
+              </li>
+              <li style="counter-increment:tgstep;display:flex;gap:10px;align-items:flex-start">
+                <span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:rgba(0,229,255,.12);color:var(--ac);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center" aria-hidden="true">4</span>
+                <div style="font-size:12px;color:var(--tx2);line-height:1.6">Paste it below and click <strong style="color:var(--tx)">Connect</strong></div>
+              </li>
+            </ol>
+
+            <div style="display:flex;gap:8px;align-items:stretch">
+              <input id="tg-chat-id-input" class="fi" placeholder="e.g. 6587735581" inputmode="numeric" pattern="[0-9-]*" style="flex:1" onkeydown="if(event.key==='Enter')connectTelegramChat()">
+              <button class="btn bp bsm" onclick="connectTelegramChat()" id="tg-connect-btn">✈️ Connect</button>
             </div>
-            <div id="safety-aggressive-warn" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:11px;color:#f59e0b">⚠️ Aggressive mode may increase risk of platform restrictions. Use at your own risk.</div>
-          </div>
-          <div style="margin-bottom:14px">
-            <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Daily Usage</div>
-            <div style="display:grid;gap:8px">
-              <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>❤️ Likes</span><span id="su-likes">0/150</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-likes" style="width:0%"></div></div></div>
-              <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>👤 Follows</span><span id="su-follows">0/50</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-follows" style="width:0%"></div></div></div>
-              <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>💬 Comments</span><span id="su-comments">0/80</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-comments" style="width:0%"></div></div></div>
-              <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>✉️ DMs</span><span id="su-dms">0/50</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-dms" style="width:0%"></div></div></div>
-            </div>
-          </div>
-          <div id="safety-pause-banner" style="display:none;padding:8px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:11px;color:#ef4444;margin-bottom:12px">🚫 Automation paused until <span id="safety-pause-until"></span></div>
-          <div style="border-top:1px solid var(--border);padding-top:12px">
-            <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Proxy Isolation</div>
-            <div id="proxy-empty" style="font-size:12px;color:var(--tx3);margin-bottom:8px">Not assigned — automation runs from the shared server IP.</div>
-            <div id="proxy-info" style="display:none;font-size:12px;margin-bottom:8px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                <span id="proxy-flag" style="font-size:18px">🌐</span>
-                <span style="font-weight:600">Oxylabs residential</span>
-                <span id="proxy-country" style="color:var(--tx3);font-size:11px"></span>
-              </div>
-              <div style="color:var(--tx3);font-size:11px">Session: <span id="proxy-session-id" style="font-family:monospace;color:var(--tx2)">–</span></div>
-              <div style="color:var(--tx3);font-size:11px">Time remaining: <span id="proxy-time-left" style="color:var(--tx2)">–</span></div>
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="btn bg bsm" id="btn-assign-proxy" onclick="assignProxy()" style="display:none">🌐 Assign Proxy</button>
-              <button class="btn bp bsm" id="btn-refresh-proxy" onclick="refreshProxy()" style="display:none">🔄 Refresh proxy session</button>
-              <span id="proxy-plan-locked" style="display:none;font-size:11px;color:var(--tx3);align-self:center">🔒 Proxy isolation requires Growth+ plan</span>
-            </div>
+            <div id="tg-connect-result" style="margin-top:8px;font-size:11px;display:none"></div>
+            <div style="padding-top:12px;margin-top:14px;border-top:1px solid var(--border);font-size:11px;color:var(--tx3);line-height:1.5">Commands available on the bot: <code style="background:var(--bg);padding:1px 4px;border-radius:3px">/start</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px">/stats</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px">/credits</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px">/autopilot</code> <code style="background:var(--bg);padding:1px 4px;border-radius:3px">/help</code></div>
           </div>
         </div>
 
         <div class="card">
-          <div class="ctitle"><span>🔍 Forbindelsesstatus</span><button class="btn bg bsm" onclick="loadConnections()">↻</button></div>
+          <div class="ctitle"><span>🔍 Connection status</span><button class="btn bg bsm" onclick="loadConnections()">↻</button></div>
           <div class="trow"><div><div class="tname">🛍️ Shopify</div><div class="tdesc" id="ov-shop">–</div></div><span class="sdot off" id="ovd-shop"></span></div>
           <div class="trow"><div><div class="tname">📸 Instagram</div><div class="tdesc" id="ov-ig">–</div></div><span class="sdot off" id="ovd-ig"></span></div>
           <div class="trow"><div><div class="tname">🎵 TikTok</div><div class="tdesc" id="ov-tt">–</div></div><span class="sdot off" id="ovd-tt"></span></div>
@@ -2787,18 +2771,18 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 <div id="page-library" class="page">
   <div class="card">
     <div class="ctitle">
-      <span>🖼️ Medie Bibliotek</span>
-      <div style="display:flex;gap:8px">
+      <span>🖼️ Media Library</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <input class="fi" id="lib-search" placeholder="🔍 Search..." style="width:140px" oninput="filterLibrary()">
-        <select class="fs" id="lib-folder-filter" style="width:130px" onchange="filterLibrary()"><option value="">📁 Alle mapper</option></select>
-        <button class="btn bg bsm" onclick="document.getElementById('lib-folder-modal').style.display='flex'">📁 Ny mappe</button>
+        <select class="fs" id="lib-folder-filter" style="width:140px" onchange="filterLibrary()"><option value="">📁 All folders</option></select>
+        <button class="btn bg bsm" onclick="document.getElementById('lib-folder-modal').style.display='flex'">📁 New folder</button>
         <button class="btn bp bsm" onclick="document.getElementById('lib-upload').click()">⬆️ Upload</button>
         <input type="file" id="lib-upload" accept="image/*,video/*" multiple style="display:none" onchange="uploadLibFiles(this)">
       </div>
     </div>
-    <div class="info-box" style="margin-bottom:16px">📸 Upload billeder og videoer. Organiser i mapper og send direkte til Post eller Content Generator.</div>
+    <div class="info-box" style="margin-bottom:16px">📸 Upload images and videos. Organize them in folders and send straight to Post or the Content Generator.</div>
     <div id="lib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px">
-      <div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🖼️</div>Ingen filer endnu — klik ⬆️ Upload</div>
+      <div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🖼️</div>No files yet — click ⬆️ Upload</div>
     </div>
   </div>
 </div>
@@ -2808,11 +2792,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <div class="card" style="margin-bottom:16px">
     <div class="ctitle">
-      <span>🗂️ Content Bibliotek</span>
+      <span>🗂️ Content Library</span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input class="fi" id="clib-search" placeholder="🔍 Search..." style="width:120px" oninput="clibRender()">
-        <select class="fs" id="clib-folder-sel" style="width:130px" onchange="clibRender()"><option value="">📁 Alle mapper</option></select>
-        <button class="btn bg bsm" onclick="document.getElementById('clib-folder-modal').style.display='flex'">📁 Ny mappe</button>
+        <select class="fs" id="clib-folder-sel" style="width:140px" onchange="clibRender()"><option value="">📁 All folders</option></select>
+        <button class="btn bg bsm" onclick="document.getElementById('clib-folder-modal').style.display='flex'">📁 New folder</button>
         <button class="btn bp bsm" onclick="document.getElementById('clib-file-upload').click()">⬆️ Upload</button>
         <input type="file" id="clib-file-upload" accept="image/*,video/*" multiple style="display:none" onchange="clibUploadFiles(this)">
       </div>
@@ -2854,16 +2838,16 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     </div>
   </div>
 
-  <!-- Mappe indstillinger -->
+  <!-- Folder settings -->
   <div class="card">
-    <div class="ctitle">⚙️ Mappe Indstillinger</div>
+    <div class="ctitle">⚙️ Folder settings</div>
     <div class="info-box" style="margin-bottom:14px">Configure which platform a folder automatically posts to, and select folders for random auto-post pool.</div>
-    <div id="clib-map-list"><div style="color:var(--tx3);font-size:12px;padding:8px 0">Opret mapper ovenfor for at konfigurere.</div></div>
+    <div id="clib-map-list"><div style="color:var(--tx3);font-size:12px;padding:8px 0">Create folders above to configure them.</div></div>
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
       <div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:10px">🎲 Random Content — select folders for auto-post pool</div>
       <div id="clib-random-folders" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
-    <button class="btn bg bsm" style="margin-top:14px" onclick="saveClibSettings()">💾 Gem indstillinger</button>
+    <button class="btn bg bsm" style="margin-top:14px" onclick="saveClibSettings()">💾 Save settings</button>
   </div>
 
 </div>
@@ -3654,7 +3638,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="font-size:22px;font-weight:800;color:var(--tx)">Growth Dashboard</div>
           <div style="font-size:12px;color:var(--tx3)">Last 30 days of content performance</div>
         </div>
-        <button class="btn bg bsm" onclick="loadGrowthDashboard();loadGrowthAccounts()">Refresh</button>
+        <button class="btn bg bsm" onclick="loadGrowthDashboard();loadGrowthAccounts();loadSafetyStatus()">Refresh</button>
       </div>
 
       <!-- Connected growth accounts -->
@@ -3668,6 +3652,48 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
         <div id="gd-accounts-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
           <div style="font-size:12px;color:var(--tx3);text-align:center;padding:20px;grid-column:1/-1">Loading accounts…</div>
+        </div>
+      </div>
+
+      <!-- ── Automation Safety (moved here from Connect page) ───────────── -->
+      <div class="card" id="safety-card" style="margin-bottom:20px">
+        <div class="ctitle"><span>🛡️ Automation Safety</span><button class="btn bg bsm" onclick="loadSafetyStatus()">↻</button></div>
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Safety Level</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="safety-btn" id="sbtn-conservative" onclick="setSafetyLevel('conservative')">🐢 Conservative</button>
+            <button class="safety-btn active" id="sbtn-balanced" onclick="setSafetyLevel('balanced')">⚖️ Balanced</button>
+            <button class="safety-btn" id="sbtn-aggressive" onclick="setSafetyLevel('aggressive')">⚡ Aggressive</button>
+          </div>
+          <div id="safety-aggressive-warn" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:11px;color:#f59e0b">⚠️ Aggressive mode may increase risk of platform restrictions. Use at your own risk.</div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Daily Usage</div>
+          <div style="display:grid;gap:8px">
+            <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>❤️ Likes</span><span id="su-likes">0/150</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-likes" style="width:0%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>👤 Follows</span><span id="su-follows">0/50</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-follows" style="width:0%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>💬 Comments</span><span id="su-comments">0/80</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-comments" style="width:0%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px"><span>✉️ DMs</span><span id="su-dms">0/50</span></div><div class="usage-bar"><div class="usage-bar-fill" id="sub-dms" style="width:0%"></div></div></div>
+          </div>
+        </div>
+        <div id="safety-pause-banner" style="display:none;padding:8px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:11px;color:#ef4444;margin-bottom:12px">🚫 Automation paused until <span id="safety-pause-until"></span></div>
+        <div style="border-top:1px solid var(--border);padding-top:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Proxy Isolation</div>
+          <div id="proxy-empty" style="font-size:12px;color:var(--tx3);margin-bottom:8px">Not assigned — automation runs from the shared server IP.</div>
+          <div id="proxy-info" style="display:none;font-size:12px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span id="proxy-flag" style="font-size:18px">🌐</span>
+              <span style="font-weight:600">Oxylabs residential</span>
+              <span id="proxy-country" style="color:var(--tx3);font-size:11px"></span>
+            </div>
+            <div style="color:var(--tx3);font-size:11px">Session: <span id="proxy-session-id" style="font-family:monospace;color:var(--tx2)">–</span></div>
+            <div style="color:var(--tx3);font-size:11px">Time remaining: <span id="proxy-time-left" style="color:var(--tx2)">–</span></div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn bg bsm" id="btn-assign-proxy" onclick="assignProxy()" style="display:none">🌐 Assign Proxy</button>
+            <button class="btn bp bsm" id="btn-refresh-proxy" onclick="refreshProxy()" style="display:none">🔄 Refresh proxy session</button>
+            <span id="proxy-plan-locked" style="display:none;font-size:11px;color:var(--tx3);align-self:center">🔒 Proxy isolation requires Growth+ plan</span>
+          </div>
         </div>
       </div>
 
@@ -13488,6 +13514,8 @@ async function loadGrowthAccounts() {
 
 async function loadGrowthDashboard() {
   loadGrowthAccounts();
+  // The Automation Safety card now lives on this page — refresh its data too.
+  try { loadSafetyStatus(); } catch(e) {}
   try {
     var d = await apiFetch('/api/growth/overview');
     // KPIs
@@ -13786,6 +13814,43 @@ async function loadTelegramStatus() {
   } catch(e) {
     if(box) box.textContent = 'Could not check bot status';
     if(legacyBox) legacyBox.textContent = 'Could not check bot status';
+  }
+}
+
+// Simple Chat-ID-paste connect for end users — replaces the dev-only
+// BotFather/webhook/link-token flow on the Connect page.
+async function connectTelegramChat() {
+  var input  = document.getElementById('tg-chat-id-input');
+  var btn    = document.getElementById('tg-connect-btn');
+  var result = document.getElementById('tg-connect-result');
+  if (!input || !btn || !result) return;
+  var raw = (input.value || '').trim();
+  if (!/^-?\d{5,}$/.test(raw)) {
+    result.style.display = 'block';
+    result.style.color = '#ef4444';
+    result.textContent = '⚠️ Paste the numeric Chat ID the bot sent you.';
+    return;
+  }
+  btn.disabled = true; btn.textContent = '⏳ Connecting…';
+  try {
+    var r = await apiFetch('/api/telegram/connect', 'POST', {chat_id: raw});
+    result.style.display = 'block';
+    if (r && r.ok) {
+      result.style.color = '#22c55e';
+      result.textContent = '✅ Connected — Nex can now message you on Telegram.';
+      input.value = '';
+      var cs = document.getElementById('cs-telegram');
+      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
+    } else {
+      result.style.color = '#ef4444';
+      result.textContent = '⚠️ ' + ((r && r.detail) || 'Could not save the Chat ID.');
+    }
+  } catch (e) {
+    result.style.display = 'block';
+    result.style.color = '#ef4444';
+    result.textContent = '⚠️ ' + (e.message || 'Connection failed');
+  } finally {
+    btn.disabled = false; btn.textContent = '✈️ Connect';
   }
 }
 

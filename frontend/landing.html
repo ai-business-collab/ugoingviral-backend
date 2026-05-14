@@ -1533,7 +1533,8 @@ async function handleRegister() {
       document.getElementById('reg-email').value = '';
       document.getElementById('reg-pass').value = '';
       closeModal();
-      showOnboarding(name);
+      // CSS-only WOW splash for 3s, then continue to the existing onboarding flow.
+      showSignupWow(name, function() { showOnboarding(name); });
     } else {
       msg.textContent = d.detail || 'Could not create account';
     }
@@ -1681,6 +1682,93 @@ function setBillingCycle() {
 
 </script>
 
+<!-- ══ SIGNUP WOW SPLASH (CSS-only, ~3s) ══════════════════════════════ -->
+<style>
+  #signup-wow { position: fixed; inset: 0; z-index: 2200; display: none;
+    align-items: center; justify-content: center; flex-direction: column;
+    background: radial-gradient(circle at 50% 35%, #0d1526 0%, #050810 60%, #000 100%);
+    overflow: hidden; transition: opacity .45s ease; opacity: 1; color: #fff;
+    font-family: var(--font-display, 'Inter', system-ui, sans-serif); }
+  #signup-wow.fading { opacity: 0; }
+  /* Sweeping aurora background */
+  #signup-wow::before, #signup-wow::after {
+    content: ''; position: absolute; inset: -30%;
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(0,229,255,.18) 90deg, transparent 180deg, rgba(124,58,237,.18) 270deg, transparent 360deg);
+    animation: sw-spin 6s linear infinite;
+    filter: blur(60px); opacity: .9; pointer-events: none;
+  }
+  #signup-wow::after { animation-duration: 9s; animation-direction: reverse; opacity: .55; }
+  @keyframes sw-spin { to { transform: rotate(360deg); } }
+  /* Logo block */
+  .signup-wow-logo {
+    width: 110px; height: 110px; border-radius: 28px; position: relative; z-index: 2;
+    background: linear-gradient(135deg, #00e5ff 0%, #7c3aed 100%);
+    display: flex; align-items: center; justify-content: center; font-size: 56px;
+    box-shadow: 0 0 80px rgba(0,229,255,.55), 0 0 120px rgba(124,58,237,.35), inset 0 0 40px rgba(255,255,255,.25);
+    animation: sw-pop .8s cubic-bezier(.34,1.56,.64,1) both, sw-pulse 1.6s ease-in-out .8s infinite;
+    margin-bottom: 28px;
+  }
+  @keyframes sw-pop {
+    0%   { transform: scale(.3); opacity: 0; }
+    60%  { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  @keyframes sw-pulse {
+    0%, 100% { box-shadow: 0 0 80px rgba(0,229,255,.55), 0 0 120px rgba(124,58,237,.35), inset 0 0 40px rgba(255,255,255,.25); }
+    50%      { box-shadow: 0 0 110px rgba(0,229,255,.85), 0 0 160px rgba(124,58,237,.55), inset 0 0 50px rgba(255,255,255,.35); }
+  }
+  .signup-wow-title {
+    font-size: 34px; font-weight: 800; letter-spacing: -1px; position: relative; z-index: 2;
+    background: linear-gradient(90deg, #fff 0%, #b3f0ff 50%, #fff 100%);
+    background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
+    color: transparent; animation: sw-shimmer 2.4s linear infinite, sw-fade-up .7s .35s both;
+    text-align: center; line-height: 1.15; padding: 0 24px;
+  }
+  @keyframes sw-shimmer { to { background-position: 200% center; } }
+  @keyframes sw-fade-up {
+    from { transform: translateY(14px); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+  }
+  .signup-wow-sub {
+    font-size: 15px; color: rgba(255,255,255,.65); margin-top: 14px;
+    position: relative; z-index: 2; text-align: center; padding: 0 24px; max-width: 520px;
+    animation: sw-fade-up .7s .8s both;
+  }
+  .signup-wow-progress-wrap {
+    margin-top: 36px; width: min(320px, 70vw); position: relative; z-index: 2;
+    animation: sw-fade-up .7s 1.1s both;
+  }
+  .signup-wow-progress-lbl {
+    font-size: 12px; color: rgba(255,255,255,.55); letter-spacing: .5px;
+    text-transform: uppercase; font-weight: 600; margin-bottom: 8px; text-align: center;
+  }
+  .signup-wow-progress-track {
+    height: 4px; width: 100%; background: rgba(255,255,255,.08);
+    border-radius: 4px; overflow: hidden;
+  }
+  #signup-wow-bar {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, #00e5ff, #7c3aed);
+    border-radius: 4px;
+  }
+  #signup-wow-bar.on { animation: sw-fill 2.7s cubic-bezier(.4,0,.2,1) forwards; }
+  @keyframes sw-fill { to { width: 100%; } }
+  @media (max-width: 520px) {
+    .signup-wow-logo  { width: 88px; height: 88px; font-size: 42px; }
+    .signup-wow-title { font-size: 26px; }
+    .signup-wow-sub   { font-size: 13px; }
+  }
+</style>
+<div id="signup-wow" aria-hidden="true">
+  <div class="signup-wow-logo">⚡</div>
+  <div class="signup-wow-title">Welcome to UgoingViral<span id="signup-wow-name"></span></div>
+  <div class="signup-wow-sub">Your AI Social Media Engine</div>
+  <div class="signup-wow-progress-wrap">
+    <div class="signup-wow-progress-lbl">Setting up your workspace…</div>
+    <div class="signup-wow-progress-track"><div id="signup-wow-bar"></div></div>
+  </div>
+</div>
+
 <!-- ONBOARDING MODAL -->
 <div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);backdrop-filter:blur(12px);z-index:2000;align-items:center;justify-content:center">
   <div style="background:#0d1526;border:1px solid rgba(255,255,255,.1);border-radius:20px;max-width:480px;width:90%;padding:40px 36px;position:relative;text-align:center">
@@ -1727,6 +1815,28 @@ function setBillingCycle() {
 </div>
 
 <script>
+// ── 3-second animated welcome splash, CSS-only, fires after a successful signup.
+function showSignupWow(name, onDone) {
+  var el = document.getElementById('signup-wow');
+  if (!el) { if (onDone) onDone(); return; }
+  var nameEl = document.getElementById('signup-wow-name');
+  if (nameEl) nameEl.textContent = name ? (', ' + name) : '';
+  el.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  // Bind the progress fill class so the animation restarts on every signup.
+  var bar = document.getElementById('signup-wow-bar');
+  if (bar) { bar.classList.remove('on'); void bar.offsetWidth; bar.classList.add('on'); }
+  setTimeout(function() {
+    el.classList.add('fading');
+    setTimeout(function() {
+      el.style.display = 'none';
+      el.classList.remove('fading');
+      document.body.style.overflow = '';
+      if (onDone) onDone();
+    }, 450);  // matches the fade-out duration in CSS
+  }, 3000);
+}
+
 function showOnboarding(name) {
   var el = document.getElementById('onboarding-overlay');
   el.style.display = 'flex';
