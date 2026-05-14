@@ -62,22 +62,29 @@ class QARunner:
         return {"Authorization": f"Bearer {self.token}"}
 
     def _fresh_user(self, label: str):
-        time.sleep(13)  # avoid rate limiting — 5 per min = 12s between
-        """Register a disposable test user. Returns (token, user_id, email)."""
-        ts = int(time.time() * 1000)
-        email = f"qa-{label}-{ts}@ugoingviral.com"
+        """Register a disposable test user. Returns (token, user_id, email).
+
+        Retries on 429 (rate limit) with a long backoff so consecutive
+        suite calls don't collide on the 5/min register limit.
+        """
         password = "QaTest2026!"
-        try:
-            r = self.client.post("/api/auth/register", json={
-                "email": email, "password": password, "name": f"QA {label}"
-            })
-            if r.status_code in (200, 201):
-                data = r.json()
-                token   = data.get("token") or data.get("access_token")
-                user_id = (data.get("user") or {}).get("id") or data.get("user_id")
-                return token, user_id, email
-        except Exception:
-            pass
+        for attempt in range(3):
+            time.sleep(13 if attempt == 0 else 65)
+            ts = int(time.time() * 1000)
+            email = f"qa-{label}-{ts}@ugoingviral.com"
+            try:
+                r = self.client.post("/api/auth/register", json={
+                    "email": email, "password": password, "name": f"QA {label}"
+                })
+                if r.status_code in (200, 201):
+                    data = r.json()
+                    token   = data.get("token") or data.get("access_token")
+                    user_id = (data.get("user") or {}).get("id") or data.get("user_id")
+                    return token, user_id, email
+                if r.status_code != 429:
+                    break
+            except Exception:
+                pass
         return None, None, email
 
     def _set_billing(self, user_id: str, plan: str, credits: int) -> bool:

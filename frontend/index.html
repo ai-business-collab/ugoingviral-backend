@@ -1171,6 +1171,108 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   table { display: block; overflow-x: auto; white-space: nowrap; }
 }
 
+/* ═══════════════════════════════════════════════════════
+   MOBILE — 600px and below: collapse all multi-col grids
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  html, body { overflow-x: hidden; max-width: 100vw; }
+  .main, .wrap, .page { max-width: 100vw; overflow-x: hidden; }
+  .wrap { padding: 14px 10px !important; }
+  .page { padding: 10px 10px !important; }
+
+  /* Force any inline-styled grid with multiple columns to a single column */
+  [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  .ac-grid, .obf-steps, .obf-platforms { grid-template-columns: 1fr !important; }
+
+  /* Topbar trims: keep title + hamburger + essentials only */
+  .topbar { padding: 8px 10px !important; gap: 6px !important; flex-wrap: wrap; }
+  .topbar > div:first-child { gap: 8px !important; flex: 1 1 auto !important; min-width: 0; }
+  .ptitle { font-size: 14px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-right { gap: 6px !important; flex-wrap: wrap; justify-content: flex-end; }
+  #lang-btn, #theme-btn { padding: 5px 9px !important; font-size: 11px !important; }
+  #acct-switcher { padding: 4px 6px !important; }
+  .acct-name { display: none !important; }
+
+  /* Cards stack vertically with reduced padding */
+  .card { padding: 14px 12px !important; margin-bottom: 12px !important; }
+  .ctitle { font-size: 14px !important; }
+  .section { padding: 12px 10px !important; }
+
+  /* All form inputs and selects full-width */
+  input, select, textarea, .fi, .fs, .fta, .obf-select, .ws-select {
+    width: 100% !important; max-width: 100% !important; box-sizing: border-box !important;
+  }
+  .fg { margin-bottom: 12px !important; }
+
+  /* Buttons: allow wrap, keep tap target */
+  .btn { font-size: 12px; padding: 8px 12px; }
+  .btn.bsm { padding: 6px 10px; font-size: 11px; }
+  .topbar-right .btn { font-size: 11px; padding: 5px 9px; }
+
+  /* Studio: stack everything */
+  .studio-wrap { grid-template-columns: 1fr !important; }
+  .studio-modes { gap: 6px !important; }
+  .studio-mode-btn { min-width: 0 !important; flex: 1 1 calc(50% - 4px) !important; padding: 10px 6px !important; }
+  .provider-grid { grid-template-columns: 1fr !important; }
+  .ar-selector { grid-template-columns: 1fr 1fr !important; }
+  #studio-root, #studio-portrait-root { min-width: 0; }
+
+  /* Studio tab bar scrolls horizontally */
+  #page-studio > div:first-child {
+    overflow-x: auto !important; white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  #page-studio > div:first-child button { white-space: nowrap; }
+
+  /* Modal: full-screen sheet */
+  .modal-overlay { padding: 0 !important; }
+  .modal-box {
+    width: 100vw !important; max-width: 100vw !important;
+    max-height: 100dvh !important; height: 100dvh !important;
+    border-radius: 0 !important; overflow-y: auto;
+  }
+
+  /* Tab strips scroll horizontally instead of overflowing */
+  [style*="border-bottom: 2px solid var(--border)"],
+  [style*="border-bottom:2px solid var(--border)"] {
+    overflow-x: auto !important; -webkit-overflow-scrolling: touch;
+  }
+
+  /* Stat KPI cells smaller */
+  .stat-kpi { padding: 14px !important; }
+  .stat-kpi-val { font-size: 22px !important; }
+
+  /* Notification / agent panels */
+  #notif-panel { width: calc(100vw - 16px) !important; right: 8px !important; left: 8px !important; }
+  #agent-panel { width: calc(100vw - 16px) !important; right: 8px !important; left: 8px !important; bottom: 76px !important; max-height: 70dvh !important; }
+
+  /* Submenu items can wrap */
+  .sub-item { font-size: 12px; padding: 7px 10px 7px 32px; }
+
+  /* Inline flex bars that can overflow */
+  [style*="display:flex"][style*="justify-content:space-between"] { flex-wrap: wrap; gap: 8px; }
+
+  /* Code/pre */
+  pre, code { word-break: break-word; white-space: pre-wrap; }
+
+  /* Images and media */
+  img, video { max-width: 100%; height: auto; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE — 400px and below: ultra-narrow trims
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 400px) {
+  .ptitle { font-size: 13px !important; }
+  #billing-badge { display: none !important; }
+  #theme-btn { display: none !important; }
+  .logo-tag { display: none; }
+  .topbar { padding: 6px 8px !important; }
+  .page { padding: 8px !important; }
+  .wrap { padding: 10px 8px !important; }
+  .btn { font-size: 11px; padding: 7px 10px; }
+}
+
 .safety-btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border-b);background:var(--glass);color:var(--tx2);transition:all .2s;font-family:'Outfit',sans-serif}
 .safety-btn.active,.safety-btn:hover{border-color:var(--ac);color:var(--ac);background:rgba(99,102,241,.1)}
 .usage-bar{height:5px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:3px}
