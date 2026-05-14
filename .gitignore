@@ -18,3 +18,12 @@ reset*.py
 *password*
 *credentials*
 security_log.json
+.env
+*.env
+.env.*
+*.db
+__pycache__/
+*.pyc
+*.bak
+*.bak.*
+sessions/
