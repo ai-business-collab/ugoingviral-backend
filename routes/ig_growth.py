@@ -39,6 +39,31 @@ SESSION_TIMEOUT_S = 10 * 60
 SESSIONS_DIR = "/root/ugoingviral-backend/sessions"
 COOKIE_FILE  = os.path.join(SESSIONS_DIR, "instagram_session.json")
 PROFILE_DIR  = os.path.join(SESSIONS_DIR, "instagram_chrome_profile")
+
+# Stability flags for Chromium under Xvfb without a real GPU / DBus session.
+# `--disable-gpu` + `--disable-software-rasterizer` keep paint on CPU;
+# `--disable-dev-shm-usage` makes Chromium fall back to /tmp instead of /dev/shm
+# (avoids OOM on small containers); the rest disables background services
+# that need a real session bus and would otherwise spam errors / crash the
+# renderer when run as root under uvicorn.
+_CHROME_ARGS = [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--disable-software-rasterizer",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--disable-blink-features=AutomationControlled",
+    "--disable-features=VizDisplayCompositor,Translate,MediaRouter",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--disable-default-apps",
+    "--metrics-recording-only",
+    "--mute-audio",
+    "--password-store=basic",
+    "--use-mock-keychain",
+]
 DISPLAY      = ":99"
 
 # Active sessions: session_id -> {user_id, token, status, error, created_at, ...}
@@ -98,27 +123,53 @@ async def _watch_and_run(session_id: str) -> None:
         sess["error"]  = "Playwright not installed in the Python environment"
         return
 
+    # Stale Chromium SingletonLock files from a previous crash will refuse a
+    # new launch with "Target page, context or browser has been closed".
+    # Clean them up before every launch.
+    for name in ("SingletonLock", "SingletonCookie", "SingletonSocket"):
+        try:
+            p_lock = os.path.join(PROFILE_DIR, name)
+            if os.path.islink(p_lock) or os.path.exists(p_lock):
+                os.unlink(p_lock)
+        except OSError:
+            pass
+
+    async def _launch(prof_dir):
+        return await p.chromium.launch_persistent_context(
+            prof_dir,
+            headless=False,
+            proxy=proxy,
+            viewport={"width": 1280, "height": 800},
+            locale="en-US",
+            ignore_https_errors=True,
+            args=_CHROME_ARGS,
+            env={
+                **os.environ,
+                "DISPLAY": os.environ.get("DISPLAY", ":99"),
+                "HOME":    "/root",
+            },
+        )
+
     browser = ctx = None
     try:
         async with async_playwright() as p:
-            ctx = await p.chromium.launch_persistent_context(
-                PROFILE_DIR,
-                headless=False,
-                proxy=proxy,
-                viewport={"width": 1280, "height": 800},
-                locale="en-US",
-                ignore_https_errors=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-blink-features=AutomationControlled",
-                    # No GPU available on the Xvfb display — force software
-                    # rendering off too so Chrome paints with CPU/SwiftShader
-                    # and we don't get a black canvas in noVNC.
-                    "--disable-gpu",
-                    "--disable-software-rasterizer",
-                ],
-            )
+            try:
+                ctx = await _launch(PROFILE_DIR)
+            except Exception as launch_err:
+                # The Chromium profile can outgrow its binary across upgrades
+                # ("Target page, context or browser has been closed" on every
+                # launch). Wipe the profile and retry once. The Instagram
+                # session itself lives in COOKIE_FILE, not in PROFILE_DIR, so
+                # this is non-destructive.
+                logger.warning("ig_growth: first launch failed (%s) — wiping profile and retrying", launch_err)
+                try:
+                    import shutil as _sh
+                    _sh.rmtree(PROFILE_DIR, ignore_errors=True)
+                    os.makedirs(PROFILE_DIR, exist_ok=True)
+                except OSError:
+                    pass
+                ctx = await _launch(PROFILE_DIR)
+
             sess["status"] = "waiting_login"
             page = ctx.pages[0] if ctx.pages else await ctx.new_page()
             try:

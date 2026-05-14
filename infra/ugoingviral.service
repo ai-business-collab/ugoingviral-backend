@@ -1,0 +1,29 @@
+[Unit]
+Description=UgoingViral Backend
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/root/ugoingviral-backend
+Environment="REPLICATE_API_KEY=***REDACTED-REPLICATE***"
+Environment="INSTAGRAM_API_TOKEN=***REDACTED-INSTAGRAM-TOKEN***"
+Environment="INSTAGRAM_IG_ID=933471429466868"
+Environment="INSTAGRAM_APP_SECRET=***REDACTED-IG-APP-SECRET***"
+Environment="INSTAGRAM_APP_ID=925957660281371"
+Environment="ADMIN_PASSWORD=***REDACTED-ADMIN-PASSWORD***"
+Environment="RUNWAY_API_KEY=***REDACTED-RUNWAY***"
+Environment="YOUTUBE_REDIRECT_URI=https://ugoingviral.com/api/youtube/callback"
+Environment="DISPLAY=:99"
+Environment="YOUTUBE_CLIENT_ID=218137801821-m1r5hg41f9cof2605dioih3smat2kg3d.apps.googleusercontent.com"
+Environment="YOUTUBE_CLIENT_SECRET=***REDACTED-GOOGLE-CLIENT-SECRET***"
+Environment="PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright"
+ExecStart=/opt/ugoingviral/bin/uvicorn app:app --host 0.0.0.0 --port 8000
+Restart=always
+# Chromium opens many file descriptors and spawns many child processes.
+# The systemd defaults (NOFILE=1024) cause Playwright to fail with
+# "Connection closed while reading from the driver" mid-session.
+LimitNOFILE=65536
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target

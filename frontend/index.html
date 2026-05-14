@@ -1616,8 +1616,13 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
     <!-- ── ACCOUNT GROWTH ── -->
     <div class="nav-section" data-i18n="nav.growth">Account Growth</div>
-    <div class="ni" id="ni-growth" onclick="nav('growth-dashboard')">
-      <span class="ico">📈</span><span data-i18n="nav.growth">Account Growth</span>
+    <div class="ni has-sub" id="ni-growth" onclick="toggleSubMenu('growth-sub')">
+      <span class="ico">📈</span><span data-i18n="nav.growth">Account Growth</span><span class="chevron">›</span>
+    </div>
+    <div class="submenu" id="growth-sub">
+      <div class="sub-item" id="ni-growth-dash-sub" onclick="nav('growth-dashboard')">🌱 <span>Growth Dashboard</span></div>
+      <div class="sub-item" onclick="nav('growth-dashboard');setTimeout(function(){var b=document.getElementById('ig-growth-connect-btn');if(b)b.scrollIntoView({behavior:'smooth',block:'center'});},150)">📈 <span>Connect Growth Account</span></div>
+      <div class="sub-item" onclick="nav('growth-dashboard');setTimeout(function(){var c=document.getElementById('growth-batch-card');if(c)c.scrollIntoView({behavior:'smooth',block:'center'});},150)">📦 <span>Batch Connect</span></div>
     </div>
 
     <!-- ── SOCIALE MEDIER ── -->
@@ -1639,7 +1644,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <!-- ── STATISTIK ── -->
     <div class="nav-section" data-i18n="nav.analytics">Analyse</div>
     <div class="ni" id="ni-analytics" onclick="nav('analytics')"><span class="ico">📈</span><span>Analytics</span></div>
-    <div class="ni" id="ni-growth-dash" onclick="nav('growth-dashboard')"><span class="ico">🌱</span><span>Growth Dashboard</span></div>
     <div class="ni" id="ni-stats" onclick="nav('stats')"><span class="ico">📊</span><span data-i18n="nav.stats">Statistik</span></div>
 
     <!-- ── TOOLS ── -->
@@ -3025,38 +3029,14 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               </div>
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Connect Instagram via official API</button>
-            <button class="btn bg" id="ig-growth-connect-btn" style="width:100%;margin-bottom:8px;font-size:13px;background:linear-gradient(135deg,rgba(225,48,108,.18),rgba(193,53,132,.18));border-color:rgba(225,48,108,.4);color:#e1306c" onclick="openInstagramGrowthConnect()">📈 Connect via Growth Session</button>
 
-            <div id="ig-batch-section" style="display:none;margin-bottom:12px;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                <div style="font-size:12px;font-weight:700">📦 Batch connect multiple accounts</div>
-                <span style="font-size:10px;color:var(--tx3)">Growth+ only</span>
-              </div>
-              <div style="font-size:11px;color:var(--tx3);line-height:1.5;margin-bottom:8px">
-                Upload a CSV — one account per line as <code style="background:var(--bg);padding:1px 4px;border-radius:3px">username,password</code>. Costs <strong>5 credits per successful connect</strong>. Failed accounts (wrong password / 2FA) cost nothing. Max 50 per batch.
-              </div>
-              <input type="file" id="ig-batch-csv" accept=".csv,text/csv" style="display:none" onchange="onIgBatchFilePicked(event)">
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button class="btn bg bsm" onclick="document.getElementById('ig-batch-csv').click()" style="flex:1;min-width:120px">📄 Choose CSV…</button>
-                <button class="btn bp bsm" id="ig-batch-go-btn" onclick="startIgBatchConnect()" disabled style="flex:1;min-width:120px">▶ Start batch</button>
-              </div>
-              <div id="ig-batch-preview" style="font-size:11px;color:var(--tx2);margin-top:8px;display:none"></div>
-              <div id="ig-batch-progress" style="display:none;margin-top:10px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px">
-                <div id="ig-batch-progress-line" style="font-size:12px;font-weight:600;margin-bottom:6px">Starting…</div>
-                <div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden">
-                  <div id="ig-batch-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#e1306c,#c13584);transition:width .3s"></div>
-                </div>
-                <div id="ig-batch-results" style="font-size:11px;margin-top:8px;display:grid;gap:3px;max-height:160px;overflow-y:auto"></div>
-              </div>
-            </div>
-
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Official API for Business/Creator accounts. <strong>Growth+ users</strong> can also connect a personal account via a remote browser session for full automation (likes, follows, DMs).</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Official API for Business/Creator accounts. To connect a personal account for full automation (likes, follows, DMs via a remote browser), go to <a onclick="nav('growth-dashboard')" style="cursor:pointer;color:#e1306c;text-decoration:underline">Account Growth</a>.</div>
             <details style="margin-bottom:10px">
-              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Manual login (fallback)</summary>
+              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Connect manually for automation</summary>
               <div style="margin-top:10px">
-                <div class="fg"><label class="fl">Brugernavn</label><input class="fi" id="ig-user" placeholder="@brugernavn"></div>
-                <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="ig-pass" placeholder="Adgangskode"></div>
-                <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('instagram')">💾 Gem</button><button class="btn bg bsm" onclick="testLogin('instagram')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('instagram')">🗑️ Slet</button></div>
+                <div class="fg"><label class="fl">Username</label><input class="fi" id="ig-user" placeholder="@username"></div>
+                <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="ig-pass" placeholder="Password"></div>
+                <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('instagram')">💾 Save</button><button class="btn bg bsm" onclick="testLogin('instagram')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('instagram')">🗑️ Delete</button></div>
               </div>
             </details>
 
@@ -3087,11 +3067,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectTikTokAPI()">🎵 Connect TikTok via official API</button>
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Requires a TikTok Business/Creator account. Gives access to direct video posting without browser automation.</div>
             <details style="margin-bottom:10px">
-              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Manual login (fallback)</summary>
+              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Connect manually for automation</summary>
               <div style="margin-top:10px">
-                <div class="fg"><label class="fl">Email / Brugernavn</label><input class="fi" id="tt-user" placeholder="email eller @brugernavn"></div>
-                <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="tt-pass" placeholder="Adgangskode"></div>
-                <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('tiktok')">💾 Gem</button><button class="btn bg bsm" onclick="testLogin('tiktok')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('tiktok')">🗑️ Slet</button></div>
+                <div class="fg"><label class="fl">Email / Username</label><input class="fi" id="tt-user" placeholder="email or @username"></div>
+                <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="tt-pass" placeholder="Password"></div>
+                <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('tiktok')">💾 Save</button><button class="btn bg bsm" onclick="testLogin('tiktok')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('tiktok')">🗑️ Delete</button></div>
               </div>
             </details>
             
@@ -3170,11 +3150,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px;background:rgba(255,0,0,.15);border-color:rgba(255,0,0,.4)" onclick="connectYouTubeAPI()">▶️ Connect YouTube via Data API v3</button>
             <details style="margin-bottom:12px">
-              <summary style="cursor:pointer;font-size:12px;color:var(--tx3);padding:6px 0">Manual login (fallback)</summary>
+              <summary style="cursor:pointer;font-size:12px;color:var(--tx3);padding:6px 0">▸ Connect manually for automation</summary>
               <div style="padding-top:8px">
-                <div class="fg"><label class="fl">Email (Google account)</label><input class="fi" id="yt-user" placeholder="din@gmail.com"></div>
-                <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="yt-pass" placeholder="Adgangskode"></div>
-                <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('youtube')">💾 Gem</button><button class="btn bg bsm" onclick="testLogin('youtube')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('youtube')">🗑️ Slet</button></div>
+                <div class="fg"><label class="fl">Email (Google account)</label><input class="fi" id="yt-user" placeholder="your@gmail.com"></div>
+                <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="yt-pass" placeholder="Password"></div>
+                <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('youtube')">💾 Save</button><button class="btn bg bsm" onclick="testLogin('youtube')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('youtube')">🗑️ Delete</button></div>
               </div>
             </details>
           </div>
@@ -4219,11 +4199,58 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div style="font-size:14px;font-weight:700;color:var(--tx)">🌱 Connected growth accounts</div>
             <div style="font-size:11px;color:var(--tx3);margin-top:2px" id="gd-accounts-count">Loading…</div>
           </div>
-          <button class="btn bp bsm" onclick="nav('connect')" style="font-size:12px">+ Connect account</button>
         </div>
         <div id="gd-accounts-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
           <div style="font-size:12px;color:var(--tx3);text-align:center;padding:20px;grid-column:1/-1">Loading accounts…</div>
         </div>
+      </div>
+
+      <!-- Add growth accounts (single + batch) -->
+      <div class="g2" style="margin-bottom:20px">
+
+        <!-- Single account via remote browser -->
+        <div class="card" style="padding:18px;background:linear-gradient(135deg,rgba(225,48,108,.05),rgba(124,58,237,.03));border:1px solid rgba(225,48,108,.25)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="font-size:24px">📈</div>
+            <div>
+              <div style="font-size:14px;font-weight:800;color:var(--tx)">Connect Growth Account</div>
+              <div style="font-size:11px;color:var(--tx3)">Personal Instagram via remote browser</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--tx2);line-height:1.55;margin-bottom:12px">
+            Opens a secure browser inside your dashboard with a dedicated residential IP in your country. Log in once — we save the session and run all engagement (likes, follows, comments, DMs) on autopilot from that account. Best for personal accounts that don't qualify for the official API.
+          </div>
+          <button class="btn bp" id="ig-growth-connect-btn" style="width:100%;background:linear-gradient(135deg,#e1306c,#c13584);border:none;color:#fff;font-weight:700" onclick="openInstagramGrowthConnect()">📈 Connect Growth Account →</button>
+          <div style="font-size:10px;color:var(--tx3);margin-top:8px;text-align:center">Growth plan or higher · session timeout: 10 min</div>
+        </div>
+
+        <!-- Batch CSV upload -->
+        <div class="card" id="growth-batch-card" style="padding:18px;display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="font-size:24px">📦</div>
+            <div>
+              <div style="font-size:14px;font-weight:800;color:var(--tx)">Batch connect accounts</div>
+              <div style="font-size:11px;color:var(--tx3)">Bulk upload via CSV</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--tx2);line-height:1.55;margin-bottom:12px">
+            Upload a CSV — one account per line as <code style="background:var(--bg);padding:1px 4px;border-radius:3px">username,password</code>. Costs <strong style="color:var(--ac)">5 credits per successful connect</strong>. Failed accounts (wrong password / 2FA challenge) cost nothing. Max 50 per batch.
+          </div>
+          <input type="file" id="ig-batch-csv" accept=".csv,text/csv" style="display:none" onchange="onIgBatchFilePicked(event)">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn bg bsm" onclick="document.getElementById('ig-batch-csv').click()" style="flex:1;min-width:120px">📄 Choose CSV…</button>
+            <button class="btn bp bsm" id="ig-batch-go-btn" onclick="startIgBatchConnect()" disabled style="flex:1;min-width:120px">▶ Start batch</button>
+          </div>
+          <div id="ig-batch-preview" style="font-size:11px;color:var(--tx2);margin-top:8px;display:none"></div>
+          <div id="ig-batch-progress" style="display:none;margin-top:10px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px">
+            <div id="ig-batch-progress-line" style="font-size:12px;font-weight:600;margin-bottom:6px">Starting…</div>
+            <div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden">
+              <div id="ig-batch-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#e1306c,#c13584);transition:width .3s"></div>
+            </div>
+            <div id="ig-batch-results" style="font-size:11px;margin-top:8px;display:grid;gap:3px;max-height:160px;overflow-y:auto"></div>
+          </div>
+        </div>
+
       </div>
 
       <!-- ── Automation Safety (moved here from Connect page) ───────────── -->
@@ -7522,8 +7549,13 @@ function _igBatchPlanOk() {
 }
 
 function _refreshIgBatchSection() {
+  // Old (Connect-page) container — removed in the restructure but kept the
+  // selector here as a no-op safety net if something else still calls it.
   var el = document.getElementById('ig-batch-section');
   if (el) el.style.display = _igBatchPlanOk() ? 'block' : 'none';
+  // New container lives on the Growth Dashboard.
+  var card = document.getElementById('growth-batch-card');
+  if (card) card.style.display = _igBatchPlanOk() ? '' : 'none';
 }
 
 function onIgBatchFilePicked(ev) {
@@ -9092,9 +9124,20 @@ async function planTomorrow(btn) {
   finally { btn.disabled = false; btn.innerHTML = '📅 Lav plan for i morgen nu'; }
 }
 async function batchGenerate() {
-  toast('🚀 Starter batch generation...','info'); addLog('🚀 Batch generation startet...','info');
-  try { const r=await apiFetch('/api/automation/generate_batch','POST',{}); toast(`✅ ${r.generated} stykker genereret!`,'success'); addLog(`✅ Batch: ${r.generated} stykker`,'success'); loadProducts(); }
-  catch(e) { toast('❌ '+e.message,'error'); addLog('❌ '+e.message,'error'); }
+  toast('🚀 Starting batch generation...','info'); addLog('🚀 Batch generation started...','info');
+  try {
+    const r = await apiFetch('/api/automation/generate_batch','POST',{});
+    if (r.status === 'no_products') {
+      toast('ℹ️ ' + (r.message || 'Add products first'), 'info');
+      addLog(r.message || 'No products to generate for', 'info');
+      return;
+    }
+    toast(`✅ ${r.generated} piece(s) generated!`,'success');
+    addLog(`✅ Batch: ${r.generated} pieces`,'success');
+    loadProducts();
+  } catch(e) {
+    toast('❌ '+e.message,'error'); addLog('❌ '+e.message,'error');
+  }
 }
 async function testPlatform(platform) {
   addLog(`🧪 Tester ${platform}...`,'info');
@@ -13205,6 +13248,9 @@ var _ag = {
 // ── Draggable FAB ─────────────────────────────────────────────────────────────
 (function() {
   var fab = document.getElementById('agent-fab');
+  if (!fab) return;                  // FAB not in DOM yet — bail; the inline
+                                     // onclick on the button still drives the
+                                     // basic toggle so the panel still opens.
   var dragging = false, moved = false;
   var dragStart = null, fabStart = null;
 
@@ -13340,29 +13386,41 @@ async function agInit() {
 // ── Toggle open/close ─────────────────────────────────────────────────────────
 function agToggle() {
   var panel = document.getElementById('agent-panel');
+  if (!panel) return;
   if (_ag.open) {
     panel.classList.add('ag-closing');
     setTimeout(function() { panel.classList.remove('ag-open','ag-closing'); }, 170);
   } else {
-    agPositionPanel();
+    try { agPositionPanel(); } catch(e) {}
     panel.classList.add('ag-open');
     _ag.unread = 0;
-    document.getElementById('ag-unread').style.display = 'none';
-    setTimeout(function() { document.getElementById('ag-input').focus(); }, 150);
+    var unread = document.getElementById('ag-unread');
+    if (unread) unread.style.display = 'none';
+    setTimeout(function() {
+      var inp = document.getElementById('ag-input');
+      if (inp) inp.focus();
+    }, 150);
     if (!_ag.welcomeSent) {
       _ag.welcomeSent = true;
+      // First-time users (no saved agent name) are asked to pick one,
+      // regardless of plan tier. Set _ag.awaitingName so the next user
+      // message is treated as the name choice.
+      var savedName = localStorage.getItem('ag_agent_name') || '';
+      if (!savedName) _ag.awaitingName = true;
       setTimeout(function() {
         if (_ag.awaitingName) {
-          agAddMsg('bot', "Hey! 👋 I'm your personal AI assistant on UgoingViral. What would you like to call me? Type a name or say 'you choose' and I'll pick one!");
+          agAddMsg('bot', "Hey! 👋 I'm your personal AI assistant on UgoingViral. What would you like to call me? Type a name, or say 'you choose' and I'll pick one!");
         } else {
-          var nm = (document.getElementById('ag-hname').textContent || '').trim() || 'your assistant';
+          var hnEl = document.getElementById('ag-hname');
+          var nm = (hnEl && hnEl.textContent || '').trim() || 'your assistant';
           agAddMsg('bot', "Hey! 👋 I'm " + nm + ", your AI assistant on UgoingViral. What can I help you with today?");
         }
       }, 400);
     }
   }
   _ag.open = !_ag.open;
-  document.getElementById('ag-fab-ico').textContent = _ag.open ? '✕' : '⚡';
+  var ico = document.getElementById('ag-fab-ico');
+  if (ico) ico.textContent = _ag.open ? '✕' : '⚡';
 }
 
 // ── Add message bubble ────────────────────────────────────────────────────────

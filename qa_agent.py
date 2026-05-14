@@ -1354,6 +1354,72 @@ class QARunner:
             print(f"[telegram] alert failed: {e}")
 
     # ------------------------------------------------------------------
+    # Suite 16 — UI regression tests (FAB, missing-content, connect)
+    # ------------------------------------------------------------------
+
+    def suite16_ui_regressions(self):
+        """Catch regressions reported by users:
+        - Floating agent button HTML present + agToggle() defined in JS
+        - /api/automation/generate_batch returns 200 (not 500) for the
+          "missing content" click on the Products page
+        - Connect page loads its connection data without 5xx
+        """
+        print("\n=== SUITE 16: UI regressions ===")
+
+        # 16.1 — Frontend bundle has the agent FAB + working toggle handler.
+        try:
+            r = self.client.get("/app")
+            html = r.text if r.status_code == 200 else ""
+            has_fab    = ('id="agent-fab"' in html)
+            has_toggle = ('function agToggle()' in html)
+            has_panel  = ('id="agent-panel"' in html)
+            if r.status_code == 200 and has_fab and has_toggle and has_panel:
+                self._pass("s16_agent_fab_present",
+                           "FAB+panel+agToggle all in bundle")
+            else:
+                self._fail("s16_agent_fab_present",
+                           f"status={r.status_code} fab={has_fab} toggle={has_toggle} panel={has_panel}")
+        except Exception as e:
+            self._fail("s16_agent_fab_present", str(e))
+
+        # 16.2 — Products "Missing content" click endpoint must not 500.
+        # We hit it with a fresh free user that has zero products, which is
+        # exactly the path that used to throw NameError: _demo_products.
+        token, uid, email = self._fresh_user("s16a")
+        if not uid:
+            self._fail("s16_missing_content_register", "could not create test user")
+            return
+        h = {"Authorization": f"Bearer {token}"}
+        try:
+            r = self.client.post("/api/automation/generate_batch", json={}, headers=h)
+            if r.status_code == 200:
+                d = r.json()
+                if d.get("status") in ("no_products", "done") and d.get("generated", 0) == 0:
+                    self._pass("s16_missing_content_endpoint",
+                               f"status={d.get('status')}")
+                else:
+                    self._fail("s16_missing_content_endpoint",
+                               f"unexpected body: {r.text[:160]}")
+            else:
+                self._fail("s16_missing_content_endpoint",
+                           f"status={r.status_code} body={r.text[:160]}")
+        except Exception as e:
+            self._fail("s16_missing_content_endpoint", str(e))
+
+        # 16.3 — Connect page loads its connection state without 5xx.
+        try:
+            r = self.client.get("/api/settings/connections", headers=h)
+            if r.status_code == 200 and isinstance(r.json(), dict):
+                self._pass("s16_connect_page_loads")
+            else:
+                self._fail("s16_connect_page_loads",
+                           f"status={r.status_code} body={r.text[:160]}")
+        except Exception as e:
+            self._fail("s16_connect_page_loads", str(e))
+
+        self._remove_fresh_user(uid, email)
+
+    # ------------------------------------------------------------------
     # Entry point
     # ------------------------------------------------------------------
 
@@ -1376,6 +1442,7 @@ class QARunner:
         self.suite13_agent_tasks()
         self.suite14_anti_ban()
         self.suite15_analytics()
+        self.suite16_ui_regressions()
         self._cleanup()
 
         passed = sum(1 for r in self.results if r["status"] == "PASS")

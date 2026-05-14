@@ -83,19 +83,27 @@ def clear_log():
     store["automation_log"] = []; save_store(); return {"status": "cleared"}
 
 @router.post("/api/automation/generate_batch")
-async def generate_batch():
+async def generate_batch(current_user: dict = Depends(get_current_user)):
     auto = store.get("automation", {})
-    add_log("🚀 Starter batch generation...", "info")
-    # Hent alle produkter — manual + Shopify cache
+    add_log("🚀 Starting batch generation...", "info")
+    # Pull all products — manual + Shopify cache.
     all_prods = store.get("manual_products", []) + store.get("shopify_products_cache", [])
     if not all_prods:
-        all_prods = _demo_products()
-    # Filtrer kun produkter UDEN content
+        # No products yet — return a clean empty-state instead of 500-ing on
+        # a missing demo helper. The UI shows the count as a click target on
+        # the Products page, and clicking with zero products should just say
+        # "add products first".
+        return {
+            "status":    "no_products",
+            "generated": 0,
+            "message":   "No products yet — add products before batch generating.",
+        }
+    # Keep only products WITHOUT content.
     has_content = set(str(k) for k in store.get("product_content", {}).keys() if store.get("product_content", {}).get(str(k)))
     products_without = [p for p in all_prods if str(p["id"]) not in has_content]
     if not products_without:
-        add_log("✅ Alle produkter har allerede content", "info")
-        return {"status": "done", "generated": 0, "message": "Alle produkter har content"}
+        add_log("✅ All products already have content", "info")
+        return {"status": "done", "generated": 0, "message": "All products already have content"}
     add_log(f"📦 {len(products_without)} produkter mangler content — genererer nu...", "info")
     products = products_without
     generated = 0
