@@ -1566,7 +1566,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div id="sb-display-name" style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">–</div>
         <div id="sb-display-email" style="font-size:11px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
       </div>
-      <button onclick="openProfileEdit()" title="Rediger profil" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--tx3);font-size:13px;padding:4px 5px;border-radius:6px;line-height:1" onmouseover="this.style.background='var(--glass-b)'" onmouseout="this.style.background='none'">✏️</button>
+      <button onclick="openProfileEdit()" title="Edit profile" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--tx3);font-size:13px;padding:4px 5px;border-radius:6px;line-height:1" onmouseover="this.style.background='var(--glass-b)'" onmouseout="this.style.background='none'">✏️</button>
     </div>
   </div>
 
@@ -1693,15 +1693,15 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <button id="mob-hamburger" onclick="sbToggle()" style="display:none;background:none;border:1px solid var(--border);border-radius:8px;color:var(--tx);font-size:18px;cursor:pointer;padding:5px 9px;line-height:1;align-items:center;justify-content:center" title="Menu">☰</button>
       <div class="ptitle" id="ptitle">🏠 Dashboard</div>
       <!-- Account switcher -->
-      <div id="acct-switcher" onclick="acctToggle(event)" title="Skift konto">
+      <div id="acct-switcher" onclick="acctToggle(event)" title="Switch account">
         <div class="acct-av" id="acct-av" style="background:#00e5ff">M</div>
-        <span class="acct-name" id="acct-name">Hoved-konto</span>
+        <span class="acct-name" id="acct-name">Main account</span>
         <span class="acct-arrow">▾</span>
         <div id="acct-dropdown" onclick="event.stopPropagation()">
           <div class="acct-dd-item active-acct" onclick="switchSubAccount(null)">
             <div class="dd-av" id="dd-main-av" style="background:#00e5ff">M</div>
             <div class="dd-info">
-              <div class="dd-name" id="dd-main-name">Hoved-konto</div>
+              <div class="dd-name" id="dd-main-name">Main account</div>
               <div class="dd-meta">Primary account</div>
             </div>
             <span id="dd-main-check" style="color:var(--ac);font-size:14px">✓</span>
@@ -1748,7 +1748,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="sb-av" id="sub-banner-av" style="background:#7c3aed">U</div>
     <span style="color:var(--tx2)">Viewing:</span>
     <span id="sub-banner-name">–</span>
-    <button id="sub-banner-exit" onclick="switchSubAccount(null)">✕ Tilbage til hoved-konto</button>
+    <button id="sub-banner-exit" onclick="switchSubAccount(null)">✕ Back to main account</button>
   </div>
 
   <div class="wrap">
@@ -1845,7 +1845,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="card">
         <div class="ctitle">📋 Seneste content</div>
         <div id="recent-content" style="max-height:280px;overflow-y:auto">
-          <div style="color:var(--tx3);font-size:12px;text-align:center;padding:24px" data-empty>Ingen content endnu</div>
+          <div style="color:var(--tx3);font-size:12px;text-align:center;padding:24px" data-empty>No content yet</div>
         </div>
       </div>
     </div>
@@ -1915,7 +1915,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="g2">
         <div class="card">
           <div class="ctitle">🏷️ Mine grupper</div>
-          <div id="groups-list" style="margin-bottom:16px"><div style="color:var(--tx3);font-size:12px">Ingen grupper endnu</div></div>
+          <div id="groups-list" style="margin-bottom:16px"><div style="color:var(--tx3);font-size:12px">No groups yet</div></div>
           <div style="background:var(--glass-b);border-radius:12px;padding:16px;border:1px solid var(--border)">
             <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--ac)">➕ Ny gruppe</div>
             <div class="fg"><label class="fl">Gruppenavn</label><input class="fi" id="new-group-name" placeholder="F.eks. Projektorer, Tilbud..."></div>
@@ -1925,7 +1925,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="card">
           <div class="ctitle">📦 Flyt produkter til gruppe</div>
           <div class="fg"><label class="fl">Move to</label><select class="fs" id="move-to-group"><option value="">Select group...</option></select></div>
-          <div id="move-prod-list" style="max-height:280px;overflow-y:auto;margin-bottom:10px"><div style="color:var(--tx3);font-size:12px">Ingen produkter</div></div>
+          <div id="move-prod-list" style="max-height:280px;overflow-y:auto;margin-bottom:10px"><div style="color:var(--tx3);font-size:12px">No products</div></div>
           <button class="btn bp" style="width:100%" onclick="moveSelectedToGroup()">✅ Flyt valgte</button>
         </div>
       </div>
@@ -2065,7 +2065,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div>
         <div class="card">
           <div class="ctitle">
-            <span>📄 Resultat</span>
+            <span>📄 Result</span>
             <div style="display:flex;gap:8px">
               <button class="btn bg bsm" onclick="copyOut()">📋 Kopier</button>
               <button class="btn bg bsm" onclick="sendToQueue()">📤 To queue</button>
@@ -2117,7 +2117,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
         <div class="card">
           <div class="ctitle"><span>💡 Video idéer</span><button class="btn bg bsm" onclick="genIdeas()">🔄 Generer</button></div>
-          <div id="ideas-out" style="font-size:12px;color:var(--tx2);line-height:1.8">Klik for at generere idéer...</div>
+          <div id="ideas-out" style="font-size:12px;color:var(--tx2);line-height:1.8">Click to generate ideas...</div>
         </div>
       </div>
     </div>
@@ -2139,7 +2139,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
       <div id="history-list" style="max-height:600px;overflow-y:auto">
-        <div style="color:var(--tx3);font-size:13px;text-align:center;padding:40px">Ingen historik endnu</div>
+        <div style="color:var(--tx3);font-size:13px;text-align:center;padding:40px">No history yet</div>
       </div>
     </div>
   </div>
@@ -2171,11 +2171,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <!-- TAB: Schedule (create post + calendar) -->
     <div id="post-panel-schedule">
     <div class="g2">
-      <!-- VENSTRE: Opret opslag -->
+      <!-- LEFT: Create post -->
       <div>
         <div class="card">
           <div class="ctitle">
-            <span>📤 Opret opslag</span>
+            <span>📤 Create post</span>
             <div style="display:flex;gap:6px">
               <div id="mode-ui" onclick="setMode('ui')" style="padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--ac);color:#000">🤖 Auto</div>
               <div id="mode-api" onclick="setMode('api')" style="padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--s2);color:var(--tx2);border:1px solid var(--bd)">🔑 API</div>
@@ -2202,7 +2202,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
 
-          <!-- Valgt produkt preview -->
+          <!-- Selected product preview -->
           <div id="selected-prod-preview" style="display:none;background:var(--s2);border:1px solid var(--ac);border-radius:10px;padding:10px;margin-bottom:12px">
             <div style="display:flex;gap:10px;align-items:center">
               <img id="prev-img" src="" style="width:48px;height:48px;object-fit:cover;border-radius:6px">
@@ -2217,7 +2217,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <!-- Content -->
           <div class="fg">
             <label class="fl" style="display:flex;justify-content:space-between">
-              <span>Indhold / Caption</span>
+              <span>Content / Caption</span>
               <span id="content-char-count" style="font-size:10px;color:var(--tx3)">0 tegn</span>
             </label>
             <textarea class="fta" id="post-content" style="min-height:100px" placeholder="Write or select a product for auto-caption..." oninput="document.getElementById('content-char-count').textContent=this.value.length+' chars'"></textarea>
@@ -2244,10 +2244,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
 
-          <!-- Tidspunkt -->
+          <!-- Time -->
           <div class="fg"><label class="fl">Tidspunkt (tom = post nu)</label><input class="fi" type="datetime-local" id="post-time"></div>
 
-          <!-- Knapper -->
+          <!-- Buttons -->
           <div style="display:flex;gap:8px;margin-top:4px">
             <button class="btn bp" style="flex:1" onclick="schedPost()">📅 Schedule</button>
             <button class="btn bg" style="flex:1;background:var(--ac3)" onclick="postNow()">⚡ Post nu</button>
@@ -2268,7 +2268,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
         </div>
 
-        <!-- Auto-post indstillinger -->
+        <!-- Auto-post settings -->
         <div class="card">
           <div class="ctitle">
             <span>⚙️ Auto-post</span>
@@ -2291,11 +2291,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="fg">
             <label class="fl">Timing metode</label>
             <div style="display:flex;gap:8px;margin-bottom:10px">
-              <div id="timing-mode-fixed" onclick="setTimingMode('fixed')" style="flex:1;padding:8px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;background:var(--ac);color:#000;border:2px solid var(--ac)">🕐 Faste tidspunkter</div>
+              <div id="timing-mode-fixed" onclick="setTimingMode('fixed')" style="flex:1;padding:8px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;background:var(--ac);color:#000;border:2px solid var(--ac)">🕐 Fixed times</div>
               <div id="timing-mode-interval" onclick="setTimingMode('interval')" style="flex:1;padding:8px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;background:var(--s2);color:var(--tx2);border:2px solid var(--bd)">⏱️ Interval</div>
             </div>
 
-            <!-- Faste tidspunkter -->
+            <!-- Fixed times -->
             <div id="timing-fixed-panel">
               <div id="post-times-list" style="display:flex;flex-direction:column;gap:4px">
                 <div class="time-row" draggable="true" ondragstart="timeDragStart(event)" ondragover="timeDragOver(event)" ondrop="timeDrop(event)" ondragleave="timeDragLeave(event)">
@@ -2419,38 +2419,38 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px;margin:10px 0;font-size:11px;color:var(--tx2);line-height:1.6">
             📋 <span id="auto-preview-text">Disabled</span>
           </div>
-          <button class="btn bp bsm" style="width:100%" onclick="savePostSettings()">💾 Gem indstillinger</button>
+          <button class="btn bp bsm" style="width:100%" onclick="savePostSettings()">💾 Save settings</button>
         </div>
       </div>
 
       <!-- RIGHT: Overview -->
       <div>
-        <!-- Samlet opslag oversigt -->
+        <!-- Combined post overview -->
         <div class="card">
           <div class="ctitle">
-            <span>📋 Kommende opslag</span>
+            <span>📋 Upcoming posts</span>
             <div style="display:flex;gap:6px;align-items:center">
               <span id="qcount" style="font-size:11px;color:var(--tx3)"></span>
               <button class="btn bg bsm" onclick="loadQueue();loadRecentPosts()">↻</button>
             </div>
           </div>
           <div id="post-queue" style="max-height:260px;overflow-y:auto">
-            <div style="color:var(--tx3);font-size:12px;text-align:center;padding:20px">Ingen planlagte</div>
+            <div style="color:var(--tx3);font-size:12px;text-align:center;padding:20px">None scheduled</div>
           </div>
         </div>
 
-        <!-- Seneste opslag -->
+        <!-- Recent posts -->
         <div class="card">
-          <div class="ctitle"><span>✅ Seneste opslag</span></div>
+          <div class="ctitle"><span>✅ Recent posts</span></div>
           <div id="recent-posts-list" style="max-height:160px;overflow-y:auto">
-            <div style="color:var(--tx3);font-size:12px;text-align:center;padding:16px">Ingen opslag endnu</div>
+            <div style="color:var(--tx3);font-size:12px;text-align:center;padding:16px">No posts yet</div>
           </div>
         </div>
 
-        <!-- Kalender -->
+        <!-- Calendar -->
         <div class="card">
           <div class="ctitle">
-            <span>📅 Kalender</span>
+            <span>📅 Calendar</span>
             <div style="display:flex;align-items:center;gap:6px">
               <button class="btn bg bsm" onclick="calMove(-1)">‹</button>
               <span id="cal-label" style="font-size:12px;font-weight:600;min-width:120px;text-align:center"></span>
@@ -2459,18 +2459,18 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px">
-            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Man</div>
-            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Tir</div>
-            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Ons</div>
-            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Tor</div>
-            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Fre</div>
+            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Mon</div>
+            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Tue</div>
+            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Wed</div>
+            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Thu</div>
+            <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Fri</div>
             <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Sat</div>
             <div style="font-size:9px;color:var(--tx3);text-align:center;padding:4px;font-weight:600">Sun</div>
           </div>
           <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px"></div>
         </div>
 
-        <!-- Dag-visning modal -->
+        <!-- Day view modal -->
         <div id="day-view-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:999;overflow-y:auto" onclick="if(event.target===this)closeDayView()">
           <div style="background:var(--bg);border-radius:16px;max-width:480px;margin:40px auto;padding:0;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.4)">
             <div style="background:var(--ac);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
@@ -2479,8 +2479,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <div id="day-view-timeline" style="padding:12px 16px;max-height:70vh;overflow-y:auto"></div>
             <div style="padding:12px 16px;border-top:1px solid var(--bd);display:flex;gap:8px">
-              <button class="btn bp" style="flex:1" id="day-view-set-date">📝 Opret opslag</button>
-              <button class="btn br bsm" id="day-view-delete-day" onclick="deleteDayFromModal()">🗑️ Slet dag</button>
+              <button class="btn bp" style="flex:1" id="day-view-set-date">📝 Create post</button>
+              <button class="btn br bsm" id="day-view-delete-day" onclick="deleteDayFromModal()">🗑️ Delete day</button>
             </div>
           </div>
         </div>
@@ -2613,7 +2613,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="g2">
       <div>
         <div class="card">
-          <div class="ctitle">⚙️ Svar indstillinger</div>
+          <div class="ctitle">⚙️ Reply settings</div>
           <div class="fg">
             <label class="fl">Active platforms</label>
             <div style="display:flex;gap:8px;flex-wrap:wrap" id="dm-plat-chips">
@@ -2650,7 +2650,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="fg"><label class="fl">Only reply to</label><input class="fi" id="dm-allowed" placeholder="E.g.: products, shipping, returns, sizes"></div>
           <div class="trow"><div><div class="tname">Auto-svar DMs</div><div class="tdesc">Playwright svarer automatisk</div></div><div class="tog" id="tog-dm" onclick="togIt(this)"></div></div>
           <div class="trow"><div><div class="tname">Auto-reply comments</div><div class="tdesc">Reply to comments automatically</div></div><div class="tog" id="tog-com" onclick="togIt(this)"></div></div>
-          <button class="btn bp" style="width:100%;margin-top:14px" onclick="saveDMSettings()">💾 Gem indstillinger</button>
+          <button class="btn bp" style="width:100%;margin-top:14px" onclick="saveDMSettings()">💾 Save settings</button>
         </div>
       </div>
 
@@ -2814,12 +2814,12 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div id="inbox-panel-email" style="display:none">
       <div class="g2">
         <div>
-          <!-- Email forbindelse -->
+          <!-- Email connection -->
           <div class="card">
             <div class="ctitle">
-              <span>📧 Email konto</span>
+              <span>📧 Email account</span>
               <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:11px;color:var(--tx3)" id="email-status-txt">Ikke forbundet</span>
+                <span style="font-size:11px;color:var(--tx3)" id="email-status-txt">Not connected</span>
                 <div class="tog" id="tog-email-auto" onclick="togIt(this);toggleEmailAuto(this)"></div>
               </div>
             </div>
@@ -2840,7 +2840,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
           <!-- Auto svar indstillinger -->
           <div class="card">
-            <div class="ctitle">⚙️ Auto svar indstillinger</div>
+            <div class="ctitle">⚙️ Auto reply settings</div>
             <div class="fg">
               <label class="fl">Tone</label>
               <select class="fs" id="email-tone">
@@ -2858,7 +2858,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               </select>
             </div>
             <div class="fg"><label class="fl">Special instructions</label><textarea class="fta" id="email-instructions" placeholder="E.g.: Always mention our return policy. Never write about competitors..." style="min-height:70px"></textarea></div>
-            <button class="btn bp bsm" style="width:100%" onclick="saveEmailSettings()">💾 Gem indstillinger</button>
+            <button class="btn bp bsm" style="width:100%" onclick="saveEmailSettings()">💾 Save settings</button>
           </div>
 
           <!-- Templates -->
@@ -2904,7 +2904,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <button class="btn bg bsm" onclick="loadPostHistory()">↻ Opdater</button>
       </div>
       <div id="post-history-list" style="max-height:320px;overflow-y:auto">
-        <div style="color:var(--tx3);font-size:12px;text-align:center;padding:24px">Tryk opdater for at hente historik</div>
+        <div style="color:var(--tx3);font-size:12px;text-align:center;padding:24px">Press refresh to load history</div>
       </div>
     </div>
   </div>
@@ -2922,7 +2922,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div id="influencer-prod-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
         <div style="color:var(--tx3);font-size:12px;text-align:center;padding:32px;grid-column:1/-1">
           <div style="font-size:32px;margin-bottom:8px;opacity:.3">🛍️</div>
-          Ingen reklame produkter endnu<br>
+          No ad products yet<br>
           <button class="btn bp bsm" style="margin-top:12px" onclick="openProdModal()">+ Add product</button>
         </div>
       </div>
@@ -2941,13 +2941,13 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div class="trow"><div><div class="tname">📸 Instagram</div></div><span class="sdot off"></span></div>
             <div class="trow"><div><div class="tname">🎵 TikTok</div></div><span class="sdot off"></span></div>
             <div class="trow"><div><div class="tname">▶️ YouTube</div></div><span class="sdot off"></span></div>
-            <button class="btn bp bsm" style="width:100%;margin-top:10px" onclick="nav('connect')">🔗 Tilknyt konto</button>
+            <button class="btn bp bsm" style="width:100%;margin-top:10px" onclick="nav('connect')">🔗 Connect account</button>
           </div>
         </div>
         <div>
           <div class="card" style="background:var(--s3)">
             <div class="ctitle">⚙️ Engagement</div>
-            <div class="trow"><div><div class="tname">Auto-like</div><div class="tdesc" style="font-size:10px">Liker relevante opslag</div></div><div class="tog" onclick="togIt(this)"></div></div>
+            <div class="trow"><div><div class="tname">Auto-like</div><div class="tdesc" style="font-size:10px">Likes relevant posts</div></div><div class="tog" onclick="togIt(this)"></div></div>
             <div class="trow"><div><div class="tname">Auto-follow</div><div class="tdesc" style="font-size:10px">Follows relevant profiles</div></div><div class="tog" onclick="togIt(this)"></div></div>
             <div class="trow"><div><div class="tname">Auto-comment</div><div class="tdesc" style="font-size:10px">Comments on relevant posts</div></div><div class="tog" onclick="togIt(this)"></div></div>
           </div>
@@ -2998,7 +2998,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="conbody">
             <div class="fg"><label class="fl">Store URL</label><input class="fi" id="shopify-store" placeholder="din-butik.myshopify.com"></div>
             <div class="fg"><label class="fl">Admin API Token</label><input class="fi" type="password" id="shopify-token" placeholder="shpat_..."></div>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Shopify Admin → Indstillinger → Apps → Udvikl apps → Opret app → Installer → Kopiér token</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Shopify Admin → Settings → Apps → Develop apps → Create app → Install → Copy token</div>
             <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('shopify')">💾 Gem</button><button class="btn br bsm" onclick="deleteConn('shopify')">🗑️ Slet</button></div>
           </div>
         </div>
@@ -3015,8 +3015,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <div class="conbody">
             <div id="ig-api-status" style="display:none;background:rgba(225,48,108,.08);border:1px solid rgba(225,48,108,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
-              <div style="font-weight:700;color:#e1306c;margin-bottom:4px">✅ Instagram Graph API forbundet</div>
-              <div style="color:var(--tx2)">Konto: <span id="ig-api-username" style="font-weight:600"></span></div>
+              <div style="font-weight:700;color:#e1306c;margin-bottom:4px">✅ Instagram Graph API connected</div>
+              <div style="color:var(--tx2)">Account: <span id="ig-api-username" style="font-weight:600"></span></div>
               <div style="color:var(--tx3);font-size:11px" id="ig-api-expires"></div>
               <div style="color:var(--tx3);font-size:11px" id="ig-api-synced"></div>
               <div style="display:flex;gap:8px;margin-top:8px">
@@ -3024,7 +3024,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
                 <button class="btn bp bsm" onclick="connectInstagramAPI()">🔄 Reconnect</button>
               </div>
             </div>
-            <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Forbind Instagram via officiel API</button>
+            <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Connect Instagram via official API</button>
             <button class="btn bg" id="ig-growth-connect-btn" style="width:100%;margin-bottom:8px;font-size:13px;background:linear-gradient(135deg,rgba(225,48,108,.18),rgba(193,53,132,.18));border-color:rgba(225,48,108,.4);color:#e1306c" onclick="openInstagramGrowthConnect()">📈 Connect via Growth Session</button>
 
             <div id="ig-batch-section" style="display:none;margin-bottom:12px;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px">
@@ -3075,8 +3075,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <div class="conbody">
             <div id="tt-api-status" style="display:none;background:rgba(255,0,80,.08);border:1px solid rgba(255,0,80,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
-              <div style="font-weight:700;color:#ff0050;margin-bottom:4px">✅ TikTok API forbundet</div>
-              <div style="color:var(--tx2)">Konto: <span id="tt-api-username" style="font-weight:600"></span></div>
+              <div style="font-weight:700;color:#ff0050;margin-bottom:4px">✅ TikTok API connected</div>
+              <div style="color:var(--tx2)">Account: <span id="tt-api-username" style="font-weight:600"></span></div>
               <div style="color:var(--tx3);font-size:11px" id="tt-api-synced"></div>
               <div style="display:flex;gap:8px;margin-top:8px">
                 <button class="btn bg bsm" onclick="checkTikTokAPIStatus()">↻ Tjek status</button>
@@ -3084,7 +3084,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
                 <button class="btn br bsm" onclick="disconnectTikTokAPI()">Afbryd API</button>
               </div>
             </div>
-            <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectTikTokAPI()">🎵 Forbind TikTok via officiel API</button>
+            <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectTikTokAPI()">🎵 Connect TikTok via official API</button>
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Requires a TikTok Business/Creator account. Gives access to direct video posting without browser automation.</div>
             <details style="margin-bottom:10px">
               <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Manual login (fallback)</summary>
@@ -3129,8 +3129,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <div class="conbody">
             <div id="tw-api-status" style="display:none;background:rgba(29,161,242,.08);border:1px solid rgba(29,161,242,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
-              <div style="font-weight:700;color:#1da1f2;margin-bottom:4px">✅ X / Twitter API forbundet</div>
-              <div style="color:var(--tx2)">Konto: <span id="tw-api-username" style="font-weight:600"></span></div>
+              <div style="font-weight:700;color:#1da1f2;margin-bottom:4px">✅ X / Twitter API connected</div>
+              <div style="color:var(--tx2)">Account: <span id="tw-api-username" style="font-weight:600"></span></div>
               <div style="color:var(--tx3);font-size:11px;margin-top:2px" id="tw-api-synced"></div>
               <div style="display:flex;gap:8px;margin-top:8px">
                 <button class="btn bg bsm" onclick="checkTwitterAPIStatus()">↻ Tjek status</button>
@@ -3138,7 +3138,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               </div>
             </div>
             <div class="info-box" style="margin-bottom:12px">🤖 UgoingViral automatically handles the connection via our platform.</div>
-            <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="window.location.href='/api/twitter/connect'">🐦 Forbind X / Twitter via officiel API</button>
+            <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="window.location.href='/api/twitter/connect'">🐦 Connect X / Twitter via official API</button>
             <div class="fg"><label class="fl">Brugernavn / Email</label><input class="fi" id="tw-user" placeholder="@brugernavn"></div>
             <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="tw-pass" placeholder="Adgangskode"></div>
             <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('twitter')">💾 Gem</button><button class="btn bg bsm" onclick="testLogin('twitter')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('twitter')">🗑️ Slet</button></div>
@@ -3159,7 +3159,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <div class="conbody">
             <div id="yt-api-status" style="display:none;background:rgba(255,0,0,.08);border:1px solid rgba(255,0,0,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
-              <div style="color:#f87171;font-weight:600;margin-bottom:4px">▶️ YouTube Data API v3 forbundet</div>
+              <div style="color:#f87171;font-weight:600;margin-bottom:4px">▶️ YouTube Data API v3 connected</div>
               <div style="color:var(--tx2)">Kanal: <span id="yt-api-channel" style="color:#fff"></span></div>
               <div style="color:var(--tx3);font-size:11px" id="yt-api-synced"></div>
               <div style="display:flex;gap:8px;margin-top:8px">
@@ -3168,11 +3168,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
                 <button class="btn br bsm" onclick="disconnectYouTubeAPI()">Afbryd API</button>
               </div>
             </div>
-            <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px;background:rgba(255,0,0,.15);border-color:rgba(255,0,0,.4)" onclick="connectYouTubeAPI()">▶️ Forbind YouTube via Data API v3</button>
+            <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px;background:rgba(255,0,0,.15);border-color:rgba(255,0,0,.4)" onclick="connectYouTubeAPI()">▶️ Connect YouTube via Data API v3</button>
             <details style="margin-bottom:12px">
               <summary style="cursor:pointer;font-size:12px;color:var(--tx3);padding:6px 0">Manual login (fallback)</summary>
               <div style="padding-top:8px">
-                <div class="fg"><label class="fl">Email (Google konto)</label><input class="fi" id="yt-user" placeholder="din@gmail.com"></div>
+                <div class="fg"><label class="fl">Email (Google account)</label><input class="fi" id="yt-user" placeholder="din@gmail.com"></div>
                 <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="yt-pass" placeholder="Adgangskode"></div>
                 <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('youtube')">💾 Gem</button><button class="btn bg bsm" onclick="testLogin('youtube')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('youtube')">🗑️ Slet</button></div>
               </div>
@@ -3274,7 +3274,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="clib-type-tab"    data-t="reel"  onclick="clibSetType(this)">📱 Reels</div>
     </div>
     <div id="clib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px">
-      <div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🗂️</div>Ingen filer endnu — klik ⬆️ Upload</div>
+      <div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🗂️</div>No files yet — click ⬆️ Upload</div>
     </div>
   </div>
 
@@ -3338,7 +3338,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   </div>
 </div>
 
-<!-- ══ INDSTILLINGER ══════════════════════════════════════════════════════ -->
+<!-- ══ SETTINGS ══════════════════════════════════════════════════════════ -->
 
   <!-- ══ TELEGRAM AGENT ══════════════════════════════════════════════════════ -->
   <div id="page-telegram-agent" class="page">
@@ -3622,7 +3622,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           Manage separate profiles from one dashboard. Each extra profile has its own connected platforms and content.
         </div>
         <div id="sub-list">
-          <div style="color:var(--tx3);text-align:center;padding:32px 0;font-size:13px">Ingen extra profiles endnu</div>
+          <div style="color:var(--tx3);text-align:center;padding:32px 0;font-size:13px">No extra profiles yet</div>
         </div>
       </div>
 
@@ -4985,7 +4985,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <button class="btn bg bsm" style="margin-left:auto" onclick="loadPipeHistory()">🔄 Opdater</button>
       </div>
       <div id="pipe-hist-grid" class="pipe-hist-grid">
-        <div style="color:var(--tx3);font-size:12px;grid-column:1/-1;padding:16px 0;text-align:center">Ingen videoer endnu</div>
+        <div style="color:var(--tx3);font-size:12px;grid-column:1/-1;padding:16px 0;text-align:center">No videos yet</div>
       </div>
     </div>
 
@@ -5033,7 +5033,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="upload-zone" onclick="document.getElementById('img-upload').click()">
         <input type="file" id="img-upload" accept="image/*" multiple onchange="uploadImages(this)">
         <div style="font-size:28px;margin-bottom:8px">📸</div>
-        <div style="font-size:13px;font-weight:600;color:var(--tx2)">Klik for at uploade billeder</div>
+        <div style="font-size:13px;font-weight:600;color:var(--tx2)">Click to upload images</div>
         <div style="font-size:11px;color:var(--tx3);margin-top:4px">JPG, PNG, WEBP — flere billeder muligt</div>
       </div>
       <div id="img-preview" class="img-grid"></div>
@@ -5176,7 +5176,7 @@ function renderSubAccountSwitcher(d) {
     if (bannerAv) { bannerAv.textContent = _subInitials(sub.name); bannerAv.style.background = sub.avatar_color; }
     if (bannerName) bannerName.textContent = sub.name;
   } else {
-    if (nameEl) nameEl.textContent = 'Hoved-konto';
+    if (nameEl) nameEl.textContent = 'Main account';
     if (avEl) { avEl.textContent = mainInitials; avEl.style.background = '#00e5ff'; }
     const banner = document.getElementById('sub-banner');
     if (banner) banner.classList.remove('shown');
@@ -5262,17 +5262,17 @@ async function createSubAccount() {
     document.getElementById('sub-new-name').value = '';
     document.getElementById('sub-new-focus').value = '';
     document.getElementById('sub-create-card').style.display = 'none';
-    toast('✅ Extra Profile oprettet!','success');
+    toast('✅ Extra profile created!','success');
     await loadSubAccounts();
   } catch(e) { toast('❌ ' + e.message,'error'); }
 }
 
 async function deleteSubAccount(id) {
-  if (!confirm('Slet denne extra-profile? Al data slettes permanent.')) return;
+  if (!confirm('Delete this extra profile? All data will be permanently deleted.')) return;
   try {
     await apiFetch(`/api/subaccounts/${id}`, 'DELETE', null, true);
     if (_activeSub === id) switchSubAccount(null);
-    toast('🗑️ Extra Profile slettet','info');
+    toast('🗑️ Extra profile deleted','info');
     await loadSubAccounts();
   } catch(e) { toast('❌ ' + e.message,'error'); }
 }
@@ -5306,11 +5306,11 @@ async function loadSubAddons() {
 
 async function buySubAddon(pkgKey) {
   try {
-    toast('Opretter betaling...', 'info');
+    toast('Creating payment...', 'info');
     const d = await apiFetch('/api/billing/create_addon_checkout', 'POST', {package: pkgKey}, true);
     if (d.url) window.location.href = d.url;
-    else toast('Fejl: ingen betalings-URL', 'error');
-  } catch(e) { toast('Fejl: ' + (e.message||'Ukendt'), 'error'); }
+    else toast('Error: no payment URL', 'error');
+  } catch(e) { toast('Error: ' + (e.message||'Unknown'), 'error'); }
 }
 
 function switchSubAccount(id) {
@@ -5493,14 +5493,14 @@ function renderBillingPage(d) {
 
 async function buyPlan(planKey, provider='stripe') {
   try {
-    toast('Opretter betaling...', 'info');
+    toast('Creating payment...', 'info');
     const endpoint = provider === 'paypal' ? '/api/billing/create_paypal_checkout' : '/api/billing/create_checkout';
     const payload = {plan: planKey, type: 'plan'};
     if (window._ugvBillingCycle === 'yearly') payload.billing_cycle = 'yearly';
     const d = await apiFetch(endpoint, 'POST', payload, true);
     if (d.url) window.location.href = d.url;
     else toast('Payment link not available', 'error');
-  } catch(e) { toast('Fejl: ' + e.message, 'error'); }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 async function buyPlanPayPal(planKey) { buyPlan(planKey, 'paypal'); }
@@ -5510,7 +5510,7 @@ async function setPlan(planKey) {
     const d = await apiFetch('/api/billing/set_plan', 'POST', {plan: planKey});
     toast('Plan skiftet til ' + planKey, 'success');
     loadBilling();
-  } catch(e) { toast('Fejl: ' + e.message, 'error'); }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 function showBonusPopup(bonusKey, amount) {
@@ -5591,7 +5591,7 @@ async function loadInvite() {
 function copyInviteLink() {
   const el = document.getElementById('invite-link');
   if (!el) return;
-  navigator.clipboard.writeText(el.value).then(() => toast('📋 Invitationslink kopieret!', 'success'));
+  navigator.clipboard.writeText(el.value).then(() => toast('📋 Invite link copied!', 'success'));
 }
 
 // ── Studio packages ───────────────────────────────────────────────────────────
@@ -5633,10 +5633,10 @@ async function loadStudioPackages() {
 
 async function buyStudioPackage(pkgKey) {
   try {
-    toast('Opretter betaling...', 'info');
+    toast('Creating payment...', 'info');
     const d = await apiFetch('/api/billing/create_studio_checkout', 'POST', {package: pkgKey}, true);
     if (d.url) window.location.href = d.url;
-  } catch(e) { toast('Fejl: ' + (e.message||'Ukendt'), 'error'); }
+  } catch(e) { toast('Error: ' + (e.message||'Unknown'), 'error'); }
 }
 
 async function startStudioWithCredits(pkgKey, sceneCount, requiredCredits) {
@@ -5740,12 +5740,12 @@ async function loadProviderStats() {
 
 async function buyExtraCredits(amount, price, provider='stripe') {
   try {
-    toast('Opretter betaling for ' + amount + ' credits...', 'info');
+    toast('Creating payment for ' + amount + ' credits...', 'info');
     const endpoint = provider === 'paypal' ? '/api/billing/create_paypal_checkout' : '/api/billing/create_checkout';
     const d = await apiFetch(endpoint, 'POST', {credits: amount, price: price, type: 'credits'}, true);
     if (d.url) window.location.href = d.url;
     else toast('Betalingsudbyder ikke konfigureret', 'info');
-  } catch(e) { toast('Fejl: ' + e.message, 'error'); }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 // ── STATISTIK ─────────────────────────────────────────────────────────────────
@@ -5858,7 +5858,7 @@ async function generateBatch() {
     <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
         <span style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase">Variant ${i+1}</span>
-        <button class="btn bg bxs" onclick="navigator.clipboard.writeText(this.closest('div').nextElementSibling.textContent.trim());toast('Kopieret!','success')">📋</button>
+        <button class="btn bg bxs" onclick="navigator.clipboard.writeText(this.closest('div').nextElementSibling.textContent.trim());toast('Copied!','success')">📋</button>
       </div>
       <div style="font-size:12px;color:var(--tx2);line-height:1.6;white-space:pre-wrap">${r}</div>
     </div>`).join('');
@@ -5897,7 +5897,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(r => r.json()).then(d => {
           launchConfetti();
           showPaymentSuccess(d.message || 'PayPal payment completed!');
-        }).catch(() => toast('⚠️ PayPal capture fejlede — kontakt support', 'error'));
+        }).catch(() => toast('⚠️ PayPal capture failed — contact support', 'error'));
     } else {
       launchConfetti();
       showPaymentSuccess('PayPal payment completed!');
@@ -5924,10 +5924,10 @@ document.addEventListener('DOMContentLoaded', () => {
       showPaymentSuccess(psMsg);
     }
   } else if (_urlp.get('payment') === 'cancelled') {
-    toast('Betaling annulleret', 'info');
+    toast('Payment cancelled', 'info');
     window.history.replaceState({}, '', '/app');
   } else if (_urlp.get('tiktok') === 'connected') {
-    toast('✅ TikTok API forbundet!', 'success');
+    toast('✅ TikTok API connected!', 'success');
     window.history.replaceState({}, '', '/app');
     nav('connect');
     setTimeout(checkTikTokAPIStatus, 500);
@@ -5935,7 +5935,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toast('❌ TikTok connection error — please try again', 'error');
     window.history.replaceState({}, '', '/app');
   } else if (_urlp.get('youtube') === 'connected') {
-    toast('✅ YouTube API forbundet!', 'success');
+    toast('✅ YouTube API connected!', 'success');
     window.history.replaceState({}, '', '/app');
     nav('connect');
     setTimeout(checkYouTubeAPIStatus, 500);
@@ -5952,7 +5952,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(checkUserWelcome, 800);
 });
 
-function refresh() { checkHealth(); loadQueue(); loadConnections(); toast('↻ Opdateret', 'info'); }
+function refresh() { checkHealth(); loadQueue(); loadConnections(); toast('↻ Refreshed', 'info'); }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // VIDEO STUDIO
@@ -6129,7 +6129,7 @@ function studioRender() {
     </div>
 
     <div class="card" style="margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:10px">⚙️ Indstillinger</div>
+      <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:10px">⚙️ Settings</div>
       <div class="trow" style="padding:8px 0">
         <div>
           <div style="font-size:12px;font-weight:600;color:var(--tx)">Forbedre prompts med AI</div>
@@ -6183,7 +6183,7 @@ function studioSceneCard(scene, idx) {
     <div class="fg" style="margin-bottom:8px">
       <textarea class="fi" id="scene-prompt-${idx}" rows="3"
         placeholder="${idx===0
-          ? 'Beskriv videoen detaljeret — fx: Slow-motion close-up af coffee beans falling into white ceramic cup, steam rising, warm morning light, cinematic depth of field'
+          ? 'Describe the video in detail — e.g. Slow-motion close-up of coffee beans falling into white ceramic cup, steam rising, warm morning light, cinematic depth of field'
           : 'Describe scene ' + (idx+1) + ' — continue the story from the previous scene...'}"
         oninput="_studio.scenes[${idx}].prompt=this.value">${_escHtml(scene.prompt)}</textarea>
     </div>
@@ -6638,7 +6638,7 @@ function obfCheckConnections() {
     const status = document.getElementById(prefix + '-status');
     const btn = document.getElementById(prefix + '-btn');
     if (connected && status) {
-      status.textContent = 'Forbundet ✓';
+      status.textContent = 'Connected ✓';
       status.classList.add('connected');
       if (btn) { btn.className = 'obf-connected-badge'; btn.textContent = '✓ Active'; btn.onclick = null; }
     }
@@ -6790,7 +6790,7 @@ async function saveProfile() {
     loadSidebarUser();
     closeProfileModal();
     toast('✅ Profil gemt', 'success');
-  } catch(e) { toast('Fejl: ' + e.message, 'error'); }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
@@ -7075,21 +7075,21 @@ async function buyExtraProfileSlot(qty) {
 // ── Navigation ────────────────────────────────────────────────────────────────
 const titles = {
   dashboard:'🏠 Dashboard',
-  products:'🛍️ Produkter', creators:'👤 Influencer Profiler',
+  products:'🛍️ Products', creators:'👤 Influencer Profiles',
   generator:'✨ Content Generator', reels:'🎬 Reels & Video',
-  history:'📚 Content Historik', library:'🖼️ Medie Bibliotek',
-  'content-library':'🗂️ Content Bibliotek',
+  history:'📚 Content History', library:'🖼️ Media Library',
+  'content-library':'🗂️ Content Library',
   posting:'📤 Post & Schedule', inbox:'💬 Inbox, DM & Email',
-  automation:'🤖 Automation', connect:'🔗 Connect', settings:'⚙️ Indstillinger', billing:'💳 Plan & Credits', 'telegram-agent':'🤖 Telegram Agent',
-  'influencer-products':'🛍️ Reklame Produkter',
-  'growth-accounts':'📈 Growth Konti',
+  automation:'🤖 Automation', connect:'🔗 Connect', settings:'⚙️ Settings', billing:'💳 Plan & Credits', 'telegram-agent':'🤖 Telegram Agent',
+  'influencer-products':'🛍️ Ad Products',
+  'growth-accounts':'📈 Growth Accounts',
   pipeline:'🎬 Content Pipeline',
-  stats:'📊 Statistik',
+  stats:'📊 Statistics',
   templates:'📝 Templates',
   analytics:'📈 Analytics',
   reels:'📝 Script Generator',
-  'content-library':'🗂️ Content Bibliotek',
-  history:'📚 Content Historik',
+  'content-library':'🗂️ Content Library',
+  history:'📚 Content History',
   subaccounts:'👥 Extra Profiles',
   studio:'🎬 Video Studio',
   'brand-kit':'🎨 Brand Kit',
@@ -7232,14 +7232,14 @@ async function loadConnections() {
     };
     var connected = 0, total = 0;
     for (const [k, ids] of Object.entries(platMap)) {
-      const ok = d[k]; const label = ok ? 'Forbundet ✓' : 'Ikke forbundet';
+      const ok = d[k]; const label = ok ? 'Connected ✓' : 'Not connected';
       if (ids[0]) setDot(ids[0], ok);
-      if (ids[1]) setText(ids[1], k === 'ai' ? (ok ? 'AI: klar' : 'AI: ikke konfigureret') : (ok ? `${k}: forbundet` : `${k}: ikke tilsluttet`));
+      if (ids[1]) setText(ids[1], k === 'ai' ? (ok ? 'AI: ready' : 'AI: not configured') : (ok ? `${k}: connected` : `${k}: not connected`));
       if (ids[2]) { const el = document.getElementById(ids[2]); if (el) { el.textContent = label; el.className = 'constatus ' + (ok ? 'ok' : 'no'); } }
       if (ids[3]) setText(ids[3], label);
       if (ids[4]) setDot(ids[4], ok);
       if (ids[5]) setDot(ids[5], ok);
-      if (ids[6]) setText(ids[6], ok ? 'Forbundet' : 'Ikke konfigureret');
+      if (ids[6]) setText(ids[6], ok ? 'Connected' : 'Not configured');
       const card = document.getElementById('con-' + k);
       if (card) card.classList.toggle('ok', ok);
       const chip = ids[7] ? document.getElementById(ids[7]) : null;
@@ -7847,9 +7847,9 @@ async function saveConn(type) {
   }
 }
 async function deleteConn(type) {
-  if (!confirm(`Slet ${type} forbindelse?`)) return;
+  if (!confirm(`Delete ${type} connection?`)) return;
   await apiFetch(`/api/settings/${type}`, 'DELETE');
-  toast(`🗑️ ${type} slettet`, 'info'); loadConnections();
+  toast(`🗑️ ${type} deleted`, 'info'); loadConnections();
 }
 async function testLogin(platform) {
   toast(`🤖 Opening browser for ${platform}...`, 'info');
@@ -7883,12 +7883,12 @@ function updateGroupSelects() {
 }
 async function createGroup() {
   const name = document.getElementById('new-group-name').value.trim();
-  if (!name) { toast('Skriv et gruppenavn', 'error'); return; }
+  if (!name) { toast('Enter a group name', 'error'); return; }
   if (allGroups.includes(name)) { toast('Gruppen findes allerede', 'error'); return; }
   await apiFetch(`/api/products/groups/${encodeURIComponent(name)}`, 'POST', {});
   allGroups.push(name); updateGroupSelects();
   document.getElementById('new-group-name').value = '';
-  toast(`✅ "${name}" oprettet!`, 'success'); renderGroupsTab();
+  toast(`✅ "${name}" created!`, 'success'); renderGroupsTab();
 }
 function renderGroupsTab() {
   const el = document.getElementById('groups-list'); if (!el) return;
@@ -7930,12 +7930,12 @@ async function moveSelectedToGroup() {
   moveSelectedProds = []; loadProducts(); renderGroupsTab();
 }
 async function deleteGroup(name) {
-  if (!confirm(`Slet "${name}"?`)) return;
+  if (!confirm(`Delete "${name}"?`)) return;
   allGroups = allGroups.filter(g => g !== name);
   for (const prod of allProducts.filter(p => p.group === name)) {
     prod.group = 'Alle'; await apiFetch('/api/products/manual', 'POST', prod);
   }
-  updateGroupSelects(); toast(`🗑️ "${name}" slettet`, 'info');
+  updateGroupSelects(); toast(`🗑️ "${name}" deleted`, 'info');
   loadProducts(); renderGroupsTab();
 }
 function filterByGroup(g) {
@@ -8055,12 +8055,12 @@ async function saveProduct() {
     await apiFetch('/api/products/manual', 'POST', body);
     toast(`✅ "${title}" gemt!`, 'success'); closeProdModal(); prodImages = []; loadProducts();
   } catch(e) { toast('❌ ' + e.message, 'error'); }
-  finally { btn.disabled = false; btn.innerHTML = '💾 Gem produkt'; }
+  finally { btn.disabled = false; btn.innerHTML = '💾 Save product'; }
 }
 async function deleteProd(id, title) {
-  if (!confirm(`Slet "${title}"?`)) return;
+  if (!confirm(`Delete "${title}"?`)) return;
   await apiFetch(`/api/products/manual/${id}`, 'DELETE');
-  toast('🗑️ Slettet', 'info');
+  toast('🗑️ Deleted', 'info');
   if (selectedProdId === id) closeProdPanel();
   loadProducts();
 }
@@ -8185,12 +8185,12 @@ async function saveCreator() {
     await apiFetch('/api/creators', 'POST', body);
     toast(`✅ "${name}" gemt!`, 'success'); closeCreatorModal(); loadCreators();
   } catch(e) { toast('❌ ' + e.message, 'error'); }
-  finally { btn.disabled = false; btn.innerHTML = '💾 Gem creator'; }
+  finally { btn.disabled = false; btn.innerHTML = '💾 Save creator'; }
 }
 async function deleteCreator(id) {
-  if (!confirm('Slet creator?')) return;
+  if (!confirm('Delete creator?')) return;
   await apiFetch(`/api/creators/${id}`, 'DELETE');
-  toast('🗑️ Slettet', 'info'); loadCreators();
+  toast('🗑️ Deleted', 'info'); loadCreators();
 }
 
 // ── Content Generator ─────────────────────────────────────────────────────────
@@ -8340,7 +8340,7 @@ async function selectPostProduct(pid) {
   
   // Vis hvad der er valgt
   const postContent = document.getElementById('post-content');
-  toast(`✅ ${prod.title} valgt — caption og billede hentet!`, 'success');
+  toast(`✅ ${prod.title} selected — caption and image loaded!`, 'success');
 }
 
 function setMode(m) {
@@ -8350,7 +8350,7 @@ function setMode(m) {
   api.style.borderColor = m==='api'?'var(--border-ac)':'var(--border)'; api.style.background = m==='api'?'rgba(var(--ac-rgb),.05)':'';
 }
 async function schedPost() {
-  const content = v('post-content'); if (!content) { toast('⚠️ Skriv noget indhold','error'); return; }
+  const content = v('post-content'); if (!content) { toast('⚠️ Enter some content','error'); return; }
   // Hent platforms fra chips
   var platforms = _selectedPostPlatforms && _selectedPostPlatforms.length ? _selectedPostPlatforms : [v('post-plat')||'instagram'];
   var imageUrl = v('post-img') || window._selectedPostImage || null;
@@ -8378,7 +8378,7 @@ async function schedPost() {
   loadQueue(); renderCal();
 }
 async function postNow() {
-  const content = v('post-content'); if (!content) { toast('⚠️ Skriv noget indhold','error'); return; }
+  const content = v('post-content'); if (!content) { toast('⚠️ Enter some content','error'); return; }
   const imageUrl = v('post-img') || window._selectedPostImage || null;
   if (postMode === 'ui') {
     const r = await apiFetch('/api/automation/playwright/post','POST',{platform:v('post-plat'),content,image_url:imageUrl});
@@ -8526,7 +8526,7 @@ function calDayClick(day, hasPosts) {
   if (hasPosts) {
     openDayView(day, dateStr);
   } else {
-    toast(`📅 ${day}/${calDate.getMonth()+1} valgt`, 'info');
+    toast(`📅 ${day}/${calDate.getMonth()+1} selected`, 'info');
   }
 }
 
@@ -8613,13 +8613,13 @@ function closeDayView() {
 var _currentDayViewDate = '';
 
 async function deleteSingleFromDay(id) {
-  if (!confirm('Slet dette opslag?')) return;
+  if (!confirm('Delete this post?')) return;
   await apiFetch('/api/posts/' + id, 'DELETE');
   // Fjern fra _calPostsByDay
   for (var day in _calPostsByDay) {
     _calPostsByDay[day] = _calPostsByDay[day].filter(function(p){ return p.id !== id; });
   }
-  toast('🗑️ Opslag slettet', 'info');
+  toast('🗑️ Post deleted', 'info');
   loadQueue(); renderCal();
   // Reload day view
   if (_currentDayViewDate) {
@@ -8630,9 +8630,9 @@ async function deleteSingleFromDay(id) {
 
 async function deleteDayFromModal() {
   if (!_currentDayViewDate) return;
-  if (!confirm('Slet alle opslag den ' + _currentDayViewDate + '?')) return;
+  if (!confirm('Delete all posts on ' + _currentDayViewDate + '?')) return;
   await apiFetch('/api/posts/day/' + _currentDayViewDate, 'DELETE');
-  toast('🗑️ Dag slettet', 'info');
+  toast('🗑️ Day deleted', 'info');
   closeDayView();
   loadQueue(); renderCal();
 }
@@ -8662,10 +8662,10 @@ async function deleteScheduledMonth(btn) {
 }
 
 async function deleteScheduledAll(btn) {
-  if (!confirm('Slet ALLE planlagte opslag? Dette kan ikke fortrydes.')) return;
+  if (!confirm('Delete ALL scheduled posts? This cannot be undone.')) return;
   btn.disabled = true;
   await apiFetch('/api/posts/all', 'DELETE');
-  toast('🗑️ Alle planlagte opslag slettet', 'info');
+  toast('🗑️ All scheduled posts deleted', 'info');
   loadQueue(); renderCal();
   btn.disabled = false;
 }
@@ -8717,7 +8717,7 @@ function toggleDMPlat(el) { el.classList.toggle('active'); }
 async function saveDMSettings() {
   const platforms = Array.from(document.querySelectorAll('#dm-plat-chips .ptab.active')).map(el => el.dataset.p);
   await apiFetch('/api/dm/settings','POST',{ reply_tone:v('dm-tone'), reply_language:v('dm-lang'), custom_instructions:v('dm-instructions'), forbidden_topics:v('dm-forbidden'), allowed_topics:v('dm-allowed'), auto_reply_dm:document.getElementById('tog-dm').classList.contains('on'), auto_reply_comments:document.getElementById('tog-com').classList.contains('on'), ghost_mode:document.getElementById('tog-ghost').classList.contains('on'), platforms });
-  toast('✅ DM indstillinger gemt','success');
+  toast('✅ DM settings saved','success');
 }
 async function genDM() {
   const msg = v('dm-msg'); if (!msg) { toast('Paste a message','error'); return; }
@@ -8825,7 +8825,7 @@ async function disconnectYouTubeAPI() {
   const statusEl = document.getElementById('yt-api-status');
   if (statusEl) statusEl.style.display = 'none';
   const cs = document.getElementById('cs-youtube');
-  if (cs) { cs.textContent = 'Ikke forbundet'; cs.className = 'constatus no'; }
+  if (cs) { cs.textContent = 'Not connected'; cs.className = 'constatus no'; }
   document.getElementById('con-youtube')?.classList.remove('ok');
 }
 
@@ -8936,7 +8936,7 @@ async function disconnectTikTokAPI() {
   const statusEl = document.getElementById('tt-api-status');
   if (statusEl) statusEl.style.display = 'none';
   const cs = document.getElementById('cs-tiktok');
-  if (cs) { cs.textContent = 'Ikke forbundet'; cs.className = 'constatus no'; }
+  if (cs) { cs.textContent = 'Not connected'; cs.className = 'constatus no'; }
   document.getElementById('con-tiktok')?.classList.remove('ok');
 }
 
@@ -9061,7 +9061,7 @@ async function planTomorrow(btn) {
       loadQueue();
     } else {
       el.style.display = 'block';
-      el.innerHTML = '⚠️ Ingen opslag planlagt — tjek auto-post indstillinger';
+      el.innerHTML = '⚠️ No posts scheduled — check auto-post settings';
       toast('⚠️ Ingen opslag planlagt', 'error');
     }
   } catch(e) { toast('❌ ' + e.message, 'error'); }
@@ -9148,8 +9148,8 @@ async function saveRepostSettings() {
   };
   try {
     await apiFetch('/api/posts/repost/settings', 'POST', body);
-    toast('Genopslag indstillinger gemt', 'success');
-  } catch(e) { toast('Fejl', 'error'); }
+    toast('Repost settings saved', 'success');
+  } catch(e) { toast('Error', 'error'); }
 }
 
 async function loadRepostHistory() {
@@ -9167,7 +9167,7 @@ async function loadRepostHistory() {
         </div>
         <button class="btn bp bsm" style="flex-shrink:0;padding:5px 12px" onclick="openRepostModal(${JSON.stringify(esc(h.content||'')).replace(/"/g,"'")}, ${JSON.stringify(esc(h.image_url||'')).replace(/"/g,"'")})">♻️ Genpost</button>
       </div>`).join('');
-  } catch(e) { wrap.innerHTML = '<div style="font-size:12px;color:var(--tx3)">Fejl ved hentning</div>'; }
+  } catch(e) { wrap.innerHTML = '<div style="font-size:12px;color:var(--tx3)">Error fetching</div>'; }
 }
 
 function openRepostModal(content, imageUrl) {
@@ -9363,7 +9363,7 @@ async function loadEmailSettings() {
     if (s.reply_language) document.getElementById('email-lang').value = s.reply_language;
     if (s.custom_instructions) document.getElementById('email-instructions').value = s.custom_instructions;
     var statusEl = document.getElementById('email-status-txt');
-    if (statusEl) statusEl.textContent = s.email_user ? 'Konfigureret' : 'Ikke forbundet';
+    if (statusEl) statusEl.textContent = s.email_user ? 'Configured' : 'Not connected';
     if (s.auto_reply_active) togSet('tog-email-auto', true);
   } catch(e) {}
 }
@@ -9382,7 +9382,7 @@ async function saveEmailSettings() {
     active: true
   };
   await apiFetch('/api/email/settings', 'POST', data);
-  toast('Email indstillinger gemt!', 'success');
+  toast('Email settings saved!', 'success');
   var statusEl = document.getElementById('email-status-txt');
   if (statusEl && data.email_user) statusEl.textContent = 'Konfigureret';
 }
@@ -9403,7 +9403,7 @@ async function toggleEmailAuto(el) {
 async function loadEmailInbox() {
   var list = document.getElementById('email-inbox-list');
   if (!list) return;
-  list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tx2)">Henter emails...</div>';
+  list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tx2)">Fetching emails...</div>';
   try {
     var r = await apiFetch('/api/email/inbox?limit=20');
     if (r.error) { list.innerHTML = '<div style="color:var(--br);padding:16px;font-size:12px">' + r.error + '</div>'; return; }
@@ -9558,7 +9558,7 @@ function setText(id,t){const el=document.getElementById(id);if(el)el.textContent
 function setDot(id,on){const el=document.getElementById(id);if(el){el.classList.remove('on','off');el.classList.add(on?'on':'off');}}
 function togIt(el){el.classList.toggle('on');}
 function togSet(id,val){const el=document.getElementById(id);if(el)el.classList.toggle('on',!!val);}
-function copyText(t){navigator.clipboard.writeText(t.replace(/\\n/g,'\n'));toast('📋 Kopieret!','success');}
+function copyText(t){navigator.clipboard.writeText(t.replace(/\\n/g,'\n'));toast('📋 Copied!','success');}
 function copyEl(id){copyText(document.getElementById(id)?.textContent||'');}
 function escQ(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/\n/g,'\\n');}
 
@@ -9628,7 +9628,7 @@ function buildPostLibGrid() {
       var f = libFiles[parseInt(this.dataset.idx)];
       if (f) { var imgEl = document.getElementById('post-img'); if (imgEl) imgEl.value = f.url; }
       document.getElementById('src-lib-panel').style.display = 'none';
-      toast('🖼️ ' + (f ? f.name : '') + ' valgt!', 'success');
+      toast('🖼️ ' + (f ? f.name : '') + ' selected!', 'success');
     });
   });
 }
@@ -9710,19 +9710,19 @@ function renderLibrary(files) {
   grid.querySelectorAll('.lib-gen').forEach(function(el) { el.addEventListener('click', function() { sendLibToGen(parseInt(this.dataset.idx)); }); });
 }
 
-function sendLibToPost(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('post-img'); if (el) el.value = f.url; nav('posting'); toast('📸 Valgt til opslag', 'success'); }
+function sendLibToPost(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('post-img'); if (el) el.value = f.url; nav('posting'); toast('📸 Selected for post', 'success'); }
 function sendLibToGen(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('g-pdesc'); if (el) el.value = 'Billede: ' + f.name; nav('generator'); toast('✨ Klar', 'info'); }
 
 async function createLibFolder() {
   var name = (document.getElementById('lib-new-folder') || {}).value.trim();
-  if (!name) { toast('Skriv et navn', 'error'); return; }
+  if (!name) { toast('Enter a name', 'error'); return; }
   try {
     var r = await apiFetch('/api/library/folders', 'POST', {name: name});
     libFolders = r.folders || [];
     renderLibFolderSelect();
     document.getElementById('lib-folder-modal').style.display = 'none';
     document.getElementById('lib-new-folder').value = '';
-    toast('📁 "' + name + '" oprettet!', 'success');
+    toast('📁 "' + name + '" created!', 'success');
   } catch(e) { toast('❌ Fejl ved oprettelse', 'error'); }
 }
 
@@ -9750,7 +9750,7 @@ var TOUR_STEPS = [
   {
     id: 'ni-dashboard', navTo: 'dashboard',
     title: '🏠 Dashboard',
-    desc: 'Dit kontrolcenter. Her ser du et samlet overblik over statistik, hurtige handlinger og seneste aktivitet.',
+    desc: 'Your control center. See an at-a-glance overview of stats, quick actions and recent activity.',
   },
   {
     id: 'ni-webshop', navTo: 'products', openSub: 'webshop-sub',
@@ -9770,7 +9770,7 @@ var TOUR_STEPS = [
   {
     id: 'ni-connect', navTo: 'connect',
     title: '🔗 Connect',
-    desc: 'Forbind dine sociale medie konti her. Tilknyt mindst én konto for at begynde at poste og automatisere.',
+    desc: 'Link your social media accounts here. Connect at least one to start posting and automating.',
   },
 ];
 var _tourStep = 0;
@@ -9979,7 +9979,7 @@ selectPostProduct = async function(pid) {
     }
   } catch(e) {}
 
-  toast('✅ ' + prod.title.substring(0,20) + ' valgt!', 'success');
+  toast('✅ ' + prod.title.substring(0,20) + ' selected!', 'success');
 };
 
 function clearPostProduct() {
@@ -10158,7 +10158,7 @@ async function loadRecentPosts() {
         var msg = '';
         if (!r.active) msg = '⏸️ Auto-post is disabled';
         else if (!upcoming.length) msg = '⚠️ Enable "Auto post" on a platform under Automation';
-        else msg = 'Ingen kommende opslag';
+        else msg = 'No upcoming posts';
         upcomingList.innerHTML = '<div style="color:var(--tx3);font-size:11px;text-align:center;padding:12px;line-height:1.6">' + msg + '</div>';
       } else {
         upcomingList.innerHTML = upcoming.slice(0,5).map(function(u) {
@@ -10376,8 +10376,8 @@ updateAutoPreview = function() {
   var maxReels = parseInt((document.getElementById('auto-max-reels')||{textContent:'1'}).textContent) || 0;
   var totalPerDay = maxPosts + maxVideos + maxReels;
   
-  el.innerHTML = '<strong>Tidspunkter:</strong> ' + times.join(', ') + '<br>' +
-    '<strong>Dage:</strong> ' + (days.length ? days.join(', ') : 'Ingen valgt') + '<br>' +
+  el.innerHTML = '<strong>Times:</strong> ' + times.join(', ') + '<br>' +
+    '<strong>Days:</strong> ' + (days.length ? days.join(', ') : 'None selected') + '<br>' +
     '<strong>Fra:</strong> ' + groupLabel + '<br>' +
     '<strong>Per dag:</strong> ' + maxPosts + ' opslag · ' + maxVideos + ' videoer · ' + maxReels + ' reels = ' + totalPerDay + ' i alt';
 };
@@ -10417,7 +10417,7 @@ savePostSettings = async function() {
     auto_groups: activeGroups
   });
   updateAutoPreview();
-  toast('✅ Auto-post indstillinger gemt!', 'success');
+  toast('✅ Auto-post settings saved!', 'success');
 };
 
 function sendContentToPost(captionText, productId) {
@@ -11384,7 +11384,7 @@ function clibRender() {
     html += '</div></div>';
   });
   grid.innerHTML = html;
-  grid.querySelectorAll('.clib-post').forEach(function(el) { el.addEventListener('click', function() { var f = clibFiles[parseInt(this.dataset.idx)]; if (!f) return; var ei = document.getElementById('post-img'); if (ei) ei.value = f.url; nav('posting'); toast('📸 Valgt til opslag','success'); }); });
+  grid.querySelectorAll('.clib-post').forEach(function(el) { el.addEventListener('click', function() { var f = clibFiles[parseInt(this.dataset.idx)]; if (!f) return; var ei = document.getElementById('post-img'); if (ei) ei.value = f.url; nav('posting'); toast('📸 Selected for post','success'); }); });
   grid.querySelectorAll('.clib-pipe').forEach(function(el) { el.addEventListener('click', function() { var f = clibFiles[parseInt(this.dataset.idx)]; if (!f) return; _pipeImgUrl = f.url; document.getElementById('pipe-img-thumb').src = f.url; document.getElementById('pipe-img-preview').style.display='block'; document.getElementById('pipe-img-zone').style.display='none'; nav('pipeline'); toast('🎬 Klar til pipeline','success'); }); });
 }
 
@@ -11417,7 +11417,7 @@ function clibRenderFolderSel() {
 
 async function clibCreateFolder() {
   var name = (document.getElementById('clib-new-folder-name') || {}).value.trim();
-  if (!name) { toast('Skriv et navn','error'); return; }
+  if (!name) { toast('Enter a name','error'); return; }
   try {
     var r = await apiFetch('/api/library/folders', 'POST', {name:name});
     clibFolders = r.folders || [];
@@ -11477,12 +11477,12 @@ function clibToggleRandom(el, folder) {
 
 function saveClibSettings() {
   localStorage.setItem('clib_settings', JSON.stringify(clibSettings));
-  toast('💾 Indstillinger gemt','success');
+  toast('💾 Settings saved','success');
 }
 
 async function clibGenReel() {
   var topic = (document.getElementById('clib-r-topic') || {}).value.trim();
-  if (!topic) { toast('Skriv et emne','error'); return; }
+  if (!topic) { toast('Enter a topic','error'); return; }
   var plat  = (document.getElementById('clib-r-plat') || {}).value;
   var len   = (document.getElementById('clib-r-len') || {}).value;
   var lang  = (document.getElementById('clib-r-lang') || {}).value;
@@ -11499,7 +11499,7 @@ async function clibGenReel() {
 
 async function clibGenIdeas() {
   var topic = (document.getElementById('clib-r-topic') || {}).value.trim();
-  if (!topic) { toast('Skriv et emne','error'); return; }
+  if (!topic) { toast('Enter a topic','error'); return; }
   var out = document.getElementById('clib-ideas-out');
   out.textContent = 'Genererer idéer...';
   try {
@@ -11726,7 +11726,7 @@ async function pipeRegenerateScripts() {
     pipeShowPreview(platData.scripts || [], (platData.shotlists||[])[0]||title, _pipePlatformForRunway, _pipeImgForRunway);
   } catch(e) {
     pipeSetStep(1, 'error', e.message, '❌');
-    toast('Fejl: ' + e.message, 'error');
+    toast('Error: ' + e.message, 'error');
     document.getElementById('pipe-form-card').style.display = 'block';
   }
 }
@@ -11783,7 +11783,7 @@ async function _pipeRunRunway(platform, imgUrl, shotlist, script) {
     pipeSetStep(stepN, 'error', e.message, '❌');
     pipeSetMsg(is402 ? '⚡ Ikke nok credits — opgradér din plan!' : 'Fejl: ' + e.message);
     if (is402) toast('Not enough credits! Go to 💳 Plan & Credits.', 'error');
-    else toast('Fejl: ' + e.message, 'error');
+    else toast('Error: ' + e.message, 'error');
     document.getElementById('pipe-form-card').style.display = 'block';
     pipeLoadCredits();
   }
@@ -11882,7 +11882,7 @@ async function regenStep(step) {
     }
   } catch(e) {
     statusEl.textContent = '❌ ' + e.message;
-    toast('Fejl: ' + e.message, 'error');
+    toast('Error: ' + e.message, 'error');
   } finally {
     btns.forEach(b => { if(b) b.disabled = false; });
   }
@@ -11907,7 +11907,7 @@ async function _uploadPipeImage() {
 // ── FULL PIPELINE ─────────────────────────────────────────────────────────────
 async function startFullPipeline() {
   const title = (document.getElementById('pipe-title').value || '').trim();
-  if (!title) { toast('Skriv en produkt titel', 'error'); return; }
+  if (!title) { toast('Enter a product title', 'error'); return; }
   if (!_pipeImgFile && !_pipeImgUrl) { toast('Upload et produktbillede', 'error'); return; }
 
   _pipeAborted = false;
@@ -11961,7 +11961,7 @@ async function startFullPipeline() {
     const is402 = e.message && (e.message.includes('402') || e.message.toLowerCase().includes('credits'));
     pipeSetMsg(is402 ? '⚡ Ikke nok credits!' : 'Fejl: ' + e.message);
     if (is402) toast('Not enough credits! Go to 💳 Plan & Credits.', 'error');
-    else toast('Fejl: ' + e.message, 'error');
+    else toast('Error: ' + e.message, 'error');
     document.getElementById('pipe-form-card').style.display = 'block';
     pipeLoadCredits();
   }
@@ -11970,7 +11970,7 @@ async function startFullPipeline() {
 // ── KUN SCRIPTS (hurtig-knap) ─────────────────────────────────────────────────
 async function generatePipeline() {
   const title = (document.getElementById('pipe-title').value || '').trim();
-  if (!title) { toast('Skriv en produkt titel', 'error'); return; }
+  if (!title) { toast('Enter a product title', 'error'); return; }
   const platform = _getPipePlatform();
   const btn = document.getElementById('pipe-scripts-btn');
   btn.disabled = true;
@@ -11989,7 +11989,7 @@ async function generatePipeline() {
     document.getElementById('pipe-scripts-section').style.display = 'block';
     toast('Scripts genereret! 📝', 'success');
   } catch(e) {
-    toast('Fejl: ' + e.message, 'error');
+    toast('Error: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = '📝 Kun scripts';
@@ -12047,7 +12047,7 @@ function toggleCaptionSection() {
 
 async function addCaptions() {
   const caption = (document.getElementById('pipe-caption-text').value || '').trim();
-  if (!caption) { toast('Skriv caption tekst', 'error'); return; }
+  if (!caption) { toast('Enter caption text', 'error'); return; }
   const btn    = document.getElementById('pipe-caption-btn');
   const status = document.getElementById('pipe-caption-status');
   btn.disabled = true;
@@ -12071,7 +12071,7 @@ async function addCaptions() {
     toast('Captions burned in! 🎬', 'success');
   } catch(e) {
     status.textContent = 'Fejl: ' + e.message;
-    toast('Fejl: ' + e.message, 'error');
+    toast('Error: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = '🔥 Burn captions in';
@@ -12089,7 +12089,7 @@ function renderPipeContent() {
     const val = plat.hashtags || '';
     el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <span style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px"># Hashtags</span>
-      <button class="pipe-item-copy" onclick="navigator.clipboard.writeText(document.getElementById('pipe-hash-val').textContent);toast('Kopieret!','success')">Kopiér alle</button>
+      <button class="pipe-item-copy" onclick="navigator.clipboard.writeText(document.getElementById('pipe-hash-val').textContent);toast('Copied!','success')">Copy all</button>
     </div><div class="pipe-single" id="pipe-hash-val">${esc(val)}</div>`;
     return;
   }
@@ -12097,7 +12097,7 @@ function renderPipeContent() {
     const val = plat.call_to_action || '';
     el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <span style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px">🎯 Call to Action</span>
-      <button class="pipe-item-copy" onclick="navigator.clipboard.writeText(document.getElementById('pipe-cta-val').textContent);toast('Kopieret!','success')">Kopiér</button>
+      <button class="pipe-item-copy" onclick="navigator.clipboard.writeText(document.getElementById('pipe-cta-val').textContent);toast('Copied!','success')">Copy</button>
     </div><div class="pipe-single" id="pipe-cta-val">${esc(val)}</div>`;
     return;
   }
@@ -12107,7 +12107,7 @@ function renderPipeContent() {
     ${items.map((item,i) => `<div class="pipe-item">
       <span class="pipe-item-num">${i+1}</span>
       <span class="pipe-item-text">${esc(item)}</span>
-      <button class="pipe-item-copy" onclick="navigator.clipboard.writeText(this.closest('.pipe-item').querySelector('.pipe-item-text').textContent.trim());toast('Kopieret!','success')">Kopiér</button>
+      <button class="pipe-item-copy" onclick="navigator.clipboard.writeText(this.closest('.pipe-item').querySelector('.pipe-item-text').textContent.trim());toast('Copied!','success')">Copy</button>
     </div>`).join('')}`;
 }
 
@@ -14122,23 +14122,68 @@ async function loadGrowthAccounts() {
       return;
     }
     var platformIco = {instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'📘', twitter:'🐦'};
+    var platformName = {instagram:'Instagram', tiktok:'TikTok', youtube:'YouTube', facebook:'Facebook', twitter:'X / Twitter'};
+    var platformBg = {
+      instagram: 'linear-gradient(135deg,rgba(225,48,108,.10),rgba(252,176,69,.04))',
+      tiktok:    'rgba(255,0,80,.08)',
+      youtube:   'rgba(255,0,0,.08)',
+      facebook:  'rgba(24,119,242,.08)',
+      twitter:   'rgba(29,161,242,.08)'
+    };
+    function _flag(cc) {
+      if (!cc || cc.length !== 2) return '🌐';
+      var c = cc.toUpperCase();
+      return String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65) +
+             String.fromCodePoint(0x1F1E6 + c.charCodeAt(1) - 65);
+    }
+    function _relTime(iso) {
+      if (!iso) return '';
+      var t = new Date(iso).getTime();
+      if (!t || isNaN(t)) return '';
+      var s = Math.floor((Date.now() - t) / 1000);
+      if (s < 60)    return 'just now';
+      if (s < 3600)  return Math.floor(s/60)   + 'm ago';
+      if (s < 86400) return Math.floor(s/3600) + 'h ago';
+      return Math.floor(s/86400) + 'd ago';
+    }
     grid.innerHTML = accs.map(function(a) {
-      var ico    = platformIco[(a.platform || '').toLowerCase()] || '🌐';
+      var plat   = (a.platform || '').toLowerCase();
+      var ico    = platformIco[plat]  || '🌐';
+      var pname  = platformName[plat] || (a.platform || 'unknown');
+      var bg     = platformBg[plat]   || 'var(--glass)';
       var status = (a.status || 'active').toLowerCase();
-      var color  = status === 'active' ? '#22c55e' : (status === 'inactive' ? 'var(--tx3)' : '#f59e0b');
-      var dot    = '<span style="width:8px;height:8px;border-radius:50%;background:' + color + ';display:inline-block;margin-right:6px"></span>';
-      var ago    = a.connected_at ? new Date(a.connected_at).toLocaleDateString() : '';
-      return '<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:6px">' +
-               '<div style="display:flex;align-items:center;gap:8px">' +
-                 '<div style="font-size:22px">' + ico + '</div>' +
+      var sColor = status === 'active' ? '#22c55e' : (status === 'inactive' ? 'var(--tx3)' : '#f59e0b');
+      var sDot   = '<span style="width:8px;height:8px;border-radius:50%;background:' + sColor + ';display:inline-block;box-shadow:0 0 6px ' + sColor + '"></span>';
+
+      var px     = a.proxy || {};
+      var pxOk   = !!px.assigned;
+      var pxCol  = pxOk ? '#22c55e' : 'var(--tx3)';
+      var pxIco  = pxOk ? '🛡️' : '⚠️';
+      var pxTxt  = pxOk
+        ? (_flag(px.country) + ' ' + (px.country || 'Proxy') + ' active')
+        : 'No proxy assigned';
+
+      var lastAct = _relTime(a.last_activity);
+      var ago     = a.connected_at ? new Date(a.connected_at).toLocaleDateString() : '';
+
+      return '<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px;background:' + bg + ';border:1px solid var(--border)">' +
+               '<div style="display:flex;align-items:center;gap:10px">' +
+                 '<div style="font-size:26px;flex-shrink:0">' + ico + '</div>' +
                  '<div style="flex:1;min-width:0">' +
-                   '<div style="font-weight:700;font-size:13px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@' + (a.username || '?') + '</div>' +
-                   '<div style="font-size:11px;color:var(--tx3);text-transform:capitalize">' + (a.platform || 'unknown') + '</div>' +
+                   '<div style="font-weight:700;font-size:14px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@' + (a.username || '?') + '</div>' +
+                   '<div style="font-size:11px;color:var(--tx3);font-weight:600;letter-spacing:.4px">' + pname + '</div>' +
                  '</div>' +
+                 sDot +
                '</div>' +
-               '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--tx3);margin-top:4px">' +
-                 '<span>' + dot + '<span style="color:' + color + ';font-weight:700;text-transform:uppercase;letter-spacing:.5px">' + status + '</span></span>' +
-                 (ago ? '<span title="Connected">' + ago + '</span>' : '') +
+
+               '<div style="display:flex;align-items:center;gap:6px;font-size:11px;padding:6px 8px;border-radius:8px;background:var(--glass-b);border:1px solid var(--border);color:' + pxCol + '" title="' + (pxOk && px.session_id ? 'Session: ' + px.session_id : 'Proxy not assigned') + '">' +
+                 '<span>' + pxIco + '</span>' +
+                 '<span style="font-weight:700">' + pxTxt + '</span>' +
+               '</div>' +
+
+               '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--tx3);gap:8px">' +
+                 '<span title="Last automation action">⚡ ' + (lastAct || 'No recent activity') + '</span>' +
+                 (ago ? '<span title="Connected">📅 ' + ago + '</span>' : '') +
                '</div>' +
              '</div>';
     }).join('');

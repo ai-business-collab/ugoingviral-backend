@@ -236,6 +236,18 @@ async def list_connected_growth_accounts(current_user: dict = Depends(get_curren
     accounts: list[dict] = []
     seen: set = set()
 
+    # User-level proxy + activity state — currently shared across all that user's
+    # growth accounts. Surfaced per-account so the dashboard can show it without
+    # an extra request.
+    proxy_cfg     = ustore.get("proxy_config", {}) or {}
+    proxy_info    = {
+        "assigned":    bool(proxy_cfg.get("assigned")),
+        "country":     proxy_cfg.get("proxy_country", ""),
+        "session_id":  proxy_cfg.get("session_id", ""),
+        "assigned_at": proxy_cfg.get("assigned_at", ""),
+    }
+    last_activity = ustore.get("last_action_time", "") or ""
+
     def _add(platform: str, username: str, status: str = "active", connected_at: str = ""):
         platform = (platform or "").lower()
         username = (username or "").lstrip("@")
@@ -246,10 +258,12 @@ async def list_connected_growth_accounts(current_user: dict = Depends(get_curren
             return
         seen.add(key)
         accounts.append({
-            "platform":     platform,
-            "username":     username,
-            "status":       status,
-            "connected_at": connected_at,
+            "platform":      platform,
+            "username":      username,
+            "status":        status,
+            "connected_at":  connected_at,
+            "proxy":         proxy_info,
+            "last_activity": last_activity,
         })
 
     # 1) Instagram handles from Growth sessions (batch + noVNC).
