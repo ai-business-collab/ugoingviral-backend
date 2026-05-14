@@ -120,7 +120,7 @@ async def register(request: Request, req: RegisterRequest):
     try:
         import asyncio
         from routes.email import send_welcome_email
-        asyncio.get_event_loop().run_in_executor(None, send_welcome_email, user["email"], user.get("name", ""))
+        if not user["email"].startswith("qa-"): asyncio.get_event_loop().run_in_executor(None, send_welcome_email, user["email"], user.get("name", ""))
     except Exception:
         pass
     if req.ref:
@@ -245,7 +245,7 @@ async def google_callback(code: str = None, error: str = None):
         try:
             from routes.email import send_welcome_email
             import asyncio
-            asyncio.get_event_loop().run_in_executor(None, send_welcome_email, email, name)
+            if not email.startswith("qa-"): asyncio.get_event_loop().run_in_executor(None, send_welcome_email, email, name)
         except Exception:
             pass
 
@@ -337,7 +337,7 @@ async def github_callback(code: str = None, error: str = None):
         try:
             from routes.email import send_welcome_email
             import asyncio
-            asyncio.get_event_loop().run_in_executor(None, send_welcome_email, email, name)
+            if not email.startswith("qa-"): asyncio.get_event_loop().run_in_executor(None, send_welcome_email, email, name)
         except Exception:
             pass
 
