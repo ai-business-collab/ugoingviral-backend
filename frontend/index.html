@@ -13409,7 +13409,7 @@ function agToggle() {
       if (!savedName) _ag.awaitingName = true;
       setTimeout(function() {
         if (_ag.awaitingName) {
-          agAddMsg('bot', "Hey! 👋 I'm your personal AI assistant on UgoingViral. What would you like to call me? Type a name, or say 'you choose' and I'll pick one!");
+          agAddMsg('bot', "Hi! I'm your personal AI assistant. What would you like to call me?\n\n(Type a name, or say \"you choose\" and I'll pick one.)");
         } else {
           var hnEl = document.getElementById('ag-hname');
           var nm = (hnEl && hnEl.textContent || '').trim() || 'your assistant';
