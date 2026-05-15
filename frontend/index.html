@@ -1761,9 +1761,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   <!-- Sub-account active banner -->
   <div id="sub-banner">
     <div class="sb-av" id="sub-banner-av" style="background:#7c3aed">U</div>
-    <span style="color:var(--tx2)">Viewing:</span>
+    <span style="color:var(--tx2)" data-i18n="subbanner.viewing">Viewing:</span>
     <span id="sub-banner-name">–</span>
-    <button id="sub-banner-exit" onclick="switchSubAccount(null)">✕ Back to main account</button>
+    <button id="sub-banner-exit" onclick="switchSubAccount(null)" data-i18n="subbanner.back">✕ Back to main account</button>
   </div>
 
   <div class="wrap">
@@ -1775,18 +1775,18 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="hero-card">
       <div style="position:relative;z-index:1;flex:1;min-width:240px">
         <div class="hero-title" id="dash-greeting">Welcome back 👋</div>
-        <div class="hero-sub" id="dash-greet-sub">Here's how your social media autopilot is doing today.</div>
+        <div class="hero-sub" id="dash-greet-sub" data-i18n="dash.heroSub">Here's how your social media autopilot is doing today.</div>
       </div>
       <div class="hero-actions">
-        <button class="btn bp bsm" onclick="nav('posting')">📅 Schedule a post</button>
-        <button class="btn bg bsm" onclick="nav('generator')">✨ Generate content</button>
+        <button class="btn bp bsm" onclick="nav('posting')" data-i18n="dash.scheduleBtn">📅 Schedule a post</button>
+        <button class="btn bg bsm" onclick="nav('generator')" data-i18n="dash.generateBtn">✨ Generate content</button>
       </div>
     </div>
 
     <!-- Setup completion widget -->
     <div id="setup-widget" style="display:none">
       <div class="card" style="margin-bottom:20px">
-        <div class="ctitle" style="margin-bottom:14px">🚀 Kom godt i gang</div>
+        <div class="ctitle" style="margin-bottom:14px" data-i18n="dash.setupTitle">🚀 Get started</div>
         <div class="setup-widget-items" id="setup-widget-items"></div>
       </div>
     </div>
@@ -1799,8 +1799,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <span class="pstat-trend flat">—</span>
         </div>
         <div class="pstat-val" id="s-prod">0</div>
-        <div class="pstat-lbl">Products</div>
-        <div class="pstat-sub">In your catalog</div>
+        <div class="pstat-lbl" data-i18n="dash.statProducts">Products</div>
+        <div class="pstat-sub" data-i18n="dash.statProductsSub">In your catalog</div>
       </div>
       <div class="pstat p2">
         <div class="pstat-head">
@@ -1808,8 +1808,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <span class="pstat-trend flat">—</span>
         </div>
         <div class="pstat-val" id="s-cont">0</div>
-        <div class="pstat-lbl">Content</div>
-        <div class="pstat-sub">AI-generated</div>
+        <div class="pstat-lbl" data-i18n="dash.statContent">Content</div>
+        <div class="pstat-sub" data-i18n="dash.statContentSub">AI-generated</div>
       </div>
       <div class="pstat p3">
         <div class="pstat-head">
@@ -1817,8 +1817,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <span class="pstat-trend flat">—</span>
         </div>
         <div class="pstat-val" id="s-sched">0</div>
-        <div class="pstat-lbl">Scheduled</div>
-        <div class="pstat-sub">Posts in queue</div>
+        <div class="pstat-lbl" data-i18n="dash.statScheduled">Scheduled</div>
+        <div class="pstat-sub" data-i18n="dash.statScheduledSub">Posts in queue</div>
       </div>
       <div class="pstat p4">
         <div class="pstat-head">
@@ -1826,27 +1826,27 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <span class="pstat-trend flat">—</span>
         </div>
         <div class="pstat-val" id="s-creators">0</div>
-        <div class="pstat-lbl">Creators</div>
-        <div class="pstat-sub">Active profiles</div>
+        <div class="pstat-lbl" data-i18n="dash.statCreators">Creators</div>
+        <div class="pstat-sub" data-i18n="dash.statCreatorsSub">Active profiles</div>
       </div>
     </div>
 
     <!-- Quick actions -->
     <div class="card" style="margin-bottom:22px">
-      <div class="ctitle">⚡ Quick Actions</div>
+      <div class="ctitle" data-i18n="dash.quickActions">⚡ Quick Actions</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:6px">
-        <a class="qact" onclick="nav('generator')"><div class="qact-icon">✨</div><div><div class="qact-name">Generate content</div><div class="qact-desc">AI captions, hooks, scripts</div></div></a>
-        <a class="qact" onclick="nav('studio')"><div class="qact-icon">🎬</div><div><div class="qact-name">Video Studio</div><div class="qact-desc">AI video + portrait</div></div></a>
-        <a class="qact" onclick="nav('posting')"><div class="qact-icon">📅</div><div><div class="qact-name">Schedule</div><div class="qact-desc">Plan upcoming posts</div></div></a>
-        <a class="qact" onclick="nav('connect')"><div class="qact-icon">🔗</div><div><div class="qact-name">Connect</div><div class="qact-desc">Link your platforms</div></div></a>
-        <a class="qact" onclick="nav('audit')"><div class="qact-icon">📋</div><div><div class="qact-name">Run audit</div><div class="qact-desc">Score any account</div></div></a>
-        <a class="qact" onclick="nav('competitor')"><div class="qact-icon">🔍</div><div><div class="qact-name">Spy competitors</div><div class="qact-desc">Strategy breakdown</div></div></a>
+        <a class="qact" onclick="nav('generator')"><div class="qact-icon">✨</div><div><div class="qact-name" data-i18n="dash.qaGen">Generate content</div><div class="qact-desc" data-i18n="dash.qaGenDesc">AI captions, hooks, scripts</div></div></a>
+        <a class="qact" onclick="nav('studio')"><div class="qact-icon">🎬</div><div><div class="qact-name" data-i18n="dash.qaStudio">Video Studio</div><div class="qact-desc" data-i18n="dash.qaStudioDesc">AI video + portrait</div></div></a>
+        <a class="qact" onclick="nav('posting')"><div class="qact-icon">📅</div><div><div class="qact-name" data-i18n="dash.qaSchedule">Schedule</div><div class="qact-desc" data-i18n="dash.qaScheduleDesc">Plan upcoming posts</div></div></a>
+        <a class="qact" onclick="nav('connect')"><div class="qact-icon">🔗</div><div><div class="qact-name" data-i18n="dash.qaConnect">Connect</div><div class="qact-desc" data-i18n="dash.qaConnectDesc">Link your platforms</div></div></a>
+        <a class="qact" onclick="nav('audit')"><div class="qact-icon">📋</div><div><div class="qact-name" data-i18n="dash.qaAudit">Run audit</div><div class="qact-desc" data-i18n="dash.qaAuditDesc">Score any account</div></div></a>
+        <a class="qact" onclick="nav('competitor')"><div class="qact-icon">🔍</div><div><div class="qact-name" data-i18n="dash.qaCompetitor">Spy competitors</div><div class="qact-desc" data-i18n="dash.qaCompetitorDesc">Strategy breakdown</div></div></a>
       </div>
     </div>
 
     <div class="g2">
       <div class="card">
-        <div class="ctitle">📡 Platform Status</div>
+        <div class="ctitle" data-i18n="dash.platformStatus">📡 Platform Status</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:6px">
           <div class="brand-chip sh" id="chip-shop"><span class="bc-dot" id="dot-s-shop"></span>🛍️ Shopify<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-shop">—</span></div>
           <div class="brand-chip ig" id="chip-ig"><span class="bc-dot" id="dot-s-ig"></span>📸 Instagram<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-ig">—</span></div>
@@ -1855,7 +1855,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="brand-chip tw" id="chip-tw"><span class="bc-dot" id="dot-s-tw"></span>🐦 X / Twitter<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-tw">—</span></div>
           <div class="brand-chip yt" id="chip-yt"><span class="bc-dot" id="dot-s-yt"></span>▶️ YouTube<span style="margin-left:auto;font-size:10px;color:var(--tx3)" id="d-yt">—</span></div>
         </div>
-        <button class="btn bg bsm" style="margin-top:12px;width:100%" onclick="nav('connect')">🔗 Manage connections →</button>
+        <button class="btn bg bsm" style="margin-top:12px;width:100%" onclick="nav('connect')" data-i18n="dash.manageConn">🔗 Manage connections →</button>
       </div>
       <div class="card">
         <div class="ctitle">📋 Seneste content</div>
@@ -6892,6 +6892,44 @@ const I18N = {
     'page.stats':'📊 Statistics', 'page.automation':'🤖 Automation',
     'page.products':'🛍️ Products', 'page.creators':'👤 Influencer Profiles',
     'page.analytics':'📈 Analytics',
+    'page.reels':'🎬 Reels & Video', 'page.inbox':'💬 Inbox, DM & Email',
+    'page.telegram-agent':'🤖 Telegram Agent',
+    'page.influencer-products':'🛍️ Ad Products',
+    'page.growth-accounts':'📈 Growth Accounts',
+    'page.templates':'📝 Templates', 'page.subaccounts':'👥 Extra Profiles',
+    'page.studio':'🎬 Video Studio', 'page.brand-kit':'🎨 Brand Kit',
+    'page.content-plan':'🗓️ AI Content Plan',
+    'page.competitor':'🔍 Competitor Spy',
+    'page.hashtags':'🏷️ Hashtag Research',
+    'page.video-script':'🎬 Video Script Generator',
+    'page.reel-templates':'📱 Story & Reel Templates',
+    'page.audit':'📋 Account Audit',
+    // Dashboard greeting
+    'dash.morning':'Good morning', 'dash.afternoon':'Good afternoon',
+    'dash.evening':'Good evening', 'dash.night':'Late night',
+    'dash.late':'Working late',
+    'dash.autopilotSub':"Here's how your autopilot is doing.",
+    'dash.welcomeBack':'Welcome back',
+    'dash.heroSub':"Here's how your social media autopilot is doing today.",
+    'dash.scheduleBtn':'📅 Schedule a post',
+    'dash.generateBtn':'✨ Generate content',
+    'dash.statProducts':'Products', 'dash.statProductsSub':'In your catalog',
+    'dash.statContent':'Content', 'dash.statContentSub':'AI-generated',
+    'dash.statScheduled':'Scheduled', 'dash.statScheduledSub':'Posts in queue',
+    'dash.statCreators':'Creators', 'dash.statCreatorsSub':'Active profiles',
+    'dash.quickActions':'⚡ Quick Actions',
+    'dash.qaGen':'Generate content', 'dash.qaGenDesc':'AI captions, hooks, scripts',
+    'dash.qaStudio':'Video Studio', 'dash.qaStudioDesc':'AI video + portrait',
+    'dash.qaSchedule':'Schedule', 'dash.qaScheduleDesc':'Plan upcoming posts',
+    'dash.qaConnect':'Connect', 'dash.qaConnectDesc':'Link your platforms',
+    'dash.qaAudit':'Run audit', 'dash.qaAuditDesc':'Score any account',
+    'dash.qaCompetitor':'Spy competitors', 'dash.qaCompetitorDesc':'Strategy breakdown',
+    'dash.platformStatus':'📡 Platform Status',
+    'dash.manageConn':'🔗 Manage connections →',
+    'dash.setupTitle':'🚀 Get started',
+    // Sub-account banner
+    'subbanner.viewing':'Viewing:',
+    'subbanner.back':'✕ Back to main account',
     'common.loading':'Loading...', 'common.save':'Save', 'common.cancel':'Cancel',
     'common.delete':'Delete', 'common.copy':'Copy', 'common.copied':'Copied!',
     'common.close':'Close', 'common.edit':'Edit', 'common.retry':'Retry',
@@ -6939,6 +6977,44 @@ const I18N = {
     'page.stats':'📊 Statistik', 'page.automation':'🤖 Automation',
     'page.products':'🛍️ Produkter', 'page.creators':'👤 Influencer Profiler',
     'page.analytics':'📈 Analyse',
+    'page.reels':'🎬 Reels & Video', 'page.inbox':'💬 Indbakke, DM & Email',
+    'page.telegram-agent':'🤖 Telegram Agent',
+    'page.influencer-products':'🛍️ Reklame­produkter',
+    'page.growth-accounts':'📈 Growth-konti',
+    'page.templates':'📝 Skabeloner', 'page.subaccounts':'👥 Ekstra profiler',
+    'page.studio':'🎬 Video Studio', 'page.brand-kit':'🎨 Brand Kit',
+    'page.content-plan':'🗓️ AI indholdsplan',
+    'page.competitor':'🔍 Konkurrent-spion',
+    'page.hashtags':'🏷️ Hashtag-research',
+    'page.video-script':'🎬 Video­manus-generator',
+    'page.reel-templates':'📱 Story- & Reel-skabeloner',
+    'page.audit':'📋 Kontoaudit',
+    // Dashboard greeting
+    'dash.morning':'Godmorgen', 'dash.afternoon':'God eftermiddag',
+    'dash.evening':'Godaften', 'dash.night':'Sen aften',
+    'dash.late':'Arbejder sent',
+    'dash.autopilotSub':'Sådan kører din autopilot lige nu.',
+    'dash.welcomeBack':'Velkommen tilbage',
+    'dash.heroSub':'Sådan har dit autopilot-system det i dag.',
+    'dash.scheduleBtn':'📅 Planlæg et opslag',
+    'dash.generateBtn':'✨ Generér indhold',
+    'dash.statProducts':'Produkter', 'dash.statProductsSub':'I dit katalog',
+    'dash.statContent':'Indhold', 'dash.statContentSub':'AI-genereret',
+    'dash.statScheduled':'Planlagt', 'dash.statScheduledSub':'Opslag i kø',
+    'dash.statCreators':'Skabere', 'dash.statCreatorsSub':'Aktive profiler',
+    'dash.quickActions':'⚡ Hurtige handlinger',
+    'dash.qaGen':'Generér indhold', 'dash.qaGenDesc':'AI captions, hooks, scripts',
+    'dash.qaStudio':'Video Studio', 'dash.qaStudioDesc':'AI video + portræt',
+    'dash.qaSchedule':'Planlæg', 'dash.qaScheduleDesc':'Planlæg kommende opslag',
+    'dash.qaConnect':'Forbind', 'dash.qaConnectDesc':'Forbind dine platforme',
+    'dash.qaAudit':'Kør audit', 'dash.qaAuditDesc':'Bedøm enhver konto',
+    'dash.qaCompetitor':'Spion konkurrenter', 'dash.qaCompetitorDesc':'Strategi-analyse',
+    'dash.platformStatus':'📡 Platform-status',
+    'dash.manageConn':'🔗 Administrér forbindelser →',
+    'dash.setupTitle':'🚀 Kom godt i gang',
+    // Sub-konto banner
+    'subbanner.viewing':'Ser på:',
+    'subbanner.back':'✕ Tilbage til hoved­konto',
     'common.loading':'Indlæser...', 'common.save':'Gem', 'common.cancel':'Annullér',
     'common.delete':'Slet', 'common.copy':'Kopiér', 'common.copied':'Kopieret!',
     'common.close':'Luk', 'common.edit':'Redigér', 'common.retry':'Prøv igen',
@@ -7241,7 +7317,14 @@ function nav(p) {
   document.querySelectorAll('.ni').forEach(x => x.classList.remove('active'));
   document.getElementById('page-' + p)?.classList.add('active');
   document.querySelectorAll('.ni').forEach(n => { if (n.getAttribute('onclick')?.includes(`'${p}'`)) n.classList.add('active'); });
-  document.getElementById('ptitle').textContent = titles[p] || p;
+  // Prefer the i18n entry so the page title flips with the language toggle.
+  // Falls back to the static `titles` map for routes that don't have a key yet.
+  var pageKey = 'page.' + p;
+  var i18nTitle = (I18N[currentLang] || I18N.en)[pageKey];
+  document.getElementById('ptitle').textContent = i18nTitle || titles[p] || p;
+  // Remember the active route so the langchange listener can re-translate the
+  // title without re-running the rest of nav().
+  window._activePage = p;
   if (p === 'products' && !allProducts.length) loadProducts();
   if (p === 'pipeline') { loadPipeline(); loadPipeHistory(); pipeLoadCredits(); }
   if (p === 'stats') { loadStats(); }
@@ -7297,16 +7380,29 @@ function updateDashGreeting() {
   var el = document.getElementById('dash-greeting');
   if (!el) return;
   var h = new Date().getHours();
-  var time = h < 5 ? 'Working late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 22 ? 'Good evening' : 'Late night';
+  var timeKey = h < 5 ? 'dash.late' : h < 12 ? 'dash.morning' : h < 17 ? 'dash.afternoon' : h < 22 ? 'dash.evening' : 'dash.night';
   var nm = (document.getElementById('sb-display-name')?.textContent || '').trim();
   nm = (nm && nm !== '–') ? (', ' + nm.split(' ')[0]) : '';
-  el.textContent = time + nm + ' 👋';
+  el.textContent = t(timeKey) + nm + ' 👋';
   var sub = document.getElementById('dash-greet-sub');
   if (sub) {
-    var d = new Date().toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
-    sub.textContent = d + ' · Here\'s how your autopilot is doing.';
+    var locale = currentLang === 'da' ? 'da-DK' : 'en-US';
+    var d = new Date().toLocaleDateString(locale, {weekday:'long', month:'long', day:'numeric'});
+    sub.textContent = d + ' · ' + t('dash.autopilotSub');
   }
 }
+
+// Re-translate imperative bits when the language flips.
+window.addEventListener('langchange', function() {
+  var p = window._activePage;
+  if (p) {
+    var pageKey = 'page.' + p;
+    var i18nTitle = (I18N[currentLang] || I18N.en)[pageKey];
+    var el = document.getElementById('ptitle');
+    if (el) el.textContent = i18nTitle || titles[p] || p;
+  }
+  if (window._activePage === 'dashboard') updateDashGreeting();
+});
 function toggleSubMenu(id) {
   const sub = document.getElementById(id);
   const niMap = {
