@@ -15992,8 +15992,7 @@ function copyVideoScript() {
     lines.push('');
   });
   lines.push('CTA (' + (cta.time_range || '') + ')', cta.text || '');
-  navigator.clipboard.writeText(lines.join('
-')).then(function() {
+  navigator.clipboard.writeText(lines.join('\n')).then(function() {
     var btn = event.target;
     btn.textContent = 'Copied!';
     setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
@@ -16058,7 +16057,7 @@ function renderReelTemplatesGrid(templates) {
   var colors = {ecommerce:'#f59e0b',creator:'#8b5cf6',fitness:'#22c55e',restaurant:'#ef4444',motivation:'#00e5ff'};
   grid.innerHTML = templates.map(function(t) {
     var c = colors[t.niche] || '#00e5ff';
-    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer" onclick="openTemplateModal('' + t.id + '')">' +
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer" onclick="openTemplateModal(\'' + t.id + '\')">' +
       '<div style="font-size:26px;margin-bottom:8px">' + (t.icon || '') + '</div>' +
       '<div style="font-weight:700;font-size:13px;margin-bottom:6px">' + t.name + '</div>' +
       '<div style="font-size:11px;color:var(--tx2);margin-bottom:10px;line-height:1.5">' + (t.description || '') + '</div>' +
@@ -16098,7 +16097,7 @@ function openTemplateModal(tid) {
     '<div style="margin-top:20px">' +
     '<label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:8px">Topic for this template *</label>' +
     '<input id="rt-topic-input" type="text" placeholder="e.g. My new summer collection" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px;margin-bottom:14px">' +
-    '<button onclick="generateFromTemplate('' + t.id + '')" style="width:100%;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#000;font-weight:800;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:14px">Generate Script from Template</button>' +
+    '<button onclick="generateFromTemplate(\'' + t.id + '\')" style="width:100%;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#000;font-weight:800;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:14px">Generate Script from Template</button>' +
     '</div>';
   modal.style.display = 'block';
 }
@@ -16458,7 +16457,7 @@ function renderContentPlan(plan) {
       if (p.product_name && _cpContext.products.length) {
         var prod = _cpContext.products.find(function(pr){ return pr.name && pr.name.toLowerCase().indexOf(p.product_name.toLowerCase()) !== -1; });
         if (prod && prod.image_url) {
-          prodThumb = '<img src="' + prod.image_url + '" alt="' + (prod.name||'') + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--border);margin-right:10px;flex-shrink:0" onerror="this.style.display='none'">';
+          prodThumb = '<img src="' + prod.image_url + '" alt="' + (prod.name||'') + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--border);margin-right:10px;flex-shrink:0" onerror="this.style.display=\'none\'">';
         }
       }
 
@@ -16835,10 +16834,10 @@ function _agRenderTasks(tasks, body) {
       + t.schedule + ' · ' + (t.run_count || 0) + ' runs · last: ' + lastRun + '</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'
-      + '<div class="tog' + (t.active ? ' on' : '') + '" onclick="agToggleTask(''+t.id+'',this)" '
+      + '<div class="tog' + (t.active ? ' on' : '') + '" onclick="agToggleTask(\''+t.id+'\',this)" '
       + 'style="flex-shrink:0"></div>'
-      + '<span onclick="agDeleteTask(''+t.id+'',this)" style="font-size:10px;color:var(--tx3);'
-      + 'cursor:pointer" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--tx3)'">remove</span>'
+      + '<span onclick="agDeleteTask(\''+t.id+'\',this)" style="font-size:10px;color:var(--tx3);'
+      + 'cursor:pointer" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'var(--tx3)\'">remove</span>'
       + '</div>'
       + '</div>';
   });
