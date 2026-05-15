@@ -417,10 +417,21 @@ body.light #clock {
 .wrap { padding: 28px; flex: 1; }
 
 /* Pages */
-.page { display: none; padding: 24px 28px; box-sizing: border-box; max-width: 100%; }
+.page {
+  display: none;
+  padding: 24px 28px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;          /* allow grid/flex children to shrink instead of overflowing the column */
+  overflow-x: hidden;    /* clip stray wide children rather than push past the sidebar */
+}
 .page.active { display: block; animation: pageIn .3s var(--ease); }
 /* Keep all page content inside the grid column so cards never escape behind the sidebar. */
-.page > * { max-width: 100%; box-sizing: border-box; }
+.page > * { max-width: 100%; box-sizing: border-box; min-width: 0; }
+/* The pattern used on most pages: an inner wrapper that caps content width with
+   inline max-width. Make it shrinkable too so its grid/flex children don't push out. */
+.page > div[style*="max-width"] { min-width: 0; }
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
@@ -10685,7 +10696,7 @@ function sendQueueToPost(id) {
       <button class="btn bp bsm" onclick="nav('connect')" data-i18n="an.goConnect">Go to Connect</button>
     </div>
     <div id="an-content-wrap">
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px">
         <div class="stat-kpi"><div class="stat-kpi-val" id="an-posts">–</div><div class="stat-kpi-lbl" data-i18n="an.posts30d">Posts (30 days)</div></div>
         <div class="stat-kpi"><div class="stat-kpi-val" id="an-platform">–</div><div class="stat-kpi-lbl" data-i18n="an.topPlatform">Top platform</div></div>
         <div class="stat-kpi"><div class="stat-kpi-val" id="an-hour">–</div><div class="stat-kpi-lbl" data-i18n="an.bestHour">Best posting time</div></div>
@@ -11137,7 +11148,7 @@ function sendQueueToPost(id) {
   </div>
 
   <!-- ═══════════════════════════════ ACCOUNT AUDIT PAGE ═══════════════════ -->
-  <div id="page-audit" class="page" style="display:none">
+  <div id="page-audit" class="page">
     <div style="max-width:860px">
 
       <!-- Intro / what this is -->
