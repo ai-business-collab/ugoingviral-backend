@@ -330,6 +330,9 @@ nav {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-top: 60px;
+  /* Let each card grow to its own height — otherwise the Growth card's hover
+     expansion would stretch every sibling in the same row to match. */
+  align-items: start;
 }
 
 .price-card {
@@ -394,37 +397,33 @@ nav {
 .price-features li.plus::before { content: ""; display: none; }
 .price-features-extra { max-height: 0; overflow: hidden; transition: max-height .35s ease, opacity .3s ease; opacity: 0; }
 .price-card:hover .price-features-extra { max-height: 200px; opacity: 1; }
-.price-card-growth { border-color: rgba(34,197,94,.2); position: relative; overflow: hidden; }
+.price-card-growth { border-color: rgba(34,197,94,.2); }
 .price-card-growth:hover { border-color: rgba(34,197,94,.5) !important; box-shadow: 0 20px 60px rgba(34,197,94,.1), 0 8px 30px rgba(0,0,0,.4) !important; }
-.growth-extras-overlay {
-  /* Slides up from the bottom — covers at most half the card so price,
-     features, and the CTA stay visible. CTA is layered above (z-index: 3). */
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: auto;
-  max-height: 50%;
+/* The Growth plan has a "Built-in safety" block that expands inline on hover.
+   No absolute positioning, no overlay — the card simply grows taller and the
+   extras flow naturally below the regular features. CTA stays in normal flow,
+   underneath the extras, so it's always visible and clickable. */
+.growth-extras-inline {
+  max-height: 0;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(13,21,38,.95), rgba(0,0,0,.97));
-  color: rgba(255,255,255,.9);
-  padding: 16px 22px;
+  opacity: 0;
+  margin-top: 0;
   font-size: 12px;
   line-height: 1.55;
-  transform: translateY(100%); opacity: 0;
-  transition: transform .35s ease, opacity .25s ease;
-  pointer-events: none;
-  border-radius: inherit;
-  z-index: 1;
+  color: rgba(255,255,255,.85);
+  transition: max-height .35s ease, opacity .3s ease, margin-top .3s ease;
 }
-.growth-extras-overlay ul { list-style: none; margin: 0; padding: 0; }
-.growth-extras-overlay li { margin: 4px 0; }
-.growth-extras-overlay .ge-title {
+.price-card-growth:hover .growth-extras-inline {
+  max-height: 260px;
+  opacity: 1;
+  margin-top: 14px;
+}
+.growth-extras-inline ul { list-style: none; margin: 0; padding: 0; }
+.growth-extras-inline li { margin: 4px 0; }
+.growth-extras-inline .ge-title {
   font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
   color: rgba(34,197,94,.95); font-weight: 800; margin-bottom: 8px;
 }
-.price-card-growth:hover .growth-extras-overlay { transform: translateY(0); opacity: 1; }
-.price-card-growth .price-cta { position: relative; z-index: 3; pointer-events: auto; }
 .price-cta {
   display: block; margin-top: 18px; text-align: center;
   background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
@@ -1153,8 +1152,7 @@ footer p { font-size: 13px; color: var(--text2); }
         <li>Replace your mobile farm</li>
         <li>Priority support</li>
       </ul>
-      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)">Choose Growth &#8594;</a>
-      <div class="growth-extras-overlay" aria-hidden="true">
+      <div class="growth-extras-inline">
         <div class="ge-title">Built-in safety</div>
         <ul>
           <li>🛡️ Anti-ban AI system</li>
@@ -1164,6 +1162,7 @@ footer p { font-size: 13px; color: var(--text2); }
           <li>🔄 Human behavior simulation</li>
         </ul>
       </div>
+      <a onclick="openModal('register')" class="price-cta" style="cursor:pointer;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)">Choose Growth &#8594;</a>
     </div>
   </div>
 </section>
