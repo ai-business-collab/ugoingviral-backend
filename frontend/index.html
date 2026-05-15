@@ -6880,6 +6880,33 @@ const I18N = {
     'page.settings':'⚙️ Settings', 'page.billing':'💳 Plan & Credits',
     'page.stats':'📊 Statistics', 'page.automation':'🤖 Automation',
     'page.products':'🛍️ Products', 'page.creators':'👤 Influencer Profiles',
+    'page.analytics':'📈 Analytics',
+    'common.loading':'Loading...', 'common.save':'Save', 'common.cancel':'Cancel',
+    'common.delete':'Delete', 'common.copy':'Copy', 'common.copied':'Copied!',
+    'common.close':'Close', 'common.edit':'Edit', 'common.retry':'Retry',
+    'common.connect':'Connect', 'common.notConnected':'Not connected',
+    'common.noData':'No data yet',
+    'an.posts30d':'Posts (30 days)', 'an.topPlatform':'Top platform',
+    'an.bestHour':'Best posting time', 'an.contentGen':'Content generated',
+    'an.engRate':'Engagement rate',
+    'an.postsPerDay':'📅 Posts per day — last 30 days',
+    'an.platformBreakdown':'📊 Platform breakdown',
+    'an.bestHours':'⏰ Best posting hours',
+    'an.bestPost':'🏆 Best performing post',
+    'an.followerGrowth':'📈 Follower growth (7 days)',
+    'an.livePlatforms':'🌐 Live Platform Analytics',
+    'an.noPostsBreakdown':'No posts yet. Start posting to see your platform breakdown.',
+    'an.noBestPost':'No posts yet. Start posting to see your best performer here.',
+    'an.heatmapHint':'Hover over bars to see exact post counts per hour',
+    'an.connectHint':'Connect your accounts to track engagement',
+    'an.connectPlatformsHint':'Connect platforms in Settings to see live stats.',
+    'an.emptyTitle':'No analytics yet',
+    'an.emptyBody':'Connect your social platforms and start posting to see follower growth, engagement, and post performance here.',
+    'an.goConnect':'Go to Connect',
+    'an.followers':'Followers', 'an.subscribers':'Subscribers',
+    'an.reach7d':'Reach 7d', 'an.growth7d':'7d growth',
+    'an.totalViews':'Total views', 'an.totalLikes':'Total likes',
+    'an.videos':'Videos', 'an.couldNotLoad':'Could not load platform data.',
   },
   da: {
     'nav.dashboard':'Dashboard', 'nav.webshop':'Webshop', 'nav.products':'Produkter',
@@ -6900,6 +6927,33 @@ const I18N = {
     'page.settings':'⚙️ Indstillinger', 'page.billing':'💳 Plan & Credits',
     'page.stats':'📊 Statistik', 'page.automation':'🤖 Automation',
     'page.products':'🛍️ Produkter', 'page.creators':'👤 Influencer Profiler',
+    'page.analytics':'📈 Analyse',
+    'common.loading':'Indlæser...', 'common.save':'Gem', 'common.cancel':'Annullér',
+    'common.delete':'Slet', 'common.copy':'Kopiér', 'common.copied':'Kopieret!',
+    'common.close':'Luk', 'common.edit':'Redigér', 'common.retry':'Prøv igen',
+    'common.connect':'Forbind', 'common.notConnected':'Ikke forbundet',
+    'common.noData':'Ingen data endnu',
+    'an.posts30d':'Opslag (30 dage)', 'an.topPlatform':'Top platform',
+    'an.bestHour':'Bedste postingstidspunkt', 'an.contentGen':'Indhold genereret',
+    'an.engRate':'Engagement rate',
+    'an.postsPerDay':'📅 Opslag pr. dag — sidste 30 dage',
+    'an.platformBreakdown':'📊 Platform fordeling',
+    'an.bestHours':'⏰ Bedste postings­timer',
+    'an.bestPost':'🏆 Bedst præsterende opslag',
+    'an.followerGrowth':'📈 Følger­vækst (7 dage)',
+    'an.livePlatforms':'🌐 Live platform-analyse',
+    'an.noPostsBreakdown':'Ingen opslag endnu. Start med at poste for at se din platform­fordeling.',
+    'an.noBestPost':'Ingen opslag endnu. Start med at poste for at se dit bedste opslag her.',
+    'an.heatmapHint':'Hold musen over søjlerne for at se præcise opslags­antal pr. time',
+    'an.connectHint':'Forbind dine konti for at spore engagement',
+    'an.connectPlatformsHint':'Forbind platforme i Indstillinger for at se live tal.',
+    'an.emptyTitle':'Ingen analyse endnu',
+    'an.emptyBody':'Forbind dine sociale platforme og start med at poste for at se følger­vækst, engagement og opslags­præstation her.',
+    'an.goConnect':'Gå til Forbind',
+    'an.followers':'Følgere', 'an.subscribers':'Abonnenter',
+    'an.reach7d':'Rækkevidde 7d', 'an.growth7d':'Vækst 7d',
+    'an.totalViews':'Visninger total', 'an.totalLikes':'Likes total',
+    'an.videos':'Videoer', 'an.couldNotLoad':'Kunne ikke hente platform­data.',
   }
 };
 
@@ -6909,11 +6963,23 @@ function t(key) { return (I18N[currentLang] || I18N.en)[key] || key; }
 
 function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
-    const k = el.dataset.i18n;
-    el.textContent = t(k);
+    el.textContent = t(el.dataset.i18n);
   });
-  document.getElementById('lang-btn').textContent = currentLang === 'en' ? 'DA' : 'EN';
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder));
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.setAttribute('title', t(el.dataset.i18nTitle));
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  });
+  const btn = document.getElementById('lang-btn');
+  if (btn) btn.textContent = currentLang === 'en' ? 'DA' : 'EN';
   document.documentElement.lang = currentLang;
+  // Notify dynamic renderers (analytics charts, agent panel, etc.) so they
+  // can re-render strings they built imperatively.
+  try { window.dispatchEvent(new CustomEvent('langchange', {detail: {lang: currentLang}})); } catch(e) {}
 }
 
 function toggleLang() {
@@ -10612,36 +10678,51 @@ function sendQueueToPost(id) {
 
   <!-- ANALYTICS PAGE -->
   <div id="page-analytics" class="page">
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-      <div class="stat-kpi"><div class="stat-kpi-val" id="an-posts">–</div><div class="stat-kpi-lbl">Posts (30 days)</div></div>
-      <div class="stat-kpi"><div class="stat-kpi-val" id="an-platform">–</div><div class="stat-kpi-lbl">Top platform</div></div>
-      <div class="stat-kpi"><div class="stat-kpi-val" id="an-hour">–</div><div class="stat-kpi-lbl">Best posting time</div></div>
-      <div class="stat-kpi"><div class="stat-kpi-val" id="an-content">–</div><div class="stat-kpi-lbl">Content generated</div></div>
+    <div id="an-empty-state" style="display:none;text-align:center;padding:60px 20px;background:var(--s2);border:1px solid var(--border);border-radius:14px;margin-bottom:20px">
+      <div style="font-size:48px;margin-bottom:12px">📊</div>
+      <div style="font-size:18px;font-weight:700;color:var(--tx);margin-bottom:6px" data-i18n="an.emptyTitle">No analytics yet</div>
+      <div style="font-size:13px;color:var(--tx3);max-width:480px;margin:0 auto 18px;line-height:1.6" data-i18n="an.emptyBody">Connect your social platforms and start posting to see follower growth, engagement, and post performance here.</div>
+      <button class="btn bp bsm" onclick="nav('connect')" data-i18n="an.goConnect">Go to Connect</button>
     </div>
-    <div class="g2" style="margin-bottom:16px">
-      <div class="card">
-        <div class="ctitle">📅 Posts per day — last 30 days</div>
-        <div class="stat-bar-wrap" id="an-posts-chart" style="margin-top:10px;min-height:60px"></div>
+    <div id="an-content-wrap">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+        <div class="stat-kpi"><div class="stat-kpi-val" id="an-posts">–</div><div class="stat-kpi-lbl" data-i18n="an.posts30d">Posts (30 days)</div></div>
+        <div class="stat-kpi"><div class="stat-kpi-val" id="an-platform">–</div><div class="stat-kpi-lbl" data-i18n="an.topPlatform">Top platform</div></div>
+        <div class="stat-kpi"><div class="stat-kpi-val" id="an-hour">–</div><div class="stat-kpi-lbl" data-i18n="an.bestHour">Best posting time</div></div>
+        <div class="stat-kpi"><div class="stat-kpi-val" id="an-content">–</div><div class="stat-kpi-lbl" data-i18n="an.contentGen">Content generated</div></div>
+        <div class="stat-kpi"><div class="stat-kpi-val" id="an-engrate">–</div><div class="stat-kpi-lbl" data-i18n="an.engRate">Engagement rate</div></div>
       </div>
-      <div class="card">
-        <div class="ctitle">📊 Platform breakdown</div>
-        <div id="an-platform-chart" style="margin-top:12px"></div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="ctitle" data-i18n="an.postsPerDay">📅 Posts per day — last 30 days</div>
+          <div class="stat-bar-wrap" id="an-posts-chart" style="margin-top:10px;min-height:60px"></div>
+        </div>
+        <div class="card">
+          <div class="ctitle" data-i18n="an.platformBreakdown">📊 Platform breakdown</div>
+          <div id="an-platform-chart" style="margin-top:12px"></div>
+        </div>
       </div>
-    </div>
-    <div class="g2" style="margin-bottom:16px">
-      <div class="card">
-        <div class="ctitle">⏰ Best posting hours</div>
-        <div class="stat-bar-wrap" id="an-heatmap" style="margin-top:10px;min-height:60px"></div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="ctitle" data-i18n="an.followerGrowth">📈 Follower growth (7 days)</div>
+          <div id="an-follower-chart" style="margin-top:12px;min-height:80px"></div>
+        </div>
+        <div class="card">
+          <div class="ctitle" data-i18n="an.bestPost">🏆 Best performing post</div>
+          <div id="an-best-post" style="margin-top:12px"></div>
+        </div>
       </div>
-      <div class="card">
-        <div class="ctitle">🏆 Best performing post</div>
-        <div id="an-best-post" style="margin-top:12px"></div>
-      </div>
-    </div>
-    <div class="card" style="margin-bottom:0">
-      <div class="ctitle" style="margin-bottom:14px">🌐 Live Platform Analytics</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px" id="an-platform-cards">
-        <div style="color:var(--tx3);font-size:13px;padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">Loading...</div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="ctitle" data-i18n="an.bestHours">⏰ Best posting hours</div>
+          <div class="stat-bar-wrap" id="an-heatmap" style="margin-top:10px;min-height:60px"></div>
+        </div>
+        <div class="card">
+          <div class="ctitle" data-i18n="an.livePlatforms">🌐 Live Platform Analytics</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:12px" id="an-platform-cards">
+            <div style="color:var(--tx3);font-size:13px;padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border)" data-i18n="common.loading">Loading...</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -14948,10 +15029,27 @@ function copyTemplateCap(id) {
 }
 
 // ── Analytics ──────────────────────────────────────────────────────────────
+var _anState = { dashboard: null, platform: null, performance: null };
+
+// Re-render the imperative bits (charts, platform cards, empty state) when the
+// language changes — declarative data-i18n elements update themselves.
+window.addEventListener('langchange', function() {
+  if (!_anState.dashboard && !_anState.platform) return;
+  var d = _anState.dashboard || {};
+  _renderAnPlatformChart(d.platform_breakdown || {});
+  _renderAnHeatmap(d.hour_heatmap || {});
+  _renderAnBestPost(d.best_post);
+  if (_anState.platform) {
+    _renderPlatformCards(_anState.platform);
+    _renderAnFollowerChart(_anState.platform);
+  }
+});
+
 async function loadAnalytics() {
+  var el = function(id) { return document.getElementById(id); };
   try {
     var d = await apiFetch('/api/analytics/dashboard');
-    var el = function(id) { return document.getElementById(id); };
+    _anState.dashboard = d;
     var k = d.kpis || {};
     if (el('an-posts')) el('an-posts').textContent = k.total_posts_30d ?? 0;
     if (el('an-platform')) el('an-platform').textContent = k.top_platform || '–';
@@ -14963,20 +15061,82 @@ async function loadAnalytics() {
     _renderAnBestPost(d.best_post);
   } catch(e) {
     ['an-posts','an-platform','an-hour','an-content'].forEach(function(id) {
-      var el = document.getElementById(id); if (el) el.textContent = '–';
+      var el2 = document.getElementById(id); if (el2) el2.textContent = '–';
     });
   }
-  _loadPlatformAnalytics();
+  // Engagement rate KPI — sourced from /api/analytics/performance summary
+  try {
+    var p = await apiFetch('/api/analytics/performance');
+    _anState.performance = p;
+    var er = (p.summary && p.summary.avg_engagement) || 0;
+    if (el('an-engrate')) el('an-engrate').textContent = er ? (Math.round(er * 1000) / 10) + '%' : '–';
+  } catch(e) {
+    if (el('an-engrate')) el('an-engrate').textContent = '–';
+  }
+  await _loadPlatformAnalytics();
+  _renderAnEmptyState();
+}
+
+function _renderAnEmptyState() {
+  // Show empty state only when there's nothing to show: no posts, no content
+  // generated, and no platforms reporting follower numbers.
+  var d = _anState.dashboard || {};
+  var k = d.kpis || {};
+  var p = _anState.platform || {};
+  var hasPosts   = (k.total_posts_30d || 0) > 0;
+  var hasContent = (k.content_generated_30d || 0) > 0;
+  var hasPlatform = ['instagram','youtube','tiktok'].some(function(key) {
+    var v = p[key] || {};
+    return v.connected && !v.error && ((v.followers || v.subscribers || 0) > 0);
+  });
+  var empty = document.getElementById('an-empty-state');
+  var content = document.getElementById('an-content-wrap');
+  var isEmpty = !hasPosts && !hasContent && !hasPlatform;
+  if (empty)   empty.style.display   = isEmpty ? '' : 'none';
+  if (content) content.style.display = isEmpty ? 'none' : '';
 }
 
 async function _loadPlatformAnalytics() {
   var wrap = document.getElementById('an-platform-cards');
   try {
     var p = await apiFetch('/api/analytics/platform');
+    _anState.platform = p;
     _renderPlatformCards(p);
+    _renderAnFollowerChart(p);
   } catch(e) {
-    if (wrap) wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:14px">Could not load platform data.</div>';
+    if (wrap) wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:14px">' + t('an.couldNotLoad') + '</div>';
+    _renderAnFollowerChart({});
   }
+}
+
+function _renderAnFollowerChart(data) {
+  var wrap = document.getElementById('an-follower-chart');
+  if (!wrap) return;
+  var ig = (data && data.instagram) || {};
+  var series = Array.isArray(ig.follower_series_7d) ? ig.follower_series_7d : [];
+  if (!series.length) {
+    wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0">' + t('an.connectPlatformsHint') + '</div>';
+    return;
+  }
+  var minV = Math.min.apply(null, series);
+  var maxV = Math.max.apply(null, series);
+  var span = Math.max(1, maxV - minV);
+  var bars = series.map(function(v, i) {
+    var pct = Math.round(((v - minV) / span) * 80) + 10; // 10..90 %
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0" title="Day ' + (i + 1) + ': ' + v.toLocaleString() + '">'
+      + '<div style="width:100%;background:linear-gradient(0deg,var(--ac),var(--ac2));border-radius:3px 3px 0 0;height:' + pct + '%;min-height:4px;transition:height .3s"></div>'
+      + '<div style="font-size:9px;color:var(--tx3)">d' + (i + 1) + '</div>'
+      + '</div>';
+  }).join('');
+  var growth = ig.follower_growth_7d || 0;
+  var growthCol = growth >= 0 ? '#22c55e' : '#ef4444';
+  var growthSign = growth > 0 ? '+' : '';
+  wrap.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">'
+    + '<div><span style="font-size:22px;font-weight:700;color:var(--tx)">' + (ig.followers || 0).toLocaleString() + '</span>'
+    + ' <span style="font-size:11px;color:var(--tx3);margin-left:6px">📸 ' + t('an.followers') + '</span></div>'
+    + '<div style="font-size:12px;font-weight:700;color:' + growthCol + '">' + growthSign + growth.toLocaleString() + ' / 7d</div>'
+    + '</div>'
+    + '<div style="display:flex;align-items:flex-end;gap:3px;height:80px">' + bars + '</div>';
 }
 
 function _renderPlatformCards(data) {
@@ -14995,7 +15155,7 @@ function _renderPlatformCards(data) {
       cards.push('<div style="padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border);opacity:0.55">'
         + '<div style="font-size:20px;margin-bottom:5px">' + m.icon + '</div>'
         + '<div style="font-weight:600;font-size:13px;color:var(--tx2);margin-bottom:3px">' + m.label + '</div>'
-        + '<div style="font-size:11px;color:var(--tx3)">Not connected</div></div>');
+        + '<div style="font-size:11px;color:var(--tx3)">' + t('common.notConnected') + '</div></div>');
       return;
     }
     if (d.error) {
@@ -15006,18 +15166,18 @@ function _renderPlatformCards(data) {
       return;
     }
     var followers = (d.followers !== undefined ? d.followers : d.subscribers) || 0;
-    var followerLabel = key === 'youtube' ? 'Subscribers' : 'Followers';
+    var followerLabel = key === 'youtube' ? t('an.subscribers') : t('an.followers');
     var extra = '';
     if (key === 'instagram') {
       var g = d.follower_growth_7d || 0;
-      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">7d growth: ' + (g >= 0 ? '+' : '') + Number(g).toLocaleString() + '</div>'
-        + '<div style="font-size:11px;color:var(--tx3)">Reach 7d: ' + Number(d.reach_7d || 0).toLocaleString() + '</div>';
+      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">' + t('an.growth7d') + ': ' + (g >= 0 ? '+' : '') + Number(g).toLocaleString() + '</div>'
+        + '<div style="font-size:11px;color:var(--tx3)">' + t('an.reach7d') + ': ' + Number(d.reach_7d || 0).toLocaleString() + '</div>';
     } else if (key === 'youtube') {
-      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">Total views: ' + Number(d.total_views || 0).toLocaleString() + '</div>'
-        + '<div style="font-size:11px;color:var(--tx3)">Videos: ' + (d.video_count || 0) + '</div>';
+      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">' + t('an.totalViews') + ': ' + Number(d.total_views || 0).toLocaleString() + '</div>'
+        + '<div style="font-size:11px;color:var(--tx3)">' + t('an.videos') + ': ' + (d.video_count || 0) + '</div>';
     } else if (key === 'tiktok') {
-      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">Total likes: ' + Number(d.total_likes || 0).toLocaleString() + '</div>'
-        + '<div style="font-size:11px;color:var(--tx3)">Videos: ' + (d.video_count || 0) + '</div>';
+      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">' + t('an.totalLikes') + ': ' + Number(d.total_likes || 0).toLocaleString() + '</div>'
+        + '<div style="font-size:11px;color:var(--tx3)">' + t('an.videos') + ': ' + (d.video_count || 0) + '</div>';
     }
     var ts = d.fetched_at ? new Date(d.fetched_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
     cards.push('<div style="padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">'
@@ -15030,7 +15190,7 @@ function _renderPlatformCards(data) {
       + (ts ? '<div style="font-size:9px;color:var(--tx3);margin-top:7px;opacity:0.55">Updated ' + ts + '</div>' : '')
       + '</div>');
   });
-  wrap.innerHTML = cards.join('') || '<div style="color:var(--tx3);font-size:13px;padding:14px">Connect platforms in Settings to see live stats.</div>';
+  wrap.innerHTML = cards.join('') || '<div style="color:var(--tx3);font-size:13px;padding:14px">' + t('an.connectPlatformsHint') + '</div>';
 }
 
 function _renderAnPostsChart(labels, perDay) {
@@ -15052,7 +15212,7 @@ function _renderAnPlatformChart(breakdown) {
   var wrap = document.getElementById('an-platform-chart');
   if (!wrap) return;
   var entries = Object.entries(breakdown);
-  if (!entries.length) { wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0">No posts yet. Start posting to see your platform breakdown.</div>'; return; }
+  if (!entries.length) { wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0">' + t('an.noPostsBreakdown') + '</div>'; return; }
   var total = entries.reduce(function(s, e) { return s + e[1]; }, 0) || 1;
   var colors = ['#00e5ff','#7c3aed','#f59e0b','#22c55e','#ef4444','#3b82f6'];
   wrap.innerHTML = entries.map(function(e, i) {
@@ -15079,21 +15239,21 @@ function _renderAnHeatmap(heatmap) {
         + (h % 6 === 0 ? '<div style="font-size:8px;color:var(--tx3)">' + h + 'h</div>' : '<div style="height:12px"></div>')
         + '</div>';
     }).join('') + '</div>'
-    + '<div style="font-size:11px;color:var(--tx3);margin-top:8px">Hover over bars to see exact post counts per hour</div>';
+    + '<div style="font-size:11px;color:var(--tx3);margin-top:8px">' + t('an.heatmapHint') + '</div>';
 }
 
 function _renderAnBestPost(bp) {
   var wrap = document.getElementById('an-best-post');
   if (!wrap) return;
   if (!bp || !bp.caption) {
-    wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0">No posts yet. Start posting to see your best performer here.</div>';
+    wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0">' + t('an.noBestPost') + '</div>';
     return;
   }
   wrap.innerHTML = '<div style="font-size:12px;color:var(--tx2);line-height:1.6;padding:12px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.12);border-radius:8px;margin-bottom:10px">' + bp.caption + '</div>'
     + '<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--tx3)">'
     + (bp.platform ? '<span>📱 ' + bp.platform + '</span>' : '')
     + (bp.date ? '<span>📅 ' + bp.date + '</span>' : '')
-    + (bp.engagement ? '<span>❤️ ' + bp.engagement + ' engagement</span>' : '<span style="font-style:italic">Connect your accounts to track engagement</span>')
+    + (bp.engagement ? '<span>❤️ ' + bp.engagement + ' engagement</span>' : '<span style="font-style:italic">' + t('an.connectHint') + '</span>')
     + '</div>';
 }
 
