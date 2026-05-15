@@ -12720,7 +12720,7 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
 <!-- FAB — draggable. onclick is a fallback if the pointer-event IIFE below
      fails to attach (e.g. earlier JS error). The IIFE skips agToggle when
      `moved` is true, and this attribute does the same check via window. -->
-<button id="agent-fab" title="AI Assistant" onclick="if (!window._fabDragged) agToggle(); window._fabDragged = false;">
+<button id="agent-fab" title="AI Assistant" onclick="agToggle(); return false;">
   <div class="ag-pulse"></div>
   <span id="ag-fab-ico">⚡</span>
   <div class="ag-unread" id="ag-unread">!</div>
@@ -13389,10 +13389,15 @@ function agToggle() {
   if (!panel) return;
   if (_ag.open) {
     panel.classList.add('ag-closing');
-    setTimeout(function() { panel.classList.remove('ag-open','ag-closing'); }, 170);
+    setTimeout(function() {
+      panel.classList.remove('ag-open','ag-closing');
+      panel.style.display = 'none';
+    }, 170);
   } else {
     try { agPositionPanel(); } catch(e) {}
     panel.classList.add('ag-open');
+    panel.style.display = 'flex';
+    try { panel.scrollIntoView({block:'nearest', behavior:'smooth'}); } catch(e) {}
     _ag.unread = 0;
     var unread = document.getElementById('ag-unread');
     if (unread) unread.style.display = 'none';
@@ -13435,7 +13440,7 @@ function agAddMsg(role, text, actions, escalate, audioUrl) {
   var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
                  .replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   var speakerBtn = (role === 'bot' && audioUrl)
-    ? '<button class="ag-speaker" onclick="agPlayAudio('' + audioUrl.replace(/'/g,"\'").replace(/"/g,'&quot;') + '')" title="Replay">🔊</button>'
+    ? '<button class="ag-speaker" onclick="agPlayAudio(\'' + audioUrl.replace(/'/g,"\\'").replace(/"/g,'&quot;') + '\')" title="Replay">🔊</button>'
     : '';
   wrap.innerHTML = '<div class="ag-bubble">' + safe + speakerBtn + '</div>';
 
