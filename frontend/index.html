@@ -440,6 +440,12 @@ body.light #clock {
   width: 100%; max-width: 100%; min-width: 0;
   box-sizing: border-box; overflow-x: hidden;
 }
+/* Center page content within the available column instead of left-aligning it. */
+#page-analytics > * {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
 #page-analytics *, #page-brand-kit *, #page-hashtags *, #page-competitor *, #page-audit * {
   box-sizing: border-box;
   min-width: 0;
@@ -10866,7 +10872,7 @@ function sendQueueToPost(id) {
 
   <!-- ── BRAND KIT ──────────────────────────────────────────────────────── -->
   <div id="page-brand-kit" class="page">
-    <div style="max-width:820px">
+    <div style="max-width:960px;margin:0 auto">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:18px">
         <!-- Logo -->
         <div class="card">
@@ -10955,7 +10961,7 @@ function sendQueueToPost(id) {
 
   <!-- ── COMPETITOR SPY ─────────────────────────────────────────────────── -->
   <div id="page-competitor" class="page">
-    <div style="max-width:920px">
+    <div style="max-width:960px;margin:0 auto">
       <!-- Input -->
       <div class="card" style="margin-bottom:18px">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
@@ -11046,7 +11052,7 @@ function sendQueueToPost(id) {
 
   <!-- ── HASHTAG RESEARCH ──────────────────────────────────────────────── -->
   <div id="page-hashtags" class="page">
-    <div style="max-width:900px">
+    <div style="max-width:960px;margin:0 auto">
       <!-- Input card -->
       <div class="card" style="margin-bottom:18px">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
@@ -11273,7 +11279,7 @@ function sendQueueToPost(id) {
 
   <!-- ═══════════════════════════════ ACCOUNT AUDIT PAGE ═══════════════════ -->
   <div id="page-audit" class="page">
-    <div style="max-width:860px">
+    <div style="max-width:960px;margin:0 auto">
 
       <!-- Intro / what this is -->
       <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(0,229,255,.04));border:1px solid rgba(124,58,237,.2)">
