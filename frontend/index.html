@@ -245,7 +245,7 @@ body.light::before {
 /* ─ Layout ───────────────────────────────────────────── */
 .app {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
   position: relative; z-index: 1;
 }
@@ -432,6 +432,34 @@ body.light #clock {
 /* The pattern used on most pages: an inner wrapper that caps content width with
    inline max-width. Make it shrinkable too so its grid/flex children don't push out. */
 .page > div[style*="max-width"] { min-width: 0; }
+
+/* ── Overflow guard for the 5 pages whose content used to escape into the sidebar.
+   Every descendant is forced to stay inside the page column, and every nested
+   .card/.stat-kpi/box can shrink instead of pushing the layout wider. ── */
+#page-analytics, #page-brand-kit, #page-hashtags, #page-competitor, #page-audit {
+  width: 100%; max-width: 100%; min-width: 0;
+  box-sizing: border-box; overflow-x: hidden;
+}
+#page-analytics *, #page-brand-kit *, #page-hashtags *, #page-competitor *, #page-audit * {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+#page-analytics .card, #page-brand-kit .card, #page-hashtags .card,
+#page-competitor .card, #page-audit .card,
+#page-analytics .stat-kpi, #page-analytics .stat {
+  max-width: 100%; min-width: 0; box-sizing: border-box;
+}
+#page-analytics .g2, #page-brand-kit .g2, #page-hashtags .g2,
+#page-competitor .g2, #page-audit .g2 {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+#page-analytics .g3, #page-brand-kit .g3, #page-hashtags .g3,
+#page-competitor .g3, #page-audit .g3,
+#page-analytics .g4, #page-brand-kit .g4, #page-hashtags .g4,
+#page-competitor .g4, #page-audit .g4 {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
@@ -10792,7 +10820,7 @@ function sendQueueToPost(id) {
       <button class="btn bp bsm" onclick="nav('connect')" data-i18n="an.goConnect">Go to Connect</button>
     </div>
     <div id="an-content-wrap">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
         <div class="stat-kpi"><div class="stat-kpi-val" id="an-posts">–</div><div class="stat-kpi-lbl" data-i18n="an.posts30d">Posts (30 days)</div></div>
         <div class="stat-kpi"><div class="stat-kpi-val" id="an-platform">–</div><div class="stat-kpi-lbl" data-i18n="an.topPlatform">Top platform</div></div>
         <div class="stat-kpi"><div class="stat-kpi-val" id="an-hour">–</div><div class="stat-kpi-lbl" data-i18n="an.bestHour">Best posting time</div></div>
@@ -10839,7 +10867,7 @@ function sendQueueToPost(id) {
   <!-- ── BRAND KIT ──────────────────────────────────────────────────────── -->
   <div id="page-brand-kit" class="page">
     <div style="max-width:820px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:18px">
         <!-- Logo -->
         <div class="card">
           <div class="ctitle">🖼️ Brand Logo</div>
@@ -10881,7 +10909,7 @@ function sendQueueToPost(id) {
       <!-- Font + Tagline -->
       <div class="card" style="margin-bottom:18px">
         <div class="ctitle">✏️ Typography & Tagline</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
           <div>
             <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:6px">Brand Font</label>
             <select id="bk-font" class="inp" oninput="_updateBKPreview()">
@@ -10967,8 +10995,8 @@ function sendQueueToPost(id) {
       </div>
       <!-- Results -->
       <div id="comp-results" style="display:none">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px" id="comp-kpis"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px" id="comp-kpis"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px">
           <div class="card">
             <div class="ctitle" style="margin-bottom:14px">📊 Content Mix</div>
             <div id="comp-content-types"></div>
@@ -10982,7 +11010,7 @@ function sendQueueToPost(id) {
             </div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px">
           <div class="card">
             <div class="ctitle" style="margin-bottom:10px">💡 Content Themes</div>
             <div id="comp-themes"></div>
@@ -11057,7 +11085,7 @@ function sendQueueToPost(id) {
       </div>
       <!-- Results -->
       <div id="ht-results" style="display:none">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px">
           <!-- Trending -->
           <div class="card" id="ht-col-trending" style="border-top:3px solid #ef4444">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
@@ -11272,7 +11300,7 @@ function sendQueueToPost(id) {
       <div class="card" style="margin-bottom:20px">
         <div class="ctitle">📋 Run an audit</div>
         <div style="font-size:13px;color:var(--tx2);margin-bottom:20px">Fill in the basics — we'll score the account and return a tailored action plan.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px">
           <div>
             <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Account Handle *</label>
             <input id="audit-handle" type="text" placeholder="@yourhandle" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
@@ -11289,7 +11317,7 @@ function sendQueueToPost(id) {
             </select>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px">
           <div>
             <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Niche</label>
             <select id="audit-niche" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
@@ -11315,7 +11343,7 @@ function sendQueueToPost(id) {
             </select>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px">
           <div>
             <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Posts Per Week</label>
             <input id="audit-ppw" type="number" value="3" min="0" max="30" step="0.5" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
