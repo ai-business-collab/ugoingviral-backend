@@ -440,12 +440,6 @@ body.light #clock {
   width: 100%; max-width: 100%; min-width: 0;
   box-sizing: border-box; overflow-x: hidden;
 }
-/* Center page content within the available column instead of left-aligning it. */
-#page-analytics > * {
-  max-width: 960px;
-  margin-left: auto;
-  margin-right: auto;
-}
 #page-analytics *, #page-brand-kit *, #page-hashtags *, #page-competitor *, #page-audit * {
   box-sizing: border-box;
   min-width: 0;
@@ -10819,6 +10813,20 @@ function sendQueueToPost(id) {
 
   <!-- ANALYTICS PAGE -->
   <div id="page-analytics" class="page">
+   <div style="max-width:960px;margin:0 auto">
+    <!-- Hero -->
+    <div class="hero-card">
+      <div style="position:relative;z-index:1;flex:1;min-width:240px;display:flex;align-items:center;gap:16px">
+        <div style="font-size:36px;line-height:1">📊</div>
+        <div>
+          <div class="hero-title" data-i18n="an.heroTitle">Analytics</div>
+          <div class="hero-sub" data-i18n="an.heroSub">Follower growth, post performance, and best posting times across every connected platform.</div>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn bg bsm" onclick="nav('connect')" data-i18n="an.connectBtn">🔗 Connect a platform</button>
+      </div>
+    </div>
     <div id="an-empty-state" style="display:none;text-align:center;padding:60px 20px;background:var(--s2);border:1px solid var(--border);border-radius:14px;margin-bottom:20px">
       <div style="font-size:48px;margin-bottom:12px">📊</div>
       <div style="font-size:18px;font-weight:700;color:var(--tx);margin-bottom:6px" data-i18n="an.emptyTitle">No analytics yet</div>
@@ -10866,6 +10874,7 @@ function sendQueueToPost(id) {
         </div>
       </div>
     </div>
+   </div>
   </div>
 
   <!-- UPLOAD MEDIA PAGE -->
@@ -10873,6 +10882,19 @@ function sendQueueToPost(id) {
   <!-- ── BRAND KIT ──────────────────────────────────────────────────────── -->
   <div id="page-brand-kit" class="page">
     <div style="max-width:960px;margin:0 auto">
+      <!-- Hero -->
+      <div class="hero-card">
+        <div style="position:relative;z-index:1;flex:1;min-width:240px;display:flex;align-items:center;gap:16px">
+          <div style="font-size:36px;line-height:1">🎨</div>
+          <div>
+            <div class="hero-title" data-i18n="bk.heroTitle">Brand Kit</div>
+            <div class="hero-sub" data-i18n="bk.heroSub">Logo, colors, font, tagline — AI uses these every time it generates content for you.</div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn bp bsm" onclick="saveBrandKit()" data-i18n="bk.saveBtn">💾 Save</button>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:18px">
         <!-- Logo -->
         <div class="card">
@@ -10962,15 +10984,19 @@ function sendQueueToPost(id) {
   <!-- ── COMPETITOR SPY ─────────────────────────────────────────────────── -->
   <div id="page-competitor" class="page">
     <div style="max-width:960px;margin:0 auto">
-      <!-- Input -->
-      <div class="card" style="margin-bottom:18px">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-          <div style="font-size:28px">🔍</div>
+      <!-- Hero -->
+      <div class="hero-card">
+        <div style="position:relative;z-index:1;flex:1;min-width:240px;display:flex;align-items:center;gap:16px">
+          <div style="font-size:36px;line-height:1">🔍</div>
           <div>
-            <div class="ctitle" style="margin:0">Competitor Spy</div>
-            <div style="font-size:12px;color:var(--tx3)">Uncover any competitor's content strategy — posting frequency, top hashtags, best times, and more</div>
+            <div class="hero-title" data-i18n="comp.heroTitle">Competitor Spy</div>
+            <div class="hero-sub" data-i18n="comp.heroSub">Uncover any competitor's content strategy — posting frequency, top hashtags, best times and content mix.</div>
           </div>
         </div>
+      </div>
+      <!-- Input -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="ctitle" data-i18n="comp.inputTitle">🎯 Pick a competitor</div>
         <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:end">
           <div>
             <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">HANDLE</label>
@@ -11053,15 +11079,19 @@ function sendQueueToPost(id) {
   <!-- ── HASHTAG RESEARCH ──────────────────────────────────────────────── -->
   <div id="page-hashtags" class="page">
     <div style="max-width:960px;margin:0 auto">
-      <!-- Input card -->
-      <div class="card" style="margin-bottom:18px">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-          <div style="font-size:28px">🏷️</div>
+      <!-- Hero -->
+      <div class="hero-card">
+        <div style="position:relative;z-index:1;flex:1;min-width:240px;display:flex;align-items:center;gap:16px">
+          <div style="font-size:36px;line-height:1">🏷️</div>
           <div>
-            <div class="ctitle" style="margin:0">Hashtag Research</div>
-            <div style="font-size:12px;color:var(--tx3)">Find the best hashtags for any topic — trending, medium-reach, and niche-specific</div>
+            <div class="hero-title" data-i18n="ht.heroTitle">Hashtag Research</div>
+            <div class="hero-sub" data-i18n="ht.heroSub">A balanced mix of trending, medium-reach and niche hashtags for any topic, on any platform.</div>
           </div>
         </div>
+      </div>
+      <!-- Input card -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="ctitle" data-i18n="ht.inputTitle">🎯 Find your hashtags</div>
         <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:end">
           <div>
             <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:4px">TOPIC / KEYWORD</label>
@@ -11281,25 +11311,24 @@ function sendQueueToPost(id) {
   <div id="page-audit" class="page">
     <div style="max-width:960px;margin:0 auto">
 
-      <!-- Intro / what this is -->
-      <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(0,229,255,.04));border:1px solid rgba(124,58,237,.2)">
-        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
-          <div style="font-size:40px;line-height:1">📋</div>
-          <div style="flex:1;min-width:240px">
-            <div style="font-size:18px;font-weight:800;color:var(--tx);margin-bottom:6px">What is an Account Audit?</div>
-            <div style="font-size:13px;color:var(--tx2);line-height:1.65;margin-bottom:10px">
-              Paste any public social handle and we'll grade the account the way a brand strategist would —
-              bio clarity, posting cadence, hook quality, content variety, and follower-to-engagement health.
-              You get a 0-100 score plus a prioritized action plan: what's working, what's hurting reach, and
-              the three highest-leverage changes to make this week.
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px">
-              <span style="background:rgba(124,58,237,.12);color:#a78bfa;padding:3px 10px;border-radius:8px;font-weight:700">🎯 Profile score</span>
-              <span style="background:rgba(0,229,255,.1);color:var(--ac);padding:3px 10px;border-radius:8px;font-weight:700">📈 Growth gaps</span>
-              <span style="background:rgba(34,197,94,.1);color:#22c55e;padding:3px 10px;border-radius:8px;font-weight:700">✅ Action plan</span>
-              <span style="background:rgba(245,158,11,.1);color:#f59e0b;padding:3px 10px;border-radius:8px;font-weight:700">🪞 Works on competitors too</span>
-            </div>
+      <!-- Hero -->
+      <div class="hero-card">
+        <div style="position:relative;z-index:1;flex:1;min-width:240px;display:flex;align-items:center;gap:16px">
+          <div style="font-size:36px;line-height:1">📋</div>
+          <div>
+            <div class="hero-title" data-i18n="audit.heroTitle">Account Audit</div>
+            <div class="hero-sub" data-i18n="audit.heroSub">A brand-strategist grade for any public handle — 0–100 score plus the three highest-leverage changes to make this week.</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Feature chips -->
+      <div class="card" style="margin-bottom:18px;padding:14px 18px">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px">
+          <span style="background:rgba(124,58,237,.12);color:#a78bfa;padding:4px 10px;border-radius:8px;font-weight:700">🎯 Profile score</span>
+          <span style="background:rgba(0,229,255,.1);color:var(--ac);padding:4px 10px;border-radius:8px;font-weight:700">📈 Growth gaps</span>
+          <span style="background:rgba(34,197,94,.1);color:#22c55e;padding:4px 10px;border-radius:8px;font-weight:700">✅ Action plan</span>
+          <span style="background:rgba(245,158,11,.1);color:#f59e0b;padding:4px 10px;border-radius:8px;font-weight:700">🪞 Works on competitors too</span>
         </div>
       </div>
 
