@@ -378,7 +378,7 @@ body.light::before {
 /* ═══════════════════════════════════════════════════════
    MAIN
    ═══════════════════════════════════════════════════════ */
-.main { display: flex; flex-direction: column; min-height: 100vh; }
+.main { display: flex; flex-direction: column; min-height: 100vh; min-width: 0; max-width: 100%; overflow-x: hidden; }
 
 /* Topbar */
 .topbar {
@@ -419,12 +419,13 @@ body.light #clock {
 /* Pages */
 .page {
   display: none;
-  padding: 24px 28px;
+  margin-left: 0;
+  padding: 24px;
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
   min-width: 0;          /* allow grid/flex children to shrink instead of overflowing the column */
-  overflow-x: hidden;    /* clip stray wide children rather than push past the sidebar */
+  overflow: hidden;      /* clip stray wide children rather than push past the sidebar */
 }
 .page.active { display: block; animation: pageIn .3s var(--ease); }
 /* Keep all page content inside the grid column so cards never escape behind the sidebar. */
