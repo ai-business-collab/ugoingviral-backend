@@ -1655,11 +1655,14 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     </div>
 
     <!-- ── ACCOUNT GROWTH ── -->
-    <div class="nav-section" data-i18n="nav.growth">Account Growth</div>
-    <div class="ni has-sub" id="ni-growth" onclick="toggleSubMenu('growth-sub')">
+    <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
+    <div class="nav-section" data-i18n="nav.growth" style="display:none">Account Growth</div>
+    <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
+    <div class="ni has-sub" id="ni-growth" onclick="toggleSubMenu('growth-sub')" style="display:none">
       <span class="ico">📈</span><span data-i18n="nav.growth">Account Growth</span><span class="chevron">›</span>
     </div>
-    <div class="submenu" id="growth-sub">
+    <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
+    <div class="submenu" id="growth-sub" style="display:none">
       <div class="sub-item" id="ni-growth-dash-sub" onclick="nav('growth-dashboard')">🌱 <span>Growth Dashboard</span></div>
       <div class="sub-item" onclick="nav('growth-dashboard');setTimeout(function(){var b=document.getElementById('ig-growth-connect-btn');if(b)b.scrollIntoView({behavior:'smooth',block:'center'});},150)">📈 <span>Connect Growth Account</span></div>
       <div class="sub-item" onclick="nav('growth-dashboard');setTimeout(function(){var c=document.getElementById('growth-batch-card');if(c)c.scrollIntoView({behavior:'smooth',block:'center'});},150)">📦 <span>Batch Connect</span></div>
@@ -2692,7 +2695,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <div class="fg"><label class="fl">Forbudte emner</label><input class="fi" id="dm-forbidden" placeholder="F.eks: konkurrenter, rabatter, leveringstider"></div>
           <div class="fg"><label class="fl">Only reply to</label><input class="fi" id="dm-allowed" placeholder="E.g.: products, shipping, returns, sizes"></div>
-          <div class="trow"><div><div class="tname">Auto-svar DMs</div><div class="tdesc">Playwright svarer automatisk</div></div><div class="tog" id="tog-dm" onclick="togIt(this)"></div></div>
+          <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
+          <div class="trow"><div><div class="tname">Auto-svar DMs</div><div class="tdesc">Reply automatically</div></div><div class="tog" id="tog-dm" onclick="togIt(this)"></div></div>
           <div class="trow"><div><div class="tname">Auto-reply comments</div><div class="tdesc">Reply to comments automatically</div></div><div class="tog" id="tog-com" onclick="togIt(this)"></div></div>
           <button class="btn bp" style="width:100%;margin-top:14px" onclick="saveDMSettings()">💾 Save settings</button>
         </div>
@@ -2974,7 +2978,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   </div>
 
   <!-- ══ GROWTH KONTI ══════════════════════════════════════════════════════════ -->
-  <div id="page-growth-accounts" class="page">
+  <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
+  <div id="page-growth-accounts" class="page" style="display:none !important">
     <div class="card">
       <div class="ctitle"><span>📈 Growth Konti</span></div>
       <div class="info-box" style="margin-bottom:16px">Styr automatisk engagement — likes, shares og kommentarer. Anti-ban system aktiveres automatisk.</div>
@@ -3070,7 +3075,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Connect Instagram via official API</button>
 
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Official API for Business/Creator accounts. To connect a personal account for full automation (likes, follows, DMs via a remote browser), go to <a onclick="nav('growth-dashboard')" style="cursor:pointer;color:#e1306c;text-decoration:underline">Account Growth</a>.</div>
+            <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Official API for Business/Creator accounts.</div>
             <details style="margin-bottom:10px">
               <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Connect manually for automation</summary>
               <div style="margin-top:10px">
@@ -3942,7 +3948,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="g2" id="extra-accounts-grid">
 
           <!-- Growth accounts (recurring) -->
-          <div class="card" style="padding:18px">
+          <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
+          <div class="card" style="padding:18px;display:none">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
               <div style="font-size:14px;font-weight:800;color:var(--tx)">📈 Growth Accounts</div>
               <span style="font-size:9px;background:rgba(0,229,255,.14);color:var(--ac);font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.4px">MONTHLY</span>
@@ -4220,7 +4227,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   </div>
 
 
-  <div id="page-growth-dashboard" class="page">
+  <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
+  <div id="page-growth-dashboard" class="page" style="display:none !important">
     <div style="max-width:960px">
 
       <!-- Header -->
@@ -7206,7 +7214,8 @@ function renderSettingsPlanFeatures(d) {
           </div>
         </div>
       </div>
-      <div style="background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
+      <div style="display:none;background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:16px">
         <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Growth Accounts</div>
         <div style="font-size:24px;font-weight:800;color:${growthColor};margin-bottom:2px">${growthTxt}</div>
         <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">included in plan</div>
