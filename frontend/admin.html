@@ -365,6 +365,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="sec-tab hidden" onclick="showSection('templates')" id="tab-templates">📝 Templates</button>
       <button class="sec-tab hidden" onclick="showSection('platform_status')" id="tab-platform-status">🖥️ Status</button>
       <button class="sec-tab hidden" onclick="showSection('quick_actions')" id="tab-quick-actions">⚡ Quick Actions</button>
+      <button class="sec-tab hidden" onclick="showSection('affiliates')" id="tab-affiliates">🤝 Affiliates</button>
     </div>
 
     <!-- STATS (owner + support) -->
@@ -575,6 +576,56 @@ tr:hover td{background:rgba(255,255,255,.02)}
           </div>
         </div>
         <div id="guidelines-wrap" class="guidelines-wrap"><div class="empty-state"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- AFFILIATES SECTION -->
+    <div id="section-affiliates" class="hidden">
+
+      <!-- Monthly payout overview -->
+      <div class="stats-row" style="margin-bottom:18px">
+        <div class="stat-card">
+          <div class="stat-label">Total available</div>
+          <div class="stat-val" id="aff-stat-available">$0</div>
+          <div class="stat-sub">Ready to be paid out</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Affiliates ready</div>
+          <div class="stat-val" id="aff-stat-ready">0</div>
+          <div class="stat-sub">Above $50 minimum</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Next payout</div>
+          <div class="stat-val" id="aff-stat-next" style="font-size:18px">–</div>
+          <div class="stat-sub">1st of every month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending applications</div>
+          <div class="stat-val" id="aff-stat-apps">0</div>
+          <div class="stat-sub">Awaiting approval</div>
+        </div>
+      </div>
+
+      <!-- Applications card -->
+      <div class="table-card" style="margin-bottom:18px">
+        <div class="table-header">
+          <div class="table-title">📥 Affiliate Applications</div>
+          <button class="action-btn" style="color:var(--ac);border-color:rgba(0,229,255,.3)" onclick="loadAdminAffiliates()">↻ Refresh</button>
+        </div>
+        <div id="aff-apps-wrap" style="padding:0 16px 16px">
+          <div class="empty-state"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Affiliates list -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">🤝 Active Affiliates</div>
+          <div style="font-size:11px;color:var(--tx3)">Tier · customers · pending · ready to pay</div>
+        </div>
+        <div id="aff-list-wrap" style="padding:0 16px 16px">
+          <div class="empty-state"><div class="spinner"></div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -824,6 +875,7 @@ async function showApp(info) {
     document.getElementById('tab-templates').classList.remove('hidden');
     document.getElementById('tab-platform-status').classList.remove('hidden');
     document.getElementById('tab-quick-actions').classList.remove('hidden');
+    document.getElementById('tab-affiliates').classList.remove('hidden');
     settingsBtn.classList.add('hidden');
     document.getElementById('emp-profile-header').classList.add('hidden');
     var _nb = document.getElementById('nex-chat-btn'); if (_nb) _nb.style.display = '';
@@ -843,6 +895,7 @@ async function showApp(info) {
     document.getElementById('tab-templates').classList.add('hidden');
     document.getElementById('tab-quick-actions').classList.add('hidden');
     document.getElementById('tab-platform-status').classList.remove('hidden');
+    document.getElementById('tab-affiliates').classList.remove('hidden');
     settingsBtn.classList.remove('hidden');
     await loadMyProfile();
   } else {
@@ -894,7 +947,7 @@ function renderProfileHeader() {
 // ── SECTIONS ─────────────────────────────────────────────────────────────────
 
 function showSection(sec) {
-  const allSections = ['customers', 'employees', 'guidelines', 'revenue', 'api_usage', 'automation_log', 'qa', 'templates', 'platform_status', 'quick_actions'];
+  const allSections = ['customers', 'employees', 'guidelines', 'revenue', 'api_usage', 'automation_log', 'qa', 'templates', 'platform_status', 'quick_actions', 'affiliates'];
   allSections.forEach(s => {
     const el = document.getElementById('section-' + s);
     if (el) el.classList.toggle('hidden', s !== sec);
@@ -910,6 +963,7 @@ function showSection(sec) {
   if (sec === 'templates') loadAdminTemplates();
   if (sec === 'api_usage') { if (userRole !== 'owner') { toast('Access denied', 'error'); return; } loadApiUsage(); }
   if (sec === 'automation_log') { populateLogUserSelect(); loadAutomationLog(); }
+  if (sec === 'affiliates') loadAdminAffiliates();
 }
 
 // ── USERS ────────────────────────────────────────────────────────────────────
@@ -2512,6 +2566,144 @@ async function sendNexMessage() {
   }
 }
 
+// ── AFFILIATES ───────────────────────────────────────────────────────────────
+async function loadAdminAffiliates() {
+  const appsWrap = document.getElementById('aff-apps-wrap');
+  const listWrap = document.getElementById('aff-list-wrap');
+  if (!appsWrap || !listWrap) return;
+  try {
+    const r = await fetch('/api/admin/affiliates', {headers: {'Authorization': 'Bearer ' + token}});
+    if (!r.ok) {
+      appsWrap.innerHTML = '<div class="empty-state">Could not load affiliates</div>';
+      listWrap.innerHTML = '';
+      return;
+    }
+    const d = await r.json();
+    renderAffiliatesOverview(d.monthly_overview, d.applications);
+    renderAffiliatesApps(d.applications);
+    renderAffiliatesList(d.affiliates);
+  } catch(e) {
+    appsWrap.innerHTML = '<div class="empty-state">Error: ' + esc(e.message) + '</div>';
+  }
+}
+
+function renderAffiliatesOverview(overview, apps) {
+  if (!overview) return;
+  document.getElementById('aff-stat-available').textContent = '$' + Number(overview.total_available || 0).toFixed(2);
+  document.getElementById('aff-stat-ready').textContent = overview.ready_for_payout || 0;
+  document.getElementById('aff-stat-next').textContent = overview.next_payout_date || '–';
+  document.getElementById('aff-stat-apps').textContent = (apps || []).length;
+}
+
+function renderAffiliatesApps(apps) {
+  const wrap = document.getElementById('aff-apps-wrap');
+  if (!apps || !apps.length) {
+    wrap.innerHTML = '<div style="font-size:13px;color:var(--tx3);padding:14px 0">No pending applications.</div>';
+    return;
+  }
+  wrap.innerHTML = apps.map(function(a) {
+    const safeEmail = esc(a.email);
+    return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'
+      + '<div style="flex:1;min-width:240px">'
+      + '<div style="font-size:14px;font-weight:700">' + esc(a.name || '(no name)') + ' <span style="font-size:11px;color:var(--tx3);font-weight:400">' + safeEmail + '</span></div>'
+      + '<div style="font-size:11px;color:var(--tx3);margin-top:6px;text-transform:uppercase;letter-spacing:.4px">Payout</div>'
+      + '<div style="font-size:13px">' + esc(a.payout_method || '—') + ' · ' + esc(a.payout_info || '—') + '</div>'
+      + '<div style="font-size:11px;color:var(--tx3);margin-top:8px;text-transform:uppercase;letter-spacing:.4px">Promotion plan</div>'
+      + '<div style="font-size:13px;line-height:1.5">' + esc(a.how || '—') + '</div>'
+      + '<div style="font-size:11px;color:var(--tx3);margin-top:6px">Applied ' + esc((a.applied_at || '').substring(0, 10)) + '</div>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:6px">'
+      + '<button class="action-btn" style="color:#22c55e;border-color:rgba(34,197,94,.4)" onclick="approveAffiliate(\'' + safeEmail + '\')">✓ Approve</button>'
+      + '<button class="action-btn" style="color:#ef4444;border-color:rgba(239,68,68,.4)" onclick="rejectAffiliate(\'' + safeEmail + '\')">✕ Reject</button>'
+      + '</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+function _tierBadgeAdmin(tier) {
+  if (!tier) return '';
+  const color = tier.key === 'gold' ? '#ffd700' : (tier.key === 'silver' ? '#c0c0c0' : '#cd7f32');
+  return '<span style="font-size:11px;font-weight:700;color:' + color + ';background:rgba(255,255,255,.04);border:1px solid ' + color + '33;padding:3px 8px;border-radius:10px">' + esc(tier.icon || '') + ' ' + esc(tier.name || '') + ' · ' + esc(String(tier.rate || 0)) + '%</span>';
+}
+
+function renderAffiliatesList(list) {
+  const wrap = document.getElementById('aff-list-wrap');
+  if (!list || !list.length) {
+    wrap.innerHTML = '<div style="font-size:13px;color:var(--tx3);padding:14px 0">No affiliates yet.</div>';
+    return;
+  }
+  wrap.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+    + '<thead><tr style="text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;letter-spacing:.5px">'
+    + '<th style="padding:10px 8px;border-bottom:1px solid var(--border)">Name</th>'
+    + '<th style="padding:10px 8px;border-bottom:1px solid var(--border)">Tier</th>'
+    + '<th style="padding:10px 8px;border-bottom:1px solid var(--border)">Customers</th>'
+    + '<th style="padding:10px 8px;border-bottom:1px solid var(--border)">Pending</th>'
+    + '<th style="padding:10px 8px;border-bottom:1px solid var(--border)">Ready</th>'
+    + '<th style="padding:10px 8px;border-bottom:1px solid var(--border)">Payout</th>'
+    + '<th style="padding:10px 8px;border-bottom:1px solid var(--border)">Action</th>'
+    + '</tr></thead><tbody>'
+    + list.map(function(a) {
+      const readyColor = a.available >= 50 ? '#22c55e' : 'var(--tx2)';
+      const safeUid = esc(a.user_id);
+      return '<tr>'
+        + '<td style="padding:10px 8px;border-bottom:1px solid var(--border)"><div style="font-weight:600">' + esc(a.name || '(no name)') + '</div><div style="font-size:11px;color:var(--tx3)">' + esc(a.email) + '</div></td>'
+        + '<td style="padding:10px 8px;border-bottom:1px solid var(--border)">' + _tierBadgeAdmin(a.tier) + '</td>'
+        + '<td style="padding:10px 8px;border-bottom:1px solid var(--border)">' + (a.customer_count || 0) + '</td>'
+        + '<td style="padding:10px 8px;border-bottom:1px solid var(--border);color:#f59e0b">$' + Number(a.pending || 0).toFixed(2) + '</td>'
+        + '<td style="padding:10px 8px;border-bottom:1px solid var(--border);color:' + readyColor + ';font-weight:700">$' + Number(a.available || 0).toFixed(2) + '</td>'
+        + '<td style="padding:10px 8px;border-bottom:1px solid var(--border);font-size:11px"><div>' + esc(a.payout_method || '—') + '</div><div style="color:var(--tx3)">' + esc(a.payout_info || '') + '</div></td>'
+        + '<td style="padding:10px 8px;border-bottom:1px solid var(--border)">'
+        + (a.available >= 50
+            ? '<button class="action-btn" style="color:#22c55e;border-color:rgba(34,197,94,.4)" onclick="markAffiliatePaid(\'' + safeUid + '\')">💸 Mark paid</button>'
+            : '<button class="action-btn" disabled style="opacity:.4">Below $50</button>')
+        + '</td></tr>';
+    }).join('')
+    + '</tbody></table></div>';
+}
+
+async function approveAffiliate(email) {
+  if (!confirm('Approve this affiliate application?')) return;
+  try {
+    const r = await fetch('/api/admin/affiliates/approve', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+      body: JSON.stringify({email: email}),
+    });
+    if (!r.ok) { toast('Approval failed', 'error'); return; }
+    toast('Affiliate approved', 'success');
+    loadAdminAffiliates();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function rejectAffiliate(email) {
+  if (!confirm('Reject this application?')) return;
+  try {
+    const r = await fetch('/api/admin/affiliates/reject', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+      body: JSON.stringify({email: email}),
+    });
+    if (!r.ok) { toast('Rejection failed', 'error'); return; }
+    toast('Application rejected', 'success');
+    loadAdminAffiliates();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function markAffiliatePaid(uid) {
+  if (!confirm('Mark all available commissions as paid for this affiliate?')) return;
+  try {
+    const r = await fetch('/api/admin/affiliates/mark_paid', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+      body: JSON.stringify({user_id: uid}),
+    });
+    if (!r.ok) { toast('Mark paid failed', 'error'); return; }
+    const d = await r.json();
+    toast('Marked $' + Number(d.paid_amount || 0).toFixed(2) + ' as paid', 'success');
+    loadAdminAffiliates();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
 
 </script>
 

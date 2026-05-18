@@ -1718,6 +1718,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" onclick="nav('billing');setTimeout(function(){document.getElementById('topup-section')?.scrollIntoView({behavior:'smooth'})},400)">💰 <span>Top Up Credits</span></div>
       <div class="sub-item" onclick="nav('subaccounts')">👥 <span>Extra Profiles</span></div>
       <div class="sub-item" onclick="nav('studio')">🎬 <span>Studio</span></div>
+      <div class="sub-item" id="ni-affiliate" onclick="nav('affiliate')">🤝 <span>Affiliate Program</span></div>
     </div>
 
     <!-- Settings (clean) -->
@@ -3727,7 +3728,20 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <!-- REFER A FRIEND (moved from Settings) -->
       <div class="card" style="margin-bottom:20px">
         <div class="ctitle">🎁 Refer a Friend</div>
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:16px">Earn <strong style="color:var(--ac)">50 bonus credits</strong> every time someone you invite upgrades to a paid plan.</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:6px">Earn <strong style="color:var(--ac)">+50 credits</strong> every time someone you invite upgrades to a paid plan.</div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">Maximum <strong>10 friends</strong> per account — once you reach 10 upgrades you've unlocked the full bonus.</div>
+
+        <!-- X / 10 progress -->
+        <div style="background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.18);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:700;color:var(--tx)"><span id="ref-count-x">0</span>/10 friends invited</div>
+            <div style="font-size:11px;color:var(--tx3)" id="ref-remaining-lbl">10 invites left</div>
+          </div>
+          <div style="height:8px;background:rgba(255,255,255,.06);border-radius:8px;overflow:hidden">
+            <div id="ref-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .4s"></div>
+          </div>
+        </div>
+
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px" id="ref-stats-grid">
           <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px;text-align:center">
             <div style="font-size:22px;font-weight:700;color:var(--ac)" id="ref-invited">–</div>
@@ -3742,14 +3756,15 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div style="font-size:11px;color:var(--tx3);margin-top:4px;text-transform:uppercase;letter-spacing:.4px">Credits Earned</div>
           </div>
         </div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Your shareable link</div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
           <input class="fi" id="ref-link-input" readonly style="font-size:12px;font-family:monospace;flex:1;cursor:pointer" onclick="this.select()" value="Loading...">
           <button class="btn bg bsm" onclick="copyRefLink()">Copy</button>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button class="btn bg bsm" onclick="shareRefTwitter()">Share on X</button>
           <button class="btn bg bsm" onclick="shareRefLinkedIn()">Share on LinkedIn</button>
-          <a href="/affiliate" target="_blank" style="font-size:12px;color:var(--ac);text-decoration:none;display:flex;align-items:center;margin-left:auto">Become an affiliate →</a>
+          <a onclick="nav('affiliate')" style="font-size:12px;color:var(--ac);text-decoration:none;display:flex;align-items:center;margin-left:auto;cursor:pointer">Become an affiliate →</a>
         </div>
       </div>
 
@@ -3814,9 +3829,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div class="ctitle" style="margin:0">Select Plan</div>
         <div style="display:flex;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:3px;gap:2px">
-          <button class="curr-btn" data-curr="USD" onclick="setCurrency('USD')" style="background:none;border:none;color:rgba(255,255,255,.45);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">$ USD</button>
-          <button class="curr-btn" data-curr="EUR" onclick="setCurrency('EUR')" style="background:none;border:none;color:rgba(255,255,255,.45);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">€ EUR</button>
-          <button class="curr-btn" data-curr="DKK" onclick="setCurrency('DKK')" style="background:none;border:none;color:rgba(255,255,255,.45);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">kr DKK</button>
+          <button class="curr-btn" data-curr="USD" onclick="setCurrency('USD')" style="background:var(--s2);border:1px solid var(--border);color:var(--tx);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">$ USD</button>
+          <button class="curr-btn" data-curr="EUR" onclick="setCurrency('EUR')" style="background:var(--s2);border:1px solid var(--border);color:var(--tx);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">€ EUR</button>
+          <button class="curr-btn" data-curr="DKK" onclick="setCurrency('DKK')" style="background:var(--s2);border:1px solid var(--border);color:var(--tx);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">kr DKK</button>
         </div>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-top:-8px;margin-bottom:14px">Secure Payment processes in USD — displayed prices are for reference</div>
@@ -4018,6 +4033,181 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div id="studio-packages-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
           <div style="color:var(--tx3);font-size:13px;padding:20px;text-align:center">Loading packages...</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ AFFILIATE PROGRAM ════════════════════════════════════════════════ -->
+  <div id="page-affiliate" class="page">
+
+    <!-- Apply gate (shown when user is not yet an affiliate) -->
+    <div id="aff-apply-gate" class="card" style="margin-bottom:20px;display:none">
+      <div class="ctitle">🤝 Become an Affiliate</div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:16px;line-height:1.6">
+        Earn <strong style="color:var(--ac)">commission on every customer you refer</strong> — separate from the Refer a Friend bonus. Tier up as you bring in more customers.
+      </div>
+
+      <!-- Tier overview -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        <div style="background:linear-gradient(135deg,rgba(205,127,50,.08),rgba(205,127,50,.02));border:1px solid rgba(205,127,50,.25);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:11px;color:#cd7f32;font-weight:700;letter-spacing:.5px;text-transform:uppercase">🥉 Bronze</div>
+          <div style="font-size:28px;font-weight:800;color:#cd7f32;margin-top:6px">10%</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:4px">1–9 customers</div>
+        </div>
+        <div style="background:linear-gradient(135deg,rgba(192,192,192,.08),rgba(192,192,192,.02));border:1px solid rgba(192,192,192,.25);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:11px;color:#c0c0c0;font-weight:700;letter-spacing:.5px;text-transform:uppercase">🥈 Silver</div>
+          <div style="font-size:28px;font-weight:800;color:#c0c0c0;margin-top:6px">15%</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:4px">10–19 customers</div>
+        </div>
+        <div style="background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,215,0,.02));border:1px solid rgba(255,215,0,.25);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:11px;color:#ffd700;font-weight:700;letter-spacing:.5px;text-transform:uppercase">🥇 Gold</div>
+          <div style="font-size:28px;font-weight:800;color:#ffd700;margin-top:6px">20%</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:4px">20+ customers</div>
+        </div>
+      </div>
+
+      <!-- Apply form -->
+      <div id="aff-form-wrap">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Apply to join</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Full name *</label>
+            <input class="fi" id="aff-app-name" placeholder="Jane Doe">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Email *</label>
+            <input class="fi" id="aff-app-email" type="email" placeholder="you@example.com">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Payout method *</label>
+            <select class="fi" id="aff-app-payout-method">
+              <option value="paypal">PayPal</option>
+              <option value="wise">Wise</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">PayPal email / Wise tag *</label>
+            <input class="fi" id="aff-app-payout-info" placeholder="payments@example.com">
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">How will you promote UgoingViral? *</label>
+          <textarea class="fta" id="aff-app-how" rows="4" placeholder="Blog posts, YouTube channel, newsletter, paid ads, niche, audience size..."></textarea>
+        </div>
+        <div id="aff-app-error" style="display:none;color:#ef4444;font-size:12px;margin-bottom:10px;padding:8px 12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px"></div>
+        <button class="btn bp" id="aff-app-submit" onclick="submitAffiliateApplication()">Apply for affiliate access →</button>
+        <div style="font-size:11px;color:var(--tx3);margin-top:10px">We review applications within 48 hours. You'll get an email once approved.</div>
+      </div>
+
+      <div id="aff-pending-msg" style="display:none;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:24px;margin-bottom:6px">⏳</div>
+        <div style="font-size:14px;font-weight:700;color:#f59e0b;margin-bottom:4px">Application under review</div>
+        <div style="font-size:12px;color:var(--tx2)">We'll notify you by email within 48 hours.</div>
+      </div>
+
+      <div id="aff-rejected-msg" style="display:none;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:14px;font-weight:700;color:#ef4444;margin-bottom:4px">Application not approved</div>
+        <div style="font-size:12px;color:var(--tx2)">Contact <a href="mailto:affiliates@ugoingviral.com" style="color:var(--ac)">affiliates@ugoingviral.com</a> for details.</div>
+      </div>
+    </div>
+
+    <!-- Dashboard (shown when approved affiliate) -->
+    <div id="aff-dashboard" style="display:none">
+
+      <!-- TIER + PROGRESS -->
+      <div class="card" style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+          <div>
+            <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Current tier</div>
+            <div id="aff-tier-name" style="font-size:26px;font-weight:800;margin-top:4px">🥉 Bronze</div>
+            <div id="aff-tier-commission" style="font-size:13px;color:var(--tx2);margin-top:2px">10% commission</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Customers referred</div>
+            <div id="aff-customer-count" style="font-size:26px;font-weight:800;color:var(--ac);margin-top:4px">0</div>
+          </div>
+        </div>
+        <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:11px;color:var(--tx3)">
+          <span id="aff-tier-progress-lbl">Progress to next tier</span>
+          <span id="aff-tier-next-lbl">— → 🥈 Silver (10 customers)</span>
+        </div>
+        <div style="height:10px;background:rgba(255,255,255,.06);border-radius:8px;overflow:hidden">
+          <div id="aff-tier-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .5s"></div>
+        </div>
+      </div>
+
+      <!-- EARNINGS GRID -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px" id="aff-earn-grid">
+        <div class="card" style="margin:0;padding:18px;text-align:center">
+          <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Total earned</div>
+          <div id="aff-total-earned" style="font-size:26px;font-weight:800;color:#22c55e;margin-top:6px">$0.00</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">All-time</div>
+        </div>
+        <div class="card" style="margin:0;padding:18px;text-align:center">
+          <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Pending</div>
+          <div id="aff-pending" style="font-size:26px;font-weight:800;color:#f59e0b;margin-top:6px">$0.00</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Held for 30 days</div>
+        </div>
+        <div class="card" style="margin:0;padding:18px;text-align:center">
+          <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">Available for payout</div>
+          <div id="aff-available" style="font-size:26px;font-weight:800;color:var(--ac);margin-top:6px">$0.00</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Paid out 1st of month</div>
+        </div>
+      </div>
+
+      <!-- AFFILIATE LINK -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">🔗 Your affiliate link</div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:10px">Share this link — you'll earn commission on every payment from people who sign up through it.</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="fi" id="aff-link-input" readonly style="font-size:12px;font-family:monospace;flex:1;cursor:pointer" onclick="this.select()" value="Loading...">
+          <button class="btn bg bsm" onclick="copyAffLink()">Copy</button>
+        </div>
+      </div>
+
+      <!-- PAYMENT INFO -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">💸 Payment info</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div style="background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Payout schedule</div>
+            <div style="font-size:14px;font-weight:700">1st of every month</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:2px">via PayPal or Wise</div>
+          </div>
+          <div style="background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Minimum payout</div>
+            <div style="font-size:14px;font-weight:700">$50</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:2px">Rolls over if below</div>
+          </div>
+        </div>
+        <div style="background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="font-size:18px;line-height:1">🛡️</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:4px">Why we hold commission for 30 days</div>
+              <div style="font-size:12px;color:var(--tx2);line-height:1.6">We hold your commission for 30 days to protect against refunds. Once confirmed, it's paid out on the 1st of the following month.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Editable payout info -->
+        <div style="margin-top:16px">
+          <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Your payout details</div>
+          <div style="display:grid;grid-template-columns:160px 1fr auto;gap:8px;align-items:center">
+            <select class="fi" id="aff-payout-method">
+              <option value="paypal">PayPal</option>
+              <option value="wise">Wise</option>
+            </select>
+            <input class="fi" id="aff-payout-info" placeholder="PayPal email or Wise tag">
+            <button class="btn bg bsm" onclick="saveAffiliatePayout()">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT COMMISSIONS -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ctitle">📜 Recent commissions</div>
+        <div id="aff-commissions-list" style="font-size:13px;color:var(--tx3)">No commissions yet — share your link to start earning.</div>
       </div>
     </div>
   </div>
@@ -7122,10 +7312,18 @@ async function loadReferralStats() {
     const r = await apiFetch('/api/billing/referral_stats');
     const d = await r.json();
     const el = (id) => document.getElementById(id);
-    if (el('ref-invited')) el('ref-invited').textContent = d.invited_count ?? 0;
-    if (el('ref-upgraded')) el('ref-upgraded').textContent = d.upgraded_count ?? 0;
+    const invited = Math.min(d.invited_count ?? 0, 10);
+    const upgraded = d.upgraded_count ?? 0;
+    if (el('ref-invited')) el('ref-invited').textContent = invited;
+    if (el('ref-upgraded')) el('ref-upgraded').textContent = upgraded;
     if (el('ref-credits')) el('ref-credits').textContent = d.credits_earned ?? 0;
     if (el('ref-link-input')) el('ref-link-input').value = d.ref_url || '';
+    if (el('ref-count-x')) el('ref-count-x').textContent = invited;
+    if (el('ref-progress-bar')) el('ref-progress-bar').style.width = Math.min(100, invited * 10) + '%';
+    if (el('ref-remaining-lbl')) {
+      const left = Math.max(0, 10 - invited);
+      el('ref-remaining-lbl').textContent = left === 0 ? '🎉 Max reached' : (left + ' invite' + (left === 1 ? '' : 's') + ' left');
+    }
     window._refUrl = d.ref_url || '';
   } catch(e) {}
 }
@@ -7148,6 +7346,140 @@ function shareRefTwitter() {
 function shareRefLinkedIn() {
   const url = encodeURIComponent(window._refUrl || document.getElementById('ref-link-input')?.value || 'https://ugoingviral.com');
   window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + url, '_blank');
+}
+
+// ── Affiliate Program ────────────────────────────────────────────────────────
+async function loadAffiliateData() {
+  try {
+    const r = await apiFetch('/api/affiliate/me');
+    const d = await r.json();
+    const $ = (id) => document.getElementById(id);
+    const gate = $('aff-apply-gate');
+    const dash = $('aff-dashboard');
+    const status = d.status || 'none';
+
+    if (status === 'approved') {
+      gate.style.display = 'none';
+      dash.style.display = 'block';
+      renderAffiliateDashboard(d);
+    } else {
+      gate.style.display = 'block';
+      dash.style.display = 'none';
+      $('aff-form-wrap').style.display = (status === 'none') ? 'block' : 'none';
+      $('aff-pending-msg').style.display = (status === 'pending') ? 'block' : 'none';
+      $('aff-rejected-msg').style.display = (status === 'rejected') ? 'block' : 'none';
+    }
+  } catch(e) {
+    const gate = document.getElementById('aff-apply-gate');
+    const dash = document.getElementById('aff-dashboard');
+    if (gate) gate.style.display = 'block';
+    if (dash) dash.style.display = 'none';
+  }
+}
+
+function _tierFor(count) {
+  if (count >= 20) return {name:'🥇 Gold', rate:20, color:'#ffd700', next:null, nextLabel:'Top tier reached'};
+  if (count >= 10) return {name:'🥈 Silver', rate:15, color:'#c0c0c0', next:20, nextLabel:'🥇 Gold (20 customers)'};
+  return {name:'🥉 Bronze', rate:10, color:'#cd7f32', next:10, nextLabel:'🥈 Silver (10 customers)'};
+}
+
+function renderAffiliateDashboard(d) {
+  const $ = (id) => document.getElementById(id);
+  const customers = d.customer_count || 0;
+  const tier = _tierFor(customers);
+  $('aff-tier-name').innerHTML = tier.name;
+  $('aff-tier-name').style.color = tier.color;
+  $('aff-tier-commission').textContent = tier.rate + '% commission';
+  $('aff-customer-count').textContent = customers;
+
+  if (tier.next) {
+    const pct = Math.min(100, Math.round((customers / tier.next) * 100));
+    $('aff-tier-progress-bar').style.width = pct + '%';
+    $('aff-tier-progress-lbl').textContent = (tier.next - customers) + ' more to next tier';
+    $('aff-tier-next-lbl').textContent = customers + ' → ' + tier.nextLabel;
+  } else {
+    $('aff-tier-progress-bar').style.width = '100%';
+    $('aff-tier-progress-lbl').textContent = '🎉 Top tier achieved';
+    $('aff-tier-next-lbl').textContent = tier.nextLabel;
+  }
+
+  const fmt = (n) => '$' + (Number(n) || 0).toFixed(2);
+  $('aff-total-earned').textContent = fmt(d.total_earned);
+  $('aff-pending').textContent = fmt(d.pending_amount);
+  $('aff-available').textContent = fmt(d.available_amount);
+  $('aff-link-input').value = d.ref_url || '';
+  window._affUrl = d.ref_url || '';
+  if (d.payout_method) $('aff-payout-method').value = d.payout_method;
+  if (d.payout_info) $('aff-payout-info').value = d.payout_info;
+
+  const list = $('aff-commissions-list');
+  if (d.commissions && d.commissions.length) {
+    list.innerHTML = d.commissions.slice(0, 20).map(function(c){
+      var statusColor = c.status === 'paid' ? '#22c55e' : (c.status === 'available' ? 'var(--ac)' : '#f59e0b');
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">' +
+        '<div><div style="font-size:13px;font-weight:600">' + esc(c.customer_email || 'Customer') + '</div>' +
+        '<div style="font-size:11px;color:var(--tx3)">' + esc(c.date || '') + ' · ' + esc(c.plan || 'plan') + '</div></div>' +
+        '<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:' + statusColor + '">+$' + Number(c.amount || 0).toFixed(2) + '</div>' +
+        '<div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">' + esc(c.status || 'pending') + '</div></div></div>';
+    }).join('');
+  } else {
+    list.innerHTML = '<div style="font-size:13px;color:var(--tx3);padding:8px 0">No commissions yet — share your link to start earning.</div>';
+  }
+}
+
+function copyAffLink() {
+  const inp = document.getElementById('aff-link-input');
+  if (!inp) return;
+  navigator.clipboard.writeText(inp.value).then(function() {
+    toast && toast('Affiliate link copied!', 'success');
+  }).catch(function() { inp.select(); document.execCommand('copy'); });
+}
+
+async function submitAffiliateApplication() {
+  const $ = (id) => document.getElementById(id);
+  const btn = $('aff-app-submit');
+  const errEl = $('aff-app-error');
+  errEl.style.display = 'none';
+  const body = {
+    name: $('aff-app-name').value.trim(),
+    email: $('aff-app-email').value.trim(),
+    payout_method: $('aff-app-payout-method').value,
+    payout_info: $('aff-app-payout-info').value.trim(),
+    how: $('aff-app-how').value.trim(),
+  };
+  if (!body.name || !body.email || !body.payout_info || !body.how) {
+    errEl.textContent = 'Please fill in all required fields.';
+    errEl.style.display = 'block';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  try {
+    const r = await apiFetch('/api/affiliate/apply', {method:'POST', body: JSON.stringify(body)});
+    const d = await r.json();
+    if (d.ok) {
+      toast && toast(d.message || 'Application submitted!', 'success');
+      loadAffiliateData();
+    } else {
+      throw new Error(d.detail || 'Submission failed');
+    }
+  } catch(e) {
+    errEl.textContent = e.message || 'Submission failed. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Apply for affiliate access →';
+  }
+}
+
+async function saveAffiliatePayout() {
+  const method = document.getElementById('aff-payout-method').value;
+  const info = document.getElementById('aff-payout-info').value.trim();
+  if (!info) { toast && toast('Please enter your payout info', 'error'); return; }
+  try {
+    const r = await apiFetch('/api/affiliate/payout_info', {method:'POST', body: JSON.stringify({payout_method: method, payout_info: info})});
+    const d = await r.json();
+    if (d.ok) toast && toast('Payout info saved', 'success');
+  } catch(e) { toast && toast('Could not save payout info', 'error'); }
 }
 
 async function loadSettingsPage() {
@@ -7344,6 +7676,7 @@ const titles = {
   'video-script':'🎬 Video Script Generator',
   'reel-templates':'📱 Story & Reel Templates',
   audit:'📋 Account Audit',
+  affiliate:'🤝 Affiliate Program',
 };
 function nav(p) {
   // Aliases — redirect sub-items to parent page + tab
@@ -7413,6 +7746,7 @@ function nav(p) {
   if (p === 'video-script') { /* ready */ }
   if (p === 'reel-templates') { loadReelTemplates(); }
   if (p === 'audit') { /* ready */ }
+  if (p === 'affiliate') { loadAffiliateData(); }
   if (p === 'dashboard') { updateDashGreeting(); }
   _currentPage = p;
 }
