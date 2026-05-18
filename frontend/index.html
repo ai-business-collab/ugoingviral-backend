@@ -221,7 +221,7 @@ body {
   background: var(--bg);
   color: var(--tx);
   min-height: 100vh;
-  overflow-x: hidden;
+  
   transition: background .5s var(--ease), color .5s var(--ease);
 }
 
@@ -260,7 +260,7 @@ body.light::before {
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   position: sticky; top: 0; height: 100vh;
-  overflow-y: auto; overflow-x: hidden;
+  overflow-y: auto; 
   transition: background .5s var(--ease);
 }
 
@@ -378,7 +378,7 @@ body.light::before {
 /* ═══════════════════════════════════════════════════════
    MAIN
    ═══════════════════════════════════════════════════════ */
-.main { display: flex; flex-direction: column; min-height: 100vh; min-width: 0; max-width: 100%; overflow-x: hidden; }
+.main { display: flex; flex-direction: column; min-height: 100vh; min-width: 0; max-width: 100%;  }
 
 /* Topbar */
 .topbar {
@@ -414,7 +414,7 @@ body.light #clock {
 }
 
 /* Content area */
-.wrap { padding: 28px; flex: 1; }
+.wrap { padding: 0; flex: 1; }
 
 /* Pages */
 .page {
@@ -434,33 +434,6 @@ body.light #clock {
    inline max-width. Make it shrinkable too so its grid/flex children don't push out. */
 .page > div[style*="max-width"] { min-width: 0; }
 
-/* ── Overflow guard for the 5 pages whose content used to escape into the sidebar.
-   Every descendant is forced to stay inside the page column, and every nested
-   .card/.stat-kpi/box can shrink instead of pushing the layout wider. ── */
-#page-analytics, #page-brand-kit, #page-hashtags, #page-competitor, #page-audit {
-  width: 100%; max-width: 100%; min-width: 0;
-  box-sizing: border-box; overflow-x: hidden;
-}
-#page-analytics *, #page-brand-kit *, #page-hashtags *, #page-competitor *, #page-audit * {
-  box-sizing: border-box;
-  min-width: 0;
-  max-width: 100%;
-}
-#page-analytics .card, #page-brand-kit .card, #page-hashtags .card,
-#page-competitor .card, #page-audit .card,
-#page-analytics .stat-kpi, #page-analytics .stat {
-  max-width: 100%; min-width: 0; box-sizing: border-box;
-}
-#page-analytics .g2, #page-brand-kit .g2, #page-hashtags .g2,
-#page-competitor .g2, #page-audit .g2 {
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-#page-analytics .g3, #page-brand-kit .g3, #page-hashtags .g3,
-#page-competitor .g3, #page-audit .g3,
-#page-analytics .g4, #page-brand-kit .g4, #page-hashtags .g4,
-#page-competitor .g4, #page-audit .g4 {
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
@@ -1215,8 +1188,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
    MOBILE — 600px and below: collapse all multi-col grids
    ═══════════════════════════════════════════════════════ */
 @media (max-width: 600px) {
-  html, body { overflow-x: hidden; max-width: 100vw; }
-  .main, .wrap, .page { max-width: 100vw; overflow-x: hidden; }
+  html, body {  max-width: 100vw; }
+  .main, .wrap, .page { max-width: 100vw;  }
   .wrap { padding: 14px 10px !important; }
   .page { padding: 10px 10px !important; }
 
