@@ -3937,7 +3937,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:10px">🎛️ Custom amount</div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <div style="flex:1;min-width:140px">
-              <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">Amount USD (min $79)</div>
+              <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">Amount (min <span data-credit-usd="79">$79</span>)</div>
               <input class="fi" type="number" id="custom-topup-amount" min="79" placeholder="e.g. 200" oninput="updateCustomTopupPreview()" style="width:100%">
             </div>
             <div style="flex:1;min-width:140px;text-align:center">
@@ -3950,7 +3950,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyCustomTopup('paypal')">🅿️ PayPal →</button>
             </div>
           </div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:8px">Fixed rate: $0.053 per credit. Minimum $79. Example: $200 = 3,773 credits | $79 = 1,490 credits.</div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:8px">Fixed rate <span data-rate-usd="79" data-rate-cr="1490">($0.053/cr)</span>. Minimum <span data-credit-usd="79">$79</span>. Example: <span data-credit-usd="200">$200</span> = 3,773 credits | <span data-credit-usd="79">$79</span> = 1,490 credits.</div>
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-top:10px;padding:8px 12px;background:rgba(0,229,255,.05);border-radius:8px;border:1px solid rgba(0,229,255,.1)">
           💡 <strong>Tip:</strong> Fixed packages give the best price per credit. Custom amounts use the same tier rates — more spent means cheaper per credit. A plan subscription is always the most cost-effective for daily use.
@@ -3974,10 +3974,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.5">Recurring monthly billing — proxy + automation included for each account.</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;font-size:11px">
-              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">1–9</strong> · $14/mo</div>
-              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">10–49</strong> · $11/mo</div>
-              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">50–99</strong> · $9/mo</div>
-              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">100+</strong> · $8/mo</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">1–9</strong> · <span data-credit-usd="14">$14</span>/mo</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">10–49</strong> · <span data-credit-usd="11">$11</span>/mo</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">50–99</strong> · <span data-credit-usd="9">$9</span>/mo</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:var(--ac)">100+</strong> · <span data-credit-usd="8">$8</span>/mo</div>
             </div>
             <div style="display:flex;gap:8px;align-items:end;margin-bottom:10px">
               <div style="flex:1">
@@ -3986,8 +3986,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               </div>
               <div style="flex:1;text-align:right">
                 <div style="font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase">Total</div>
-                <div style="font-size:20px;font-weight:900;color:var(--ac)" id="ea-growth-total">$14<span style="font-size:11px;color:var(--tx3);font-weight:600">/mo</span></div>
-                <div style="font-size:10px;color:var(--tx3)" id="ea-growth-tier">1–9 accounts · $14/mo each</div>
+                <div style="font-size:20px;font-weight:900;color:var(--ac)" id="ea-growth-total"><span data-credit-usd="14">$14</span><span style="font-size:11px;color:var(--tx3);font-weight:600">/mo</span></div>
+                <div style="font-size:10px;color:var(--tx3)" id="ea-growth-tier">1–9 accounts · <span data-credit-usd="14">$14</span>/mo each</div>
               </div>
             </div>
             <button class="btn bp" style="width:100%" onclick="buyExtraGrowthAccounts()">📈 Buy Growth Accounts →</button>
@@ -4001,10 +4001,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.5">Pay once, keep forever. Use these slots for agency clients in your workspace.</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;font-size:11px">
-              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">1–9</strong> · $29 ea</div>
-              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">10–49</strong> · $22 ea</div>
-              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">50–99</strong> · $19 ea</div>
-              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">100+</strong> · $15 ea</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">1–9</strong> · <span data-credit-usd="29">$29</span> ea</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">10–49</strong> · <span data-credit-usd="22">$22</span> ea</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">50–99</strong> · <span data-credit-usd="19">$19</span> ea</div>
+              <div style="background:var(--glass-b);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><strong style="color:#22c55e">100+</strong> · <span data-credit-usd="15">$15</span> ea</div>
             </div>
             <div style="display:flex;gap:8px;align-items:end;margin-bottom:10px">
               <div style="flex:1">
@@ -4013,8 +4013,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               </div>
               <div style="flex:1;text-align:right">
                 <div style="font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.5px;text-transform:uppercase">Total</div>
-                <div style="font-size:20px;font-weight:900;color:#22c55e" id="ea-client-total">$29</div>
-                <div style="font-size:10px;color:var(--tx3)" id="ea-client-tier">1–9 accounts · $29 each</div>
+                <div style="font-size:20px;font-weight:900;color:#22c55e" id="ea-client-total"><span data-credit-usd="29">$29</span></div>
+                <div style="font-size:10px;color:var(--tx3)" id="ea-client-tier">1–9 accounts · <span data-credit-usd="29">$29</span> each</div>
               </div>
             </div>
             <button class="btn bp" style="width:100%;background:#22c55e;color:#000" onclick="buyExtraClientAccounts()">🧑‍💼 Buy Client Accounts →</button>
@@ -5676,6 +5676,10 @@ function renderBillingPrices() {
   document.querySelectorAll('.curr-btn').forEach(function(b) {
     b.classList.toggle('curr-active', b.getAttribute('data-curr') === _currency);
   });
+  // Re-render Extra Accounts previews if their inputs already have a quantity
+  // — these use innerHTML/textContent and lose the data-credit-usd spans once typed.
+  if (typeof updateExtraGrowthPreview === 'function' && document.getElementById('ea-growth-qty')?.value) updateExtraGrowthPreview();
+  if (typeof updateExtraClientPreview === 'function' && document.getElementById('ea-client-qty')?.value) updateExtraClientPreview();
 }
 
 function setCurrency(code) {
@@ -5885,7 +5889,7 @@ async function loadStudioPackages() {
         </ul>
                 <div style="margin-bottom:12px">
             <div style="font-size:11px;color:var(--tx3)">Price</div>
-            <div style="font-size:22px;font-weight:900;color:var(--tx)">${Math.round(pkg.price * (window._currencyRate||1))} <span style="font-size:12px;font-weight:500;color:var(--tx2)">${window._currencySymbol||"USD"}</span></div>
+            <div style="font-size:22px;font-weight:900;color:var(--tx)">${fmtPrice(pkg.price)}</div>
           </div>
           </div>
         </div>
@@ -6876,18 +6880,25 @@ var _obfTotal = 6;
 var _obfShopMode = 'shopify';
 var _obfGoal = '';
 
+function _obfKey() {
+  const u = JSON.parse(localStorage.getItem('ugv_user') || '{}');
+  return 'ugv_obf_done_' + (u.id || u.email || 'u');
+}
+
 async function obfInit() {
   try {
-    const d = await apiFetch('/api/onboarding/status');
-    if (d.completed) {
+    const user = JSON.parse(localStorage.getItem('ugv_user') || '{}');
+    const seen = localStorage.getItem(_obfKey());
+    // Always fetch status so we can render the widget regardless of branch.
+    let d = {};
+    try { d = await apiFetch('/api/onboarding/status') || {}; } catch(e) { d = {}; }
+    if (seen) {
       obfRenderWidget(d.widget);
-      // Setup already done — start tour if not seen yet
       setTimeout(tourStart, 500);
       return;
     }
     const nameEl = document.getElementById('obf-name');
     if (nameEl && d.name) nameEl.textContent = d.name;
-    const user = JSON.parse(localStorage.getItem('ugv_user') || '{}');
     const profName = document.getElementById('obf-prof-name');
     const profComp = document.getElementById('obf-prof-company');
     if (profName) profName.value = user.name || '';
@@ -6981,6 +6992,7 @@ async function obfSkip() {
 
 async function obfComplete() {
   try { await apiFetch('/api/onboarding/complete', 'POST'); } catch(e) {}
+  try { localStorage.setItem(_obfKey(), '1'); } catch(e) {}
   document.getElementById('obf-overlay').classList.remove('obf-show');
   try {
     const d = await apiFetch('/api/onboarding/status');
@@ -8253,8 +8265,8 @@ function updateExtraGrowthPreview() {
   var qty = Math.max(1, Math.min(1000, parseInt(el.value, 10) || 1));
   el.value = qty;
   var u = _extraGrowthUnit(qty);
-  document.getElementById('ea-growth-total').innerHTML = '$' + (u * qty) + '<span style="font-size:11px;color:var(--tx3);font-weight:600">/mo</span>';
-  document.getElementById('ea-growth-tier').textContent = _tierLabel(qty) + ' · $' + u + '/mo each';
+  document.getElementById('ea-growth-total').innerHTML = fmtPrice(u * qty) + '<span style="font-size:11px;color:var(--tx3);font-weight:600">/mo</span>';
+  document.getElementById('ea-growth-tier').textContent = _tierLabel(qty) + ' · ' + fmtPrice(u) + '/mo each';
 }
 function updateExtraClientPreview() {
   var el = document.getElementById('ea-client-qty');
@@ -8262,8 +8274,8 @@ function updateExtraClientPreview() {
   var qty = Math.max(1, Math.min(1000, parseInt(el.value, 10) || 1));
   el.value = qty;
   var u = _extraClientUnit(qty);
-  document.getElementById('ea-client-total').textContent = '$' + (u * qty);
-  document.getElementById('ea-client-tier').textContent = _tierLabel(qty) + ' · $' + u + ' each';
+  document.getElementById('ea-client-total').textContent = fmtPrice(u * qty);
+  document.getElementById('ea-client-tier').textContent = _tierLabel(qty) + ' · ' + fmtPrice(u) + ' each';
 }
 async function buyExtraGrowthAccounts() {
   var qty = Math.max(1, Math.min(1000, parseInt(document.getElementById('ea-growth-qty').value, 10) || 1));
