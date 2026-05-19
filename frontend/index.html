@@ -13766,11 +13766,44 @@ var _ag = {
   plan: 'free',
   unread: 0,
   awaitingName: false,
+  awaitingNameConfirm: false,
+  pendingName: '',
   welcomeSent: false,
   pendingFirstMsg: null,
   detectedLang: 'en',
+  currentAudio: null,
   workflow: { active: false, step: 0 },
 };
+
+// ── TTS overlap guard ─────────────────────────────────────────────────────────
+// Cancel any voice currently playing (HTMLAudio or speechSynthesis) before a
+// new utterance starts, so two voices never speak at once.
+function agStopAllAudio() {
+  try {
+    if (_ag.currentAudio) {
+      _ag.currentAudio.pause();
+      try { _ag.currentAudio.currentTime = 0; } catch(e) {}
+      _ag.currentAudio = null;
+    }
+  } catch(e) {}
+  try {
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
+  } catch(e) {}
+}
+
+function agSpeak(src) {
+  agStopAllAudio();
+  try {
+    var a = new Audio(src);
+    _ag.currentAudio = a;
+    a.addEventListener('ended', function() {
+      if (_ag.currentAudio === a) _ag.currentAudio = null;
+    });
+    a.play().catch(function(){});
+  } catch(e) {}
+}
 
 // ── Draggable FAB ─────────────────────────────────────────────────────────────
 (function() {
@@ -13957,7 +13990,7 @@ function agToggle() {
 
 // ── Add message bubble ────────────────────────────────────────────────────────
 function agPlayAudio(src) {
-  try { new Audio(src).play(); } catch(e) {}
+  agSpeak(src);
 }
 
 function agAddMsg(role, text, actions, escalate, audioUrl) {
@@ -14029,24 +14062,75 @@ async function agSend(fromVoice) {
   var inp = document.getElementById('ag-input');
   var text = inp.value.trim(); if (!text) return;
 
-  if (_ag.awaitingName) {
+  // ── Name confirmation flow ──────────────────────
+  // Two-step: first message proposes a name -> bot asks "Did you mean X?";
+  // user must confirm ('yes'/'ja'/'confirm') before we save. A different
+  // typed name restarts the confirmation with the new value.
+  if (_ag.awaitingName || _ag.awaitingNameConfirm) {
     inp.value = ''; inp.style.height = 'auto';
-    var low = text.toLowerCase().trim();
-    var agentName;
-    if (low === 'you choose' || low === 'u choose' || low === 'pick one' || low === 'you pick') {
-      var picks = ['Aria','Nova','Sage','Leo','Mia','Zara','Atlas','Luna','Kai','Remi'];
-      agentName = picks[Math.floor(Math.random() * picks.length)];
-    } else {
-      agentName = text.trim().split(' ').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join(' ').slice(0,30);
-    }
-    _ag.awaitingName = false;
+    agDetectLang(text);
     agAddMsg('user', text);
-    agShowTyping();
-    try { await apiFetch('/api/agent/name', 'PATCH', {name: agentName}); } catch(e) {}
-    localStorage.setItem('ag_agent_name', agentName);
-    document.getElementById('ag-hname').textContent = agentName;
-    agRemoveTyping();
-    agAddMsg('bot', 'Nice to meet you! I\u2019m ' + agentName + ' 🎉 How can I help you today?');
+    var lang = _ag.detectedLang === 'da' ? 'da' : 'en';
+    var lowRaw = text.toLowerCase().trim();
+    var stripped = lowRaw.replace(/[.!?,'"\u2018\u2019\u201C\u201D]/g, '').trim();
+    var YES_WORDS = ['yes','y','yep','yeah','yup','sure','confirm','correct','ok','okay','right',
+                     "yes that's right",'thats right','that is right',
+                     'ja','jo','jep','korrekt','rigtigt','bekraeft','bekr\u00e6ft'];
+    var NO_WORDS  = ['no','n','nope','nah','nej','ikke'];
+    var isYes = YES_WORDS.indexOf(stripped) !== -1 || /^yes[ ,]/.test(stripped) || /^ja[ ,]/.test(stripped);
+    var isNo  = NO_WORDS.indexOf(stripped) !== -1;
+
+    var PICKS = ['Aria','Nova','Sage','Leo','Mia','Zara','Atlas','Luna','Kai','Remi'];
+    var YOU_CHOOSE = ['you choose','u choose','pick one','you pick','du v\u00e6lger','v\u00e6lg selv','du bestemmer'];
+
+    // Step 2 — awaiting confirmation of a proposed name.
+    if (_ag.awaitingNameConfirm) {
+      if (isYes && _ag.pendingName) {
+        var chosen = _ag.pendingName;
+        _ag.awaitingNameConfirm = false;
+        _ag.awaitingName = false;
+        _ag.pendingName = '';
+        agShowTyping();
+        try { await apiFetch('/api/agent/name', 'PATCH', {name: chosen}); } catch(e) {}
+        localStorage.setItem('ag_agent_name', chosen);
+        document.getElementById('ag-hname').textContent = chosen;
+        agRemoveTyping();
+        agAddMsg('bot', lang === 'da'
+          ? 'Perfekt! Jeg hedder ' + chosen + ' 🎉 Hvad kan jeg hj\u00e6lpe dig med i dag?'
+          : 'Perfect! I\u2019m ' + chosen + ' 🎉 How can I help you today?');
+        return;
+      }
+      if (isNo) {
+        _ag.pendingName = '';
+        agAddMsg('bot', lang === 'da'
+          ? 'Ingen problem — hvilket navn vil du s\u00e5 give mig?'
+          : 'No problem — what name would you like to give me instead?');
+        return;
+      }
+      // Treat as a fresh name proposal — fall through to step 1.
+    }
+
+    // Step 1 — propose name from user input, then ask to confirm.
+    var proposed;
+    if (YOU_CHOOSE.indexOf(stripped) !== -1) {
+      proposed = PICKS[Math.floor(Math.random() * PICKS.length)];
+    } else {
+      proposed = text.trim().split(/\s+/)
+                    .map(function(w){return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();})
+                    .join(' ').slice(0,30);
+    }
+    if (!proposed) {
+      agAddMsg('bot', lang === 'da'
+        ? 'Jeg fangede ikke et navn der — pr\u00f8v venligst igen.'
+        : 'I didn\u2019t catch a name there — please try again.');
+      return;
+    }
+    _ag.pendingName = proposed;
+    _ag.awaitingName = false;
+    _ag.awaitingNameConfirm = true;
+    agAddMsg('bot', lang === 'da'
+      ? 'Mente du ' + proposed + '? Svar \u2018ja\u2019 for at bekr\u00e6fte eller skriv et andet navn.'
+      : 'Did you mean ' + proposed + '? Reply \u2018yes\u2019 to confirm or type a different name.');
     return;
   }
 
@@ -14078,8 +14162,9 @@ async function agSend(fromVoice) {
     document.getElementById('ag-hstatus').textContent = 'Ready to help';
 
     if (audioUrl && (fromVoice || _ag.voiceEnabled)) {
-      new Audio(audioUrl).play().catch(function(){});
+      agSpeak(audioUrl);
     } else if ((fromVoice || _ag.voiceMode) && !audioUrl && window.speechSynthesis) {
+      agStopAllAudio();
       var utt = new SpeechSynthesisUtterance(reply.replace(/<[^>]+>/g,'').slice(0,300));
       utt.lang = _ag.detectedLang === 'da' ? 'da-DK' : 'en-US';
       utt.rate = 1.05;

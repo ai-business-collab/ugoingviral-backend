@@ -17,8 +17,6 @@ ELEVENLABS_KEY   = os.getenv("ELEVENLABS_API_KEY", "")
 OPENAI_AGENT_MODEL  = "gpt-4o-mini"
 CLAUDE_HEAVY_MODEL  = "claude-sonnet-4-6"
 CLAUDE_LIGHT_MODEL  = "claude-haiku-4-5-20251001"
-ELEVENLABS_VOICE    = "EXAVITQu4vr4xnSDxMaL"   # "Bella" — warm female voice (legacy default)
-
 # User-facing agent voice catalog. Two curated options the user can switch
 # between via chat ("change voice" / "skift stemme") or in Settings.
 VOICE_OPTIONS = {
@@ -26,6 +24,8 @@ VOICE_OPTIONS = {
     "max":  {"id": "y0s2ExEMuum3muUnA6Zd", "name": "Max",  "description": "Professional & clear male"},
 }
 DEFAULT_VOICE_KEY = "nova"
+# Default fallback when a user has not selected a voice. Female default = Nova.
+ELEVENLABS_VOICE    = VOICE_OPTIONS[DEFAULT_VOICE_KEY]["id"]
 
 
 def _voice_key_from_id(voice_id: str) -> str:
@@ -367,7 +367,7 @@ PLATFORM FEATURES:
 CREDIT COSTS: Script 5cr · Image 8cr · Video 5s 20cr · Video 15s 40cr · Video 30s 80cr · Voice 15cr · Assembly 2cr · Post 1cr
 
 RESPONSE RULES:
-1. Detect the user's language and respond in THAT language (Danish if Danish, English if English, etc.)
+1. LANGUAGE: Detect the user's language from their CURRENT message and reply in the SAME language. Danish → Danish, English → English, German → German, Spanish → Spanish, etc. Match the user every turn — if they switch language, switch with them. If their message is too short or ambiguous to tell (e.g. just "ok", a name, or a single emoji), ask: "What language would you like me to speak — English or Danish?" / "Hvilket sprog vil du have jeg taler — engelsk eller dansk?". Never mix languages within a single reply.
 2. Keep responses concise (max 3 short paragraphs). Be direct and actionable.
 3. When you want to navigate the user to a section, add [[NAV:pagename]] at the END of your response.
    Valid pages: dashboard, generator, pipeline, history, content-library, library, products, posting, inbox, automation, connect, settings, billing, stats
@@ -719,6 +719,16 @@ async def set_agent_name(req: Request, current_user: dict = Depends(get_current_
     ustore["agent_name"] = name
     _save_user_store(current_user["id"], ustore)
     return {"ok": True, "name": name}
+
+
+@router.post("/api/agent/reset_name")
+def reset_agent_name(current_user: dict = Depends(get_current_user)):
+    """Clear the stored agent name so the user is re-prompted to pick one."""
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    ustore["agent_name"] = ""
+    _save_user_store(uid, ustore)
+    return {"ok": True, "name": ""}
 
 
 @router.post("/api/agent/transcribe")
