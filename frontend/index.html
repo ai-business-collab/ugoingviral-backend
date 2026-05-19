@@ -1174,8 +1174,18 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     bottom: 80px !important;
   }
 
-  /* ── Agent FAB ── */
-  #agent-fab { right: 16px !important; bottom: 16px !important; }
+  /* ── Agent FAB ── always visible on mobile, bottom-right ── */
+  #agent-fab {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    right: 16px !important;
+    bottom: 16px !important;
+    left: auto !important;
+    top: auto !important;
+    z-index: 99999 !important;
+  }
 
   /* ── Notification panel ── */
   #notif-panel { width: calc(100vw - 28px) !important; right: 0 !important; }
@@ -13069,7 +13079,7 @@ function renderPipeContent() {
 <!-- ═══════════ FLOATING AI AGENT v2 ════════════════════════════════════════ -->
 <style>
 #agent-fab {
-  position:fixed; bottom:28px; right:28px; z-index:9000;
+  position:fixed; bottom:28px; right:28px; z-index:99999;
   width:30px; height:30px; border-radius:50%;
   background:linear-gradient(135deg,var(--ac),var(--ac2));
   border:none; cursor:pointer;
