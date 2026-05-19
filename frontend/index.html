@@ -13222,6 +13222,42 @@ function renderPipeContent() {
 @keyframes ag-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }
 .ag-speaker { background:none;border:none;cursor:pointer;font-size:13px;opacity:.5;padding:1px 4px;margin-left:4px;vertical-align:middle }
 .ag-speaker:hover { opacity:1 }
+
+/* ── Inline voice-message player ── */
+.ag-audio {
+  display:flex; align-items:center; gap:8px;
+  padding:6px 10px; margin-top:4px;
+  background:rgba(0,229,255,.07);
+  border:1px solid rgba(0,229,255,.18);
+  border-radius:14px;
+  min-width:220px; max-width:100%;
+}
+.ag-audio-btn {
+  width:28px; height:28px; border-radius:50%;
+  background:var(--ac); color:#000; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; line-height:1; flex-shrink:0; padding:0;
+  transition:transform .15s, background .15s;
+}
+.ag-audio-btn:hover { background:var(--ac2); transform:scale(1.05); }
+.ag-audio-btn:disabled { opacity:.5; cursor:default; transform:none; }
+.ag-audio-progress {
+  flex:1; height:4px; border-radius:2px;
+  background:rgba(255,255,255,.12);
+  cursor:pointer; position:relative; overflow:hidden;
+}
+.ag-audio-fill {
+  position:absolute; left:0; top:0; height:100%;
+  background:linear-gradient(90deg, var(--ac), var(--ac2));
+  width:0%;
+}
+.ag-audio-time {
+  font-size:10px; color:var(--tx3); flex-shrink:0;
+  font-variant-numeric:tabular-nums;
+  min-width:62px; text-align:right;
+}
+body.light .ag-audio { background:rgba(0,229,255,.08); border-color:rgba(0,229,255,.25); }
+body.light .ag-audio-progress { background:rgba(0,0,0,.08); }
 body.light #agent-panel { background:#eef1f5; border-color:rgba(0,0,0,.1); box-shadow:0 20px 70px rgba(0,0,0,.2); }
 body.light #ag-msgs { background:#eef1f5; }
 body.light .ag-msg.bot .ag-bubble { background:#fff; color:#0f1923; border-color:rgba(0,0,0,.09); }
@@ -13993,16 +14029,109 @@ function agPlayAudio(src) {
   agSpeak(src);
 }
 
+function agFmtTime(s) {
+  if (!isFinite(s) || s < 0) s = 0;
+  var m = Math.floor(s / 60);
+  var ss = Math.floor(s % 60);
+  return m + ':' + (ss < 10 ? '0' : '') + ss;
+}
+
+// Build an inline voice-message player with custom play/pause + scrubbable
+// progress + time display. Returns the container element; the underlying
+// HTMLAudio is attached as `.audioEl` so callers can auto-play.
+function agBuildAudioPlayer(src) {
+  var box = document.createElement('div');
+  box.className = 'ag-audio';
+  box.innerHTML =
+    '<button class="ag-audio-btn" type="button" aria-label="Play" title="Play">' +
+      '<span class="ag-audio-ico">▶</span>' +    // ▶
+    '</button>' +
+    '<div class="ag-audio-progress" role="slider" aria-label="Seek">' +
+      '<div class="ag-audio-fill"></div>' +
+    '</div>' +
+    '<div class="ag-audio-time">0:00 / 0:00</div>';
+
+  var audio   = new Audio();
+  audio.preload = 'metadata';
+  audio.src   = src;
+  var btn     = box.querySelector('.ag-audio-btn');
+  var ico     = box.querySelector('.ag-audio-ico');
+  var track   = box.querySelector('.ag-audio-progress');
+  var fill    = box.querySelector('.ag-audio-fill');
+  var timeEl  = box.querySelector('.ag-audio-time');
+
+  function refreshTime() {
+    var d = isFinite(audio.duration) ? audio.duration : 0;
+    timeEl.textContent = agFmtTime(audio.currentTime) + ' / ' + agFmtTime(d);
+  }
+  function refreshFill() {
+    var d = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+    fill.style.width = (d > 0 ? (audio.currentTime / d * 100) : 0) + '%';
+  }
+  audio.addEventListener('loadedmetadata', function() { refreshTime(); });
+  audio.addEventListener('timeupdate', function() { refreshTime(); refreshFill(); });
+  audio.addEventListener('play', function() {
+    // Stop any other voice playing so two voices never overlap.
+    if (_ag.currentAudio && _ag.currentAudio !== audio) {
+      try { _ag.currentAudio.pause(); } catch(e) {}
+    }
+    try {
+      if (window.speechSynthesis && window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+      }
+    } catch(e) {}
+    _ag.currentAudio = audio;
+    ico.textContent = '⏸';   // ⏸
+    btn.setAttribute('aria-label', 'Pause');
+    btn.setAttribute('title', 'Pause');
+  });
+  audio.addEventListener('pause', function() {
+    ico.textContent = '▶';   // ▶
+    btn.setAttribute('aria-label', 'Play');
+    btn.setAttribute('title', 'Play');
+  });
+  audio.addEventListener('ended', function() {
+    if (_ag.currentAudio === audio) _ag.currentAudio = null;
+    fill.style.width = '100%';
+    refreshTime();
+  });
+
+  btn.addEventListener('click', function() {
+    if (audio.paused) {
+      audio.play().catch(function(){});
+    } else {
+      audio.pause();
+    }
+  });
+
+  track.addEventListener('click', function(e) {
+    var rect = track.getBoundingClientRect();
+    var ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    var d = isFinite(audio.duration) ? audio.duration : 0;
+    if (d > 0) {
+      audio.currentTime = ratio * d;
+      refreshFill();
+      refreshTime();
+    }
+  });
+
+  box.audioEl = audio;
+  return box;
+}
+
 function agAddMsg(role, text, actions, escalate, audioUrl) {
   var msgs = document.getElementById('ag-msgs');
   var wrap = document.createElement('div');
   wrap.className = 'ag-msg ' + (role === 'user' ? 'user' : 'bot');
   var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
                  .replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  var speakerBtn = (role === 'bot' && audioUrl)
-    ? '<button class="ag-speaker" onclick="agPlayAudio(\'' + audioUrl.replace(/'/g,"\\'").replace(/"/g,'&quot;') + '\')" title="Replay">🔊</button>'
-    : '';
-  wrap.innerHTML = '<div class="ag-bubble">' + safe + speakerBtn + '</div>';
+  wrap.innerHTML = '<div class="ag-bubble">' + safe + '</div>';
+
+  if (role === 'bot' && audioUrl) {
+    var player = agBuildAudioPlayer(audioUrl);
+    wrap.appendChild(player);
+    wrap._audio = player.audioEl;
+  }
 
   if (actions && actions.length) {
     var actRow = document.createElement('div');
@@ -14157,12 +14286,17 @@ async function agSend(fromVoice) {
     agRemoveTyping();
     var reply = d.response || '…';
     var audioUrl = d.voice_url || null;
-    agAddMsg('bot', reply, d.actions || [], d.escalate, audioUrl);
+    var msgEl = agAddMsg('bot', reply, d.actions || [], d.escalate, audioUrl);
     _ag.history.push({role:'assistant', content:reply});
     document.getElementById('ag-hstatus').textContent = 'Ready to help';
 
     if (audioUrl && (fromVoice || _ag.voiceEnabled)) {
-      agSpeak(audioUrl);
+      agStopAllAudio();
+      if (msgEl && msgEl._audio) {
+        msgEl._audio.play().catch(function(){});
+      } else {
+        agSpeak(audioUrl);
+      }
     } else if ((fromVoice || _ag.voiceMode) && !audioUrl && window.speechSynthesis) {
       agStopAllAudio();
       var utt = new SpeechSynthesisUtterance(reply.replace(/<[^>]+>/g,'').slice(0,300));
