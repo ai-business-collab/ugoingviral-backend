@@ -3759,6 +3759,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <button class="btn bg bsm" onclick="shareRefLinkedIn()">Share on LinkedIn</button>
           <button class="btn bg bsm" onclick="shareRefWhatsApp()">📱 WhatsApp</button>
           <button class="btn bg bsm" onclick="shareRefFacebook()">📘 Facebook</button>
+          <button class="btn bg bsm" onclick="shareRefInstagram(this)">📸 Instagram</button>
           <button class="btn bg bsm" onclick="shareRefCopy(this)">🔗 Copy link</button>
         </div>
       </div>
@@ -4276,7 +4277,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div style="display:grid;grid-template-columns:1fr 120px 120px;gap:10px;margin-bottom:10px">
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Prompt</label>
-            <textarea id="sp-prompt" class="fta" placeholder="Cinematic shot of a wave breaking on a beach at golden hour…" style="margin-top:4px;width:100%;min-height:120px;max-height:300px;resize:vertical;font-size:13px;line-height:1.5"></textarea>
+            <textarea id="sp-prompt" class="fta" placeholder="Cinematic shot of a wave breaking on a beach at golden hour…" style="margin-top:4px;width:100%;box-sizing:border-box;min-height:120px;max-height:300px;resize:vertical;font-size:13px;line-height:1.5"></textarea>
           </div>
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Duration</label>
@@ -7374,6 +7375,20 @@ function shareRefCopy(btn) {
   }).catch(function() {
     const inp = document.getElementById('ref-link-input');
     if (inp) { inp.select(); document.execCommand('copy'); }
+  });
+}
+
+function shareRefInstagram(btn) {
+  // Instagram has no direct share URL — copy an IG-ready caption and open the app.
+  const url = window._refUrl || document.getElementById('ref-link-input')?.value || 'https://ugoingviral.com';
+  const caption = 'I use @ugoingviral to automate my social media — try it out 🚀\n\nLink: ' + url + '\n\n#socialmedia #contentcreator #marketing #automation';
+  navigator.clipboard.writeText(caption).then(function() {
+    if (btn) { const orig = btn.innerHTML; btn.innerHTML = '✅ Caption copied!'; setTimeout(function() { btn.innerHTML = orig; }, 2400); }
+    toast('Instagram caption copied — paste it in your post or story', 'success');
+    window.open('https://www.instagram.com/', '_blank');
+  }).catch(function() {
+    toast('Could not copy caption — copy the link manually', 'error');
+    window.open('https://www.instagram.com/', '_blank');
   });
 }
 
