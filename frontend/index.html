@@ -5445,11 +5445,9 @@ function renderSubAccountsPage(d) {
 
   if (!subs.length) {
     list.innerHTML = limit === 0
-      ? `<div style="color:var(--tx3);text-align:center;padding:32px 0;font-size:13px">Your current plan does not include extra profiles.<br><button class="btn bp bsm" style="margin-top:12px" onclick="nav('billing')">Upgrade plan →</button></div>`
+      ? `<div style="color:var(--tx3);text-align:center;padding:32px 0;font-size:13px">Your plan doesn't include extra profiles by default — buy a slot below to add one.</div>`
       : `<div style="color:var(--tx3);text-align:center;padding:32px 0;font-size:13px">No extra profiles yet — create your first one!</div>`;
-    return;
-  }
-
+  } else {
   list.innerHTML = subs.map(s => {
     const inactive = s.status === 'inactive';
     return `
@@ -5469,6 +5467,7 @@ function renderSubAccountsPage(d) {
       </div>
     </div>`;
   }).join('');
+  }
 
   // Show add-on section if user is at their limit
   let addonEl = document.getElementById('sub-addon-section');
@@ -5478,10 +5477,13 @@ function renderSubAccountsPage(d) {
     document.getElementById('sub-list')?.closest('.card')?.after(addonEl);
   }
   if (subs.length >= limit && limit >= 0) {
+    const blurb = limit === 0
+      ? `Extra profile slots are available as an add-on for any plan. Buy one to start adding profiles.`
+      : `You have reached your plan limit (${limit} accounts). Buy extra slots — permanent additions to your account.`;
     addonEl.innerHTML = `
       <div class="card" style="margin-top:16px;border-color:rgba(139,92,246,.3)">
         <div class="ctitle" style="margin-bottom:8px">➕ Buy extra profile slots</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">You have reached your plan limit (${limit} accounts). Buy extra slots — permanent additions to your account.</div>
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">${blurb}</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px" id="sub-addon-grid">
           <div style="color:var(--tx3);font-size:12px;padding:12px;text-align:center">Loading...</div>
         </div>
@@ -7786,10 +7788,6 @@ function toggleSubMenu(id) {
   });
   sub.classList.toggle('open');
   if (ni) ni.classList.toggle('open');
-  if (sub.classList.contains('open')) {
-    if (id === 'products-sub') nav('products');
-    if (id === 'content-sub') nav('generator');
-  }
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────
