@@ -26,8 +26,8 @@ HIGGSFIELD_API_URL = os.getenv("HIGGSFIELD_API_URL", "https://api.higgsfield.ai/
 PIKA_API_KEY       = os.getenv("PIKA_API_KEY", "")
 PIKA_API_URL       = os.getenv("PIKA_API_URL", "https://api.pika.art/v1/generate")
 
-# Plans that may use the premium video providers.
-_PRO_PLUS = {"pro", "elite", "personal", "agency", "growth"}
+# Plans that may use the premium video providers — any paid plan.
+_PRO_PLUS = {"starter", "basic", "pro", "elite", "personal", "agency", "growth"}
 
 
 def _is_pro_plus(user_id: str) -> bool:
@@ -1007,7 +1007,7 @@ def _charge_or_402(uid: str, amount: int) -> int:
 @router.post("/api/studio/higgsfield")
 async def higgsfield_generate(body: dict, current_user: dict = Depends(get_current_user)):
     if not _is_pro_plus(current_user["id"]):
-        raise HTTPException(status_code=403, detail="Higgsfield generation requires Pro plan or higher")
+        raise HTTPException(status_code=403, detail="Higgsfield generation requires a paid plan")
     if not HIGGSFIELD_API_KEY:
         raise HTTPException(status_code=503, detail="HIGGSFIELD_API_KEY not configured on the server")
     prompt, duration, aspect = _validate_video_payload(body)
@@ -1034,7 +1034,7 @@ async def higgsfield_generate(body: dict, current_user: dict = Depends(get_curre
 @router.post("/api/studio/pika")
 async def pika_generate(body: dict, current_user: dict = Depends(get_current_user)):
     if not _is_pro_plus(current_user["id"]):
-        raise HTTPException(status_code=403, detail="Pika Labs generation requires Pro plan or higher")
+        raise HTTPException(status_code=403, detail="Pika Labs generation requires a paid plan")
     if not PIKA_API_KEY:
         raise HTTPException(status_code=503, detail="PIKA_API_KEY not configured on the server")
     prompt, duration, aspect = _validate_video_payload(body)

@@ -4258,12 +4258,12 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div id="studio-root"></div>
     <div id="studio-portrait-root" style="display:none"></div>
 
-    <!-- ══ Premium video providers (Higgsfield + Pika Labs) — Pro+ only ══ -->
+    <!-- ══ Premium video providers (Higgsfield + Pika Labs) — any paid plan ══ -->
     <div id="studio-premium-card" style="display:none;margin-top:18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(0,229,255,.04));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-size:14px;font-weight:700;color:var(--tx)">✨ Premium video providers</div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Higgsfield + Pika Labs — Pro plan or higher · 25 credits per generation</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Higgsfield + Pika Labs — included on any paid plan · 25 credits per generation</div>
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('higgsfield')" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Higgsfield</button>
@@ -4271,7 +4271,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
       <div id="sp-locked" style="display:none;padding:18px;background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:10px;text-align:center;font-size:13px;color:var(--tx3)">
-        🔒 Premium providers require <strong style="color:var(--ac)">Pro plan or higher</strong>. <a onclick="nav('billing')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Upgrade →</a>
+        🔒 Premium providers are included on <strong style="color:var(--ac)">any paid plan</strong>. <a onclick="nav('billing')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Upgrade →</a>
       </div>
       <div id="sp-form" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 120px 120px;gap:10px;margin-bottom:10px">
@@ -4717,7 +4717,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   </div>
 
 
-  <div id="page-content-engine" class="page" style="display:none">
+  <div id="page-content-engine" class="page">
     <div style="max-width:960px">
 
       <!-- ── Quick post generator — single AI post ────────────────────── -->
@@ -6448,7 +6448,7 @@ function studioSceneCard(scene, idx) {
     </div>
     <div class="fg" style="margin-bottom:8px">
       <textarea class="fi" id="scene-prompt-${idx}" rows="5"
-        style="min-height:120px;max-height:300px;resize:vertical;line-height:1.5"
+        style="width:100%;box-sizing:border-box;min-height:120px;max-height:300px;resize:vertical;line-height:1.5"
         placeholder="${idx===0
           ? 'Describe the video in detail — e.g. Slow-motion close-up of coffee beans falling into white ceramic cup, steam rising, warm morning light, cinematic depth of field'
           : 'Describe scene ' + (idx+1) + ' — continue the story from the previous scene...'}"
@@ -11552,7 +11552,7 @@ function sendQueueToPost(id) {
 
 
   <!-- ═══════════════════════════════ VIDEO SCRIPT PAGE ═════════════════════ -->
-  <div id="page-video-script" class="page" style="display:none">
+  <div id="page-video-script" class="page">
     <div style="max-width:860px">
 
       <!-- Intro / what this is -->
@@ -11642,7 +11642,7 @@ function sendQueueToPost(id) {
   </div>
 
   <!-- ═══════════════════════════════ REEL TEMPLATES PAGE ══════════════════ -->
-  <div id="page-reel-templates" class="page" style="display:none">
+  <div id="page-reel-templates" class="page">
     <div style="max-width:1000px">
       <div class="card" style="margin-bottom:20px">
         <div class="ctitle">📱 Story & Reel Templates</div>
@@ -16011,7 +16011,7 @@ function refreshStudioPremiumGate() {
   if (!card) return;
   card.style.display = 'block';
   var plan = (window._currentPlan || 'free').toLowerCase();
-  var allowed = ['pro','elite','personal','agency','growth'].indexOf(plan) >= 0;
+  var allowed = ['starter','basic','pro','elite','personal','agency','growth'].indexOf(plan) >= 0;
   document.getElementById('sp-locked').style.display = allowed ? 'none' : 'block';
   document.getElementById('sp-form').style.display   = allowed ? 'block' : 'none';
 }
