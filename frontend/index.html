@@ -5610,10 +5610,11 @@ async function loadBilling() {
     // Single source of truth: also refresh the pipeline credits widget so
     // the header and the pipeline page can't drift apart.
     if (typeof pipeUpdateCreditsUI === 'function') pipeUpdateCreditsUI(d.credits, d.max_credits);
-    // Premium-provider card visibility (Higgsfield/Pika — Pro+).
+    // Set current plan *before* refreshing the premium gate so it reads the fresh value.
+    window._currentPlan = d.plan || 'free';
+    // Premium-provider card visibility (Higgsfield/Pika).
     if (typeof refreshStudioPremiumGate === 'function') refreshStudioPremiumGate();
     // billing page
-    window._currentPlan = d.plan || 'free';
     renderBillingPage(d);
     loadInvite();
     // Show Agency Dashboard only for agency plan users
