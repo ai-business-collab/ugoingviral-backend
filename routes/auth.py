@@ -1,4 +1,5 @@
 import os
+import secrets
 import httpx
 from datetime import datetime, timedelta
 
@@ -59,6 +60,44 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class VerifyEmailRequest(BaseModel):
+    email: str
+    code: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: str
+
+
+VERIFICATION_TTL_MIN = 30
+
+
+def _generate_verification_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def _issue_verification(user: dict) -> str:
+    code = _generate_verification_code()
+    expires = (datetime.utcnow() + timedelta(minutes=VERIFICATION_TTL_MIN)).isoformat()
+    update_user(user["id"], {
+        "email_verified": False,
+        "verification_code": code,
+        "verification_expires": expires,
+    })
+    return code
+
+
+def _send_verification_email_async(email: str, name: str, code: str) -> None:
+    try:
+        import asyncio
+        from routes.email import send_verification_email
+        if email.startswith("qa-"):
+            return
+        asyncio.get_event_loop().run_in_executor(None, send_verification_email, email, name, code)
+    except Exception:
+        pass
+
+
 def _create_token(user_id: str, email: str) -> str:
     expire = datetime.utcnow() + timedelta(days=TOKEN_EXPIRE_DAYS)
     return jwt.encode(
@@ -108,7 +147,6 @@ async def register(request: Request, req: RegisterRequest):
         pg_create_user(user)
     except Exception:
         pass
-    token = _create_token(user["id"], user["email"])
     try:
         from routes.workspaces import _ensure_default_workspace
         from services.store import _load_user_store, _save_user_store
@@ -117,19 +155,22 @@ async def register(request: Request, req: RegisterRequest):
         _save_user_store(user["id"], _ustore)
     except Exception:
         pass
+    # Issue verification code, send welcome + verification emails.
+    code = _issue_verification(user)
     try:
         import asyncio
         from routes.email import send_welcome_email
         if not user["email"].startswith("qa-"): asyncio.get_event_loop().run_in_executor(None, send_welcome_email, user["email"], user.get("name", ""))
     except Exception:
         pass
+    _send_verification_email_async(user["email"], user.get("name", ""), code)
     if req.ref:
         try:
             from routes.billing import referral_signup
             referral_signup({"ref_code": req.ref, "user_id": user["id"]})
         except Exception:
             pass
-    return {"token": token, "user": _safe_user(user)}
+    return {"requires_verification": True, "email": user["email"]}
 
 
 @router.post("/api/auth/login")
@@ -143,6 +184,11 @@ async def login(request: Request, req: LoginRequest):
         record_login_failure(ip, req.email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
     record_login_success(ip, req.email)
+    # Block unverified accounts. Older accounts without the field are treated as verified.
+    if user.get("email_verified") is False:
+        code = _issue_verification(user)
+        _send_verification_email_async(user["email"], user.get("name", ""), code)
+        return {"requires_verification": True, "email": user["email"]}
     token = _create_token(user["id"], user["email"])
     # Auto daily login bonus — requires user store context
     from services.store import _load_user_store, _save_user_store
@@ -168,6 +214,49 @@ async def login(request: Request, req: LoginRequest):
     except Exception:
         pass
     return {"token": token, "user": _safe_user(user)}
+
+
+@router.post("/api/auth/verify_email")
+@limiter.limit("10/minute")
+async def verify_email(request: Request, req: VerifyEmailRequest):
+    email = sanitize_string(req.email).lower()
+    code = (req.code or "").strip()
+    user = get_user_by_email(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="No account found for this email")
+    if user.get("email_verified", True):
+        token = _create_token(user["id"], user["email"])
+        return {"token": token, "user": _safe_user(user)}
+    stored = (user.get("verification_code") or "").strip()
+    expires_raw = user.get("verification_expires") or ""
+    if not stored or stored != code:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+    try:
+        if expires_raw and datetime.fromisoformat(expires_raw) < datetime.utcnow():
+            raise HTTPException(status_code=400, detail="Verification code has expired — request a new one")
+    except ValueError:
+        pass
+    update_user(user["id"], {
+        "email_verified": True,
+        "verification_code": "",
+        "verification_expires": "",
+    })
+    user = get_user_by_email(email)
+    token = _create_token(user["id"], user["email"])
+    return {"token": token, "user": _safe_user(user)}
+
+
+@router.post("/api/auth/resend_verification")
+@limiter.limit("3/minute")
+async def resend_verification(request: Request, req: ResendVerificationRequest):
+    email = sanitize_string(req.email).lower()
+    user = get_user_by_email(email)
+    # Don't leak whether the email exists.
+    if not user or user.get("email_verified", True):
+        return {"ok": True}
+    code = _issue_verification(user)
+    _send_verification_email_async(user["email"], user.get("name", ""), code)
+    return {"ok": True}
 
 
 @router.get("/api/auth/me")
@@ -248,6 +337,8 @@ async def google_callback(code: str = None, error: str = None):
             if not email.startswith("qa-"): asyncio.get_event_loop().run_in_executor(None, send_welcome_email, email, name)
         except Exception:
             pass
+    # OAuth provider already verified the email — mark verified.
+    update_user(user["id"], {"email_verified": True, "verification_code": "", "verification_expires": ""})
 
     if not user.get("is_active"):
         return RedirectResponse("/?error=account_inactive")
@@ -340,6 +431,8 @@ async def github_callback(code: str = None, error: str = None):
             if not email.startswith("qa-"): asyncio.get_event_loop().run_in_executor(None, send_welcome_email, email, name)
         except Exception:
             pass
+    # OAuth provider already verified the email — mark verified.
+    update_user(user["id"], {"email_verified": True, "verification_code": "", "verification_expires": ""})
 
     if not user.get("is_active"):
         return RedirectResponse("/?error=account_inactive")

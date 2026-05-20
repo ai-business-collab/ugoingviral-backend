@@ -1474,6 +1474,30 @@ footer p { font-size: 13px; color: var(--text2); }
         By signing up you agree to our <a href="/terms">terms</a>
       </div>
     </div>
+
+    <!-- VERIFY EMAIL FORM -->
+    <div id="form-verify" style="display:none">
+      <div style="text-align:center;margin-bottom:18px">
+        <div style="font-size:46px;line-height:1">📬</div>
+        <div style="font-size:18px;font-weight:800;color:#f0f4f8;margin-top:10px">Check your email for your verification code</div>
+        <div style="font-size:13px;color:#7d8fa3;margin-top:6px">We sent a 6-digit code to <span id="verify-email-lbl" style="color:#00e5ff;font-weight:700"></span></div>
+      </div>
+      <div class="form-group">
+        <label>VERIFICATION CODE</label>
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code"
+               placeholder="000000" id="verify-code"
+               style="text-align:center;letter-spacing:10px;font-size:22px;font-weight:700">
+      </div>
+      <div id="verify-msg" style="font-size:13px;color:#ef4444;min-height:18px;margin-top:4px"></div>
+      <button class="btn-submit" onclick="handleVerify()">Verify &amp; continue →</button>
+      <div style="text-align:center;margin-top:14px;font-size:12px;color:#7d8fa3">
+        Didn't get it? <a onclick="handleResendCode()" style="color:#00e5ff;cursor:pointer;font-weight:600">Resend code</a>
+        · <a onclick="switchTab('register')" style="color:#7d8fa3;cursor:pointer">Use a different email</a>
+      </div>
+      <div class="form-footer" style="margin-top:14px">
+        The code expires in 30 minutes.
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1495,12 +1519,72 @@ function closeModalOutside(e) {
 
 function switchTab(tab) {
   var isLogin = tab === 'login';
+  var isVerify = tab === 'verify';
   document.getElementById('tab-login').classList.toggle('active', isLogin);
-  document.getElementById('tab-register').classList.toggle('active', !isLogin);
+  document.getElementById('tab-register').classList.toggle('active', !isLogin && !isVerify);
   document.getElementById('form-login').style.display = isLogin ? 'block' : 'none';
-  document.getElementById('form-register').style.display = isLogin ? 'none' : 'block';
-  document.getElementById('modal-title').textContent = isLogin ? 'Welcome back' : 'Get started';
-  document.getElementById('modal-subtitle').textContent = isLogin ? 'Log in to your account' : 'Create your free account';
+  document.getElementById('form-register').style.display = (!isLogin && !isVerify) ? 'block' : 'none';
+  var fv = document.getElementById('form-verify');
+  if (fv) fv.style.display = isVerify ? 'block' : 'none';
+  document.getElementById('modal-title').textContent =
+    isVerify ? 'Verify your email' : (isLogin ? 'Welcome back' : 'Get started');
+  document.getElementById('modal-subtitle').textContent =
+    isVerify ? 'Enter the 6-digit code we sent you'
+             : (isLogin ? 'Log in to your account' : 'Create your free account');
+}
+
+function showVerifyScreen(email) {
+  window._verifyEmail = email || '';
+  var lbl = document.getElementById('verify-email-lbl');
+  if (lbl) lbl.textContent = email || '';
+  var code = document.getElementById('verify-code');
+  if (code) code.value = '';
+  var msg = document.getElementById('verify-msg');
+  if (msg) { msg.style.color = '#ef4444'; msg.textContent = ''; }
+  switchTab('verify');
+  setTimeout(function(){ if (code) code.focus(); }, 50);
+}
+
+async function handleVerify() {
+  var code = (document.getElementById('verify-code').value || '').trim();
+  var msg = document.getElementById('verify-msg');
+  msg.style.color = '#ef4444';
+  if (!/^\d{6}$/.test(code)) { msg.textContent = 'Enter the 6-digit code from your email'; return; }
+  try {
+    var r = await fetch('/api/auth/verify_email', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email: window._verifyEmail, code: code})
+    });
+    var d = await r.json();
+    if (d.token) {
+      localStorage.setItem('ugv_token', d.token);
+      localStorage.setItem('ugv_user', JSON.stringify(d.user));
+      closeModal();
+      var nm = (d.user && d.user.name) ? d.user.name : '';
+      if (typeof showSignupWow === 'function') showSignupWow(nm, function(){ showOnboarding(nm); });
+      else window.location.href = '/app';
+    } else {
+      msg.textContent = d.detail || 'Invalid verification code';
+    }
+  } catch(e) { msg.textContent = 'Error — please try again'; }
+}
+
+async function handleResendCode() {
+  var msg = document.getElementById('verify-msg');
+  if (!window._verifyEmail) { msg.style.color = '#ef4444'; msg.textContent = 'Please register first'; return; }
+  try {
+    await fetch('/api/auth/resend_verification', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email: window._verifyEmail})
+    });
+    msg.style.color = '#22c55e';
+    msg.textContent = '✅ New code sent — check your inbox';
+  } catch(e) {
+    msg.style.color = '#ef4444';
+    msg.textContent = 'Could not resend — try again in a minute';
+  }
 }
 
 function togglePw(id, btn) {
@@ -1524,6 +1608,9 @@ async function handleLogin() {
       document.getElementById('login-email').value = '';
       document.getElementById('login-pass').value = '';
       window.location.href = '/app';
+    } else if (d.requires_verification) {
+      document.getElementById('login-pass').value = '';
+      showVerifyScreen(d.email || email);
     } else {
       msg.textContent = d.detail || 'Incorrect email or password';
     }
@@ -1552,6 +1639,10 @@ async function handleRegister() {
       closeModal();
       // CSS-only WOW splash for 3s, then continue to the existing onboarding flow.
       showSignupWow(name, function() { showOnboarding(name); });
+    } else if (d.requires_verification) {
+      document.getElementById('reg-pass').value = '';
+      window._verifyName = name;
+      showVerifyScreen(d.email || email);
     } else {
       msg.textContent = d.detail || 'Could not create account';
     }

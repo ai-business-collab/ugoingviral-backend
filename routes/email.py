@@ -339,7 +339,7 @@ def send_welcome_email(to_addr: str, name: str = "") -> bool:
     first = (name or to_addr.split("@")[0]).split(" ")[0].capitalize()
     subject = f"Welcome to UgoingViral, {first}! 🚀"
     html = f"""<!DOCTYPE html>
-<html lang="da">
+<html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   body{{margin:0;padding:0;background:#080c18;font-family:'Helvetica Neue',Arial,sans-serif}}
@@ -367,44 +367,88 @@ def send_welcome_email(to_addr: str, name: str = "") -> bool:
 <div class="wrap">
   <div class="header">
     <div class="logo">Ugoin<span>g</span>Viral</div>
-    <div class="hero">Velkommen, {first}! 🎉</div>
-    <div class="sub">Din konto er klar — lad os få dine sociale medier til at eksplodere.</div>
+    <div class="hero">Welcome to UgoingViral, {first}! 🎉</div>
+    <div class="sub">Your account is live — let's make your social media take off.</div>
   </div>
   <div class="body">
     <div class="credits-box">
       <div class="credits-num">50 Credits</div>
-      <div class="credits-label">gratis på din konto — klar til brug</div>
+      <div class="credits-label">free on your account — ready to use</div>
     </div>
     <div class="steps">
       <div class="step">
-        <div class="step-icon">🔗</div>
-        <div class="step-text">
-          <div class="step-title">Forbind dine platforme</div>
-          Tilslut Instagram, TikTok, YouTube og mere under Indstillinger → Forbindelser.
-        </div>
-      </div>
-      <div class="step">
         <div class="step-icon">✍️</div>
         <div class="step-text">
-          <div class="step-title">Generer dit første content</div>
-          Brug AI Content Generator til at lave scripts, billeder og videoer på sekunder.
+          <div class="step-title">AI content generation</div>
+          Generate captions, scripts, hashtags and on-brand videos in seconds — built for Instagram, TikTok, YouTube, Facebook and X.
         </div>
       </div>
       <div class="step">
         <div class="step-icon">📅</div>
         <div class="step-text">
-          <div class="step-title">Planlæg og auto-post</div>
-          Sæt posts til at gå live automatisk — og hent bonus credits undervejs.
+          <div class="step-title">Schedule &amp; auto-post</div>
+          Plan a week or a month at a time and let UgoingViral publish to every platform on the right schedule, automatically.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-icon">📈</div>
+        <div class="step-text">
+          <div class="step-title">Growth analytics &amp; competitor spy</div>
+          Track performance across platforms and reverse-engineer the strategies that are working for any competitor you choose.
         </div>
       </div>
     </div>
     <div class="cta">
-      <a href="https://ugoingviral.com/app" class="btn">Kom i gang →</a>
+      <a href="https://ugoingviral.com/app" class="btn">Go to UgoingViral →</a>
     </div>
   </div>
   <div class="footer">
-    Du modtager denne email fordi du oprettede en konto på ugoingviral.com<br>
-    Spørgsmål? Skriv til support@ugoingviral.com
+    You're receiving this email because you created an account on ugoingviral.com.<br>
+    Questions? Reach us at support@ugoingviral.com
+  </div>
+</div>
+</body>
+</html>"""
+    return send_system_email(to_addr, subject, html)
+
+
+def send_verification_email(to_addr: str, name: str, code: str) -> bool:
+    first = (name or to_addr.split("@")[0]).split(" ")[0].capitalize()
+    subject = f"Your UgoingViral verification code: {code}"
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body{{margin:0;padding:0;background:#080c18;font-family:'Helvetica Neue',Arial,sans-serif}}
+  .wrap{{max-width:560px;margin:40px auto;background:#0d1526;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.07)}}
+  .header{{background:linear-gradient(135deg,#00e5ff22,#7c3aed22);padding:36px 40px 28px;text-align:center;border-bottom:1px solid rgba(255,255,255,.07)}}
+  .logo{{font-size:22px;font-weight:800;color:#f0f4f8;letter-spacing:-0.5px}}
+  .logo span{{color:#00e5ff}}
+  .hero{{font-size:24px;font-weight:800;color:#f0f4f8;margin:14px 0 8px}}
+  .sub{{font-size:14px;color:#7d8fa3;line-height:1.5}}
+  .body{{padding:28px 40px 36px;text-align:center}}
+  .code-box{{display:inline-block;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.25);border-radius:14px;padding:22px 36px;margin:18px 0}}
+  .code{{font-size:36px;font-weight:800;color:#00e5ff;letter-spacing:10px;font-family:'Courier New',monospace}}
+  .meta{{font-size:13px;color:#7d8fa3;margin-top:14px;line-height:1.6}}
+  .footer{{padding:18px 40px;text-align:center;font-size:11px;color:#3d4f61;border-top:1px solid rgba(255,255,255,.05)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="logo">Ugoin<span>g</span>Viral</div>
+    <div class="hero">Verify your email</div>
+    <div class="sub">Hi {first} — enter this 6-digit code on the signup screen to activate your account.</div>
+  </div>
+  <div class="body">
+    <div class="code-box"><div class="code">{code}</div></div>
+    <div class="meta">
+      This code expires in 30 minutes.<br>
+      If you didn't request this, you can safely ignore the email.
+    </div>
+  </div>
+  <div class="footer">
+    UgoingViral · support@ugoingviral.com
   </div>
 </div>
 </body>
