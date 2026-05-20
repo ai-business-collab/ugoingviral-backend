@@ -1424,6 +1424,23 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 .qact-name { font-size: 13px; font-weight: 700; color: var(--tx); }
 .qact-desc { font-size: 11px; color: var(--tx3); margin-top: 1px; }
 
+/* ── Tools tiles (Tools page) ──────────── */
+.tools-tile {
+  display: flex; flex-direction: column;
+  padding: 24px;
+  background: var(--glass-b);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  text-decoration: none;
+  min-height: 160px;
+}
+.tools-tile:hover { border-color: var(--border-ac); background: var(--glass-h); transform: translateY(-2px); box-shadow: 0 10px 32px rgba(0,0,0,.18); }
+.tools-tile-icon { font-size: 36px; margin-bottom: 14px; }
+.tools-tile-name { font-size: 17px; font-weight: 800; color: var(--tx); margin-bottom: 6px; }
+.tools-tile-desc { font-size: 12px; color: var(--tx3); line-height: 1.5; }
+
 /* ── Brand chip (platform badges in status row) ──────── */
 .brand-chip {
   display: flex; align-items: center; gap: 8px;
@@ -1674,14 +1691,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
     <!-- ── TOOLS ── -->
     <div class="nav-section">Tools</div>
-    <div class="ni has-sub" id="ni-tools" onclick="toggleSubMenu('tools-sub')">
-      <span class="ico">🧰</span><span>Tools</span><span class="chevron">›</span>
-    </div>
-    <div class="submenu" id="tools-sub">
-      <div class="sub-item" id="ni-brand-kit" onclick="nav('brand-kit')">🎨 <span>Brand Kit</span></div>
-      <div class="sub-item" id="ni-hashtags" onclick="nav('hashtags')">🏷️ <span>Hashtag Research</span></div>
-      <div class="sub-item" id="ni-competitor" onclick="nav('competitor')">🔍 <span>Competitor Spy</span></div>
-      <div class="sub-item" id="ni-audit" onclick="nav('audit')">📋 <span>Account Audit</span></div>
+    <div class="ni" id="ni-tools" onclick="nav('tools')">
+      <span class="ico">🧰</span><span>Tools</span>
     </div>
 
     <!-- ── SYSTEM ── -->
@@ -1700,7 +1711,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" onclick="nav('billing')">💳 <span>Plan & Credits</span></div>
       <div class="sub-item" onclick="nav('billing');setTimeout(function(){document.getElementById('topup-section')?.scrollIntoView({behavior:'smooth'})},400)">💰 <span>Top Up Credits</span></div>
       <div class="sub-item" onclick="nav('subaccounts')">👥 <span>Extra Profiles</span></div>
-      <div class="sub-item" onclick="nav('studio')">🎬 <span>Studio</span></div>
       <div class="sub-item" id="ni-affiliate" onclick="nav('affiliate')">🤝 <span>Affiliate Program</span></div>
     </div>
 
@@ -3747,7 +3757,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button class="btn bg bsm" onclick="shareRefTwitter()">Share on X</button>
           <button class="btn bg bsm" onclick="shareRefLinkedIn()">Share on LinkedIn</button>
-          <a onclick="nav('affiliate')" style="font-size:12px;color:var(--ac);text-decoration:none;display:flex;align-items:center;margin-left:auto;cursor:pointer">Become an affiliate →</a>
+          <button class="btn bg bsm" onclick="shareRefWhatsApp()">📱 WhatsApp</button>
+          <button class="btn bg bsm" onclick="shareRefFacebook()">📘 Facebook</button>
+          <button class="btn bg bsm" onclick="shareRefCopy(this)">🔗 Copy link</button>
         </div>
       </div>
 
@@ -4264,7 +4276,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div style="display:grid;grid-template-columns:1fr 120px 120px;gap:10px;margin-bottom:10px">
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Prompt</label>
-            <textarea id="sp-prompt" class="fta" placeholder="Cinematic shot of a wave breaking on a beach at golden hour…" style="margin-top:4px;width:100%;min-height:72px;font-size:13px"></textarea>
+            <textarea id="sp-prompt" class="fta" placeholder="Cinematic shot of a wave breaking on a beach at golden hour…" style="margin-top:4px;width:100%;min-height:120px;max-height:300px;resize:vertical;font-size:13px;line-height:1.5"></textarea>
           </div>
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Duration</label>
@@ -6434,7 +6446,8 @@ function studioSceneCard(scene, idx) {
       ${!isOnly ? `<button class="scene-del" onclick="studioRemoveScene(${idx})" title="Fjern scene">✕</button>` : ''}
     </div>
     <div class="fg" style="margin-bottom:8px">
-      <textarea class="fi" id="scene-prompt-${idx}" rows="3"
+      <textarea class="fi" id="scene-prompt-${idx}" rows="5"
+        style="min-height:120px;max-height:300px;resize:vertical;line-height:1.5"
         placeholder="${idx===0
           ? 'Describe the video in detail — e.g. Slow-motion close-up of coffee beans falling into white ceramic cup, steam rising, warm morning light, cinematic depth of field'
           : 'Describe scene ' + (idx+1) + ' — continue the story from the previous scene...'}"
@@ -7127,6 +7140,7 @@ const I18N = {
     'page.video-script':'🎬 Video Script Generator',
     'page.reel-templates':'📱 Story & Reel Templates',
     'page.audit':'📋 Account Audit',
+    'page.tools':'🧰 Tools',
     // Dashboard greeting
     'dash.morning':'Good morning', 'dash.afternoon':'Good afternoon',
     'dash.evening':'Good evening', 'dash.night':'Late night',
@@ -7212,6 +7226,7 @@ const I18N = {
     'page.video-script':'🎬 Video­manus-generator',
     'page.reel-templates':'📱 Story- & Reel-skabeloner',
     'page.audit':'📋 Kontoaudit',
+    'page.tools':'🧰 Værktøjer',
     // Dashboard greeting
     'dash.morning':'Godmorgen', 'dash.afternoon':'God eftermiddag',
     'dash.evening':'Godaften', 'dash.night':'Sen aften',
@@ -7339,6 +7354,27 @@ function shareRefTwitter() {
 function shareRefLinkedIn() {
   const url = encodeURIComponent(window._refUrl || document.getElementById('ref-link-input')?.value || 'https://ugoingviral.com');
   window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + url, '_blank');
+}
+
+function shareRefWhatsApp() {
+  const url = window._refUrl || document.getElementById('ref-link-input')?.value || 'https://ugoingviral.com';
+  const text = encodeURIComponent('I use UgoingViral to automate my social media — check it out: ' + url);
+  window.open('https://wa.me/?text=' + text, '_blank');
+}
+
+function shareRefFacebook() {
+  const url = encodeURIComponent(window._refUrl || document.getElementById('ref-link-input')?.value || 'https://ugoingviral.com');
+  window.open('https://www.facebook.com/sharer/sharer.php?u=' + url, '_blank');
+}
+
+function shareRefCopy(btn) {
+  const url = window._refUrl || document.getElementById('ref-link-input')?.value || 'https://ugoingviral.com';
+  navigator.clipboard.writeText(url).then(function() {
+    if (btn) { const orig = btn.innerHTML; btn.innerHTML = '✅ Copied!'; setTimeout(function() { btn.innerHTML = orig; }, 1800); }
+  }).catch(function() {
+    const inp = document.getElementById('ref-link-input');
+    if (inp) { inp.select(); document.execCommand('copy'); }
+  });
 }
 
 // ── Affiliate Program ────────────────────────────────────────────────────────
@@ -7669,6 +7705,7 @@ const titles = {
   'video-script':'🎬 Video Script Generator',
   'reel-templates':'📱 Story & Reel Templates',
   audit:'📋 Account Audit',
+  tools:'🧰 Tools',
   affiliate:'🤝 Affiliate Program',
 };
 function nav(p) {
@@ -11199,6 +11236,36 @@ function sendQueueToPost(id) {
   </div>
 
   <!-- UPLOAD MEDIA PAGE -->
+
+  <!-- ── TOOLS ─────────────────────────────────────────────────────────── -->
+  <div id="page-tools" class="page">
+    <div class="card" style="margin-bottom:18px">
+      <div class="ctitle">🧰 Tools</div>
+      <div style="font-size:13px;color:var(--tx3);margin-top:4px">Pick a tool to get started.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
+      <a class="tools-tile" onclick="nav('brand-kit')">
+        <div class="tools-tile-icon">🎨</div>
+        <div class="tools-tile-name">Brand Kit</div>
+        <div class="tools-tile-desc">Logo, colors, fonts &amp; voice for on-brand content.</div>
+      </a>
+      <a class="tools-tile" onclick="nav('hashtags')">
+        <div class="tools-tile-icon">🏷️</div>
+        <div class="tools-tile-name">Hashtag Research</div>
+        <div class="tools-tile-desc">Discover and save high-performing hashtag sets.</div>
+      </a>
+      <a class="tools-tile" onclick="nav('competitor')">
+        <div class="tools-tile-icon">🔍</div>
+        <div class="tools-tile-name">Competitor Spy</div>
+        <div class="tools-tile-desc">Break down any competitor's strategy and content.</div>
+      </a>
+      <a class="tools-tile" onclick="nav('audit')">
+        <div class="tools-tile-icon">📋</div>
+        <div class="tools-tile-name">Account Audit</div>
+        <div class="tools-tile-desc">Score any account with actionable insights.</div>
+      </a>
+    </div>
+  </div>
 
   <!-- ── BRAND KIT ──────────────────────────────────────────────────────── -->
   <div id="page-brand-kit" class="page">
