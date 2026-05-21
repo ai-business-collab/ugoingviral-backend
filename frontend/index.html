@@ -1733,7 +1733,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="ni has-sub" id="ni-billing" onclick="toggleSubMenu('billing-sub')"><span class="ico">💳</span><span data-i18n="nav.billing">Plan & Credits</span><span class="chevron">›</span></div>
     <div class="submenu" id="billing-sub">
       <div class="sub-item" onclick="nav('billing')">💳 <span>Plan & Credits</span></div>
-      <div class="sub-item" onclick="nav('billing');setTimeout(function(){document.getElementById('topup-section')?.scrollIntoView({behavior:'smooth'})},400)">💰 <span>Top Up Credits</span></div>
       <div class="sub-item" onclick="nav('subaccounts')">👥 <span>Extra Profiles</span></div>
       <div class="sub-item" id="ni-affiliate" onclick="nav('affiliate')">🤝 <span>Affiliate Program</span></div>
     </div>
@@ -3812,18 +3811,24 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
         <div style="font-size:13px;color:var(--tx2);margin-bottom:8px">Credits are used when you generate content with AI. New credits are assigned at plan renewal.</div>
         <div id="low-credits-banner" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#f87171">
-          ⚠️ <strong>Running low on credits.</strong> Top up below to keep posting, or <span style="cursor:pointer;text-decoration:underline" onclick="document.getElementById('billing-plans-grid').scrollIntoView({behavior:'smooth'})">upgrade your plan</span>.
+          ⚠️ <strong>Running low on credits.</strong> <span style="cursor:pointer;text-decoration:underline" onclick="switchBillingTab('topup')">Top up your balance</span> or <span style="cursor:pointer;text-decoration:underline" onclick="document.getElementById('billing-plans-grid').scrollIntoView({behavior:'smooth'})">upgrade your plan</span>.
         </div>
       </div>
 
+      <!-- BILLING TAB BAR -->
+      <div class="gtabs" data-group="billing">
+        <button class="gtab active" data-bill-key="overview" onclick="switchBillingTab('overview')">📊 Plans & Overview</button>
+        <button class="gtab" data-bill-key="topup" onclick="switchBillingTab('topup')">💰 Top Up Credits</button>
+      </div>
+
       <!-- PLAN FEATURES & EXTRA PROFILES (moved from Settings) -->
-      <div class="card" style="margin-bottom:20px">
+      <div class="card" style="margin-bottom:20px" data-bill-tab="overview">
         <div class="ctitle">💎 Plan Features</div>
         <div id="settings-plan-features"><div style="color:var(--tx3);font-size:13px;padding:8px 0">Loading...</div></div>
       </div>
 
       <!-- REFER A FRIEND (moved from Settings) -->
-      <div class="card" style="margin-bottom:20px">
+      <div class="card" style="margin-bottom:20px" data-bill-tab="overview">
         <div class="ctitle">🎁 Refer a Friend</div>
         <div style="font-size:13px;color:var(--tx2);margin-bottom:6px">Earn <strong style="color:var(--ac)">+50 credits</strong> every time someone you invite upgrades to a paid plan.</div>
         <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">Maximum <strong>10 friends</strong> per account — once you reach 10 upgrades you've unlocked the full bonus.</div>
@@ -3869,7 +3874,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       </div>
 
       <!-- BONUS CREDITS -->
-      <div class="card" style="margin-bottom:20px">
+      <div class="card" style="margin-bottom:20px" data-bill-tab="overview">
         <div class="ctitle">🎁 Bonus credits — awarded automatically
           <span class="tip"><span class="tip-icon">?</span><span class="tip-box">Bonus credits are automatically assigned when you perform the action. No extra steps needed.</span></span>
         </div>
@@ -3926,7 +3931,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px" data-bill-tab="overview">
         <div class="ctitle" style="margin:0">Select Plan</div>
         <div style="display:flex;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:3px;gap:2px">
           <button class="curr-btn" data-curr="USD" onclick="setCurrency('USD')" style="background:var(--s2);border:1px solid var(--border);color:var(--tx);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">$ USD</button>
@@ -3934,11 +3939,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <button class="curr-btn" data-curr="DKK" onclick="setCurrency('DKK')" style="background:var(--s2);border:1px solid var(--border);color:var(--tx);font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s">kr DKK</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--tx3);margin-top:-8px;margin-bottom:14px">Secure Payment processes in USD — displayed prices are for reference</div>
-      
+      <div style="font-size:11px;color:var(--tx3);margin-top:-8px;margin-bottom:14px" data-bill-tab="overview">Secure Payment processes in USD — displayed prices are for reference</div>
+
         <!-- Auto Top-Up -->
-        <div id="topup-section"></div>
-        <div class="card" style="margin-bottom:20px" id="auto-topup-card">
+        <div id="topup-section" data-bill-tab="topup"></div>
+        <div class="card" style="margin-bottom:20px" id="auto-topup-card" data-bill-tab="topup">
           <div class="ctitle">Auto Top-Up</div>
           <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">Automatically add credits when your balance runs low</div>
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
@@ -3970,7 +3975,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
 
 
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px" data-bill-tab="overview">
           <span style="font-size:11px;color:var(--tx2);font-weight:600">Monthly</span>
           <button id="billing-cycle-btn" onclick="setBillingCycleIdx()" style="width:38px;height:21px;border-radius:11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);position:relative;cursor:pointer;padding:0;transition:background .2s;flex-shrink:0">
             <div id="billing-cycle-thumb" style="position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:var(--tx);transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>
@@ -3978,10 +3983,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <span style="font-size:11px;color:var(--tx2);font-weight:600">Yearly <span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;margin-left:2px">Save 20%</span></span>
         </div>
         <!-- LOCKED PRICES — DO NOT CHANGE WITHOUT MICHAEL'S APPROVAL -->
-        <div id="billing-plans-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px"></div>
+        <div id="billing-plans-grid" data-bill-tab="overview" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px"></div>
 
       <!-- ADD-ONS -->
-      <div style="margin-top:28px">
+      <div style="margin-top:28px" data-bill-tab="topup">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
           <!-- LOCKED PRICES — DO NOT CHANGE WITHOUT MICHAEL'S APPROVAL -->
           <div class="ctitle" style="margin:0">⚡ Ekstra Credits</div>
@@ -3995,7 +4000,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div data-credit-usd="8" style="font-size:22px;font-weight:800;margin-bottom:12px">$8</div>
             <div style="display:flex;flex-direction:column;gap:5px">
               <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(100,8)">💳 Secure Payment →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(100,8,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
           <div class="card" style="padding:18px;text-align:center;position:relative">
@@ -4005,7 +4009,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div data-credit-usd="24" style="font-size:22px;font-weight:800;margin-bottom:12px">$24</div>
             <div style="display:flex;flex-direction:column;gap:5px">
               <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(350,24)">💳 Secure Payment →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(350,24,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
           <div class="card" style="padding:18px;text-align:center;border-color:var(--border-ac);position:relative">
@@ -4016,7 +4019,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div data-credit-usd="44" style="font-size:22px;font-weight:800;margin-bottom:12px">$44</div>
             <div style="display:flex;flex-direction:column;gap:5px">
               <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(700,44)">💳 Secure Payment →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(700,44,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
           <div class="card" style="padding:18px;text-align:center;position:relative">
@@ -4027,7 +4029,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <div data-credit-usd="79" style="font-size:22px;font-weight:800;margin-bottom:12px">$79</div>
             <div style="display:flex;flex-direction:column;gap:5px">
               <button class="btn bp bsm" style="width:100%" onclick="buyExtraCredits(1500,79)">💳 Secure Payment →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyExtraCredits(1500,79,'paypal')">🅿️ PayPal →</button>
             </div>
           </div>
         </div>
@@ -4047,7 +4048,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;min-width:130px">
               <button class="btn bp bsm" style="width:100%" onclick="buyCustomTopup('stripe')">💳 Secure Payment →</button>
-              <button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.12);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyCustomTopup('paypal')">🅿️ PayPal →</button>
             </div>
           </div>
           <div style="font-size:10px;color:var(--tx3);margin-top:8px">Fixed rate <span data-rate-usd="79" data-rate-cr="1490">($0.053/cr)</span>. Minimum <span data-credit-usd="79">$79</span>. Example: <span data-credit-usd="200">$200</span> = 3,773 credits | <span data-credit-usd="79">$79</span> = 1,490 credits.</div>
@@ -4058,7 +4058,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       </div>
 
       <!-- EXTRA ACCOUNTS — Growth (monthly) + Client (one-time) -->
-      <div style="margin-top:28px">
+      <div style="margin-top:28px" data-bill-tab="overview">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
           <div class="ctitle" style="margin:0">👥 Extra Accounts</div>
         </div>
@@ -4124,7 +4124,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       </div>
 
       <!-- STUDIO PAKKER -->
-      <div style="margin-top:28px">
+      <div style="margin-top:28px" data-bill-tab="overview">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
           <div class="ctitle" style="margin:0">🎬 Video Studio Pakker</div>
           <span style="font-size:10px;background:linear-gradient(90deg,var(--ac),var(--ac2));color:#000;font-weight:800;padding:2px 8px;border-radius:6px">NY</span>
@@ -5861,8 +5861,7 @@ function renderBillingPage(d) {
       <div style="font-size:16px;font-weight:800;color:${active ? 'var(--ac)' : 'var(--tx)'};margin-bottom:2px">${p.name}</div>
       <div style="font-size:22px;font-weight:900;color:var(--tx);margin-bottom:2px">${getPriceHtml(PLAN_USD[key] !== undefined ? PLAN_USD[key] : Math.round(p.price/7))}</div>
       <ul style="list-style:none;margin:10px 0 16px;padding:0;border-top:1px solid var(--border);padding-top:10px">${feats}</ul>
-      <button class="btn ${active ? 'bp' : 'bg'} bsm" style="width:100%;margin-bottom:${(!active && p.price > 0) ? '6px' : '0'}" onclick="${active ? '' : (p.price === 0 ? 'setPlan(\'' + key + '\')' : 'buyPlan(\'' + key + '\')')}" ${active ? 'disabled' : ''}>${active ? '✓ Current plan' : (p.price === 0 ? 'Start free →' : '💳 Secure Payment →')}</button>
-      ${(!active && p.price > 0) ? `<button class="btn bg bsm" style="width:100%;background:rgba(0,112,240,.15);border-color:rgba(0,112,240,.3);color:#60a5fa" onclick="buyPlanPayPal('${key}')">🅿️ PayPal →</button>` : ''}
+      <button class="btn ${active ? 'bp' : 'bg'} bsm" style="width:100%" onclick="${active ? '' : (p.price === 0 ? 'setPlan(\'' + key + '\')' : 'buyPlan(\'' + key + '\')')}" ${active ? 'disabled' : ''}>${active ? '✓ Current plan' : (p.price === 0 ? 'Start free →' : '💳 Secure Payment →')}</button>
     </div>`;
   }).join('');
 
@@ -5871,19 +5870,31 @@ function renderBillingPage(d) {
   renderBillingPrices();
 }
 
-async function buyPlan(planKey, provider='stripe') {
+function switchBillingTab(tab) {
+  var key = (tab === 'topup') ? 'topup' : 'overview';
+  document.querySelectorAll('#page-billing [data-bill-tab]').forEach(function(el){
+    el.style.display = (el.getAttribute('data-bill-tab') === key) ? '' : 'none';
+  });
+  document.querySelectorAll('#page-billing .gtab[data-bill-key]').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-bill-key') === key);
+  });
+  // Re-apply grid display where needed (we just cleared inline display)
+  var grid = document.getElementById('billing-plans-grid');
+  if (grid && key === 'overview') grid.style.display = 'grid';
+  // Scroll to top of the visible pane so users see what's there
+  try { document.getElementById('page-billing').scrollIntoView({behavior:'smooth', block:'start'}); } catch(e) {}
+}
+
+async function buyPlan(planKey) {
   try {
     toast('Creating payment...', 'info');
-    const endpoint = provider === 'paypal' ? '/api/billing/create_paypal_checkout' : '/api/billing/create_checkout';
     const payload = {plan: planKey, type: 'plan'};
     if (window._ugvBillingCycle === 'yearly') payload.billing_cycle = 'yearly';
-    const d = await apiFetch(endpoint, 'POST', payload, true);
+    const d = await apiFetch('/api/billing/create_checkout', 'POST', payload, true);
     if (d.url) window.location.href = d.url;
     else toast('Payment link not available', 'error');
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
-
-async function buyPlanPayPal(planKey) { buyPlan(planKey, 'paypal'); }
 
 async function setPlan(planKey) {
   try {
@@ -6040,17 +6051,12 @@ function updateCustomTopupPreview() {
   el.textContent = credits.toLocaleString('en-US');
 }
 
-async function buyCustomTopup(provider) {
+async function buyCustomTopup() {
   const amt = parseFloat(document.getElementById('custom-topup-amount')?.value || '0');
   if (amt < 10) { toast('Minimum $10 for custom top-up', 'error'); return; }
   try {
     toast('Creating payment...', 'info');
-    let d;
-    if (provider === 'paypal') {
-      d = await apiFetch('/api/billing/create_paypal_checkout', 'POST', {type:'custom', amount_usd: amt}, true);
-    } else {
-      d = await apiFetch('/api/billing/create_custom_topup', 'POST', {amount_usd: amt}, true);
-    }
+    const d = await apiFetch('/api/billing/create_custom_topup', 'POST', {amount_usd: amt}, true);
     if (d.url) window.location.href = d.url;
     else toast('Error: no payment URL', 'error');
   } catch(e) { toast('Error: ' + (e.message||'Unknown'), 'error'); }
@@ -6118,11 +6124,10 @@ async function loadProviderStats() {
   } catch(e) {}
 }
 
-async function buyExtraCredits(amount, price, provider='stripe') {
+async function buyExtraCredits(amount, price) {
   try {
     toast('Creating payment for ' + amount + ' credits...', 'info');
-    const endpoint = provider === 'paypal' ? '/api/billing/create_paypal_checkout' : '/api/billing/create_checkout';
-    const d = await apiFetch(endpoint, 'POST', {credits: amount, price: price, type: 'credits'}, true);
+    const d = await apiFetch('/api/billing/create_checkout', 'POST', {credits: amount, price: price, type: 'credits'}, true);
     if (d.url) window.location.href = d.url;
     else toast('Betalingsudbyder ikke konfigureret', 'info');
   } catch(e) { toast('Error: ' + e.message, 'error'); }
@@ -6267,22 +6272,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if(typeof checkInstagramToken==='function') checkInstagramToken();
   apiFetch('/api/auth/me').then(function(u){ if(typeof checkNicheModal==='function') checkNicheModal(u||{}); }).catch(function(){});
   const _urlp = new URLSearchParams(window.location.search);
-  if (_urlp.get('payment') === 'success' && _urlp.get('provider') === 'paypal') {
-    const _token = _urlp.get('token') || _urlp.get('order_id') || '';
-    const _ref   = _urlp.get('ref') || '';
-    window.history.replaceState({}, '', '/app');
-    nav('billing');
-    if (_token) {
-      fetch('/api/billing/paypal_capture', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({order_id:_token, ref:_ref})})
-        .then(r => r.json()).then(d => {
-          launchConfetti();
-          showPaymentSuccess(d.message || 'PayPal payment completed!');
-        }).catch(() => toast('⚠️ PayPal capture failed — contact support', 'error'));
-    } else {
-      launchConfetti();
-      showPaymentSuccess('PayPal payment completed!');
-    }
-  } else if (_urlp.get('payment') === 'success') {
+  if (_urlp.get('payment') === 'success') {
     const _plan      = _urlp.get('plan') || '';
     const _pkg       = _urlp.get('pkg') || '';
     const _addon     = _urlp.get('addon') || '';
@@ -7865,7 +7855,7 @@ function nav(p) {
   if (p === 'products' && !allProducts.length) loadProducts();
   if (p === 'pipeline') { loadPipeline(); loadPipeHistory(); pipeLoadCredits(); }
   if (p === 'stats') { loadStats(); }
-  if (p === 'billing') { loadReferralStats(); loadSettingsPage();  loadBilling(); detectBillingCurrency(); loadAutoTopup(); }
+  if (p === 'billing') { loadReferralStats(); loadSettingsPage();  loadBilling(); detectBillingCurrency(); loadAutoTopup(); switchBillingTab('overview'); }
   if (p === 'billing') { setTimeout(checkLowCredits, 800); }
   if (p === 'settings') { loadSettingsPage(); loadContentLanguage(); }
   if (p === 'telegram-agent') { loadUserTelegramStatus(); }

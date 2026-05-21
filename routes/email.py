@@ -461,7 +461,7 @@ def send_verification_email(to_addr: str, name: str, code: str) -> bool:
     </div>
   </div>
   <div class="footer">
-    UgoingViral · support@ugoingviral.com
+    Please do not reply to this email. For support contact <a href="mailto:support@ugoingviral.com" style="color:#00e5ff">support@ugoingviral.com</a>.
   </div>
 </div>
 </body>
