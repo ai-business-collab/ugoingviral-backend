@@ -979,20 +979,63 @@ async def create_checkout(body: dict, current_user: dict = Depends(get_current_u
 
 @router.post("/api/billing/webhook")
 async def stripe_webhook(request: Request):
+    """
+    Stripe webhook receiver.
+
+    - Verifies the Stripe signature against STRIPE_WEBHOOK_SECRET. Returns
+      HTTP 400 only when the signature is missing or invalid (which is what
+      Stripe expects so it can retry / surface the failure in the dashboard).
+    - Every successfully-verified event returns HTTP 200, even if internal
+      processing for an individual event type fails — we log and acknowledge
+      so Stripe stops retrying. Per-event handlers are individually wrapped
+      in try/except so one bad payload can't take down the endpoint.
+    - Unhandled event types are acknowledged with 200 (no-op).
+    """
     import stripe
+    import json as _json
+    import logging
+    log = logging.getLogger("stripe_webhook")
+
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
     webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
     payload = await request.body()
     sig = request.headers.get("stripe-signature", "")
 
+    if not webhook_secret:
+        # Missing server config — refuse rather than process unverified data.
+        log.error("STRIPE_WEBHOOK_SECRET is not configured")
+        raise HTTPException(status_code=500, detail="Webhook secret not configured")
+
+    if not sig:
+        raise HTTPException(status_code=400, detail="Missing Stripe-Signature header")
+
     try:
         event = stripe.Webhook.construct_event(payload, sig, webhook_secret)
     except stripe.error.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
-    except Exception:
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except Exception as e:
+        # Unknown construct_event failure — treat as bad request so Stripe
+        # surfaces it in the dashboard rather than silently swallowing it.
+        log.exception("Webhook construct_event failed: %s", e)
         raise HTTPException(status_code=400, detail="Webhook error")
 
+    event_type = event.get("type", "")
+    try:
+        _process_stripe_event(event, stripe)
+    except Exception as e:
+        # Never propagate a processing failure as a non-2xx — we already
+        # verified the signature, so Stripe shouldn't retry. Log and ack.
+        log.exception("Stripe event %s processing failed: %s", event_type, e)
+
+    return {"ok": True, "received": True, "type": event_type}
+
+
+def _process_stripe_event(event, stripe):
+    """Dispatch a verified Stripe event to its handler. Each branch is wrapped
+    in try/except so one bad path doesn't break the rest."""
     if event["type"] == "checkout.session.completed":
         obj = event["data"]["object"]
         meta = obj.get("metadata") or {}
@@ -1198,8 +1241,6 @@ async def stripe_webhook(request: Request):
             billing["credits"] = billing.get("credits", 0) + plan_info["credits"]
             user_store["billing"] = billing
             _save_user_store(user_id, user_store)
-
-    return {"ok": True}
 
 
 # ── Invite / Referral ──────────────────────────────────────────────────────────

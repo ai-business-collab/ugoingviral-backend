@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
+from datetime import datetime
 from services.store import store, save_store, add_log
 
 router = APIRouter()
@@ -58,6 +59,8 @@ async def tiktok_oauth_callback(code: str = "", error: str = "", state: str = ""
         store.get("settings", {})["tiktok_expires_at"]       = expires_at
         store.get("settings", {})["tiktok_refresh_expires"]  = refresh_exp
         store.get("settings", {})["tiktok_username"]         = username
+        store.get("settings", {})["tiktok_connected_at"]     = datetime.utcnow().isoformat()
+        store.get("settings", {})["tiktok_last_sync"]        = datetime.utcnow().isoformat()
         # Spejl til connections dict så UI viser det som forbundet
         conns = store.setdefault("connections", {})
         conns["tiktok"] = {"username": username, "connected": True}

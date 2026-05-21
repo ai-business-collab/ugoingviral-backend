@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from fastapi.responses import RedirectResponse
 from services.store import store, save_store, add_log
 import os, httpx, base64, hashlib, secrets, urllib.parse
+from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.env"))
 from dotenv import load_dotenv
@@ -88,6 +89,8 @@ async def twitter_callback(code: str = "", error: str = "", state: str = ""):
         store.get("settings", {})["twitter_access_token"] = access_token
         store.get("settings", {})["twitter_refresh_token"] = refresh_token
         store.get("settings", {})["twitter_username"] = username
+        store.get("settings", {})["twitter_connected_at"] = datetime.utcnow().isoformat()
+        store.get("settings", {})["twitter_last_sync"] = datetime.utcnow().isoformat()
         store.get("connections", {})["twitter"] = {"username": username, "connected": True}
         save_store()
         add_log(f"✅ Twitter/X API forbundet: @{username}", "success")

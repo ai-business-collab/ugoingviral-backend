@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
+from datetime import datetime
 from services.store import store, save_store, add_log
 
 router = APIRouter()
@@ -58,6 +59,8 @@ async def youtube_oauth_callback(code: str = "", error: str = "", state: str = "
         store.get("settings", {})["youtube_expires_at"]     = expires_at
         store.get("settings", {})["youtube_channel_id"]     = channel_id
         store.get("settings", {})["youtube_channel_name"]   = channel_name
+        store.get("settings", {})["youtube_connected_at"]   = datetime.utcnow().isoformat()
+        store.get("settings", {})["youtube_last_sync"]      = datetime.utcnow().isoformat()
         conns = store.setdefault("connections", {})
         conns["youtube"] = {"username": channel_name, "connected": True}
         store["connections"] = conns

@@ -1096,6 +1096,12 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 .bonus-item.claimed .bonus-badge{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:var(--ac3)}
 .bonus-item.claimed .bonus-badge::before{content:"✓ "}
 
+/* ── Grouped page tabs (Content Creation / Video / Archive) ── */
+.gtabs{display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid var(--border);flex-wrap:wrap}
+.gtab{background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--tx3);cursor:pointer;transition:color .15s, border-color .15s;font-family:inherit}
+.gtab:hover{color:var(--tx2)}
+.gtab.active{border-bottom-color:var(--ac);color:var(--ac)}
+
 /* ── Stats ── */
 .stat-bar-wrap{display:flex;flex-direction:column;gap:4px}
 .stat-bar-row{display:flex;align-items:center;gap:8px}
@@ -1510,6 +1516,29 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 .concard:hover { border-color: var(--border-b); }
 .concard .concard-top { padding-left: 6px; }
 
+/* Inline quick-action row on every connect card */
+.conmeta {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  font-size: 11px; color: var(--tx3);
+  margin-top: 2px;
+}
+.conmeta strong { color: var(--tx2); font-weight: 700; }
+.conmeta .meta-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--glass-b); border: 1px solid var(--border);
+  font-size: 10px; font-weight: 600; color: var(--tx2);
+}
+.conmeta .meta-pill.ok { color: var(--ac3); border-color: rgba(var(--ac3-rgb),.3); background: rgba(var(--ac3-rgb),.08); }
+.conmeta .meta-pill.warn { color: var(--or); border-color: rgba(245,158,11,.3); background: rgba(245,158,11,.08); }
+
+.concard-actions {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.concard:not(.ok) .concard-actions { display: none; }
+
 /* Compact connection status overview bar */
 .conn-status-bar {
   display: flex; align-items: center; justify-content: space-between;
@@ -1630,16 +1659,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <span class="ico">✨</span><span data-i18n="nav.content">Content</span><span class="chevron">›</span>
     </div>
     <div class="submenu" id="content-sub">
-      <div class="sub-item" id="ni-generator" onclick="nav('generator')">✨ <span data-i18n="nav.generator">Generator</span></div>
+      <div class="sub-item" id="ni-content-creation" onclick="nav('generator')">✨ <span>Content Creation</span></div>
       <div class="sub-item" id="ni-content-engine" onclick="nav('content-engine')">📅 <span>Content Engine</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NEW</span></div>
       <div class="sub-item" id="ni-content-plan" onclick="nav('content-plan')">🗓️ <span>Content Plan</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">AI</span></div>
-      <div class="sub-item" id="ni-studio" onclick="nav('studio')">🎬 <span>Video Studio</span> <span style="font-size:9px;background:linear-gradient(90deg,var(--ac),var(--ac2));color:#000;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NY</span></div>
-      <div class="sub-item" id="ni-pipeline" onclick="nav('pipeline')">⚡ <span data-i18n="nav.pipeline">Pipeline</span></div>
-      <div class="sub-item" id="ni-video-script" onclick="nav('video-script')">🎬 <span>Video Script</span></div>
-      <div class="sub-item" id="ni-reel-templates" onclick="nav('reel-templates')">📱 <span>Reel Templates</span></div>
-      <div class="sub-item" onclick="nav('history')">📚 <span data-i18n="nav.history">Historik</span></div>
-      <div class="sub-item" onclick="nav('content-library')">🗂️ <span data-i18n="nav.library">Library</span></div>
-      <div class="sub-item" onclick="nav('library')">📁 <span data-i18n="nav.mapper">Content Mapper</span></div>
+      <div class="sub-item" id="ni-video-group" onclick="nav('studio')">🎬 <span>Video</span></div>
+      <div class="sub-item" id="ni-archive-group" onclick="nav('history')">🗂️ <span>Archive</span></div>
     </div>
 
     <!-- ── INFLUENCER ── -->
@@ -2013,6 +2037,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ══ CONTENT GENERATOR ══════════════════════════════════════════════════ -->
   <div id="page-generator" class="page">
+    <div class="gtabs" data-group="content-creation">
+      <button class="gtab" data-page="generator" onclick="nav('generator')">✨ Generator</button>
+      <button class="gtab" data-page="pipeline" onclick="nav('pipeline')">⚡ Pipeline</button>
+    </div>
     <div class="g2">
       <div>
         <div class="card">
@@ -2166,6 +2194,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ══ HISTORIK ══════════════════════════════════════════════════════════ -->
   <div id="page-history" class="page">
+    <div class="gtabs" data-group="archive">
+      <button class="gtab" data-page="history" onclick="nav('history')">📚 History</button>
+      <button class="gtab" data-page="content-library" onclick="nav('content-library')">🗂️ Library</button>
+      <button class="gtab" data-page="library" onclick="nav('library')">📁 Content Mapper</button>
+    </div>
     <div class="card">
       <div class="ctitle">
         <span>📚 Content Historik</span>
@@ -3009,6 +3042,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="hero-title">🔗 Connect your platforms</div>
         <div class="hero-sub">Link each social network so UgoingViral can post, reply, and grow on your behalf — securely and on-brand.</div>
       </div>
+      <div class="hero-actions">
+        <button class="btn bg bsm" onclick="loadConnections();toast('🔄 Refreshed all connections','info')">🔄 Refresh all</button>
+      </div>
     </div>
 
     <!-- Connection overview bar -->
@@ -3016,8 +3052,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:220px">
         <div style="font-size:32px">🔗</div>
         <div>
-          <div style="font-size:13px;color:var(--tx3);font-weight:700;letter-spacing:.6px;text-transform:uppercase">Connected</div>
-          <div style="font-size:20px;font-weight:800;color:var(--tx)"><span id="conn-count-num">0</span> <span style="color:var(--tx3);font-weight:600">/ <span id="conn-count-total">7</span> platforms</span></div>
+          <div style="font-size:11px;color:var(--tx3);font-weight:700;letter-spacing:.6px;text-transform:uppercase">Connection health</div>
+          <div style="font-size:20px;font-weight:800;color:var(--tx)"><span id="conn-count-num">0</span> <span style="color:var(--tx3);font-weight:600">/ <span id="conn-count-total">7</span> platforms connected</span></div>
         </div>
       </div>
       <div style="flex:2;min-width:160px">
@@ -3031,12 +3067,21 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="concard" id="con-shopify">
           <div class="concard-top" onclick="toggleCon('shopify')">
             <div class="conico">🛍️</div>
-            <div class="coninfo"><div class="conname">Shopify</div><div class="constatus no" id="cs-shopify">Ikke forbundet</div></div>
+            <div class="coninfo">
+              <div class="conname">Shopify</div>
+              <div class="constatus no" id="cs-shopify">Ikke forbundet</div>
+              <div class="conmeta" id="cm-shopify"></div>
+            </div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:10px;color:var(--tx3);font-weight:600">API</span>
               <div class="tog on" id="tog-api-shopify" onclick="event.stopPropagation();toggleAPI('shopify',this)"></div>
               <button class="btn bg bsm">▾</button>
             </div>
+          </div>
+          <div class="concard-actions">
+            <button class="btn bg bsm" onclick="event.stopPropagation();loadConnections();toast('🔄 Refreshed Shopify','info')">🔄 Sync</button>
+            <button class="btn bg bsm" onclick="event.stopPropagation();toggleCon('shopify')">⚙️ Manage</button>
+            <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('shopify')">🗑️ Disconnect</button>
           </div>
           <div class="conbody">
             <div class="fg"><label class="fl">Store URL</label><input class="fi" id="shopify-store" placeholder="din-butik.myshopify.com"></div>
@@ -3049,12 +3094,21 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="concard" id="con-instagram">
           <div class="concard-top" onclick="toggleCon('instagram')">
             <div class="conico">📸</div>
-            <div class="coninfo"><div class="conname">Instagram</div><div class="constatus no" id="cs-instagram">Ikke forbundet</div></div>
+            <div class="coninfo">
+              <div class="conname">Instagram</div>
+              <div class="constatus no" id="cs-instagram">Ikke forbundet</div>
+              <div class="conmeta" id="cm-instagram"></div>
+            </div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:10px;color:var(--tx3);font-weight:600">API</span>
               <div class="tog" id="tog-api-instagram" onclick="event.stopPropagation();toggleAPI('instagram',this)"></div>
               <button class="btn bg bsm">▾</button>
             </div>
+          </div>
+          <div class="concard-actions">
+            <button class="btn bg bsm" onclick="event.stopPropagation();checkInstagramAPIStatus();toast('🔄 Syncing Instagram…','info')">🔄 Sync</button>
+            <button class="btn bp bsm" onclick="event.stopPropagation();connectInstagramAPI()">🔁 Reconnect</button>
+            <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('instagram')">🗑️ Disconnect</button>
           </div>
           <div class="conbody">
             <div id="ig-api-status" style="display:none;background:rgba(225,48,108,.08);border:1px solid rgba(225,48,108,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
@@ -3087,12 +3141,21 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="concard" id="con-tiktok">
           <div class="concard-top" onclick="toggleCon('tiktok')">
             <div class="conico">🎵</div>
-            <div class="coninfo"><div class="conname">TikTok</div><div class="constatus no" id="cs-tiktok">Ikke forbundet</div></div>
+            <div class="coninfo">
+              <div class="conname">TikTok</div>
+              <div class="constatus no" id="cs-tiktok">Ikke forbundet</div>
+              <div class="conmeta" id="cm-tiktok"></div>
+            </div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:10px;color:var(--tx3);font-weight:600">API</span>
               <div class="tog" id="tog-api-tiktok" onclick="event.stopPropagation();toggleAPI('tiktok',this)"></div>
               <button class="btn bg bsm">▾</button>
             </div>
+          </div>
+          <div class="concard-actions">
+            <button class="btn bg bsm" onclick="event.stopPropagation();checkTikTokAPIStatus();toast('🔄 Syncing TikTok…','info')">🔄 Sync</button>
+            <button class="btn bp bsm" onclick="event.stopPropagation();connectTikTokAPI()">🔁 Reconnect</button>
+            <button class="btn br bsm" onclick="event.stopPropagation();disconnectTikTokAPI()">🗑️ Disconnect</button>
           </div>
           <div class="conbody">
             <div id="tt-api-status" style="display:none;background:rgba(255,0,80,.08);border:1px solid rgba(255,0,80,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
@@ -3123,12 +3186,21 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="concard" id="con-facebook">
           <div class="concard-top" onclick="toggleCon('facebook')">
             <div class="conico">📘</div>
-            <div class="coninfo"><div class="conname">Facebook</div><div class="constatus no" id="cs-facebook">Ikke forbundet</div></div>
+            <div class="coninfo">
+              <div class="conname">Facebook</div>
+              <div class="constatus no" id="cs-facebook">Ikke forbundet</div>
+              <div class="conmeta" id="cm-facebook"></div>
+            </div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:10px;color:var(--tx3);font-weight:600">API</span>
               <div class="tog" id="tog-api-facebook" onclick="event.stopPropagation();toggleAPI('facebook',this)"></div>
               <button class="btn bg bsm">▾</button>
             </div>
+          </div>
+          <div class="concard-actions">
+            <button class="btn bg bsm" onclick="event.stopPropagation();loadConnections();toast('🔄 Refreshed Facebook','info')">🔄 Sync</button>
+            <button class="btn bg bsm" onclick="event.stopPropagation();toggleCon('facebook')">⚙️ Manage</button>
+            <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('facebook')">🗑️ Disconnect</button>
           </div>
           <div class="conbody">
             <div class="info-box" style="margin-bottom:12px">💡 <strong>Tip:</strong> Connect your Instagram to your Facebook page — your Instagram posts will automatically upload to Facebook too. Do it in Facebook → Settings → Instagram.</div>
@@ -3142,12 +3214,21 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="concard" id="con-twitter">
           <div class="concard-top" onclick="toggleCon('twitter')">
             <div class="conico">🐦</div>
-            <div class="coninfo"><div class="conname">X / Twitter</div><div class="constatus no" id="cs-twitter">Ikke forbundet</div></div>
+            <div class="coninfo">
+              <div class="conname">X / Twitter</div>
+              <div class="constatus no" id="cs-twitter">Ikke forbundet</div>
+              <div class="conmeta" id="cm-twitter"></div>
+            </div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:10px;color:var(--tx3);font-weight:600">API</span>
               <div class="tog" id="tog-api-twitter" onclick="event.stopPropagation();toggleAPI('twitter',this)"></div>
               <button class="btn bg bsm">▾</button>
             </div>
+          </div>
+          <div class="concard-actions">
+            <button class="btn bg bsm" onclick="event.stopPropagation();checkTwitterAPIStatus();toast('🔄 Syncing X / Twitter…','info')">🔄 Sync</button>
+            <button class="btn bp bsm" onclick="event.stopPropagation();window.location.href='/api/twitter/connect'">🔁 Reconnect</button>
+            <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('twitter')">🗑️ Disconnect</button>
           </div>
           <div class="conbody">
             <div id="tw-api-status" style="display:none;background:rgba(29,161,242,.08);border:1px solid rgba(29,161,242,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
@@ -3172,12 +3253,21 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="concard" id="con-youtube">
           <div class="concard-top" onclick="toggleCon('youtube')">
             <div class="conico">▶️</div>
-            <div class="coninfo"><div class="conname">YouTube</div><div class="constatus no" id="cs-youtube">Ikke forbundet</div></div>
+            <div class="coninfo">
+              <div class="conname">YouTube</div>
+              <div class="constatus no" id="cs-youtube">Ikke forbundet</div>
+              <div class="conmeta" id="cm-youtube"></div>
+            </div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:10px;color:var(--tx3);font-weight:600">API</span>
               <div class="tog" id="tog-api-youtube" onclick="event.stopPropagation();toggleAPI('youtube',this)"></div>
               <button class="btn bg bsm">▾</button>
             </div>
+          </div>
+          <div class="concard-actions">
+            <button class="btn bg bsm" onclick="event.stopPropagation();checkYouTubeAPIStatus();toast('🔄 Syncing YouTube…','info')">🔄 Sync</button>
+            <button class="btn bp bsm" onclick="event.stopPropagation();connectYouTubeAPI()">🔁 Reconnect</button>
+            <button class="btn br bsm" onclick="event.stopPropagation();disconnectYouTubeAPI()">🗑️ Disconnect</button>
           </div>
           <div class="conbody">
             <div id="yt-api-status" style="display:none;background:rgba(255,0,0,.08);border:1px solid rgba(255,0,0,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
@@ -3207,7 +3297,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div class="concard" id="con-telegram">
           <div class="concard-top" onclick="toggleCon('telegram')">
             <div class="conico">✈️</div>
-            <div class="coninfo"><div class="conname">Telegram Bot</div><div class="constatus no" id="cs-telegram">Not connected</div></div>
+            <div class="coninfo">
+              <div class="conname">Telegram Bot</div>
+              <div class="constatus no" id="cs-telegram">Not connected</div>
+              <div class="conmeta" id="cm-telegram"></div>
+            </div>
             <button class="btn bg bsm">▾</button>
           </div>
           <div class="conbody">
@@ -3258,6 +3352,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ══ BIBLIOTEK ════════════════════════════════════════════════════════ -->
 <div id="page-library" class="page">
+  <div class="gtabs" data-group="archive">
+    <button class="gtab" data-page="history" onclick="nav('history')">📚 History</button>
+    <button class="gtab" data-page="content-library" onclick="nav('content-library')">🗂️ Library</button>
+    <button class="gtab" data-page="library" onclick="nav('library')">📁 Content Mapper</button>
+  </div>
   <div class="card">
     <div class="ctitle">
       <span>🖼️ Media Library</span>
@@ -3278,6 +3377,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
 <!-- ══ CONTENT BIBLIOTEK (merged) ═══════════════════════════════════════ -->
 <div id="page-content-library" class="page">
+  <div class="gtabs" data-group="archive">
+    <button class="gtab" data-page="history" onclick="nav('history')">📚 History</button>
+    <button class="gtab" data-page="content-library" onclick="nav('content-library')">🗂️ Library</button>
+    <button class="gtab" data-page="library" onclick="nav('library')">📁 Content Mapper</button>
+  </div>
 
   <div class="card" style="margin-bottom:16px">
     <div class="ctitle">
@@ -4250,6 +4354,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <!-- ══ VIDEO STUDIO ═══════════════════════════════════════════════════════ -->
   <div id="page-studio" class="page">
+    <div class="gtabs" data-group="video">
+      <button class="gtab" data-page="studio" onclick="nav('studio')">🎬 Video Studio</button>
+      <button class="gtab" data-page="video-script" onclick="nav('video-script')">📝 Video Script</button>
+      <button class="gtab" data-page="reel-templates" onclick="nav('reel-templates')">📱 Reel Templates</button>
+    </div>
     <!-- Studio tab bar -->
     <div style="display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid var(--border)">
       <button id="studio-tab-video" onclick="studioSwitchTab('video')" style="background:none;border:none;border-bottom:2px solid var(--ac);margin-bottom:-2px;padding:8px 18px;font-size:13px;font-weight:700;color:var(--ac);cursor:pointer">🎬 Video Studio</button>
@@ -5012,6 +5121,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   </div>
 
   <div id="page-pipeline" class="page">
+    <div class="gtabs" data-group="content-creation">
+      <button class="gtab" data-page="generator" onclick="nav('generator')">✨ Generator</button>
+      <button class="gtab" data-page="pipeline" onclick="nav('pipeline')">⚡ Pipeline</button>
+    </div>
 
     <!-- FORM -->
     <!-- CREDITS WIDGET -->
@@ -7737,6 +7850,10 @@ function nav(p) {
   document.querySelectorAll('.ni').forEach(x => x.classList.remove('active'));
   document.getElementById('page-' + p)?.classList.add('active');
   document.querySelectorAll('.ni').forEach(n => { if (n.getAttribute('onclick')?.includes(`'${p}'`)) n.classList.add('active'); });
+  // Highlight active group tab for Content Creation / Video / Archive
+  document.querySelectorAll('.gtab').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-page') === p);
+  });
   // Prefer the i18n entry so the page title flips with the language toggle.
   // Falls back to the static `titles` map for routes that don't have a key yet.
   var pageKey = 'page.' + p;
@@ -7859,6 +7976,39 @@ async function checkPlaywright() {
 }
 
 // ── Connections ───────────────────────────────────────────────────────────────
+function _conRelTime(iso) {
+  if (!iso) return '';
+  var t = Date.parse(iso);
+  if (isNaN(t)) return '';
+  var diff = Math.max(0, Date.now() - t);
+  var m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  var dy = Math.floor(h / 24);
+  if (dy < 30) return dy + 'd ago';
+  return new Date(t).toLocaleDateString();
+}
+function _renderConMeta(plat, ok, info) {
+  var el = document.getElementById('cm-' + plat);
+  if (!el) return;
+  if (!ok) { el.innerHTML = ''; return; }
+  var bits = [];
+  bits.push('<span class="meta-pill ok">● Connected</span>');
+  if (info && info.label) bits.push('<span><strong>' + String(info.label).replace(/[<>&]/g,'') + '</strong></span>');
+  var ls = info && info.last_sync ? _conRelTime(info.last_sync) : '';
+  if (ls) bits.push('<span>🕒 Last sync: <strong>' + ls + '</strong></span>');
+  if (info && info.expires_at) {
+    var exp = Date.parse(info.expires_at);
+    if (!isNaN(exp)) {
+      var days = Math.round((exp - Date.now()) / 86400000);
+      if (days <= 0) bits.push('<span class="meta-pill warn">⚠ Token expired</span>');
+      else if (days <= 7) bits.push('<span class="meta-pill warn">⚠ Expires in ' + days + 'd</span>');
+    }
+  }
+  el.innerHTML = bits.join('');
+}
 async function loadConnections() {
   try {
     const d = await apiFetch('/api/settings/connections');
@@ -7871,6 +8021,7 @@ async function loadConnections() {
       youtube:   ['','','cs-youtube','ov-yt','ovd-yt','dot-s-yt','d-yt','chip-yt'],
       ai:        ['dot-ai','txt-ai','cs-ai','ov-ai','ovd-ai','dot-s-ai','d-ai',''],
     };
+    const meta = d.meta || {};
     var connected = 0, total = 0;
     for (const [k, ids] of Object.entries(platMap)) {
       const ok = d[k]; const label = ok ? 'Connected ✓' : 'Not connected';
@@ -7885,8 +8036,17 @@ async function loadConnections() {
       if (card) card.classList.toggle('ok', ok);
       const chip = ids[7] ? document.getElementById(ids[7]) : null;
       if (chip) chip.classList.toggle('connected', !!ok);
-      if (k !== 'ai') { total += 1; if (ok) connected += 1; }
+      if (k !== 'ai') {
+        total += 1;
+        if (ok) connected += 1;
+        _renderConMeta(k, ok, meta[k]);
+      }
     }
+    // Telegram is not in platMap but has its own meta row.
+    var tgOk = !!(meta.telegram && meta.telegram.label);
+    var tgCard = document.getElementById('con-telegram');
+    if (tgCard) tgCard.classList.toggle('ok', tgOk);
+    _renderConMeta('telegram', tgOk, meta.telegram);
     // Update connect-page progress bar
     var num = document.getElementById('conn-count-num');
     var tot = document.getElementById('conn-count-total');
@@ -11554,6 +11714,11 @@ function sendQueueToPost(id) {
 
   <!-- ═══════════════════════════════ VIDEO SCRIPT PAGE ═════════════════════ -->
   <div id="page-video-script" class="page">
+    <div class="gtabs" data-group="video">
+      <button class="gtab" data-page="studio" onclick="nav('studio')">🎬 Video Studio</button>
+      <button class="gtab" data-page="video-script" onclick="nav('video-script')">📝 Video Script</button>
+      <button class="gtab" data-page="reel-templates" onclick="nav('reel-templates')">📱 Reel Templates</button>
+    </div>
     <div style="max-width:860px">
 
       <!-- Intro / what this is -->
@@ -11644,6 +11809,11 @@ function sendQueueToPost(id) {
 
   <!-- ═══════════════════════════════ REEL TEMPLATES PAGE ══════════════════ -->
   <div id="page-reel-templates" class="page">
+    <div class="gtabs" data-group="video">
+      <button class="gtab" data-page="studio" onclick="nav('studio')">🎬 Video Studio</button>
+      <button class="gtab" data-page="video-script" onclick="nav('video-script')">📝 Video Script</button>
+      <button class="gtab" data-page="reel-templates" onclick="nav('reel-templates')">📱 Reel Templates</button>
+    </div>
     <div style="max-width:1000px">
       <div class="card" style="margin-bottom:20px">
         <div class="ctitle">📱 Story & Reel Templates</div>

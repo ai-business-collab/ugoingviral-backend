@@ -77,6 +77,28 @@ def get_connections():
     if s.get("tiktok_api_connected"): conns["tiktok"] = True
     if s.get("youtube_api_connected"): conns["youtube"] = True
     if s.get("twitter_api_connected"): conns["twitter"] = True
+    # Per-platform metadata (last sync, account label, expires_at) so the
+    # Connect page can show contextual info next to each card.
+    meta = {
+        "shopify":   {"label": s.get("shopify_store") or "",
+                      "last_sync": s.get("shopify_last_sync") or s.get("shopify_connected_at") or ""},
+        "instagram": {"label": s.get("instagram_api_username") or s.get("instagram_user") or "",
+                      "last_sync": s.get("instagram_last_sync") or s.get("instagram_connected_at") or "",
+                      "expires_at": s.get("instagram_api_expires") or ""},
+        "tiktok":    {"label": s.get("tiktok_username") or s.get("tiktok_user") or "",
+                      "last_sync": s.get("tiktok_last_sync") or s.get("tiktok_connected_at") or "",
+                      "expires_at": s.get("tiktok_expires_at") or ""},
+        "facebook":  {"label": s.get("facebook_user") or "",
+                      "last_sync": s.get("facebook_last_sync") or s.get("facebook_connected_at") or ""},
+        "twitter":   {"label": s.get("twitter_username") or s.get("twitter_user") or "",
+                      "last_sync": s.get("twitter_last_sync") or s.get("twitter_connected_at") or ""},
+        "youtube":   {"label": s.get("youtube_channel_name") or s.get("youtube_user") or "",
+                      "last_sync": s.get("youtube_last_sync") or s.get("youtube_connected_at") or "",
+                      "expires_at": s.get("youtube_expires_at") or ""},
+        "telegram":  {"label": s.get("telegram_chat_id") or "",
+                      "last_sync": s.get("telegram_last_sync") or s.get("telegram_connected_at") or ""},
+    }
+    conns["meta"] = meta
     return conns
 
 # ── Automation settings ───────────────────────────────────────────────────────

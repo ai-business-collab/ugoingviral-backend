@@ -58,7 +58,10 @@ async def instagram_oauth_callback(code: str = "", state: str = "", error: str =
         store.get("settings", {})["instagram_api_expires"] = expires_at
         store.get("settings", {})["instagram_ig_id"] = ig_id
         store.get("settings", {})["instagram_username"] = info.get("username", "")
+        store.get("settings", {})["instagram_api_username"] = info.get("username", "")
         store.get("settings", {})["instagram_api_connected"] = True
+        store.get("settings", {})["instagram_connected_at"] = datetime.utcnow().isoformat()
+        store.get("settings", {})["instagram_last_sync"] = datetime.utcnow().isoformat()
         save_store()
         add_log(f"✅ Instagram API forbundet: @{info.get('username', ig_id)}", "success")
         # Redirect til app
