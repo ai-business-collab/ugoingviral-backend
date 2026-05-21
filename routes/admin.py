@@ -1,7 +1,10 @@
 import os
 import json
+import logging
 import uuid
 from datetime import datetime, timedelta
+
+logger = logging.getLogger("ugv.admin")
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
@@ -26,7 +29,7 @@ PLANS = {
     "agency":   {"name": "Agency",   "price": 199, "credits": 2000},
 }
 
-ADMIN_EMAIL = "admin@ugoingviral.com"
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@ugoingviral.com")
 ADMIN_NAME  = "Michael"
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -864,16 +867,51 @@ def admin_broadcast_email(req: BroadcastEmailRequest, admin=Depends(require_owne
         '</div></body></html>'
     )
 
+    # Sanity-check that the HTML body actually contains the user's message.
+    body_ok = safe_message and (safe_message in html)
+    logger.info(
+        "[broadcast] requested by role=%s · subject=%r · subject_len=%d · message_len=%d · html_len=%d · body_embedded=%s · sendgrid=%s · from=%s",
+        admin.get("role", "?"),
+        subject,
+        len(subject),
+        len(message),
+        len(html),
+        body_ok,
+        "set" if os.getenv("SENDGRID_API_KEY", "") else "missing",
+        os.getenv("SENDGRID_FROM", "noreply@ugoingviral.com"),
+    )
+
     users = load_users().get("users", [])
 
     if req.test_only:
-        target_email = admin.get("email") or admin.get("display_email") or ""
-        if not target_email and admin.get("role") == "owner":
-            target_email = ADMIN_EMAIL
+        # Always prefer the ADMIN_EMAIL env var for test sends so the owner
+        # gets the preview to a known address, regardless of which admin JWT
+        # initiated the request. Fall back to the admin's own email, then to
+        # the hardcoded default.
+        env_admin = os.getenv("ADMIN_EMAIL", "").strip()
+        target_email = env_admin or admin.get("email") or admin.get("display_email") or ADMIN_EMAIL
         if not target_email:
-            raise HTTPException(status_code=400, detail="Admin account has no email on file")
-        ok = send_system_email(target_email, "[TEST] " + subject, html)
-        return {"ok": ok, "sent": 1 if ok else 0, "failed": 0 if ok else 1, "total": 1, "test_only": True, "to": target_email}
+            logger.error("[broadcast/test] no recipient available (ADMIN_EMAIL env unset, admin JWT has no email)")
+            raise HTTPException(status_code=400, detail="ADMIN_EMAIL is not configured")
+        test_subject = "[TEST] " + subject
+        logger.info("[broadcast/test] sending → to=%s · subject=%r · source=%s",
+                    target_email, test_subject,
+                    "ADMIN_EMAIL env" if env_admin else ("admin JWT" if admin.get("email") else "hardcoded default"))
+        try:
+            ok = send_system_email(target_email, test_subject, html)
+        except Exception as e:
+            logger.exception("[broadcast/test] send raised: %s", e)
+            ok = False
+        logger.info("[broadcast/test] result → to=%s · ok=%s", target_email, ok)
+        return {
+            "ok": bool(ok),
+            "sent": 1 if ok else 0,
+            "failed": 0 if ok else 1,
+            "total": 1,
+            "test_only": True,
+            "to": target_email,
+            "from": os.getenv("SENDGRID_FROM", "noreply@ugoingviral.com"),
+        }
 
     plan_filter = (req.plan_filter or "").strip().lower()
 
@@ -906,18 +944,34 @@ def admin_broadcast_email(req: BroadcastEmailRequest, admin=Depends(require_owne
         seen.add(k)
         deduped.append(e)
 
+    logger.info("[broadcast/all] sending to %d recipients · plan_filter=%s · subject=%r",
+                len(deduped), plan_filter or "all", subject)
+
     sent = 0
     failed = 0
+    failures = []
     for email in deduped:
+        logger.info("[broadcast/all] → to=%s · subject=%r", email, subject)
         try:
             ok = send_system_email(email, subject, html)
             if ok:
                 sent += 1
             else:
                 failed += 1
-        except Exception:
+                failures.append(email)
+        except Exception as e:
+            logger.exception("[broadcast/all] send raised for %s: %s", email, e)
             failed += 1
-    return {"ok": True, "sent": sent, "failed": failed, "total": len(deduped), "plan_filter": plan_filter or "all"}
+            failures.append(email)
+    logger.info("[broadcast/all] done · sent=%d · failed=%d · total=%d", sent, failed, len(deduped))
+    return {
+        "ok": True,
+        "sent": sent,
+        "failed": failed,
+        "total": len(deduped),
+        "plan_filter": plan_filter or "all",
+        "failures": failures[:20],  # cap for response size
+    }
 
 
 @router.get("/api/admin/session_view")

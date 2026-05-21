@@ -11,9 +11,11 @@ Håndterer:
 
 from fastapi import APIRouter, HTTPException, Request
 from typing import Optional, List
-import asyncio, os, json
+import asyncio, logging, os, json
 from datetime import datetime
 from services.store import store, save_store, add_log
+
+logger = logging.getLogger("ugv.email")
 
 router = APIRouter()
 
@@ -295,9 +297,9 @@ def send_system_email(to_addr: str, subject: str, html_body: str) -> bool:
     # Try SendGrid first (preferred)
     sg_key = os.getenv("SENDGRID_API_KEY", "")
     if sg_key:
+        from_email = os.getenv("SENDGRID_FROM", "noreply@ugoingviral.com")
         try:
             import httpx
-            from_email = os.getenv("SENDGRID_FROM", "noreply@ugoingviral.com")
             r = httpx.post(
                 "https://api.sendgrid.com/v3/mail/send",
                 headers={"Authorization": f"Bearer {sg_key}", "Content-Type": "application/json"},
@@ -309,12 +311,21 @@ def send_system_email(to_addr: str, subject: str, html_body: str) -> bool:
                 },
                 timeout=15,
             )
-            return r.status_code in (200, 202)
-        except Exception:
-            pass  # Fall through to SMTP
+            if r.status_code in (200, 202):
+                logger.info("SendGrid → %s · subject=%r · status=%d", to_addr, subject, r.status_code)
+                return True
+            # Surface why the send failed instead of silently falling through.
+            logger.error(
+                "SendGrid send failed → to=%s from=%s subject=%r status=%d body=%s",
+                to_addr, from_email, subject, r.status_code, (r.text or "")[:500],
+            )
+        except Exception as e:
+            logger.exception("SendGrid send raised an exception for %s: %s", to_addr, e)
+        # Fall through to SMTP only if explicitly configured.
 
     cfg = _system_smtp_cfg()
     if not cfg["user"] or not cfg["password"]:
+        logger.error("send_system_email: no SMTP fallback configured (SENDGRID_API_KEY=%s)", "set" if sg_key else "missing")
         return False
     try:
         import smtplib
@@ -329,8 +340,10 @@ def send_system_email(to_addr: str, subject: str, html_body: str) -> bool:
             srv.starttls()
             srv.login(cfg["user"], cfg["password"])
             srv.send_message(msg)
+        logger.info("SMTP → %s · subject=%r · ok", to_addr, subject)
         return True
     except Exception as e:
+        logger.exception("SMTP send failed for %s: %s", to_addr, e)
         add_log(f"❌ System email fejl: {str(e)[:80]}", "error")
         return False
 
