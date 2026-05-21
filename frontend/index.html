@@ -12815,6 +12815,83 @@ function renderPipeContent() {
     </div>`).join('')}`;
 }
 
+// ── FEATURE HELP TOOLTIPS ─────────────────────────────────────────────────
+// Inject a small ? icon next to the main title of each major feature page.
+// The existing SMART TOOLTIPS delegate handles hover positioning.
+(function() {
+  var AGENT_HINT = ' · Need help? Ask your personal AI agent.';
+  var FEATURE_TIPS = {
+    'page-dashboard':       'Your home view — quick actions, account stats, and platform status all in one place.',
+    'page-generator':       'AI Content Generator — write captions, hooks, scripts and hashtags for any platform in seconds.',
+    'page-content-engine':  'Content Engine — generate a full 30-day social media calendar tailored to your niche.',
+    'page-content-plan':    'AI Content Plan — get a strategic posting plan with timing, topics and tone for the next 30 days.',
+    'page-studio':          'Video Studio — turn a prompt into a polished AI video with voiceover, scenes and assembly.',
+    'page-pipeline':        'Content Pipeline — script → image → video → voice → finished post, in one automated flow.',
+    'page-video-script':    'AI Video Script Generator — timestamped script with hook, scenes and CTA, ready to record.',
+    'page-reel-templates':  'Story & Reel Templates — 20+ pre-built scripts by niche, ready to customize.',
+    'page-posting':         'Post & Schedule — plan, queue and auto-publish content across every connected platform.',
+    'page-autopilot':       'Auto Pilot — your social media on full autopilot: generate, schedule and post automatically.',
+    'page-inbox':           'Inbox, DM & Email — auto-reply to DMs and comments with AI in your tone of voice.',
+    'page-creators':        'Influencer Profiles — manage multiple creators, each with their own niche, style and content history.',
+    'page-influencer-products': 'Ad Products — manage product catalogs used in ads, posts and influencer campaigns.',
+    'page-products':        'Products — your full webshop catalog. AI captions auto-generated from product details.',
+    'page-content-library': 'Content Library — every piece of content you have generated, browsable by niche and platform.',
+    'page-library':         'Media Library — upload, organize and reuse your own images and videos in posts.',
+    'page-history':         'Content History — every caption, script and post you have produced, searchable.',
+    'page-stats':           'Statistics — top-line metrics across content, posts and platforms.',
+    'page-analytics':       'Analytics — deep performance breakdown per platform, audience and content type.',
+    'page-brand-kit':       'Brand Kit — your logo, colors, fonts and tone of voice so every AI output stays on-brand.',
+    'page-hashtags':        'Hashtag Research — discover and save high-performing hashtag sets per niche.',
+    'page-competitor':      'Competitor Spy — reverse-engineer any competitor: strategy, hooks and posting cadence.',
+    'page-audit':           'Account Audit — score any social account and get a tailored action plan.',
+    'page-tools':           'Tools — quick access to Brand Kit, Hashtag Research, Competitor Spy and Account Audit.',
+    'page-connect':         'Connect — link Instagram, TikTok, YouTube, Facebook and X so posts and analytics flow automatically.',
+    'page-telegram-agent':  'Telegram Agent — chat with your AI assistant from Telegram on the go.',
+    'page-subaccounts':     'Extra Profiles — manage additional brand/creator profiles under your main account.',
+    'page-billing':         'Plan & Credits — manage your subscription, buy extra credits and view payment history.',
+    'page-affiliate':       'Affiliate Program — earn recurring commission on every customer you refer.',
+    'page-settings':        'Settings — account, interface, language and notification preferences.',
+    'page-agency-dashboard': 'Agency Dashboard — manage clients, per-client content settings and white-label reports.',
+    'page-growth-dashboard': 'Growth Dashboard — auto DMs, likes and comments to grow your accounts on autopilot.'
+  };
+
+  function _attachHelpTip(titleEl, text) {
+    if (!titleEl || titleEl.querySelector('.tip.help-tip')) return;
+    var tip = document.createElement('span');
+    tip.className = 'tip help-tip';
+    var iconSpan = document.createElement('span');
+    iconSpan.className = 'tip-icon';
+    iconSpan.textContent = '?';
+    iconSpan.setAttribute('aria-label', 'Help');
+    var boxSpan = document.createElement('span');
+    boxSpan.className = 'tip-box';
+    boxSpan.textContent = text + AGENT_HINT;
+    tip.appendChild(iconSpan);
+    tip.appendChild(boxSpan);
+    titleEl.appendChild(tip);
+  }
+
+  function _firstTitle(pageEl) {
+    if (!pageEl) return null;
+    return pageEl.querySelector('.ctitle, .hero-title, h1, h2');
+  }
+
+  function initFeatureHelpTips() {
+    Object.keys(FEATURE_TIPS).forEach(function(pid) {
+      var page = document.getElementById(pid);
+      if (!page) return;
+      var titleEl = _firstTitle(page);
+      if (titleEl) _attachHelpTip(titleEl, FEATURE_TIPS[pid]);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFeatureHelpTips);
+  } else {
+    initFeatureHelpTips();
+  }
+})();
+
 // ── SMART TOOLTIPS ─────────────────────────────────────────────────────────
 (function() {
   var _tipBox = null;
@@ -13300,6 +13377,8 @@ function renderPipeContent() {
 #ag-send:hover { background:var(--ac2); transform:scale(1.05); }
 #ag-mic { background:#111d35; border:1px solid rgba(255,255,255,.1); color:var(--tx2); }
 #ag-mic.listening { background:rgba(239,68,68,.2); border-color:#ef4444; color:#ef4444; animation:ag-pulse 1s infinite; }
+#ag-attach { background:#111d35; border:1px solid rgba(255,255,255,.1); color:var(--tx2); }
+#ag-attach:hover { background:rgba(0,229,255,.12); border-color:var(--ac); color:var(--ac); }
 @keyframes ag-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }
 .ag-speaker { background:none;border:none;cursor:pointer;font-size:13px;opacity:.5;padding:1px 4px;margin-left:4px;vertical-align:middle }
 .ag-speaker:hover { opacity:1 }
@@ -13521,8 +13600,11 @@ body.light .ag-chip { background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.1); c
   </div>
 
   <!-- Input -->
+  <div id="ag-attach-preview" style="display:none;padding:6px 10px;border-top:1px solid var(--border);background:var(--s2)"></div>
   <div id="ag-input-row">
     <button class="ag-ibtn" id="ag-mic" onclick="agMicToggle()" title="Voice input">🎤</button>
+    <button class="ag-ibtn" id="ag-attach" onclick="document.getElementById('ag-file-input').click()" title="Attach photo">📷</button>
+    <input type="file" id="ag-file-input" accept="image/*" style="display:none" onchange="agOnFileSelected(this)">
     <textarea id="ag-input" placeholder="Type or speak…" rows="1"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agSend()}"
       oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px'"></textarea>
@@ -13885,6 +13967,7 @@ var _ag = {
   awaitingName: false,
   awaitingNameConfirm: false,
   pendingName: '',
+  pendingImage: null,
   welcomeSent: false,
   pendingFirstMsg: null,
   detectedLang: 'en',
@@ -14200,12 +14283,23 @@ function agBuildAudioPlayer(src) {
   return box;
 }
 
-function agAddMsg(role, text, actions, escalate, audioUrl) {
+function _escapeHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                       .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function agAddMsg(role, text, actions, escalate, audioUrl, allowHtml) {
   var msgs = document.getElementById('ag-msgs');
   var wrap = document.createElement('div');
   wrap.className = 'ag-msg ' + (role === 'user' ? 'user' : 'bot');
-  var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-                 .replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  var safe;
+  if (allowHtml) {
+    // Caller is responsible for escaping any user-provided substrings.
+    safe = text.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  } else {
+    safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+               .replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  }
   wrap.innerHTML = '<div class="ag-bubble">' + safe + '</div>';
 
   if (role === 'bot' && audioUrl) {
@@ -14270,7 +14364,10 @@ function agRemoveTyping() {
 // ── Send message ──────────────────────────────────────────────────────────────
 async function agSend(fromVoice) {
   var inp = document.getElementById('ag-input');
-  var text = inp.value.trim(); if (!text) return;
+  var text = inp.value.trim();
+  // Allow sending an image without text — default to a reasonable prompt.
+  if (!text && _ag.pendingImage) text = 'Use this photo for my next content idea.';
+  if (!text) return;
 
   // ── Name confirmation flow ──────────────────────
   // Two-step: first message proposes a name -> bot asks "Did you mean X?";
@@ -14346,11 +14443,22 @@ async function agSend(fromVoice) {
 
   inp.value = ''; inp.style.height = 'auto';
 
+  // Snapshot + clear any attached image so it doesn't persist into the next turn.
+  var attachedImage = _ag.pendingImage;
+  if (attachedImage) agClearAttachPreview();
+
   // Detect language from user input
   agDetectLang(text);
 
-  agAddMsg('user', text);
-  _ag.history.push({role:'user', content:text});
+  if (attachedImage) {
+    agAddMsg('user', '<img src="' + attachedImage.url + '" alt="" style="max-width:200px;border-radius:10px;display:block;margin-bottom:6px">' + _escapeHtml(text), [], false, null, true);
+  } else {
+    agAddMsg('user', text);
+  }
+  var historyContent = attachedImage
+    ? '[User attached an image: ' + attachedImage.url + '] ' + text
+    : text;
+  _ag.history.push({role:'user', content:historyContent});
   agShowTyping();
   document.getElementById('ag-hstatus').textContent = 'Thinking…';
 
@@ -14358,10 +14466,11 @@ async function agSend(fromVoice) {
     var curPage = (document.getElementById('ptitle')?.textContent || '').replace(/[\u{1F000}-\u{1FFFF}]/gu,'').trim();
     var agentName = localStorage.getItem('ag_agent_name') || '';
     var langHint = _ag.detectedLang === 'da' ? ' [User language: Danish — respond in Danish]' : ' [User language: English — respond in English]';
+    var imageHint = attachedImage ? ' [User uploaded image available at ' + attachedImage.url + ' — reference it when planning content]' : '';
     var d = await apiFetch('/api/agent/chat', 'POST', {
-      message: text,
+      message: attachedImage ? historyContent : text,
       history: _ag.history.slice(-10),
-      context: curPage + langHint + (agentName ? ' [Agent name: ' + agentName + ']' : ''),
+      context: curPage + langHint + imageHint + (agentName ? ' [Agent name: ' + agentName + ']' : ''),
       voice_mode: !!(fromVoice || _ag.voiceEnabled),
     });
     agRemoveTyping();
@@ -14396,6 +14505,72 @@ async function agSend(fromVoice) {
 function agChip(text) {
   document.getElementById('ag-input').value = text;
   agSend();
+}
+
+// ── Image upload (camera on mobile, file picker on desktop) ─────────────────
+async function agOnFileSelected(input) {
+  var file = input.files && input.files[0];
+  input.value = '';  // reset so picking the same file again still fires change
+  if (!file) return;
+  if (!file.type || file.type.indexOf('image/') !== 0) {
+    if (typeof toast === 'function') toast('Please choose an image file', 'error');
+    return;
+  }
+  // 10 MB sanity cap
+  if (file.size > 10 * 1024 * 1024) {
+    if (typeof toast === 'function') toast('Image is too large (max 10 MB)', 'error');
+    return;
+  }
+  agShowAttachPreview(file.name, 'uploading');
+  try {
+    var fd = new FormData();
+    fd.append('file', file);
+    var token = localStorage.getItem('ugv_token') || '';
+    var r = await fetch('/api/content/upload_image', {
+      method: 'POST',
+      headers: token ? {'Authorization': 'Bearer ' + token} : {},
+      body: fd
+    });
+    var d = await r.json();
+    if (!r.ok || !d.url) {
+      agClearAttachPreview();
+      if (typeof toast === 'function') toast(d.detail || 'Upload failed', 'error');
+      return;
+    }
+    _ag.pendingImage = {url: d.url, name: file.name};
+    agShowAttachPreview(file.name, 'ready', d.url);
+    var inp = document.getElementById('ag-input');
+    if (inp && !inp.value) {
+      inp.placeholder = 'Describe what you want me to do with this photo…';
+      inp.focus();
+    }
+  } catch(e) {
+    agClearAttachPreview();
+    if (typeof toast === 'function') toast('Upload error — please try again', 'error');
+  }
+}
+
+function agShowAttachPreview(name, state, url) {
+  var box = document.getElementById('ag-attach-preview');
+  if (!box) return;
+  var label = state === 'uploading' ? 'Uploading…' : '📎 Attached';
+  var thumb = url ? '<img src="' + url + '" alt="" style="width:34px;height:34px;border-radius:6px;object-fit:cover;flex-shrink:0">' : '';
+  box.innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--tx2)">'
+    + thumb
+    + '<div style="flex:1;min-width:0"><div style="font-weight:700;color:var(--tx)">' + label + '</div>'
+    + '<div style="color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (name || '') + '</div></div>'
+    + '<button onclick="agClearAttachPreview()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:16px;line-height:1">✕</button>'
+    + '</div>';
+  box.style.display = 'block';
+}
+
+function agClearAttachPreview() {
+  _ag.pendingImage = null;
+  var box = document.getElementById('ag-attach-preview');
+  if (box) { box.innerHTML = ''; box.style.display = 'none'; }
+  var inp = document.getElementById('ag-input');
+  if (inp) inp.placeholder = 'Type or speak…';
 }
 
 // ── Mic / voice input (MediaRecorder → Whisper) ───────────────────────────────

@@ -821,6 +821,105 @@ async def quick_extend_plan_ep(req: Request, admin=Depends(require_owner)):
     return {"ok": True, "plan": plan, "days": days, "expires": billing["plan_expires"]}
 
 
+class BroadcastEmailRequest(BaseModel):
+    subject: str
+    message: str
+    plan_filter: Optional[str] = ""  # "" = all users; or a plan key
+    test_only: Optional[bool] = False  # send only to the requesting admin
+
+
+@router.post("/api/admin/broadcast_email")
+def admin_broadcast_email(req: BroadcastEmailRequest, admin=Depends(require_owner)):
+    from routes.email import send_system_email
+    subject = (req.subject or "").strip()
+    message = (req.message or "").strip()
+    if not subject or not message:
+        raise HTTPException(status_code=400, detail="Subject and message are required")
+    if len(subject) > 200:
+        raise HTTPException(status_code=400, detail="Subject is too long (max 200 chars)")
+
+    # Plain-text message → HTML with brand styling.
+    safe_message = (
+        message
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\n", "<br>")
+    )
+    html = (
+        '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+        '<style>'
+        'body{margin:0;padding:0;background:#080c18;font-family:Arial,sans-serif}'
+        '.wrap{max-width:560px;margin:40px auto;background:#0d1526;border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden}'
+        '.hdr{background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(124,58,237,.12));padding:30px 36px;text-align:center}'
+        '.logo{font-size:20px;font-weight:800;color:#f0f4f8}'
+        '.logo span{color:#00e5ff}'
+        '.body{padding:26px 36px;color:#a0b0c0;font-size:14px;line-height:1.7}'
+        '.footer{padding:16px 36px;font-size:11px;color:#3d4f61;border-top:1px solid rgba(255,255,255,.05);text-align:center}'
+        '</style></head><body>'
+        '<div class="wrap">'
+        '<div class="hdr"><div class="logo">Ugoin<span>g</span>Viral</div></div>'
+        '<div class="body">' + safe_message + '</div>'
+        '<div class="footer">UgoingViral · <a href="mailto:support@ugoingviral.com" style="color:#00e5ff">support@ugoingviral.com</a></div>'
+        '</div></body></html>'
+    )
+
+    users = load_users().get("users", [])
+
+    if req.test_only:
+        target_email = admin.get("email") or admin.get("display_email") or ""
+        if not target_email and admin.get("role") == "owner":
+            target_email = ADMIN_EMAIL
+        if not target_email:
+            raise HTTPException(status_code=400, detail="Admin account has no email on file")
+        ok = send_system_email(target_email, "[TEST] " + subject, html)
+        return {"ok": ok, "sent": 1 if ok else 0, "failed": 0 if ok else 1, "total": 1, "test_only": True, "to": target_email}
+
+    plan_filter = (req.plan_filter or "").strip().lower()
+
+    targets = []
+    for u in users:
+        if not isinstance(u, dict):
+            continue
+        if not u.get("is_active", True):
+            continue
+        email = (u.get("email") or "").strip()
+        if not email or "@" not in email or email.startswith("qa-"):
+            continue
+        if plan_filter:
+            try:
+                ustore = _load_user_store(u["id"])
+                user_plan = (ustore.get("billing", {}).get("plan") or "").lower()
+            except Exception:
+                user_plan = ""
+            if user_plan != plan_filter:
+                continue
+        targets.append(email)
+
+    # De-duplicate while preserving order.
+    seen = set()
+    deduped = []
+    for e in targets:
+        k = e.lower()
+        if k in seen:
+            continue
+        seen.add(k)
+        deduped.append(e)
+
+    sent = 0
+    failed = 0
+    for email in deduped:
+        try:
+            ok = send_system_email(email, subject, html)
+            if ok:
+                sent += 1
+            else:
+                failed += 1
+        except Exception:
+            failed += 1
+    return {"ok": True, "sent": sent, "failed": failed, "total": len(deduped), "plan_filter": plan_filter or "all"}
+
+
 @router.get("/api/admin/session_view")
 def session_view_ep(email: str, admin=Depends(require_owner)):
     users = load_users().get("users", [])
