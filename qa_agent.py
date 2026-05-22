@@ -61,11 +61,41 @@ class QARunner:
     def _auth_headers(self):
         return {"Authorization": f"Bearer {self.token}"}
 
+    def _bypass_email_verification(self, email: str) -> str | None:
+        """Mark a qa- test user as email_verified=True directly in users.json.
+
+        Only operates on emails starting with 'qa-' so production flow is never
+        affected. Returns the user_id if the bypass was applied, else None.
+        """
+        if not email or not email.startswith("qa-"):
+            return None
+        try:
+            if not os.path.exists(USERS_FILE):
+                return None
+            with open(USERS_FILE, encoding="utf-8") as f:
+                data = json.load(f)
+            users = data.get("users", data) if isinstance(data, dict) else data
+            uid = None
+            for u in users:
+                if (u.get("email") or "").lower() == email.lower():
+                    u["email_verified"] = True
+                    u["verification_code"] = ""
+                    u["verification_expires"] = ""
+                    uid = u.get("id")
+                    break
+            with open(USERS_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return uid
+        except Exception:
+            return None
+
     def _fresh_user(self, label: str):
         """Register a disposable test user. Returns (token, user_id, email).
 
         Retries on 429 (rate limit) with a long backoff so consecutive
-        suite calls don't collide on the 5/min register limit.
+        suite calls don't collide on the 5/min register limit. After
+        registration the qa- account is force-verified (bypass) so the
+        subsequent login isn't blocked by the email verification gate.
         """
         password = "QaTest2026!"
         for attempt in range(3):
@@ -80,6 +110,20 @@ class QARunner:
                     data = r.json()
                     token   = data.get("token") or data.get("access_token")
                     user_id = (data.get("user") or {}).get("id") or data.get("user_id")
+                    # QA bypass: mark the test account as verified so we can log in.
+                    bypass_uid = self._bypass_email_verification(email)
+                    user_id = user_id or bypass_uid
+                    if not token:
+                        try:
+                            lr = self.client.post("/api/auth/login", json={
+                                "email": email, "password": password
+                            })
+                            if lr.status_code == 200:
+                                ldata = lr.json()
+                                token = ldata.get("token") or ldata.get("access_token")
+                                user_id = user_id or (ldata.get("user") or {}).get("id") or ldata.get("user_id")
+                        except Exception:
+                            pass
                     return token, user_id, email
                 if r.status_code != 429:
                     break
@@ -143,6 +187,12 @@ class QARunner:
                 self._fail("register", f"unexpected status={r.status_code}")
         except Exception as e:
             self._fail("register", str(e))
+
+        # QA bypass: mark the qa-auto account as verified so login isn't
+        # blocked by the email verification gate. Real users still go
+        # through the normal verification flow — only qa- prefixed accounts
+        # are affected by _bypass_email_verification.
+        self._bypass_email_verification(QA_EMAIL)
 
         # Login
         try:

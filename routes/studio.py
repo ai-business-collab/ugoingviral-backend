@@ -18,7 +18,7 @@ router = APIRouter()
 RUNWAY_API_KEY    = os.getenv("RUNWAY_API_KEY", "")
 LUMA_API_KEY      = os.getenv("LUMA_API_KEY", "")
 REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
-# Higgsfield + Pika Labs (Pro+ video providers). Base URLs are env-configurable
+# Hyper Realistic + Premium Animation (Pro+ video providers). Base URLs are env-configurable
 # because both providers gate their public APIs and the canonical endpoint may
 # move; defaults below are the documented v1 paths as of May 2026.
 HIGGSFIELD_API_KEY = os.getenv("HIGGSFIELD_API_KEY", "")
@@ -943,7 +943,7 @@ def face_scene_presets(current_user: dict = Depends(get_current_user)):
     return {"presets": FACE_SCENE_PRESETS, "cost": FACE_SCENE_COST}
 
 
-# ── Higgsfield + Pika Labs (Pro+ premium video providers) ────────────────────
+# ── Hyper Realistic + Premium Animation (Pro+ premium video providers) ───────
 # Both follow a similar request shape: POST {prompt, duration, aspect_ratio}
 # with Bearer auth and return a JSON job descriptor. Provider URLs are
 # env-configurable so they can be retargeted without a code change.
@@ -1007,9 +1007,9 @@ def _charge_or_402(uid: str, amount: int) -> int:
 @router.post("/api/studio/higgsfield")
 async def higgsfield_generate(body: dict, current_user: dict = Depends(get_current_user)):
     if not _is_pro_plus(current_user["id"]):
-        raise HTTPException(status_code=403, detail="Higgsfield generation requires a paid plan")
+        raise HTTPException(status_code=403, detail="Hyper Realistic generation requires a paid plan")
     if not HIGGSFIELD_API_KEY:
-        raise HTTPException(status_code=503, detail="HIGGSFIELD_API_KEY not configured on the server")
+        raise HTTPException(status_code=503, detail="Hyper Realistic provider is not configured on the server")
     prompt, duration, aspect = _validate_video_payload(body)
 
     credits_left = _charge_or_402(current_user["id"], _VIDEO_CREDIT_COST)
@@ -1020,7 +1020,7 @@ async def higgsfield_generate(body: dict, current_user: dict = Depends(get_curre
         "metadata":     {"user_id": current_user["id"], "source": "ugoingviral"},
     }
     result = await _call_video_provider(
-        HIGGSFIELD_API_URL, HIGGSFIELD_API_KEY, payload, label="Higgsfield"
+        HIGGSFIELD_API_URL, HIGGSFIELD_API_KEY, payload, label="Hyper Realistic"
     )
     return {
         "provider":     "higgsfield",
@@ -1034,9 +1034,9 @@ async def higgsfield_generate(body: dict, current_user: dict = Depends(get_curre
 @router.post("/api/studio/pika")
 async def pika_generate(body: dict, current_user: dict = Depends(get_current_user)):
     if not _is_pro_plus(current_user["id"]):
-        raise HTTPException(status_code=403, detail="Pika Labs generation requires a paid plan")
+        raise HTTPException(status_code=403, detail="Premium Animation generation requires a paid plan")
     if not PIKA_API_KEY:
-        raise HTTPException(status_code=503, detail="PIKA_API_KEY not configured on the server")
+        raise HTTPException(status_code=503, detail="Premium Animation provider is not configured on the server")
     prompt, duration, aspect = _validate_video_payload(body)
 
     credits_left = _charge_or_402(current_user["id"], _VIDEO_CREDIT_COST)
@@ -1047,7 +1047,7 @@ async def pika_generate(body: dict, current_user: dict = Depends(get_current_use
         "user_id":      current_user["id"],
     }
     result = await _call_video_provider(
-        PIKA_API_URL, PIKA_API_KEY, payload, label="Pika Labs"
+        PIKA_API_URL, PIKA_API_KEY, payload, label="Premium Animation"
     )
     return {
         "provider":     "pika",

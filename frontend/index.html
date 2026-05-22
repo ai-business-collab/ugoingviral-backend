@@ -4367,16 +4367,16 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div id="studio-root"></div>
     <div id="studio-portrait-root" style="display:none"></div>
 
-    <!-- ══ Premium video providers (Higgsfield + Pika Labs) — any paid plan ══ -->
+    <!-- ══ Premium video providers (Hyper Realistic + Premium Animation) — any paid plan ══ -->
     <div id="studio-premium-card" style="display:none;margin-top:18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(0,229,255,.04));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-size:14px;font-weight:700;color:var(--tx)">✨ Premium video providers</div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Higgsfield + Pika Labs — included on any paid plan · 25 credits per generation</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation — included on any paid plan · 25 credits per generation</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('higgsfield')" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Higgsfield</button>
-          <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" style="background:rgba(255,255,255,.05);color:var(--tx3);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Pika Labs</button>
+          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('higgsfield')" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Hyper Realistic</button>
+          <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" style="background:rgba(255,255,255,.05);color:var(--tx3);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
         </div>
       </div>
       <div id="sp-locked" style="display:none;padding:18px;background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:10px;text-align:center;font-size:13px;color:var(--tx3)">
@@ -4408,7 +4408,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-          <div style="font-size:11px;color:var(--tx3)">Provider: <span id="sp-provider-lbl" style="color:#a78bfa;font-weight:700">Higgsfield</span> · Cost: <strong style="color:var(--ac)">25 credits</strong></div>
+          <div style="font-size:11px;color:var(--tx3)">Provider: <span id="sp-provider-lbl" style="color:#a78bfa;font-weight:700">Hyper Realistic</span> · Cost: <strong style="color:var(--ac)">25 credits</strong></div>
           <button class="btn bp bsm" id="sp-gen-btn" onclick="spGenerate()" style="font-size:13px;padding:8px 18px">✨ Generate video</button>
         </div>
         <div id="sp-result" style="display:none;margin-top:14px;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:12px;font-family:monospace;white-space:pre-wrap;max-height:260px;overflow:auto"></div>
@@ -5699,33 +5699,78 @@ function switchSubAccount(id) {
   if (_currentPage === 'subaccounts') loadSubAccounts();
 }
 
+// ── Single source of truth for credits ────────────────────────────────────────
+// Every credit-display surface on the platform (top bar badge, pipeline widget,
+// billing page, dashboard, agent panel) reads from /api/billing/credits via
+// this one function. Call refreshCredits() after any action that can change the
+// balance and every widget updates in lock-step.
+async function refreshCredits() {
+  try {
+    const d = await apiFetch('/api/billing/credits');
+    _applyCreditsToUI(d.credits, d.max_credits);
+    return d;
+  } catch (e) { return null; }
+}
+
+function _applyCreditsToUI(credits, maxCredits) {
+  const max = maxCredits || 1;
+  const pct = Math.round((credits / max) * 100);
+  const col = pct < 20 ? 'var(--red)' : pct < 50 ? 'var(--or)' : 'var(--ac)';
+  const setNum = (id) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = credits; el.style.color = col; }
+  };
+  const setMax = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '/ ' + maxCredits;
+  };
+  // Top bar badge
+  setNum('billing-credits');
+  // Dashboard
+  setNum('dash-credits');
+  setMax('dash-credits-max');
+  const db = document.getElementById('dash-credits-bar');
+  if (db) { db.style.width = pct + '%'; db.style.background = `linear-gradient(90deg,${col},var(--ac2))`; }
+  // Billing page
+  setNum('billing-page-credits');
+  setMax('billing-page-max');
+  const bpb = document.getElementById('billing-page-bar');
+  if (bpb) { bpb.style.width = pct + '%'; bpb.style.background = `linear-gradient(90deg,${col},var(--ac2))`; }
+  // Pipeline widget
+  const pn = document.getElementById('pipe-credits-num');
+  const pm = document.getElementById('pipe-credits-max');
+  const pb = document.getElementById('pipe-credits-bar-fill');
+  if (pn) { pn.textContent = credits; pn.style.color = col; }
+  if (pm) pm.textContent = '/ ' + maxCredits;
+  if (pb) {
+    pb.style.width = Math.min(100, pct) + '%';
+    pb.style.background = pct < 20
+      ? 'linear-gradient(90deg,var(--red),#f97316)'
+      : `linear-gradient(90deg,${col},var(--ac2))`;
+  }
+  // Agent panel (if it shows a balance)
+  setNum('agent-credits');
+  // Low-credits banner on billing page
+  const banner = document.getElementById('low-credits-banner');
+  if (banner) banner.style.display = pct < 20 ? '' : 'none';
+}
+
 async function loadBilling() {
   // Track if we're in a sub-account context (no bonuses there)
   try { const _ctx = await apiFetch('/api/user/profile'); window._isSubAccount = !!_ctx.is_sub_account; } catch(e) {}
   try {
     const d = await apiFetch('/api/billing/plan');
-    const pct = Math.round((d.credits / d.max_credits) * 100);
-    const col = pct < 20 ? 'var(--red)' : pct < 50 ? 'var(--or)' : 'var(--ac)';
-    // topbar badge
+    // Update credit displays from the single source of truth so the badge,
+    // pipeline widget, dashboard and billing page can't drift apart.
+    _applyCreditsToUI(d.credits, d.max_credits);
+    // Plan-name labels (these aren't credit numbers, so keep them here).
     const lbl = document.getElementById('billing-plan-label');
-    const cr = document.getElementById('billing-credits');
     if (lbl) lbl.textContent = d.plan_name;
-    if (cr) { cr.textContent = d.credits; cr.style.color = col; }
-    // dashboard bar
     const dn = document.getElementById('dash-plan-name');
-    const dc = document.getElementById('dash-credits');
-    const dm = document.getElementById('dash-credits-max');
-    const db = document.getElementById('dash-credits-bar');
     if (dn) dn.textContent = d.plan_name;
-    if (dc) { dc.textContent = d.credits; dc.style.color = col; }
-    if (dm) dm.textContent = '/ ' + d.max_credits;
-    if (db) { db.style.width = pct + '%'; db.style.background = `linear-gradient(90deg,${col},var(--ac2))`; }
-    // Single source of truth: also refresh the pipeline credits widget so
-    // the header and the pipeline page can't drift apart.
-    if (typeof pipeUpdateCreditsUI === 'function') pipeUpdateCreditsUI(d.credits, d.max_credits);
     // Set current plan *before* refreshing the premium gate so it reads the fresh value.
     window._currentPlan = d.plan || 'free';
-    // Premium-provider card visibility (Higgsfield/Pika).
+    // Premium-provider card visibility.
     if (typeof refreshStudioPremiumGate === 'function') refreshStudioPremiumGate();
     // billing page
     renderBillingPage(d);
@@ -12387,42 +12432,26 @@ var _pipeSessionCredits = 0;
 
 // ── Credits widget ────────────────────────────────────────────────────────────
 async function pipeLoadCredits() {
-  try {
-    // Use the same endpoint as the header so credits never disagree.
-    const d = await apiFetch('/api/billing/plan');
-    pipeUpdateCreditsUI(d.credits, d.max_credits);
-    // Also refresh the header in case it was stale.
-    const cr = document.getElementById('billing-credits');
-    if (cr) cr.textContent = d.credits;
-  } catch(e) {}
+  // Pull the canonical balance and update every credit display at once so the
+  // pipeline widget, top-bar badge and billing page never disagree.
+  await refreshCredits();
+  const sessEl = document.getElementById('pipe-session-used');
+  if (sessEl) sessEl.textContent = _pipeSessionCredits + ' credits';
 }
 
 function pipeUpdateCreditsUI(left, max) {
-  const numEl  = document.getElementById('pipe-credits-num');
-  const maxEl  = document.getElementById('pipe-credits-max');
-  const barEl  = document.getElementById('pipe-credits-bar-fill');
-  if (!numEl) return;
-  numEl.textContent = left ?? '–';
-  if (max) {
-    maxEl.textContent = '/ ' + max;
-    barEl.style.width = Math.min(100, Math.round((left / max) * 100)) + '%';
-    barEl.style.background = left < max * 0.2
-      ? 'linear-gradient(90deg,var(--red),#f97316)'
-      : 'linear-gradient(90deg,var(--ac),var(--ac2))';
-  }
+  // Kept for backwards-compatibility — delegates to the single source of truth
+  // so any external callers still update every widget in lock-step.
+  if (left == null && max == null) { refreshCredits(); return; }
+  _applyCreditsToUI(left ?? 0, max ?? 0);
   const sessEl = document.getElementById('pipe-session-used');
   if (sessEl) sessEl.textContent = _pipeSessionCredits + ' credits';
 }
 
 function _pipeTrackCredits(res) {
-  if (res && res.credits_left !== undefined) {
-    const billing = JSON.parse(localStorage.getItem('ugv_billing') || '{}');
-    const cost = (billing.max_credits || 0) - res.credits_left - ((billing.credits_left || res.credits_left) - res.credits_left);
-    const prev = _pipeSessionCredits;
-    // simpler: track by difference
-    pipeUpdateCreditsUI(res.credits_left, null);
-    document.getElementById('pipe-credits-num').textContent = res.credits_left;
-  }
+  // After any action that touched credits, re-sync every display from the API
+  // rather than trusting a single response field — keeps everything coherent.
+  refreshCredits();
 }
 
 function _pipeCreditCost(action) {
@@ -16339,7 +16368,7 @@ function _renderAnBestPost(bp) {
 }
 
 
-// ── Studio premium providers (Higgsfield + Pika Labs) ────────────────────────
+// ── Studio premium providers (Hyper Realistic + Premium Animation) ───────────
 window._spProvider = 'higgsfield';
 
 function refreshStudioPremiumGate() {
@@ -16364,7 +16393,7 @@ function spSwitchProvider(provider) {
   }
   setActive(higgs, provider === 'higgsfield');
   setActive(pika,  provider === 'pika');
-  if (lbl) lbl.textContent = provider === 'pika' ? 'Pika Labs' : 'Higgsfield';
+  if (lbl) lbl.textContent = provider === 'pika' ? 'Premium Animation' : 'Hyper Realistic';
 }
 
 async function spGenerate() {
@@ -16376,15 +16405,13 @@ async function spGenerate() {
   var aspect_ratio = document.getElementById('sp-aspect').value || '9:16';
   btn.disabled = true; btn.textContent = '⏳ Generating…';
   out.style.display = 'block';
-  out.textContent   = 'Sending request to ' + (window._spProvider === 'pika' ? 'Pika Labs' : 'Higgsfield') + '…';
+  out.textContent   = 'Sending request to ' + (window._spProvider === 'pika' ? 'Premium Animation' : 'Hyper Realistic') + '…';
   try {
     var endpoint = window._spProvider === 'pika' ? '/api/studio/pika' : '/api/studio/higgsfield';
     var r = await apiFetch(endpoint, 'POST', {prompt: prompt, duration: duration, aspect_ratio: aspect_ratio});
     out.textContent = JSON.stringify(r, null, 2);
-    if (r && typeof r.credits_left === 'number') {
-      var cr = document.getElementById('billing-credits');
-      if (cr) cr.textContent = r.credits_left;
-    }
+    // Sync every credit display from the canonical endpoint after a generation.
+    if (typeof refreshCredits === 'function') refreshCredits();
     toast('✅ Generation queued — 25 credits charged', 'success');
   } catch (e) {
     out.textContent = '⚠️ ' + (e.message || 'Generation failed');

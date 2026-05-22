@@ -641,6 +641,26 @@ def get_plan(current_user: dict = Depends(get_current_user)):
     }
 
 
+@router.get("/api/billing/credits")
+def get_credits(current_user: dict = Depends(get_current_user)):
+    """Single source of truth for the credit balance.
+
+    Every UI surface (top bar, pipeline, billing page, dashboard, agent)
+    reads from here so the displayed number can't drift between widgets.
+    """
+    billing = store.get("billing", {})
+    plan_key = billing.get("plan", "free")
+    plan_info = PLANS.get(plan_key, PLANS["free"])
+    credits = billing.get("credits", plan_info["credits"])
+    max_credits = plan_info["credits"]
+    return {
+        "credits": credits,
+        "max_credits": max_credits,
+        "plan": plan_key,
+        "plan_name": plan_info["name"],
+    }
+
+
 @router.get("/api/billing/usage")
 def get_usage(current_user: dict = Depends(get_current_user)):
     billing = store.get("billing", {})
