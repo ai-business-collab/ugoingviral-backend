@@ -434,6 +434,29 @@ nav {
 .price-card.featured .price-cta { background: #fff; color: #000; }
 .price-card.featured .price-cta:hover { background: #eee; }
 
+/* ── Plan cards on mobile ─────────────────────────────────────
+   Touch devices can't trigger :hover reliably so the extra
+   features and growth-plan extras stay collapsed and users
+   never see them. Below 768px, force everything open by
+   default and disable the hover transition so the cards
+   render their full content on first paint. */
+@media (max-width: 768px) {
+  .price-features-extra {
+    max-height: none !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    transition: none !important;
+  }
+  .price-card-growth .growth-extras-inline,
+  .growth-extras-inline {
+    max-height: none !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    margin-top: 14px !important;
+    transition: none !important;
+  }
+}
+
 /* ── LOGIN MODAL ── */
 .modal-overlay {
   position: fixed;
@@ -2095,6 +2118,38 @@ function onbFinish() {
     .catch(function() {});
 })();
 </script>
+
+<!-- ══ GDPR cookie consent banner ═══════════════════════════════════════════ -->
+<div id="ugv-cookie-consent" style="display:none;position:fixed;left:16px;right:16px;bottom:16px;z-index:99999;max-width:760px;margin:0 auto;background:#0f172a;color:#e2e8f0;border:1px solid rgba(148,163,184,.25);border-radius:14px;padding:16px 18px;box-shadow:0 12px 32px rgba(0,0,0,.45);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:13px;line-height:1.5">
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div style="flex:1;min-width:220px">
+      <div style="font-weight:700;color:#fff;margin-bottom:4px">🍪 We use cookies</div>
+      <div style="color:#cbd5e1">We use cookies to keep you signed in and to improve UgoingViral. By accepting you agree to our use of cookies for analytics and preferences. See our <a href="/privacy.html" style="color:#7dd3fc;text-decoration:underline">Privacy Policy</a>.</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" onclick="ugvCookieConsent('declined')" style="background:transparent;color:#e2e8f0;border:1px solid rgba(148,163,184,.4);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">Decline</button>
+      <button type="button" onclick="ugvCookieConsent('accepted')" style="background:linear-gradient(135deg,#22d3ee,#7c3aed);color:#0b1020;border:0;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:800;cursor:pointer">Accept</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  function show(){ var el=document.getElementById('ugv-cookie-consent'); if(el) el.style.display='block'; }
+  function hide(){ var el=document.getElementById('ugv-cookie-consent'); if(el) el.style.display='none'; }
+  window.ugvCookieConsent = function(choice){
+    try { localStorage.setItem('ugv_cookie_consent', choice); } catch(e){}
+    hide();
+  };
+  try {
+    if (!localStorage.getItem('ugv_cookie_consent')) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', show);
+      } else { show(); }
+    }
+  } catch(e){}
+})();
+</script>
+
 </body>
 </html>
 <style>

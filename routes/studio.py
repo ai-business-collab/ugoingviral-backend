@@ -948,9 +948,16 @@ def face_scene_presets(current_user: dict = Depends(get_current_user)):
 # with Bearer auth and return a JSON job descriptor. Provider URLs are
 # env-configurable so they can be retargeted without a code change.
 
-_VIDEO_CREDIT_COST = 25  # generation cost — same order of magnitude as Runway/Luma
-_ASPECT_OK         = {"16:9", "9:16", "1:1", "4:5"}
-_DUR_MIN, _DUR_MAX = 1, 10
+# Per-duration pricing for premium video providers (Hyper Realistic + Premium
+# Animation). Only the three documented durations are accepted; durations
+# outside the table are rejected by _validate_video_payload below.
+_VIDEO_CREDIT_PRICES = {5: 50, 10: 85, 15: 100}
+_ASPECT_OK           = {"16:9", "9:16", "1:1", "4:5"}
+_ALLOWED_DURATIONS   = sorted(_VIDEO_CREDIT_PRICES.keys())
+
+
+def _video_credit_cost(duration: int) -> int:
+    return _VIDEO_CREDIT_PRICES[duration]
 
 
 async def _call_video_provider(url: str, api_key: str, payload: dict, *, label: str) -> dict:
@@ -973,7 +980,7 @@ async def _call_video_provider(url: str, api_key: str, payload: dict, *, label: 
         return {"raw": r.text[:500]}
 
 
-def _validate_video_payload(body: dict) -> tuple[str, int, str]:
+def _validate_video_payload(body: dict) -> tuple[str, int, str, str]:
     prompt = (body.get("prompt") or "").strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt required")
@@ -983,12 +990,21 @@ def _validate_video_payload(body: dict) -> tuple[str, int, str]:
         duration = int(body.get("duration") or 5)
     except (TypeError, ValueError):
         raise HTTPException(status_code=400, detail="duration must be an integer")
-    if not _DUR_MIN <= duration <= _DUR_MAX:
-        raise HTTPException(status_code=400, detail=f"duration must be {_DUR_MIN}–{_DUR_MAX} seconds")
+    if duration not in _VIDEO_CREDIT_PRICES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"duration must be one of {_ALLOWED_DURATIONS} seconds",
+        )
     aspect = (body.get("aspect_ratio") or "16:9").strip()
     if aspect not in _ASPECT_OK:
         raise HTTPException(status_code=400, detail=f"aspect_ratio must be one of {sorted(_ASPECT_OK)}")
-    return prompt, duration, aspect
+    # Optional reference image (from saved character library). When present
+    # it's forwarded to the provider so generations can match an established
+    # character look across a mini-series.
+    image_url = (body.get("image_url") or "").strip()
+    if image_url and len(image_url) > 2000:
+        raise HTTPException(status_code=400, detail="image_url too long")
+    return prompt, duration, aspect, image_url
 
 
 def _charge_or_402(uid: str, amount: int) -> int:
@@ -1010,23 +1026,26 @@ async def higgsfield_generate(body: dict, current_user: dict = Depends(get_curre
         raise HTTPException(status_code=403, detail="Hyper Realistic generation requires a paid plan")
     if not HIGGSFIELD_API_KEY:
         raise HTTPException(status_code=503, detail="Hyper Realistic provider is not configured on the server")
-    prompt, duration, aspect = _validate_video_payload(body)
+    prompt, duration, aspect, image_url = _validate_video_payload(body)
 
-    credits_left = _charge_or_402(current_user["id"], _VIDEO_CREDIT_COST)
+    cost = _video_credit_cost(duration)
+    credits_left = _charge_or_402(current_user["id"], cost)
     payload = {
         "prompt":       prompt,
         "duration":     duration,
         "aspect_ratio": aspect,
         "metadata":     {"user_id": current_user["id"], "source": "ugoingviral"},
     }
+    if image_url:
+        payload["image_url"] = image_url
     result = await _call_video_provider(
         HIGGSFIELD_API_URL, HIGGSFIELD_API_KEY, payload, label="Hyper Realistic"
     )
     return {
         "provider":     "higgsfield",
         "credits_left": credits_left,
-        "credits_used": _VIDEO_CREDIT_COST,
-        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect},
+        "credits_used": cost,
+        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "image_url": image_url},
         "result":       result,
     }
 
@@ -1037,22 +1056,25 @@ async def pika_generate(body: dict, current_user: dict = Depends(get_current_use
         raise HTTPException(status_code=403, detail="Premium Animation generation requires a paid plan")
     if not PIKA_API_KEY:
         raise HTTPException(status_code=503, detail="Premium Animation provider is not configured on the server")
-    prompt, duration, aspect = _validate_video_payload(body)
+    prompt, duration, aspect, image_url = _validate_video_payload(body)
 
-    credits_left = _charge_or_402(current_user["id"], _VIDEO_CREDIT_COST)
+    cost = _video_credit_cost(duration)
+    credits_left = _charge_or_402(current_user["id"], cost)
     payload = {
         "prompt":       prompt,
         "duration":     duration,
         "aspect_ratio": aspect,
         "user_id":      current_user["id"],
     }
+    if image_url:
+        payload["image_url"] = image_url
     result = await _call_video_provider(
         PIKA_API_URL, PIKA_API_KEY, payload, label="Premium Animation"
     )
     return {
         "provider":     "pika",
         "credits_left": credits_left,
-        "credits_used": _VIDEO_CREDIT_COST,
-        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect},
+        "credits_used": cost,
+        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "image_url": image_url},
         "result":       result,
     }

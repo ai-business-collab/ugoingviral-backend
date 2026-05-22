@@ -956,3 +956,59 @@ Rules:
 @router.get("/api/content/plans")
 def get_content_plans(current_user: dict = Depends(get_current_user)):
     return {"plans": store.get("content_plans", [])}
+
+
+# ── Character library (mini-series reference characters) ─────────────────────
+# Lets users save a generated video's reference image as a named character so
+# they can reuse the same look across episodes. Per-user storage via the
+# per-user store proxy.
+
+_MAX_CHARACTERS = 50
+
+
+class CharacterRequest(BaseModel):
+    name: str
+    image_url: str
+    description: str = ""
+
+
+@router.get("/api/content/characters")
+def list_characters(current_user: dict = Depends(get_current_user)):
+    return {"characters": store.get("characters", [])}
+
+
+@router.post("/api/content/characters")
+def save_character(req: CharacterRequest, current_user: dict = Depends(get_current_user)):
+    name = (req.name or "").strip()
+    image_url = (req.image_url or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    if not image_url:
+        raise HTTPException(status_code=400, detail="image_url required")
+    if len(name) > 80:
+        raise HTTPException(status_code=400, detail="name too long (max 80 chars)")
+    characters = store.get("characters", [])
+    if len(characters) >= _MAX_CHARACTERS:
+        raise HTTPException(status_code=400, detail=f"Character library full (max {_MAX_CHARACTERS})")
+    char = {
+        "id":          uuid.uuid4().hex,
+        "name":        name,
+        "image_url":   image_url,
+        "description": (req.description or "").strip()[:500],
+        "created_at":  datetime.now().isoformat(),
+    }
+    characters.append(char)
+    store["characters"] = characters
+    save_store()
+    return {"character": char, "characters": characters}
+
+
+@router.delete("/api/content/characters/{character_id}")
+def delete_character(character_id: str, current_user: dict = Depends(get_current_user)):
+    characters = store.get("characters", [])
+    new_list = [c for c in characters if c.get("id") != character_id]
+    if len(new_list) == len(characters):
+        raise HTTPException(status_code=404, detail="Character not found")
+    store["characters"] = new_list
+    save_store()
+    return {"characters": new_list}
