@@ -1,79 +1,5 @@
 [
   {
-    "run_id": "20260515T040002Z",
-    "timestamp": "2026-05-15T04:00:02.769760Z",
-    "passed": 8,
-    "failed": 0,
-    "total": 8,
-    "all_pass": true,
-    "tests": [
-      {
-        "name": "health_check",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 6,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "user_signup",
-        "passed": true,
-        "status_code": 400,
-        "response_time": 7,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "user_login",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 357,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "billing_plan",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 295,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "admin_login",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 12,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "autopilot_toggle",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 19,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "content_engine",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 15,
-        "error": null,
-        "note": ""
-      },
-      {
-        "name": "upload_media",
-        "passed": true,
-        "status_code": 200,
-        "response_time": 16,
-        "error": null,
-        "note": ""
-      }
-    ]
-  },
-  {
     "timestamp": "2026-05-15T04:04:02.025917Z",
     "platform": "ugoingviral",
     "passed": 76,
@@ -11001,6 +10927,251 @@
         "name": "s10_credits_deducted",
         "status": "PASS",
         "detail": "--skip-ai (credit check skipped)"
+      },
+      {
+        "name": "s11_register",
+        "status": "FAIL",
+        "detail": "could not create test user"
+      },
+      {
+        "name": "s12_register",
+        "status": "FAIL",
+        "detail": "could not create test user"
+      },
+      {
+        "name": "s13_register",
+        "status": "FAIL",
+        "detail": "could not create test user"
+      },
+      {
+        "name": "s14_register",
+        "status": "FAIL",
+        "detail": "could not create test user"
+      },
+      {
+        "name": "s15_register",
+        "status": "FAIL",
+        "detail": "could not create test user"
+      },
+      {
+        "name": "s16_agent_fab_present",
+        "status": "PASS",
+        "detail": "FAB+panel+agToggle all in bundle"
+      },
+      {
+        "name": "s16_missing_content_register",
+        "status": "FAIL",
+        "detail": "could not create test user"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-22T00:32:21.368120Z",
+    "platform": "ugoingviral",
+    "passed": 37,
+    "failed": 10,
+    "total": 47,
+    "all_pass": false,
+    "results": [
+      {
+        "name": "register",
+        "status": "PASS",
+        "detail": "status=400"
+      },
+      {
+        "name": "login",
+        "status": "PASS",
+        "detail": "user_id=e7ffa80f-39cd-4cf8-904d-fea0b380e683"
+      },
+      {
+        "name": "jwt_validation",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "plan_is_free",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "max_credits_50",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "free_videos_3",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "download_locked",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "gated_api/studio",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "gated_api/generate",
+        "status": "PASS",
+        "detail": "status=404"
+      },
+      {
+        "name": "content_generate",
+        "status": "PASS",
+        "detail": "status=200"
+      },
+      {
+        "name": "plan_price_free",
+        "status": "PASS",
+        "detail": "$0"
+      },
+      {
+        "name": "plan_price_starter",
+        "status": "PASS",
+        "detail": "$49"
+      },
+      {
+        "name": "plan_price_basic",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "plan_price_growth",
+        "status": "PASS",
+        "detail": "$299"
+      },
+      {
+        "name": "plan_price_pro",
+        "status": "PASS",
+        "detail": "$149"
+      },
+      {
+        "name": "plan_price_elite",
+        "status": "PASS",
+        "detail": "$229"
+      },
+      {
+        "name": "plan_price_personal",
+        "status": "PASS",
+        "detail": "$459"
+      },
+      {
+        "name": "plan_price_agency",
+        "status": "PASS",
+        "detail": "$199"
+      },
+      {
+        "name": "credit_pkg_100",
+        "status": "PASS",
+        "detail": "$8"
+      },
+      {
+        "name": "credit_pkg_350",
+        "status": "PASS",
+        "detail": "$24"
+      },
+      {
+        "name": "credit_pkg_700",
+        "status": "PASS",
+        "detail": "$44"
+      },
+      {
+        "name": "credit_pkg_1500",
+        "status": "PASS",
+        "detail": "$79"
+      },
+      {
+        "name": "yearly_math_pro",
+        "status": "PASS",
+        "detail": "$149 * 0.8 = $119"
+      },
+      {
+        "name": "health_root",
+        "status": "PASS",
+        "detail": "status=200 4ms"
+      },
+      {
+        "name": "health_health",
+        "status": "PASS",
+        "detail": "status=200 4ms"
+      },
+      {
+        "name": "health_api/auth/login",
+        "status": "PASS",
+        "detail": "status=422 4ms"
+      },
+      {
+        "name": "health_api/billing/plan",
+        "status": "PASS",
+        "detail": "status=401 4ms"
+      },
+      {
+        "name": "health_api/billing/usage",
+        "status": "PASS",
+        "detail": "status=401 4ms"
+      },
+      {
+        "name": "s6_setup",
+        "status": "FAIL",
+        "detail": "could not register fresh test user"
+      },
+      {
+        "name": "s7_voices_list",
+        "status": "PASS",
+        "detail": "31 voices returned"
+      },
+      {
+        "name": "s7_voice_settings_defaults",
+        "status": "PASS",
+        "detail": "voice_enabled=False voice_id present"
+      },
+      {
+        "name": "s7_voice_enable",
+        "status": "PASS",
+        "detail": "voice_enabled=true saved"
+      },
+      {
+        "name": "s7_voice_enabled_persisted",
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "name": "s8_free_watermark_on",
+        "status": "PASS",
+        "detail": "watermark=True on free plan"
+      },
+      {
+        "name": "s8_free_watermark_locked",
+        "status": "PASS",
+        "detail": "correctly blocked with 403"
+      },
+      {
+        "name": "s8_paid_setup",
+        "status": "FAIL",
+        "detail": "could not create paid test user"
+      },
+      {
+        "name": "s9_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s9_paid_setup",
+        "status": "FAIL",
+        "detail": "could not create paid test user"
+      },
+      {
+        "name": "s10_free_blocked",
+        "status": "PASS",
+        "detail": "403 on free plan"
+      },
+      {
+        "name": "s10_paid_setup",
+        "status": "FAIL",
+        "detail": "could not create paid test user"
       },
       {
         "name": "s11_register",
