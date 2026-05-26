@@ -148,34 +148,19 @@ def tiktok_verify4():
 @app.get("/privacy")
 def privacy_policy():
     from fastapi.responses import HTMLResponse
-    html = """<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Privacy Policy - UgoingViral</title></head>
-<body style="font-family:sans-serif;max-width:800px;margin:40px auto;padding:20px">
-<h1>Privacy Policy</h1>
-<p>Last updated: April 2026</p>
-<h2>Data We Collect</h2>
-<p>UgoingViral collects information you provide when connecting your social media accounts, including access tokens required to post content on your behalf.</p>
-<h2>How We Use Your Data</h2>
-<p>We use your data solely to provide the services you request, including automated social media posting and content generation.</p>
-<h2>Data Deletion</h2>
-<p>To request deletion of your data, contact us at: support@ugoingviral.com</p>
-<h2>Contact</h2>
-<p>Email: support@ugoingviral.com</p>
-</body></html>"""
+    import os
+    path = os.path.join(os.path.dirname(__file__), "frontend", "privacy.html")
+    with open(path, "r") as f:
+        html = f.read()
     return HTMLResponse(content=html)
 
 @app.get("/terms")
 def terms():
     from fastapi.responses import HTMLResponse
-    html = """<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Terms of Service - UgoingViral</title></head>
-<body style="font-family:sans-serif;max-width:800px;margin:40px auto;padding:20px">
-<h1>Terms of Service</h1>
-<p>Last updated: April 2026</p>
-<p>By using UgoingViral, you agree to use the service in accordance with all applicable laws and platform terms of service.</p>
-<h2>Contact</h2>
-<p>Email: support@ugoingviral.com</p>
-</body></html>"""
+    import os
+    path = os.path.join(os.path.dirname(__file__), "frontend", "terms.html")
+    with open(path, "r") as f:
+        html = f.read()
     return HTMLResponse(content=html)
 
 @app.get("/data-deletion")
