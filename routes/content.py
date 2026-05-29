@@ -420,16 +420,31 @@ async def generate_video(req: VideoGenerateRequest):
 
 
 @router.get("/api/content/videos")
-async def get_videos(platform: str = ""):
-    pipeline = store.get("content_pipeline", {})
-    if platform:
-        return {"videos": pipeline.get(platform, {}).get("videos", [])}
-    all_videos = []
+async def get_videos(platform: str = "", kind: str = ""):
+    """List the user's generated videos across all providers.
+
+    - `generated_videos` is the unified history written by studio_generate,
+      higgsfield and pika.
+    - Legacy `content_pipeline` videos (older content engine output) are
+      merged in for backwards compat.
+    - Optional `kind` filters by normal / hyper_realistic / premium_animation.
+    - Optional `platform` filters legacy pipeline entries by platform.
+    """
+    out = []
+    for v in store.get("generated_videos", []) or []:
+        if kind and v.get("kind") != kind:
+            continue
+        out.append(v)
+
+    pipeline = store.get("content_pipeline", {}) or {}
     for p, data in pipeline.items():
-        for v in data.get("videos", []):
-            all_videos.append({**v, "platform": p})
-    all_videos.sort(key=lambda x: x.get("generated_at", ""), reverse=True)
-    return {"videos": all_videos}
+        if platform and p != platform:
+            continue
+        for v in (data.get("videos") or []):
+            out.append({**v, "platform": p, "kind": v.get("kind") or "legacy"})
+
+    out.sort(key=lambda x: x.get("created_at") or x.get("generated_at") or "", reverse=True)
+    return {"videos": out}
 
 
 # ── ElevenLabs Voiceover ──────────────────────────────────────────────────────

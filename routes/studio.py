@@ -39,11 +39,25 @@ ELEVENLABS_KEY    = os.getenv("ELEVENLABS_API_KEY", "")
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads", "studio")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
+
+def _save_generated_video(uid: str, entry: dict) -> None:
+    """Append a generated video to the user's unified `generated_videos` list.
+    Keeps the most recent 100 entries so /api/content/videos can list past
+    generations across all providers (Normal / Hyper Realistic / Premium
+    Animation)."""
+    if not uid:
+        return
+    ustore = _load_user_store(uid)
+    history = ustore.setdefault("generated_videos", [])
+    history.insert(0, entry)
+    ustore["generated_videos"] = history[:100]
+    _save_user_store(uid, ustore)
+
 STUDIO_COSTS = {
-    "video_5s":         VIDEO_GENERATION["image_to_video_10s"] // 2,  # 125
-    "video_10s":        VIDEO_GENERATION["image_to_video_10s"],        # 250
-    "video_15s":        VIDEO_GENERATION["image_to_video_10s"] + VIDEO_GENERATION["extended_per_10s"],   # 300
-    "video_30s":        VIDEO_GENERATION["image_to_video_10s"] + VIDEO_GENERATION["extended_per_10s"] * 2,  # 350
+    "video_5s":         40,
+    "video_10s":        60,
+    "video_15s":        80,
+    "video_30s":        120,
     "extra_scene":      VIDEO_GENERATION["extended_per_10s"],          # 50
     "clip_cut":          5,
     "format_convert":    2,
@@ -125,12 +139,13 @@ class EnhancePromptsRequest(BaseModel):
 # ── Credit helper ──────────────────────────────────────────────────────────────
 
 def _calc_cost(req: StudioRequest) -> int:
+    """Flat per-duration pricing for Normal video: 5s=40, 10s=60, 15s=80.
+    Provider does not affect base cost. Extras (extra scenes, product
+    overlay, voice-over, prompt enhance) still apply additively."""
     cost = 0
     for i, scene in enumerate(req.scenes):
         dur_key = f"video_{scene.duration}s" if f"video_{scene.duration}s" in STUDIO_COSTS else "video_5s"
         base = STUDIO_COSTS[dur_key]
-        prov = PROVIDERS.get(req.provider, PROVIDERS["runway"])
-        base = int(base * prov["cost_multiplier"])
         if i > 0:
             base += STUDIO_COSTS["extra_scene"]
         if req.product_title or req.product_description:
@@ -665,6 +680,29 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
         "created_at": datetime.now().isoformat(),
     })
     ustore["studio_history"] = history[:50]
+
+    # Unified generated_videos list (consumed by /api/content/videos + "My
+    # Videos" panel). One row per produced clip — the assembled multi-scene
+    # video if present, otherwise each individual scene.
+    gv = ustore.setdefault("generated_videos", [])
+    now_iso = datetime.now().isoformat()
+    primary_url = assembled_url or next((v["url"] for v in result_videos if v.get("url")), None)
+    if primary_url:
+        gv.insert(0, {
+            "id":           session_id,
+            "url":          primary_url,
+            "provider":     provider,
+            "kind":         "normal",
+            "mode":         req.mode,
+            "duration":     req.scenes[0].duration if req.scenes else None,
+            "aspect_ratio": req.aspect_ratio,
+            "prompt":       (req.scenes[0].prompt if req.scenes else "")[:240],
+            "scenes":       len(req.scenes),
+            "credits_used": cost,
+            "created_at":   now_iso,
+        })
+        ustore["generated_videos"] = gv[:100]
+
     _save_user_store(uid, ustore)
 
     return {
@@ -1020,6 +1058,32 @@ def _charge_or_402(uid: str, amount: int) -> int:
     return billing["credits"]
 
 
+def _extract_video_url(result: dict) -> Optional[str]:
+    """Best-effort extraction of a playable URL from a provider response.
+    Provider schemas vary, so probe common shapes and return the first match."""
+    if not isinstance(result, dict):
+        return None
+    for key in ("video_url", "url", "output_url", "result_url"):
+        v = result.get(key)
+        if isinstance(v, str) and v.startswith(("http://", "https://")):
+            return v
+    for parent_key in ("output", "video", "result", "data"):
+        parent = result.get(parent_key)
+        if isinstance(parent, dict):
+            inner = _extract_video_url(parent)
+            if inner:
+                return inner
+        if isinstance(parent, list) and parent:
+            first = parent[0]
+            if isinstance(first, str) and first.startswith(("http://", "https://")):
+                return first
+            if isinstance(first, dict):
+                inner = _extract_video_url(first)
+                if inner:
+                    return inner
+    return None
+
+
 @router.post("/api/studio/higgsfield")
 async def higgsfield_generate(body: dict, current_user: dict = Depends(get_current_user)):
     if not _is_pro_plus(current_user["id"]):
@@ -1041,6 +1105,18 @@ async def higgsfield_generate(body: dict, current_user: dict = Depends(get_curre
     result = await _call_video_provider(
         HIGGSFIELD_API_URL, HIGGSFIELD_API_KEY, payload, label="Hyper Realistic"
     )
+    _save_generated_video(current_user["id"], {
+        "id":           uuid.uuid4().hex[:10],
+        "url":          _extract_video_url(result),
+        "provider":     "higgsfield",
+        "kind":         "hyper_realistic",
+        "duration":     duration,
+        "aspect_ratio": aspect,
+        "prompt":       prompt[:240],
+        "credits_used": cost,
+        "created_at":   datetime.now().isoformat(),
+        "raw_result":   result if isinstance(result, dict) else None,
+    })
     return {
         "provider":     "higgsfield",
         "credits_left": credits_left,
@@ -1071,6 +1147,18 @@ async def pika_generate(body: dict, current_user: dict = Depends(get_current_use
     result = await _call_video_provider(
         PIKA_API_URL, PIKA_API_KEY, payload, label="Premium Animation"
     )
+    _save_generated_video(current_user["id"], {
+        "id":           uuid.uuid4().hex[:10],
+        "url":          _extract_video_url(result),
+        "provider":     "pika",
+        "kind":         "premium_animation",
+        "duration":     duration,
+        "aspect_ratio": aspect,
+        "prompt":       prompt[:240],
+        "credits_used": cost,
+        "created_at":   datetime.now().isoformat(),
+        "raw_result":   result if isinstance(result, dict) else None,
+    })
     return {
         "provider":     "pika",
         "credits_left": credits_left,

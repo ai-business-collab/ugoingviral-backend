@@ -1289,6 +1289,50 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 }
 
 /* ═══════════════════════════════════════════════════════
+   MOBILE — 480px and below: phone-portrait specifics
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* iOS Safari zooms in if input font-size < 16px on focus — pin to 16px
+     for all text-like inputs to keep the form usable on phones. */
+  input[type=text], input[type=email], input[type=password], input[type=number],
+  input[type=search], input[type=url], input[type=tel], textarea, select,
+  .fi, .fs, .fta { font-size: 16px !important; }
+
+  /* Tap targets — keep buttons reachable for thumbs (~44px). */
+  .btn, .btn.bsm, .ptab, .gtab, .qact, .ar-btn, .scene-dur-btn,
+  .clip-fmt-btn, .pipe-plat-btn {
+    min-height: 40px !important;
+    line-height: 1.2;
+  }
+
+  /* Topbar wraps cleanly with consistent gaps. */
+  .topbar { flex-wrap: wrap !important; row-gap: 6px !important; }
+  .topbar-right { width: auto; }
+
+  /* My Videos grid: 2 cards per row on phones. */
+  #my-videos-list {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  #my-videos-list video { aspect-ratio: 9/16 !important; }
+
+  /* Studio cost breakdown rows stay readable */
+  .credit-calc-row { font-size: 12px !important; }
+
+  /* Connect cards and similar action rows stack on phones */
+  .concard, .trow { padding: 12px !important; }
+
+  /* Sidebar drawer: a bit narrower on small phones */
+  .sb { width: 220px !important; }
+
+  /* Modals already become full-screen sheets at 600px; tighten padding */
+  .modal-box > * { box-sizing: border-box; }
+
+  /* Hide non-essential decoration to free up width */
+  .logo-tag { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════
    MOBILE — 400px and below: ultra-narrow trims
    ═══════════════════════════════════════════════════════ */
 @media (max-width: 400px) {
@@ -1300,6 +1344,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   .page { padding: 8px !important; }
   .wrap { padding: 10px 8px !important; }
   .btn { font-size: 11px; padding: 7px 10px; }
+  /* My Videos: stack to 1 col on very narrow */
+  #my-videos-list { grid-template-columns: 1fr !important; }
 }
 
 .safety-btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border-b);background:var(--glass);color:var(--tx2);transition:all .2s;font-family:'Outfit',sans-serif}
@@ -4442,6 +4488,20 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div id="studio-watermark-notice" style="display:none;background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;margin-top:12px;font-size:12px;color:var(--tx2)">
         🔖 <strong>Free plan:</strong> Your generated videos will include a "Made with UgoingViral" watermark. <span style="cursor:pointer;color:var(--ac);text-decoration:underline" onclick="nav('billing')">Upgrade to remove it →</span>
       </div>
+
+      <!-- ══ My Videos — past generations across Normal / Hyper / Premium ══ -->
+      <div id="studio-my-videos-card" style="margin-top:18px;background:var(--s);border:1px solid var(--border);border-radius:14px;padding:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:15px;font-weight:800;color:var(--tx)">📚 My Videos</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:2px">All your past video generations — Normal, Hyper Realistic and Premium Animation</div>
+          </div>
+          <button class="btn bg bsm" onclick="loadMyVideos()" style="font-size:12px;padding:6px 12px">🔄 Refresh</button>
+        </div>
+        <div id="my-videos-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+          <div style="grid-column:1/-1;font-size:12px;color:var(--tx3);text-align:center;padding:14px">Loading…</div>
+        </div>
+      </div>
   </div>
 
   <!-- ══ CONTENT PIPELINE ══════════════════════════════════════════════════ -->
@@ -6416,9 +6476,9 @@ var _studio = {
 };
 
 var STUDIO_MODES = [
-  { key:'single',    icon:'🎬', name:'Quick Video',      desc:'Én scene, hurtig generering',         cost:'20-80 cr' },
-  { key:'series',    icon:'🎞️', name:'Mini-serie',       desc:'2-6 scenes in one continuous video',cost:'from 80 cr' },
-  { key:'animation', icon:'✨', name:'Animation',        desc:'Animeret stil med konsistent karakter',cost:'fra 80 cr' },
+  { key:'single',    icon:'🎬', name:'Quick Video',      desc:'Én scene, hurtig generering',          cost:'40-80 cr' },
+  { key:'series',    icon:'🎞️', name:'Mini-serie',       desc:'2-6 scenes in one continuous video',   cost:'from 90 cr' },
+  { key:'animation', icon:'✨', name:'Animation',        desc:'Animeret stil med konsistent karakter', cost:'' },
 ];
 
 var STUDIO_AR = [
@@ -6436,6 +6496,54 @@ async function studioInit() {
     } catch(e) {}
   }
   studioRender();
+  loadMyVideos();
+}
+
+async function loadMyVideos() {
+  const list = document.getElementById('my-videos-list');
+  if (!list) return;
+  list.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--tx3);text-align:center;padding:14px">Loading…</div>';
+  try {
+    const r = await apiFetch('/api/content/videos', 'GET', null, false);
+    const videos = (r && r.videos) || [];
+    if (!videos.length) {
+      list.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--tx3);text-align:center;padding:24px">No videos yet — generate one above and it will appear here.</div>';
+      return;
+    }
+    const kindLabel = {normal:'Normal', hyper_realistic:'Hyper Realistic', premium_animation:'Premium Animation', legacy:'Legacy'};
+    const kindColor = {normal:'var(--ac)', hyper_realistic:'#a78bfa', premium_animation:'#f472b6', legacy:'var(--tx3)'};
+    list.innerHTML = videos.slice(0, 24).map(v => {
+      const k = v.kind || 'normal';
+      const url = v.url || (v.assembled_url || '');
+      const created = (v.created_at || v.generated_at || '').slice(0, 16).replace('T', ' ');
+      const dur = v.duration ? `${v.duration}s` : '';
+      const credits = (typeof v.credits_used === 'number') ? `${v.credits_used} cr` : '';
+      const prompt = (v.prompt || '').slice(0, 80);
+      const player = url
+        ? `<video src="${url}" controls preload="metadata" style="width:100%;aspect-ratio:9/16;object-fit:cover;background:#000;border-radius:8px 8px 0 0"></video>`
+        : `<div style="width:100%;aspect-ratio:9/16;background:var(--s2);border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3)">⏳ Processing…</div>`;
+      const downloadBtn = url
+        ? `<a href="${url}" download class="btn bg bsm" style="font-size:10px;padding:4px 8px;text-decoration:none">⬇️</a>`
+        : '';
+      return `<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        ${player}
+        <div style="padding:8px 10px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="font-size:10px;font-weight:700;color:${kindColor[k]||'var(--tx2)'}">${kindLabel[k]||k}</span>
+            ${dur ? `<span style="font-size:10px;color:var(--tx3)">· ${dur}</span>` : ''}
+            ${credits ? `<span style="font-size:10px;color:var(--tx3);margin-left:auto">${credits}</span>` : ''}
+          </div>
+          <div style="font-size:11px;color:var(--tx2);line-height:1.3;height:28px;overflow:hidden;text-overflow:ellipsis">${_escHtml(prompt)}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--tx3)">
+            <span>${created}</span>
+            ${downloadBtn}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--red);text-align:center;padding:14px">Could not load videos.</div>';
+  }
 }
 
 function studioRender() {
@@ -6629,7 +6737,7 @@ function studioSceneCard(scene, idx) {
     </div>
     <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">⏱️ Varighed</div>
     <div class="scene-dur-btns">
-      ${[5,10,15].map(d => `<div class="scene-dur-btn ${scene.duration===d?'active':''}" onclick="studioSetDur(${idx},${d})">${d}s ${d===5?'(20cr)':d===10?'(35cr)':'(40cr)'}</div>`).join('')}
+      ${[5,10,15].map(d => `<div class="scene-dur-btn ${scene.duration===d?'active':''}" onclick="studioSetDur(${idx},${d})">${d}s ${d===5?'(40cr)':d===10?'(60cr)':'(80cr)'}</div>`).join('')}
     </div>
     <div class="fg" style="margin-top:10px">
       <label class="fl" style="font-size:10px">Stil hint (valgfri)</label>
@@ -6783,14 +6891,13 @@ async function studioCalcCost() {
   let lines = [];
   let total = 0;
   const costs = _studio.providers?.costs || {};
-  const prov = _studio.providers?.providers?.[_studio.provider] || {};
-  const mult = prov.cost_multiplier || 1;
 
   _studio.scenes.forEach((s, i) => {
     const durKey = `video_${s.duration}s`;
-    const baseCosts = {'video_5s':20,'video_10s':35,'video_15s':40,'video_30s':80};
-    let c = Math.round((baseCosts[durKey]||20) * mult);
-    if (i > 0) c += (costs.extra_scene || 15);
+    // Must match STUDIO_COSTS in routes/studio.py — flat per-duration pricing.
+    const baseCosts = {'video_5s':40,'video_10s':60,'video_15s':80,'video_30s':120};
+    let c = baseCosts[durKey] || 40;
+    if (i > 0) c += (costs.extra_scene || 50);
     if (_studio.productTitle) c += (costs.product_overlay || 5);
     lines.push({label: _studio.scenes.length > 1 ? `Scene ${i+1} (${s.duration}s)` : `Video (${s.duration}s)`, val: c});
     total += c;
@@ -6899,6 +7006,7 @@ async function studioGenerate() {
     _studio.generating = false;
     toast(`✅ Video${totalScenes>1?' serie':''} genereret! ${result.credits_used} cr brugt`, 'success');
     studioRender();
+    loadMyVideos();
 
     // First video bonus
     checkAndClaimBonus('first_video');
@@ -16513,6 +16621,7 @@ async function spGenerate() {
       result:       r && r.result,
     };
     if (typeof spShowSaveCharacter === 'function') spShowSaveCharacter();
+    if (typeof loadMyVideos === 'function') loadMyVideos();
     toast('✅ Generation queued — ' + charged + ' credits charged', 'success');
   } catch (e) {
     out.textContent = '⚠️ ' + (e.message || 'Generation failed');
