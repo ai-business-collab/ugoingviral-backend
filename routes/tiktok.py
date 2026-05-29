@@ -81,6 +81,23 @@ async def tiktok_oauth_callback(code: str = "", error: str = "", state: str = ""
 
         username = user_info.get("display_name", "") or user_info.get("username", open_id)
 
+        now = datetime.utcnow().isoformat()
+
+        # Primary store: a single grouped tiktok dict with all token data.
+        store["tiktok"] = {
+            "connected":            True,
+            "username":             username,
+            "open_id":              open_id,
+            "access_token":         access_token,
+            "refresh_token":        refresh_token,
+            "token_expiry":         expires_at,
+            "refresh_token_expiry": refresh_exp,
+            "connected_at":         now,
+            "last_sync":            now,
+        }
+
+        # Keep the legacy flat keys in settings up-to-date so older readers
+        # (e.g. routes/tiktok.py:tiktok_post, analytics, scheduler) keep working.
         s = store.setdefault("settings", {})
         s["tiktok_api_connected"]    = True
         s["tiktok_access_token"]     = access_token
@@ -89,8 +106,9 @@ async def tiktok_oauth_callback(code: str = "", error: str = "", state: str = ""
         s["tiktok_expires_at"]       = expires_at
         s["tiktok_refresh_expires"]  = refresh_exp
         s["tiktok_username"]         = username
-        s["tiktok_connected_at"]     = datetime.utcnow().isoformat()
-        s["tiktok_last_sync"]        = datetime.utcnow().isoformat()
+        s["tiktok_connected_at"]     = now
+        s["tiktok_last_sync"]        = now
+
         conns = store.setdefault("connections", {})
         conns["tiktok"] = {"username": username, "connected": True}
         store["connections"] = conns
@@ -105,41 +123,64 @@ async def tiktok_oauth_callback(code: str = "", error: str = "", state: str = ""
 
 @router.get("/api/tiktok/status")
 async def tiktok_status():
-    s = store.get("settings", {})
-    connected = s.get("tiktok_api_connected", False)
-    username  = s.get("tiktok_username", "")
-    expires   = s.get("tiktok_expires_at", "")
-    access    = s.get("tiktok_access_token", "")
-    refresh   = s.get("tiktok_refresh_token", "")
+    """Return TikTok connection status. `connected` is true only when an
+    access_token exists AND is not expired — auto-refreshing first if a
+    refresh_token is available."""
+    tt = store.get("tiktok") or {}
+    s  = store.get("settings", {})
 
-    # Proactively refresh if token is close to expiry — TikTok access tokens
-    # last ~24h, so the UI would flip to "expired" daily without this.
-    valid = bool(connected and access)
-    if connected and refresh and expires:
+    # Read from the grouped dict first, fall back to legacy flat keys so
+    # accounts connected before the schema change keep working.
+    access  = tt.get("access_token")  or s.get("tiktok_access_token", "")
+    refresh = tt.get("refresh_token") or s.get("tiktok_refresh_token", "")
+    expires = tt.get("token_expiry")  or s.get("tiktok_expires_at", "")
+    username = tt.get("username") or s.get("tiktok_username", "")
+
+    if not access:
+        return {"connected": False, "username": username, "token_expiry": expires}
+
+    def _is_expired(exp_iso: str) -> bool:
+        if not exp_iso:
+            return False
         try:
-            from tiktok_api import refresh_token_if_needed
-            new_token, new_refresh, new_exp = await refresh_token_if_needed(access, refresh, expires)
-            if new_exp:
-                s["tiktok_access_token"]  = new_token
-                s["tiktok_refresh_token"] = new_refresh or refresh
-                s["tiktok_expires_at"]    = new_exp
-                s["tiktok_last_sync"]     = datetime.utcnow().isoformat()
-                save_store()
-                expires = new_exp
-                valid = True
+            return datetime.fromisoformat(exp_iso) <= datetime.utcnow()
+        except Exception:
+            return False
+
+    expired = _is_expired(expires)
+    if expired and refresh:
+        try:
+            from tiktok_api import refresh_access_token
+            data = await refresh_access_token(refresh)
+            access  = data.get("access_token", access)
+            refresh = data.get("refresh_token", refresh)
+            expires = data.get("access_token_expires_at", expires)
+            now = datetime.utcnow().isoformat()
+            tt_new = dict(tt)
+            tt_new.update({
+                "connected":     True,
+                "access_token":  access,
+                "refresh_token": refresh,
+                "token_expiry":  expires,
+                "last_sync":     now,
+            })
+            store["tiktok"] = tt_new
+            s["tiktok_access_token"]  = access
+            s["tiktok_refresh_token"] = refresh
+            s["tiktok_expires_at"]    = expires
+            s["tiktok_last_sync"]     = now
+            save_store()
+            expired = _is_expired(expires)
         except Exception as e:
             add_log(f"⚠️ TikTok auto-refresh fejl: {e}", "error")
-            try:
-                if datetime.fromisoformat(expires) < datetime.utcnow():
-                    valid = False
-            except Exception:
-                valid = False
 
+    connected = bool(access) and not expired
     return {
-        "connected": bool(connected),
-        "valid": valid,
-        "username": username,
-        "expires_at": expires,
+        "connected":   connected,
+        "username":    username,
+        "open_id":     tt.get("open_id") or s.get("tiktok_open_id", ""),
+        "token_expiry": expires,
+        "expires_at":  expires,  # legacy field name for older frontend code
     }
 
 
@@ -148,6 +189,10 @@ async def tiktok_disconnect():
     for key in ("tiktok_api_connected", "tiktok_access_token", "tiktok_refresh_token",
                 "tiktok_open_id", "tiktok_expires_at", "tiktok_refresh_expires", "tiktok_username"):
         store.get("settings", {}).pop(key, None)
+    try:
+        del store["tiktok"]
+    except KeyError:
+        pass
     conns = store.get("connections", {})
     conns.pop("tiktok", None)
     save_store()

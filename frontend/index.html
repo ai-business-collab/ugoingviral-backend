@@ -9667,24 +9667,24 @@ async function checkYouTubeAPIStatus() {
     const statusEl = document.getElementById('yt-api-status');
     const cs = document.getElementById('cs-youtube');
     const card = document.getElementById('con-youtube');
-    const expired = r.connected && r.expires_at
-      ? new Date(r.expires_at).getTime() < Date.now()
-      : false;
-    const ok = !!r.connected && r.valid !== false && !expired;
+    // Backend returns connected=true only when token exists AND is not expired.
+    // A previous expires_at with connected=false signals an expired session.
+    const exp = r.token_expiry || r.expires_at || '';
+    const wasConnected = !!exp;
     if (r.connected) {
       if (statusEl) statusEl.style.display = 'block';
       const ch = document.getElementById('yt-api-channel');
       if (ch) ch.textContent = r.channel_name || r.channel_id || 'YouTube';
       const sy = document.getElementById('yt-api-synced');
       if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
-      if (cs) {
-        cs.textContent = ok ? '✅ Connected' : '⚠️ Token expired — Reconnect';
-        cs.className = 'constatus ' + (ok ? 'yes' : 'no');
-      }
-      if (card) card.classList.toggle('ok', ok);
+      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
+      if (card) card.classList.add('ok');
     } else {
       if (statusEl) statusEl.style.display = 'none';
-      if (cs) { cs.textContent = '❌ Not connected'; cs.className = 'constatus no'; }
+      if (cs) {
+        cs.textContent = wasConnected ? '⚠️ Token expired — Reconnect' : '❌ Not connected';
+        cs.className = 'constatus no';
+      }
       if (card) card.classList.remove('ok');
     }
   } catch(e) {}
@@ -9795,24 +9795,22 @@ async function checkTikTokAPIStatus() {
     const statusEl = document.getElementById('tt-api-status');
     const cs = document.getElementById('cs-tiktok');
     const card = document.getElementById('con-tiktok');
-    const expired = r.connected && r.expires_at
-      ? new Date(r.expires_at).getTime() < Date.now()
-      : false;
-    const ok = !!r.connected && r.valid !== false && !expired;
+    const exp = r.token_expiry || r.expires_at || '';
+    const wasConnected = !!exp;
     if (r.connected) {
       if (statusEl) statusEl.style.display = 'block';
       const u = document.getElementById('tt-api-username');
       if (u) u.textContent = '@' + (r.username || r.open_id || 'TikTok');
       const sy = document.getElementById('tt-api-synced');
       if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
-      if (cs) {
-        cs.textContent = ok ? '✅ Connected' : '⚠️ Token expired — Reconnect';
-        cs.className = 'constatus ' + (ok ? 'yes' : 'no');
-      }
-      if (card) card.classList.toggle('ok', ok);
+      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
+      if (card) card.classList.add('ok');
     } else {
       if (statusEl) statusEl.style.display = 'none';
-      if (cs) { cs.textContent = '❌ Not connected'; cs.className = 'constatus no'; }
+      if (cs) {
+        cs.textContent = wasConnected ? '⚠️ Token expired — Reconnect' : '❌ Not connected';
+        cs.className = 'constatus no';
+      }
       if (card) card.classList.remove('ok');
     }
   } catch(e) {}

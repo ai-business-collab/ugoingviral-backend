@@ -54,18 +54,39 @@ async def youtube_oauth_callback(code: str = "", error: str = "", state: str = "
         except Exception:
             pass
 
+        now = datetime.utcnow().isoformat()
+
+        # Google only returns refresh_token on the first consent. If the
+        # new response omits it, fall back to whatever we already had.
+        existing = store.get("youtube") or {}
+        old_refresh = existing.get("refresh_token") or store.get("settings", {}).get("youtube_refresh_token", "")
+        effective_refresh = refresh_token or old_refresh
+
+        # Primary store: a single grouped youtube dict with all token data.
+        store["youtube"] = {
+            "connected":     True,
+            "username":      channel_name,
+            "channel_id":    channel_id,
+            "access_token":  access_token,
+            "refresh_token": effective_refresh,
+            "token_expiry":  expires_at,
+            "connected_at":  now,
+            "last_sync":     now,
+        }
+
+        # Legacy flat keys in settings — kept in sync so existing consumers
+        # (post endpoint, scheduler, etc.) keep working.
         s = store.setdefault("settings", {})
         s["youtube_api_connected"]  = True
         s["youtube_access_token"]   = access_token
-        # Google only returns refresh_token on the first consent; preserve
-        # any previously-stored refresh_token if the new response omits it.
-        if refresh_token:
-            s["youtube_refresh_token"] = refresh_token
+        if effective_refresh:
+            s["youtube_refresh_token"] = effective_refresh
         s["youtube_expires_at"]     = expires_at
         s["youtube_channel_id"]     = channel_id
         s["youtube_channel_name"]   = channel_name
-        s["youtube_connected_at"]   = datetime.utcnow().isoformat()
-        s["youtube_last_sync"]      = datetime.utcnow().isoformat()
+        s["youtube_connected_at"]   = now
+        s["youtube_last_sync"]      = now
+
         conns = store.setdefault("connections", {})
         conns["youtube"] = {"username": channel_name, "connected": True}
         store["connections"] = conns
@@ -80,38 +101,70 @@ async def youtube_oauth_callback(code: str = "", error: str = "", state: str = "
 
 @router.get("/api/youtube/status")
 async def youtube_status():
-    s = store.get("settings", {})
-    connected = s.get("youtube_api_connected", False)
-    access    = s.get("youtube_access_token", "")
-    refresh   = s.get("youtube_refresh_token", "")
-    expires   = s.get("youtube_expires_at", "")
+    """Return YouTube connection status. `connected` is true only when an
+    access_token exists AND is not expired — auto-refreshing first via the
+    stored refresh_token when needed."""
+    yt = store.get("youtube") or {}
+    s  = store.get("settings", {})
 
-    valid = bool(connected and access)
-    if connected and refresh and expires:
+    access  = yt.get("access_token")  or s.get("youtube_access_token", "")
+    refresh = yt.get("refresh_token") or s.get("youtube_refresh_token", "")
+    expires = yt.get("token_expiry")  or s.get("youtube_expires_at", "")
+    channel_name = yt.get("username") or s.get("youtube_channel_name", "")
+    channel_id   = yt.get("channel_id") or s.get("youtube_channel_id", "")
+
+    if not access:
+        return {
+            "connected":    False,
+            "channel_name": channel_name,
+            "channel_id":   channel_id,
+            "token_expiry": expires,
+        }
+
+    def _is_expired(exp_iso: str) -> bool:
+        if not exp_iso:
+            return False
         try:
-            from youtube_api import refresh_token_if_needed
-            new_token, new_exp = await refresh_token_if_needed(access, refresh, expires)
-            if new_exp:
-                s["youtube_access_token"] = new_token
-                s["youtube_expires_at"]   = new_exp
-                s["youtube_last_sync"]    = datetime.utcnow().isoformat()
-                save_store()
-                expires = new_exp
-                valid = True
+            return datetime.fromisoformat(exp_iso) <= datetime.utcnow()
+        except Exception:
+            return False
+
+    expired = _is_expired(expires)
+    if expired and refresh:
+        try:
+            from youtube_api import refresh_access_token
+            data = await refresh_access_token(refresh)
+            access  = data.get("access_token", access)
+            # Google generally does not return a new refresh_token on refresh,
+            # but use it if present.
+            refresh = data.get("refresh_token") or refresh
+            expires = data.get("access_token_expires_at", expires)
+            now = datetime.utcnow().isoformat()
+            yt_new = dict(yt)
+            yt_new.update({
+                "connected":     True,
+                "access_token":  access,
+                "refresh_token": refresh,
+                "token_expiry":  expires,
+                "last_sync":     now,
+            })
+            store["youtube"] = yt_new
+            s["youtube_access_token"]  = access
+            s["youtube_refresh_token"] = refresh
+            s["youtube_expires_at"]    = expires
+            s["youtube_last_sync"]     = now
+            save_store()
+            expired = _is_expired(expires)
         except Exception as e:
             add_log(f"⚠️ YouTube auto-refresh fejl: {e}", "error")
-            try:
-                if datetime.fromisoformat(expires) < datetime.utcnow():
-                    valid = False
-            except Exception:
-                valid = False
 
+    connected = bool(access) and not expired
     return {
-        "connected":    bool(connected),
-        "valid":        valid,
-        "channel_name": s.get("youtube_channel_name", ""),
-        "channel_id":   s.get("youtube_channel_id", ""),
-        "expires_at":   expires,
+        "connected":    connected,
+        "channel_name": channel_name,
+        "channel_id":   channel_id,
+        "token_expiry": expires,
+        "expires_at":   expires,  # legacy field for older frontend code
     }
 
 
@@ -120,6 +173,10 @@ async def youtube_disconnect():
     for key in ("youtube_api_connected", "youtube_access_token", "youtube_refresh_token",
                 "youtube_expires_at", "youtube_channel_id", "youtube_channel_name"):
         store.get("settings", {}).pop(key, None)
+    try:
+        del store["youtube"]
+    except KeyError:
+        pass
     store.get("connections", {}).pop("youtube", None)
     save_store()
     add_log("YouTube API forbindelse fjernet", "info")
