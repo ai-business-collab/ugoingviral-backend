@@ -9658,27 +9658,34 @@ async function saveTwitterAPI() {
 
 async function connectYouTubeAPI() {
   toast('⏳ Opening YouTube login...', 'info');
-  window.location.href = '/api/youtube/connect';
+  openOAuthPopup('/api/youtube/connect', 'youtube_oauth', 'youtube', checkYouTubeAPIStatus);
 }
 
 async function checkYouTubeAPIStatus() {
   try {
     const r = await apiFetch('/api/youtube/status');
     const statusEl = document.getElementById('yt-api-status');
+    const cs = document.getElementById('cs-youtube');
+    const card = document.getElementById('con-youtube');
+    const expired = r.connected && r.expires_at
+      ? new Date(r.expires_at).getTime() < Date.now()
+      : false;
+    const ok = !!r.connected && r.valid !== false && !expired;
     if (r.connected) {
       if (statusEl) statusEl.style.display = 'block';
       const ch = document.getElementById('yt-api-channel');
       if (ch) ch.textContent = r.channel_name || r.channel_id || 'YouTube';
       const sy = document.getElementById('yt-api-synced');
       if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
-      const cs = document.getElementById('cs-youtube');
-      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
-      document.getElementById('con-youtube')?.classList.add('ok');
+      if (cs) {
+        cs.textContent = ok ? '✅ Connected' : '⚠️ Token expired — Reconnect';
+        cs.className = 'constatus ' + (ok ? 'yes' : 'no');
+      }
+      if (card) card.classList.toggle('ok', ok);
     } else {
       if (statusEl) statusEl.style.display = 'none';
-      const cs = document.getElementById('cs-youtube');
       if (cs) { cs.textContent = '❌ Not connected'; cs.className = 'constatus no'; }
-      document.getElementById('con-youtube')?.classList.remove('ok');
+      if (card) card.classList.remove('ok');
     }
   } catch(e) {}
 }
@@ -9746,28 +9753,67 @@ async function checkInstagramAPIStatus() {
 
 async function connectTikTokAPI() {
   toast('⏳ Opening TikTok login...', 'info');
-  window.location.href = '/api/tiktok/connect';
+  openOAuthPopup('/api/tiktok/connect', 'tiktok_oauth', 'tiktok', checkTikTokAPIStatus);
+}
+
+function openOAuthPopup(url, name, platform, onDone) {
+  const w = 600, h = 720;
+  const left = (window.screenX || 0) + Math.max(0, (window.outerWidth  - w) / 2);
+  const top  = (window.screenY || 0) + Math.max(0, (window.outerHeight - h) / 2);
+  const popup = window.open(url, name, `width=${w},height=${h},left=${left},top=${top}`);
+  if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+    toast('⚠️ Popup blocked — please allow popups and try again', 'error');
+    return;
+  }
+  // Listen for the callback page postMessage and refresh status when done.
+  function onMsg(ev) {
+    const d = ev.data || {};
+    if (d.type !== 'oauth_result' || d.platform !== platform) return;
+    window.removeEventListener('message', onMsg);
+    clearInterval(closedPoll);
+    if (d.status === 'connected') {
+      toast(`✅ ${platform} connected`, 'success');
+    } else {
+      toast(`❌ ${platform} connection failed`, 'error');
+    }
+    if (typeof onDone === 'function') setTimeout(onDone, 400);
+  }
+  window.addEventListener('message', onMsg);
+  // Fallback: if the user closes the popup manually, still refresh status.
+  const closedPoll = setInterval(() => {
+    if (popup.closed) {
+      clearInterval(closedPoll);
+      window.removeEventListener('message', onMsg);
+      if (typeof onDone === 'function') setTimeout(onDone, 400);
+    }
+  }, 800);
 }
 
 async function checkTikTokAPIStatus() {
   try {
     const r = await apiFetch('/api/tiktok/status');
     const statusEl = document.getElementById('tt-api-status');
+    const cs = document.getElementById('cs-tiktok');
+    const card = document.getElementById('con-tiktok');
+    const expired = r.connected && r.expires_at
+      ? new Date(r.expires_at).getTime() < Date.now()
+      : false;
+    const ok = !!r.connected && r.valid !== false && !expired;
     if (r.connected) {
       if (statusEl) statusEl.style.display = 'block';
       const u = document.getElementById('tt-api-username');
       if (u) u.textContent = '@' + (r.username || r.open_id || 'TikTok');
       const sy = document.getElementById('tt-api-synced');
       if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
-      const cs = document.getElementById('cs-tiktok');
-      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
-      const card = document.getElementById('con-tiktok');
-      if (card) card.classList.add('ok');
+      if (cs) {
+        cs.textContent = ok ? '✅ Connected' : '⚠️ Token expired — Reconnect';
+        cs.className = 'constatus ' + (ok ? 'yes' : 'no');
+      }
+      if (card) card.classList.toggle('ok', ok);
     } else {
       if (statusEl) statusEl.style.display = 'none';
-      const cs = document.getElementById('cs-tiktok');
       if (cs) { cs.textContent = '❌ Not connected'; cs.className = 'constatus no'; }
-      document.getElementById('con-tiktok')?.classList.remove('ok');
+      if (card) card.classList.remove('ok');
     }
   } catch(e) {}
 }

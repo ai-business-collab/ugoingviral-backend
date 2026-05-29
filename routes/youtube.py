@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
-from datetime import datetime
+from fastapi.responses import RedirectResponse, HTMLResponse
+from datetime import datetime, timedelta
 from services.store import store, save_store, add_log
+from routes.tiktok import _popup_close_html
 
 router = APIRouter()
 
@@ -23,21 +24,21 @@ async def youtube_oauth_start():
 
 @router.get("/api/youtube/callback")
 async def youtube_oauth_callback(code: str = "", error: str = "", state: str = ""):
-    """Google OAuth callback — exchange code for tokens og gem kanal info."""
+    """Google OAuth callback — exchange code for tokens, save both access +
+    refresh tokens to the user store, and close the popup."""
     if error or not code:
         add_log(f"❌ YouTube OAuth fejl: {error or 'ingen code'}", "error")
-        return RedirectResponse(url="/app?youtube=error")
+        return HTMLResponse(_popup_close_html("YouTube", "error", error or "no_code"))
 
     try:
         from youtube_api import exchange_code_for_token, get_channel_info
         from services.users import load_users
-        from services.store import set_user_context, reset_user_context, _save_user_store
-        # Find første aktive bruger som fallback
+        from services.store import set_user_context
         users_data = load_users()
         users = users_data.get("users", [])
         active_user = next((u for u in users if u.get("is_active")), None)
         if active_user:
-            tokens = set_user_context(active_user["id"])
+            set_user_context(active_user["id"])
         token_data = await exchange_code_for_token(code)
         access_token  = token_data.get("access_token", "")
         refresh_token = token_data.get("refresh_token", "")
@@ -53,34 +54,64 @@ async def youtube_oauth_callback(code: str = "", error: str = "", state: str = "
         except Exception:
             pass
 
-        store.get("settings", {})["youtube_api_connected"]  = True
-        store.get("settings", {})["youtube_access_token"]   = access_token
-        store.get("settings", {})["youtube_refresh_token"]  = refresh_token
-        store.get("settings", {})["youtube_expires_at"]     = expires_at
-        store.get("settings", {})["youtube_channel_id"]     = channel_id
-        store.get("settings", {})["youtube_channel_name"]   = channel_name
-        store.get("settings", {})["youtube_connected_at"]   = datetime.utcnow().isoformat()
-        store.get("settings", {})["youtube_last_sync"]      = datetime.utcnow().isoformat()
+        s = store.setdefault("settings", {})
+        s["youtube_api_connected"]  = True
+        s["youtube_access_token"]   = access_token
+        # Google only returns refresh_token on the first consent; preserve
+        # any previously-stored refresh_token if the new response omits it.
+        if refresh_token:
+            s["youtube_refresh_token"] = refresh_token
+        s["youtube_expires_at"]     = expires_at
+        s["youtube_channel_id"]     = channel_id
+        s["youtube_channel_name"]   = channel_name
+        s["youtube_connected_at"]   = datetime.utcnow().isoformat()
+        s["youtube_last_sync"]      = datetime.utcnow().isoformat()
         conns = store.setdefault("connections", {})
         conns["youtube"] = {"username": channel_name, "connected": True}
         store["connections"] = conns
         save_store()
         add_log(f"✅ YouTube API forbundet: {channel_name}", "success")
-        return RedirectResponse(url="/app?youtube=connected")
+        return HTMLResponse(_popup_close_html("YouTube", "connected", channel_name))
 
     except Exception as e:
         add_log(f"❌ YouTube OAuth fejl: {e}", "error")
-        return RedirectResponse(url="/app?youtube=error")
+        return HTMLResponse(_popup_close_html("YouTube", "error", str(e)))
 
 
 @router.get("/api/youtube/status")
 async def youtube_status():
     s = store.get("settings", {})
+    connected = s.get("youtube_api_connected", False)
+    access    = s.get("youtube_access_token", "")
+    refresh   = s.get("youtube_refresh_token", "")
+    expires   = s.get("youtube_expires_at", "")
+
+    valid = bool(connected and access)
+    if connected and refresh and expires:
+        try:
+            from youtube_api import refresh_token_if_needed
+            new_token, new_exp = await refresh_token_if_needed(access, refresh, expires)
+            if new_exp:
+                s["youtube_access_token"] = new_token
+                s["youtube_expires_at"]   = new_exp
+                s["youtube_last_sync"]    = datetime.utcnow().isoformat()
+                save_store()
+                expires = new_exp
+                valid = True
+        except Exception as e:
+            add_log(f"⚠️ YouTube auto-refresh fejl: {e}", "error")
+            try:
+                if datetime.fromisoformat(expires) < datetime.utcnow():
+                    valid = False
+            except Exception:
+                valid = False
+
     return {
-        "connected":    s.get("youtube_api_connected", False),
+        "connected":    bool(connected),
+        "valid":        valid,
         "channel_name": s.get("youtube_channel_name", ""),
         "channel_id":   s.get("youtube_channel_id", ""),
-        "expires_at":   s.get("youtube_expires_at", ""),
+        "expires_at":   expires,
     }
 
 
