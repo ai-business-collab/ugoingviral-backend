@@ -140,21 +140,27 @@ async def youtube_status():
             refresh = data.get("refresh_token") or refresh
             expires = data.get("access_token_expires_at", expires)
             now = datetime.utcnow().isoformat()
-            yt_new = dict(yt)
-            yt_new.update({
+            # Build the grouped dict from scratch when it was missing
+            # (legacy users) so it has the full channel info too.
+            yt_new = {
                 "connected":     True,
+                "username":      channel_name,
+                "channel_id":    channel_id,
                 "access_token":  access,
                 "refresh_token": refresh,
                 "token_expiry":  expires,
+                "connected_at":  yt.get("connected_at") or s.get("youtube_connected_at") or now,
                 "last_sync":     now,
-            })
+            }
             store["youtube"] = yt_new
+            s["youtube_api_connected"] = True
             s["youtube_access_token"]  = access
             s["youtube_refresh_token"] = refresh
             s["youtube_expires_at"]    = expires
             s["youtube_last_sync"]     = now
             save_store()
             expired = _is_expired(expires)
+            add_log("🔄 YouTube access token auto-refreshed", "info")
         except Exception as e:
             add_log(f"⚠️ YouTube auto-refresh fejl: {e}", "error")
 
