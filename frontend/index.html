@@ -3436,9 +3436,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <input class="fi" id="clib-search" placeholder="🔍 Search..." style="width:120px" oninput="libRender()">
         <button class="btn bg bsm" id="lib-shopify-btn" onclick="openShopifyGenerateModal()" style="display:none">🛒 Generate from Shopify products</button>
         <button class="btn bp bsm" onclick="document.getElementById('clib-file-upload').click()">⬆️ Upload</button>
-        <input type="file" id="clib-file-upload" accept="image/*,video/*" multiple style="display:none" onchange="clibUploadFiles(this)">
+        <input type="file" id="clib-file-upload" accept=".mp4,.mov,.mp3,.wav,.aac,.jpg,.jpeg,.png,.gif,.webp,video/*,image/*,audio/*" multiple style="display:none" onchange="clibUploadFiles(this)">
       </div>
     </div>
+    <div style="font-size:11px;color:var(--tx3);margin:-4px 0 12px">Upload your own files — mp4, mov, mp3, wav, aac, jpg, png, gif, webp · up to 500 MB each.</div>
+    <div id="clib-upload-zone"></div>
     <div class="clib-type-tabs" role="tablist">
       <div class="clib-type-tab on" data-t="videos"  onclick="libSetFolder(this)">🎬 Videos</div>
       <div class="clib-type-tab"    data-t="images"  onclick="libSetFolder(this)">🖼️ Images</div>
@@ -4493,6 +4495,19 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div id="studio-root"></div>
     <div id="studio-portrait-root" style="display:none"></div>
 
+    <!-- ══ Upload your own media ══════════════════════════════════════════ -->
+    <div id="studio-upload-card" style="margin-top:18px;background:var(--s);border:1px solid var(--border);border-radius:14px;padding:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--tx)">⬆️ Upload your own media</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Bring your own clips & images — mp4, mov, mp3, wav, aac, jpg, png, gif, webp · up to 500 MB each. Saved to your Content Library.</div>
+        </div>
+        <button class="btn bp bsm" onclick="document.getElementById('studio-file-upload').click()" style="font-weight:700">⬆️ Choose files</button>
+        <input type="file" id="studio-file-upload" accept=".mp4,.mov,.mp3,.wav,.aac,.jpg,.jpeg,.png,.gif,.webp,video/*,image/*,audio/*" multiple style="display:none" onchange="studioUploadFiles(this)">
+      </div>
+      <div id="studio-upload-zone"></div>
+    </div>
+
     <!-- ══ Premium video providers (Hyper Realistic + Premium Animation) — any paid plan ══ -->
     <div id="studio-premium-card" style="display:none;margin-top:18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(0,229,255,.04));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
@@ -5143,21 +5158,25 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   <div id="page-content-plan" class="page">
     <div style="max-width:1100px">
 
-      <!-- ── Weekly calendar — scheduled posts overview ───────────────── -->
+      <!-- ── Content calendar — scheduled posts overview (Week / Month) ──── -->
       <div class="card" style="margin-bottom:18px;padding:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div>
-            <div class="ctitle" style="margin:0">🗓️ This week's posts</div>
-            <div style="font-size:11px;color:var(--tx3);margin-top:2px" id="cp-week-range">Loading…</div>
+            <div class="ctitle" style="margin:0">🗓️ Content Calendar</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:2px" id="cp-cal-range">Loading…</div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button class="btn bg bsm" onclick="cpWeekShift(-1)" title="Previous week">‹</button>
-            <button class="btn bg bsm" onclick="cpWeekShift(0)" style="font-size:11px">Today</button>
-            <button class="btn bg bsm" onclick="cpWeekShift(1)" title="Next week">›</button>
-            <button class="btn bp bsm" onclick="nav('posting')" style="margin-left:8px;font-size:11px">+ New post</button>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <div style="display:inline-flex;background:var(--glass-b);border:1px solid var(--border);border-radius:9px;padding:2px">
+              <button id="cp-view-week" onclick="cpSetView('week')" style="border:none;border-radius:7px;font-size:11px;padding:5px 12px;cursor:pointer;font-weight:700;background:var(--ac);color:#001">Week</button>
+              <button id="cp-view-month" onclick="cpSetView('month')" style="border:none;border-radius:7px;font-size:11px;padding:5px 12px;cursor:pointer;font-weight:700;background:none;color:var(--tx3)">Month</button>
+            </div>
+            <button class="btn bg bsm" onclick="cpCalShift(-1)" title="Previous">‹</button>
+            <button class="btn bg bsm" onclick="cpCalShift(0)" style="font-size:11px">Today</button>
+            <button class="btn bg bsm" onclick="cpCalShift(1)" title="Next">›</button>
+            <button class="btn bp bsm" onclick="cpAddToPlan('')" style="margin-left:8px;font-size:11px;font-weight:700">+ Add to plan</button>
           </div>
         </div>
-        <div id="cp-week-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px"></div>
+        <div id="cp-week-grid"></div>
         <div style="display:flex;gap:14px;margin-top:12px;font-size:11px;color:var(--tx3);flex-wrap:wrap">
           <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ac);display:inline-block"></span> Scheduled</span>
           <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block"></span> Posted</span>
@@ -12921,22 +12940,100 @@ function clibRender() {
   grid.querySelectorAll('.clib-pipe').forEach(function(el) { el.addEventListener('click', function() { var f = clibFiles[parseInt(this.dataset.idx)]; if (!f) return; _pipeImgUrl = f.url; document.getElementById('pipe-img-thumb').src = f.url; document.getElementById('pipe-img-preview').style.display='block'; document.getElementById('pipe-img-zone').style.display='none'; nav('pipeline'); toast('🎬 Klar til pipeline','success'); }); });
 }
 
-async function clibUploadFiles(input) {
-  var folder = (document.getElementById('clib-folder-sel') || {}).value || '';
-  for (var i = 0; i < input.files.length; i++) {
-    var file = input.files[i];
+// ── User uploads (own videos / images / audio) — progress bar + preview ─────
+var MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
+
+// Stream one file to /api/library/upload with an upload-progress callback.
+function ugvUploadFile(file, onProgress) {
+  return new Promise(function(resolve, reject) {
     var fd = new FormData(); fd.append('file', file);
-    try {
-      var res = await fetch(API + '/api/upload/image', {method:'POST',body:fd});
-      var d = await res.json();
-      var t = file.type.startsWith('video') ? 'video' : 'image';
-      clibFiles.unshift({url:d.url,name:file.name,folder:folder,type:t});
-      libFiles = clibFiles.slice(); // sync back to shared lib
-      clibRender();
-      toast('📸 ' + file.name + ' uploadet!', 'success');
-    } catch(e) { toast('❌ Upload fejl','error'); }
-  }
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', API + '/api/library/upload', true);
+    var tok = localStorage.getItem('ugv_token') || '';
+    if (tok) xhr.setRequestHeader('Authorization', 'Bearer ' + tok);
+    xhr.upload.onprogress = function(e) {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = function() {
+      var d = {};
+      try { d = JSON.parse(xhr.responseText || '{}'); } catch(_) {}
+      if (xhr.status >= 200 && xhr.status < 300 && d.ok) resolve(d.item);
+      else reject(new Error((d && d.detail) || ('Upload failed (' + xhr.status + ')')));
+    };
+    xhr.onerror = function() { reject(new Error('Network error during upload')); };
+    xhr.send(fd);
+  });
+}
+
+function _ugvEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+// Adds a progress-bar row to `zone`; returns handlers to update / finish it.
+function _ugvProgressRow(zone, fileName) {
+  var row = document.createElement('div');
+  row.style.cssText = 'background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px';
+  row.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">' +
+      '<span style="font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">' + _ugvEsc(fileName) + '</span>' +
+      '<span class="ugv-pct" style="font-size:12px;font-weight:700;color:var(--ac)">0%</span>' +
+    '</div>' +
+    '<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div class="ugv-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .2s"></div></div>';
+  zone.appendChild(row);
+  var bar = row.querySelector('.ugv-bar');
+  var pct = row.querySelector('.ugv-pct');
+  return {
+    set: function(p){ bar.style.width = p + '%'; pct.textContent = p + '%'; },
+    done: function(item){
+      var url = item.local_url || '';
+      var mt = item.media_type || 'image';
+      var prev;
+      if (mt === 'video')      prev = '<video src="' + url + '" controls playsinline style="width:100%;max-height:180px;border-radius:8px;background:#000"></video>';
+      else if (mt === 'audio') prev = '<audio src="' + url + '" controls style="width:100%"></audio>';
+      else                     prev = '<img src="' + url + '" style="width:100%;max-height:180px;object-fit:contain;border-radius:8px;background:var(--glass-b)">';
+      row.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">' +
+          '<span style="font-size:12px;font-weight:700;color:var(--tx)">✅ ' + _ugvEsc(item.original_name || item.filename) + '</span>' +
+          '<span style="font-size:11px;color:var(--tx3)">' + (item.size_mb || 0) + ' MB</span>' +
+        '</div>' + prev;
+    },
+    fail: function(msg){
+      row.innerHTML = '<div style="font-size:12px;color:#ef4444">⚠️ ' + _ugvEsc(fileName) + ' — ' + _ugvEsc(msg) + '</div>';
+    }
+  };
+}
+
+async function _ugvHandleUploads(input, zoneId, onDone) {
+  var zone = document.getElementById(zoneId);
+  if (!zone) return;
+  var files = Array.prototype.slice.call(input.files || []);
   input.value = '';
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    if (file.size > MAX_UPLOAD_BYTES) { toast('❌ ' + file.name + ' is over 500 MB', 'error'); continue; }
+    var prog = _ugvProgressRow(zone, file.name);
+    try {
+      var item = await ugvUploadFile(file, function(p){ prog.set(p); });
+      prog.set(100);
+      prog.done(item);
+      toast('✅ ' + (item.original_name || 'File') + ' uploaded', 'success');
+      if (typeof onDone === 'function') onDone(item);
+    } catch (e) {
+      prog.fail(e.message || 'Upload failed');
+      toast('❌ ' + (e.message || 'Upload failed'), 'error');
+    }
+  }
+}
+
+// Video Studio upload handler.
+function studioUploadFiles(input) {
+  _ugvHandleUploads(input, 'studio-upload-zone', function(){
+    if (typeof loadMyVideos === 'function') loadMyVideos();
+  });
+}
+
+// Content Library upload handler — refreshes the library after each batch.
+async function clibUploadFiles(input) {
+  await _ugvHandleUploads(input, 'clib-upload-zone', null);
+  if (typeof libLoad === 'function') libLoad();
 }
 
 function clibRenderFolderSel() {
@@ -13064,10 +13161,11 @@ async function pipeLoadCredits() {
 }
 
 function pipeUpdateCreditsUI(left, max) {
-  // Kept for backwards-compatibility — delegates to the single source of truth
-  // so any external callers still update every widget in lock-step.
-  if (left == null && max == null) { refreshCredits(); return; }
-  _applyCreditsToUI(left ?? 0, max ?? 0);
+  // Always re-sync the whole UI from the canonical /api/billing/credits balance.
+  // Trusting the partial (left, null) values that pipeline actions pass in used
+  // to render a "/ 0" max and a wrong progress bar — refreshCredits() pulls the
+  // real remaining + max so the pipeline widget matches the actual balance.
+  refreshCredits();
   const sessEl = document.getElementById('pipe-session-used');
   if (sessEl) sessEl.textContent = _pipeSessionCredits + ' credits';
 }
@@ -18309,42 +18407,103 @@ var _cpPlatforms = [];
 
 var _cpContext = {products: [], mediaCount: 0, historyCount: 0};
 
-// ── Weekly scheduled-posts calendar (top of Content Plan page) ───────────────
-window._cpWeekOffset = 0;  // 0 = current week, -1 = previous, +1 = next
+// ── Content calendar (Week / Month) — scheduled-posts overview ───────────────
+window._cpView   = 'week';   // 'week' | 'month'
+window._cpOffset = 0;        // weeks (week view) or months (month view)
+
+var CP_PLAT_ICO = {instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'📘', twitter:'🐦', linkedin:'💼', pinterest:'📌', snapchat:'👻'};
+var CP_STATUS = {
+  scheduled:{c:'var(--ac)', t:'Scheduled'}, queued:{c:'var(--ac)', t:'Scheduled'},
+  pending:{c:'var(--ac)', t:'Scheduled'}, posting:{c:'#f59e0b', t:'Posting'},
+  posted:{c:'#22c55e', t:'Posted'}, published:{c:'#22c55e', t:'Posted'},
+  failed:{c:'#ef4444', t:'Failed'}, error:{c:'#ef4444', t:'Failed'},
+};
+function _cpStatus(s){ return CP_STATUS[(s || 'scheduled').toLowerCase()] || CP_STATUS.scheduled; }
+function _cpType(p){
+  if (p.video_url || p.video || p.media_type === 'video') return {ico:'🎬', t:'Video'};
+  if (p.image || p.image_url || p.media_type === 'image') return {ico:'🖼️', t:'Image'};
+  return {ico:'📝', t:'Text'};
+}
+function _cpDateKey(d){ return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
+function _cpTime(p){ return p.scheduled_time ? new Date(p.scheduled_time).toLocaleTimeString(currentLang==='da'?'da-DK':'en-US',{hour:'2-digit',minute:'2-digit'}) : ''; }
+function _cpDayNames(){ return currentLang==='da' ? ['Man','Tir','Ons','Tor','Fre','Lør','Søn'] : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; }
 
 function _cpWeekStart(offsetWeeks) {
   var d = new Date();
-  // Monday as start of week.
   var dow = (d.getDay() + 6) % 7;          // 0 = Mon, 6 = Sun
   d.setDate(d.getDate() - dow + (offsetWeeks || 0) * 7);
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
-function cpWeekShift(delta) {
-  window._cpWeekOffset = delta === 0 ? 0 : (window._cpWeekOffset + delta);
-  cpRenderWeek();
+function cpSetView(v) {
+  window._cpView = v; window._cpOffset = 0;
+  var wk = document.getElementById('cp-view-week'), mo = document.getElementById('cp-view-month');
+  if (wk && mo) {
+    var on = 'background:var(--ac);color:#001;', off = 'background:none;color:var(--tx3);';
+    var base = 'border:none;border-radius:7px;font-size:11px;padding:5px 12px;cursor:pointer;font-weight:700;';
+    wk.style.cssText = base + (v === 'week' ? on : off);
+    mo.style.cssText = base + (v === 'month' ? on : off);
+  }
+  cpRenderCalendar();
+}
+function cpCalShift(delta) {
+  window._cpOffset = (delta === 0) ? 0 : (window._cpOffset + delta);
+  cpRenderCalendar();
+}
+function cpWeekShift(delta) { cpCalShift(delta); }   // back-compat alias
+
+async function _cpFetchPosts() {
+  try { var r = await apiFetch('/api/posts/scheduled'); return (r && r.posts) ? r.posts : []; }
+  catch(e) { return []; }
+}
+
+function cpRenderCalendar() {
+  return (window._cpView === 'month') ? cpRenderMonth() : cpRenderWeek();
+}
+
+// "Add to plan" → open the post scheduler, pre-filling the chosen day at 09:00.
+function cpAddToPlan(dateKey) {
+  nav('posting');
+  setTimeout(function() {
+    if (typeof switchPostTab === 'function') switchPostTab('schedule');
+    var el = document.getElementById('post-time');
+    if (el) {
+      if (dateKey) el.value = dateKey + 'T09:00';
+      if (el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+  }, 140);
+}
+
+function _cpPostChip(p) {
+  var st = _cpStatus(p.status), ty = _cpType(p);
+  var ico = CP_PLAT_ICO[(p.platform || '').toLowerCase()] || '📤';
+  var preview = (p.content || p.caption || '').replace(/[<>]/g, '').slice(0, 46);
+  return '<div onclick="showPostDetail(\'' + p.id + '\')" style="cursor:pointer;background:var(--s2);border:1px solid var(--border);border-left:3px solid ' + st.c + ';border-radius:8px;padding:7px 8px;margin-bottom:5px;font-size:11px">' +
+           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
+             '<span style="font-weight:700">' + ico + ' ' + _cpTime(p) + '</span>' +
+             '<span style="font-size:9px;font-weight:700;color:' + st.c + ';background:rgba(255,255,255,.04);border:1px solid ' + st.c + '44;border-radius:6px;padding:1px 6px">' + st.t + '</span>' +
+           '</div>' +
+           '<div style="color:var(--tx3);font-size:9px;margin-bottom:2px">' + ty.ico + ' ' + ty.t + '</div>' +
+           '<div style="color:var(--tx2);line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + preview + '</div>' +
+         '</div>';
 }
 
 async function cpRenderWeek() {
   var grid = document.getElementById('cp-week-grid');
-  var label = document.getElementById('cp-week-range');
+  var label = document.getElementById('cp-cal-range');
   if (!grid) return;
-  var start = _cpWeekStart(window._cpWeekOffset);
-  var end   = new Date(start); end.setDate(end.getDate() + 6);
-  if (label) {
-    var fmt = function(d) { return d.toLocaleDateString(currentLang === 'da' ? 'da-DK' : 'en-US', {day:'numeric', month:'short'}); };
-    label.textContent = fmt(start) + ' — ' + fmt(end);
-  }
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(7,1fr)';
+  grid.style.gap = '8px';
 
-  // Fetch scheduled posts (existing endpoint).
-  var posts = [];
-  try {
-    var r = await apiFetch('/api/posts/scheduled');
-    posts = (r && r.posts) ? r.posts : [];
-  } catch(e) { /* render empty grid */ }
+  var start = _cpWeekStart(window._cpOffset);
+  var end = new Date(start); end.setDate(end.getDate() + 6);
+  var fmt = function(d){ return d.toLocaleDateString(currentLang==='da'?'da-DK':'en-US',{day:'numeric',month:'short'}); };
+  if (label) label.textContent = fmt(start) + ' — ' + fmt(end);
 
-  var byDay = [[], [], [], [], [], [], []];
+  var posts = await _cpFetchPosts();
+  var byDay = [[],[],[],[],[],[],[]];
   posts.forEach(function(p) {
     var t = p.scheduled_time ? new Date(p.scheduled_time) : null;
     if (!t || isNaN(t.getTime())) return;
@@ -18353,60 +18512,78 @@ async function cpRenderWeek() {
     if (idx >= 0 && idx <= 6) byDay[idx].push(p);
   });
 
-  var dayNames = currentLang === 'da'
-    ? ['Man','Tir','Ons','Tor','Fre','Lør','Søn']
-    : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var dayNames = _cpDayNames();
   var today = new Date(); today.setHours(0,0,0,0);
-  var platIco = {instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'📘', twitter:'🐦'};
-  var statusColor = {
-    scheduled: 'var(--ac)',
-    queued:    'var(--ac)',
-    posted:    '#22c55e',
-    published: '#22c55e',
-    failed:    '#ef4444',
-    error:     '#ef4444',
-  };
-
   grid.innerHTML = byDay.map(function(dayPosts, i) {
-    var d  = new Date(start); d.setDate(d.getDate() + i);
+    var d = new Date(start); d.setDate(d.getDate() + i);
+    var key = _cpDateKey(d);
     var isToday = d.getTime() === today.getTime();
     var head = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-                 '<div style="font-size:10px;font-weight:700;color:' + (isToday ? 'var(--ac)' : 'var(--tx3)') + ';letter-spacing:.5px;text-transform:uppercase">' +
-                   dayNames[i] +
-                 '</div>' +
-                 '<div style="font-size:11px;font-weight:700;color:' + (isToday ? 'var(--ac)' : 'var(--tx)') + '">' +
-                   d.getDate() +
-                 '</div>' +
+                 '<div style="font-size:10px;font-weight:700;color:' + (isToday?'var(--ac)':'var(--tx3)') + ';letter-spacing:.5px;text-transform:uppercase">' + dayNames[i] + '</div>' +
+                 '<div style="font-size:12px;font-weight:800;color:' + (isToday?'var(--ac)':'var(--tx)') + '">' + d.getDate() + '</div>' +
                '</div>';
-    var cards;
-    if (!dayPosts.length) {
-      cards = '<div style="font-size:10px;color:var(--tx3);text-align:center;padding:14px 4px;opacity:.55">—</div>';
-    } else {
-      cards = dayPosts.map(function(p) {
-        var status = (p.status || 'scheduled').toLowerCase();
-        var color  = statusColor[status] || statusColor.scheduled;
-        var time   = new Date(p.scheduled_time).toLocaleTimeString(currentLang === 'da' ? 'da-DK' : 'en-US', {hour:'2-digit', minute:'2-digit'});
-        var ico    = platIco[(p.platform || '').toLowerCase()] || '📤';
-        var preview = (p.content || '').replace(/[<>]/g, '').slice(0, 50);
-        return '<div onclick="showPostDetail(\'' + p.id + '\')" style="cursor:pointer;background:var(--s2);border:1px solid var(--border);border-left:3px solid ' + color + ';border-radius:8px;padding:7px 8px;margin-bottom:5px;font-size:11px">' +
-                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
-                   '<span style="font-weight:700">' + ico + ' ' + time + '</span>' +
-                   '<span style="width:6px;height:6px;border-radius:50%;background:' + color + ';display:inline-block" title="' + status + '"></span>' +
-                 '</div>' +
-                 '<div style="color:var(--tx2);line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + preview + '</div>' +
-               '</div>';
-      }).join('');
-    }
-    var bg = isToday ? 'rgba(0,229,255,.03)' : 'var(--card)';
-    var borderColor = isToday ? 'rgba(0,229,255,.3)' : 'var(--border)';
-    return '<div style="background:' + bg + ';border:1px solid ' + borderColor + ';border-radius:10px;padding:10px 8px;min-height:130px">' +
-             head + cards +
+    var cards = dayPosts.length
+      ? dayPosts.map(_cpPostChip).join('')
+      : '<div style="font-size:10px;color:var(--tx3);text-align:center;padding:10px 4px;opacity:.5">—</div>';
+    var add = '<button onclick="cpAddToPlan(\'' + key + '\')" style="width:100%;margin-top:6px;background:none;border:1px dashed var(--border);color:var(--tx3);border-radius:7px;padding:5px;font-size:11px;cursor:pointer;font-weight:600">+ Add</button>';
+    var bg = isToday ? 'rgba(0,229,255,.04)' : 'var(--card)';
+    var bc = isToday ? 'rgba(0,229,255,.3)' : 'var(--border)';
+    return '<div style="background:' + bg + ';border:1px solid ' + bc + ';border-radius:10px;padding:10px 8px;min-height:150px;display:flex;flex-direction:column">' +
+             head + '<div style="flex:1">' + cards + '</div>' + add +
            '</div>';
   }).join('');
 }
 
+async function cpRenderMonth() {
+  var grid = document.getElementById('cp-week-grid');
+  var label = document.getElementById('cp-cal-range');
+  if (!grid) return;
+
+  var base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + (window._cpOffset || 0)); base.setHours(0,0,0,0);
+  var year = base.getFullYear(), month = base.getMonth();
+  if (label) label.textContent = base.toLocaleDateString(currentLang==='da'?'da-DK':'en-US',{month:'long',year:'numeric'});
+
+  var posts = await _cpFetchPosts();
+  var byKey = {};
+  posts.forEach(function(p) {
+    var t = p.scheduled_time ? new Date(p.scheduled_time) : null;
+    if (!t || isNaN(t.getTime())) return;
+    var k = _cpDateKey(t); (byKey[k] = byKey[k] || []).push(p);
+  });
+
+  var dayNames = _cpDayNames();
+  var firstDow = (new Date(year, month, 1).getDay() + 6) % 7;   // Monday = 0
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  var today = new Date(); today.setHours(0,0,0,0);
+
+  var headRow = dayNames.map(function(n){ return '<div style="font-size:10px;font-weight:700;color:var(--tx3);text-align:center;padding:4px 0;text-transform:uppercase;letter-spacing:.5px">' + n + '</div>'; }).join('');
+  var cells = '';
+  for (var b = 0; b < firstDow; b++) cells += '<div style="min-height:92px"></div>';
+  for (var day = 1; day <= daysInMonth; day++) {
+    var d = new Date(year, month, day);
+    var key = _cpDateKey(d);
+    var isToday = d.getTime() === today.getTime();
+    var dp = byKey[key] || [];
+    var chips = dp.slice(0, 3).map(function(p) {
+      var st = _cpStatus(p.status), ico = CP_PLAT_ICO[(p.platform || '').toLowerCase()] || '📤';
+      return '<div onclick="event.stopPropagation();showPostDetail(\'' + p.id + '\')" title="' + st.t + ' · ' + _cpType(p).t + '" style="cursor:pointer;display:flex;align-items:center;gap:4px;background:var(--s2);border-left:3px solid ' + st.c + ';border-radius:5px;padding:2px 5px;margin-bottom:3px;font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">' +
+               '<span>' + ico + '</span><span style="color:var(--tx3)">' + _cpTime(p) + '</span></div>';
+    }).join('');
+    if (dp.length > 3) chips += '<div style="font-size:9px;color:var(--tx3)">+' + (dp.length - 3) + ' more</div>';
+    var bg = isToday ? 'rgba(0,229,255,.05)' : 'var(--card)';
+    var bc = isToday ? 'rgba(0,229,255,.35)' : 'var(--border)';
+    cells += '<div onclick="cpAddToPlan(\'' + key + '\')" title="Add to plan" style="cursor:pointer;min-height:92px;background:' + bg + ';border:1px solid ' + bc + ';border-radius:8px;padding:6px;overflow:hidden">' +
+               '<div style="font-size:11px;font-weight:800;color:' + (isToday?'var(--ac)':'var(--tx)') + ';margin-bottom:4px">' + day + '</div>' + chips +
+             '</div>';
+  }
+  grid.style.display = 'block';
+  grid.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px">' + headRow + '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">' + cells + '</div>';
+}
+
 function loadContentPlanPage() {
-  cpRenderWeek();
+  cpRenderCalendar();
   _cpPlatforms = [];
   var platDisplay  = document.getElementById('cp-platforms-display');
   var ctxInfo      = document.getElementById('cp-context-info');

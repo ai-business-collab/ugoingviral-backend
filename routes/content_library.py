@@ -25,7 +25,7 @@ from datetime import datetime
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import FileResponse
 
 from routes.auth import get_current_user
@@ -42,6 +42,14 @@ os.makedirs(USER_CONTENT_DIR, exist_ok=True)
 
 # Plans that may download original files. Free plan can still browse + post.
 _DOWNLOAD_PLANS = {"starter", "basic", "pro", "elite", "personal", "agency", "growth"}
+
+# User uploads — supported formats mapped to library folder, and the size cap.
+UPLOAD_EXT_KIND = {
+    "mp4": "videos", "mov": "videos",
+    "mp3": "audio", "wav": "audio", "aac": "audio",
+    "jpg": "images", "jpeg": "images", "png": "images", "gif": "images", "webp": "images",
+}
+MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MB per file
 
 
 def _kind_dir(user_id: str, kind: str) -> str:
@@ -300,6 +308,94 @@ async def delete_library_item(item_id: str, current_user: dict = Depends(get_cur
     ustore["library_items"] = [x for x in items if x.get("id") != item_id]
     _save_user_store(uid, ustore)
     return {"status": "deleted"}
+
+
+@router.post("/api/library/upload")
+async def upload_to_library(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload the user's own video / image / audio file.
+
+    Supported: mp4, mov, mp3, wav, aac, jpg, png, gif, webp (max 500 MB).
+    The file is streamed to user_content/{user_id}/uploads/ and registered in
+    the content library automatically so it shows up alongside generated media.
+    """
+    uid = current_user["id"]
+    orig = file.filename or "upload"
+    ext = os.path.splitext(orig)[1].lower().lstrip(".")
+    kind = UPLOAD_EXT_KIND.get(ext)
+    if not kind:
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported format. Allowed: mp4, mov, mp3, wav, aac, jpg, png, gif, webp",
+        )
+
+    uploads_dir = os.path.join(USER_CONTENT_DIR, uid, "uploads")
+    os.makedirs(uploads_dir, exist_ok=True)
+    item_id = uuid.uuid4().hex[:12]
+    save_ext = "jpg" if ext == "jpeg" else ext
+    filename = f"{item_id}.{save_ext}"
+    abs_path = os.path.join(uploads_dir, filename)
+
+    # Stream to disk in chunks so a 500 MB upload never loads fully into memory,
+    # and abort early if the size cap is exceeded.
+    total = 0
+    try:
+        with open(abs_path, "wb") as out:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > MAX_UPLOAD_BYTES:
+                    raise HTTPException(status_code=413, detail="File too large. Max 500 MB per file.")
+                out.write(chunk)
+    except HTTPException:
+        _safe_remove(abs_path)
+        raise
+    except Exception as e:
+        _safe_remove(abs_path)
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)[:160]}")
+
+    if total == 0:
+        _safe_remove(abs_path)
+        raise HTTPException(status_code=400, detail="Empty file")
+
+    local_url = _public_url(uid, "uploads", filename)
+    media_type = {"videos": "video", "images": "image", "audio": "audio"}[kind]
+    entry = {
+        "id":            item_id,
+        "kind":          kind,
+        "provider":      "upload",
+        "prompt":        orig[:200],
+        "original_name": orig,
+        "media_type":    media_type,
+        "source_url":    local_url,
+        "local_url":     local_url,
+        "local_path":    abs_path,
+        "filename":      filename,
+        "size_bytes":    total,
+        "size_mb":       round(total / 1024 / 1024, 1),
+        "saved_locally": True,
+        "is_upload":     True,
+        "created_at":    datetime.utcnow().isoformat(),
+    }
+
+    ustore = _load_user_store(uid)
+    items = ustore.setdefault("library_items", [])
+    items.insert(0, entry)
+    ustore["library_items"] = items[:500]
+    _save_user_store(uid, ustore)
+    return {"ok": True, "item": entry}
+
+
+def _safe_remove(path: str) -> None:
+    try:
+        if path and os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
 
 
 # ── Shopify content generation ────────────────────────────────────────────────
