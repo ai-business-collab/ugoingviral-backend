@@ -1709,7 +1709,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" id="ni-content-engine" onclick="nav('content-engine')">📅 <span>Content Engine</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">NEW</span></div>
       <div class="sub-item" id="ni-content-plan" onclick="nav('content-plan')">🗓️ <span>Content Plan</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">AI</span></div>
       <div class="sub-item" id="ni-video-group" onclick="nav('studio')">🎬 <span>Video</span></div>
-      <div class="sub-item" id="ni-archive-group" onclick="nav('history')">🗂️ <span>Archive</span></div>
+      <div class="sub-item" id="ni-archive-group" onclick="nav('content-library')">🗂️ <span>Archive</span></div>
     </div>
 
     <!-- ── INFLUENCER ── -->
@@ -3433,21 +3433,22 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="ctitle">
       <span>🗂️ Content Library</span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <input class="fi" id="clib-search" placeholder="🔍 Search..." style="width:120px" oninput="clibRender()">
-        <select class="fs" id="clib-folder-sel" style="width:140px" onchange="clibRender()"><option value="">📁 All folders</option></select>
-        <button class="btn bg bsm" onclick="document.getElementById('clib-folder-modal').style.display='flex'">📁 New folder</button>
+        <input class="fi" id="clib-search" placeholder="🔍 Search..." style="width:120px" oninput="libRender()">
+        <button class="btn bg bsm" id="lib-shopify-btn" onclick="openShopifyGenerateModal()" style="display:none">🛒 Generate from Shopify products</button>
         <button class="btn bp bsm" onclick="document.getElementById('clib-file-upload').click()">⬆️ Upload</button>
         <input type="file" id="clib-file-upload" accept="image/*,video/*" multiple style="display:none" onchange="clibUploadFiles(this)">
       </div>
     </div>
-    <div class="clib-type-tabs">
-      <div class="clib-type-tab on" data-t="all"   onclick="clibSetType(this)">📦 Alt</div>
-      <div class="clib-type-tab"    data-t="image" onclick="clibSetType(this)">🖼️ Billeder</div>
-      <div class="clib-type-tab"    data-t="video" onclick="clibSetType(this)">🎬 Videoer</div>
-      <div class="clib-type-tab"    data-t="reel"  onclick="clibSetType(this)">📱 Reels</div>
+    <div class="clib-type-tabs" role="tablist">
+      <div class="clib-type-tab on" data-t="videos"  onclick="libSetFolder(this)">🎬 Videos</div>
+      <div class="clib-type-tab"    data-t="images"  onclick="libSetFolder(this)">🖼️ Images</div>
+      <div class="clib-type-tab"    data-t="posts"   onclick="libSetFolder(this)">📅 Posts</div>
     </div>
-    <div id="clib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px">
-      <div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🗂️</div>No files yet — click ⬆️ Upload</div>
+    <div id="lib-plan-banner" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);font-size:12px;color:var(--tx2)">
+      🔒 You're on the <strong style="color:var(--ac)">Free plan</strong> — downloads are available on any paid plan. <a onclick="nav('billing')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Upgrade to download →</a>
+    </div>
+    <div id="lib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
+      <div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🗂️</div>Loading library…</div>
     </div>
   </div>
 
@@ -3507,6 +3508,48 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div style="display:flex;gap:8px">
       <button class="btn bp" style="flex:1" onclick="clibCreateFolder()">Opret</button>
       <button class="btn bg" onclick="document.getElementById('clib-folder-modal').style.display='none'">Annuller</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shopify "Generate from product" modal -->
+<div id="shopify-gen-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeShopifyGenerateModal()">
+  <div class="modal-box" style="width:680px;max-width:96vw">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700">🛒 Generate from Shopify products</div>
+      <button class="btn bg bsm" onclick="closeShopifyGenerateModal()">✕</button>
+    </div>
+    <div id="shopify-gen-empty" style="display:none;color:var(--tx3);font-size:13px;padding:24px;text-align:center">Loading your Shopify products…</div>
+    <div id="shopify-gen-products" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;max-height:340px;overflow-y:auto;margin-bottom:14px"></div>
+    <div id="shopify-gen-form" style="display:none;border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Selected: <strong id="shopify-gen-selected-title" style="color:var(--ac)"></strong></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--tx2);display:block;margin-bottom:4px">Duration</label>
+          <select id="shopify-gen-duration" class="fs">
+            <option value="5">5 s — 50 credits</option>
+            <option value="10">10 s — 85 credits</option>
+            <option value="15">15 s — 100 credits</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--tx2);display:block;margin-bottom:4px">Aspect</label>
+          <select id="shopify-gen-aspect" class="fs">
+            <option value="9:16" selected>9:16 vertical</option>
+            <option value="16:9">16:9 widescreen</option>
+            <option value="1:1">1:1 square</option>
+            <option value="4:5">4:5 portrait</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;font-weight:700;color:var(--tx2);display:block;margin-bottom:4px">Extra style notes (optional)</label>
+        <input id="shopify-gen-extra" class="fi" placeholder="e.g. cinematic, golden-hour lighting">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn bg bsm" onclick="closeShopifyGenerateModal()">Cancel</button>
+        <button class="btn bp" id="shopify-gen-submit" onclick="submitShopifyGenerate()">✨ Generate video</button>
+      </div>
     </div>
   </div>
 </div>
@@ -12523,7 +12566,240 @@ async function loadClib() {
     clibRenderRandomFolders();
   } catch(e) {}
   clibFiles = libFiles.slice(); // share with existing lib
-  clibRender();
+  // New content management view — Videos / Images / Posts folders.
+  libLoad();
+  refreshShopifyButton();
+}
+
+// ── Content Library v2 — folder-based view backed by /api/library/content ──
+var _lib = {
+  folder: 'videos',
+  items: [],
+  canDownload: false,
+  plan: 'free',
+};
+
+async function libLoad() {
+  try {
+    var r = await apiFetch('/api/library/content?kind=' + encodeURIComponent(_lib.folder));
+    _lib.items = r.items || [];
+    _lib.canDownload = !!r.can_download;
+    _lib.plan = r.plan || 'free';
+  } catch(e) {
+    _lib.items = [];
+  }
+  libRender();
+}
+
+function libSetFolder(el) {
+  document.querySelectorAll('.clib-type-tab').forEach(function(t){ t.classList.remove('on'); });
+  el.classList.add('on');
+  _lib.folder = el.dataset.t || 'videos';
+  libLoad();
+}
+
+function libRender() {
+  var grid = document.getElementById('lib-grid');
+  if (!grid) return;
+  var q = (((document.getElementById('clib-search') || {}).value) || '').toLowerCase();
+  var items = _lib.items.filter(function(it){
+    if (!q) return true;
+    var hay = ((it.prompt||'') + ' ' + (it.provider||'') + ' ' + (it.product_title||'')).toLowerCase();
+    return hay.indexOf(q) >= 0;
+  });
+  // Plan banner — visible only to free users.
+  var banner = document.getElementById('lib-plan-banner');
+  if (banner) banner.style.display = _lib.canDownload ? 'none' : 'block';
+
+  if (!items.length) {
+    var emptyLabel = _lib.folder === 'images' ? 'No images yet — generate or upload above'
+                    : _lib.folder === 'posts'  ? 'No scheduled or published posts yet'
+                    : 'No videos yet — head to Video Studio to generate one';
+    grid.innerHTML = '<div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🗂️</div>' + emptyLabel + '</div>';
+    return;
+  }
+  grid.innerHTML = items.map(libItemHtml).join('');
+}
+
+function libItemHtml(it) {
+  var id    = it.id || '';
+  var url   = it.local_url || it.source_url || '';
+  var kind  = it.kind || 'videos';
+  var ts    = (it.created_at || '').slice(0, 16).replace('T', ' ');
+  var label = (it.prompt || it.product_title || '').slice(0, 110);
+  var providerLabel = (it.provider || '').replace('higgsfield','Hyper Realistic').replace('pika','Premium Animation');
+  var thumb;
+  if (kind === 'videos' && url) {
+    thumb = '<video src="' + url + '" controls preload="metadata" style="width:100%;aspect-ratio:9/16;object-fit:cover;background:#000;border-radius:8px 8px 0 0"></video>';
+  } else if (kind === 'images' && url) {
+    thumb = '<div style="width:100%;aspect-ratio:1/1;background:#000;border-radius:8px 8px 0 0;overflow:hidden"><img src="' + url + '" style="width:100%;height:100%;object-fit:cover"></div>';
+  } else if (kind === 'posts') {
+    thumb = '<div style="width:100%;aspect-ratio:1/1;background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(0,229,255,.10));display:flex;align-items:center;justify-content:center;font-size:46px;border-radius:8px 8px 0 0">📅</div>';
+  } else {
+    thumb = '<div style="width:100%;aspect-ratio:1/1;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--tx3);border-radius:8px 8px 0 0">⏳</div>';
+  }
+  // Buttons — Download gated by plan; Direct Post always available.
+  var downloadBtn = _lib.canDownload
+    ? '<button class="btn bp bsm" style="flex:1" onclick="libDownload(\'' + id + '\')">⬇️ Download</button>'
+    : '<button class="btn bg bsm" style="flex:1" onclick="nav(\'billing\')" title="Upgrade to download">🔒 Upgrade to download</button>';
+  var postBtn = '<button class="btn bp bsm" style="flex:1" onclick="libDirectPost(\'' + id + '\')">📤 Direct post</button>';
+  var deleteBtn = '<button class="btn bg bsm" style="padding:6px 8px" onclick="libDelete(\'' + id + '\')" title="Delete">🗑️</button>';
+  return '<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column">'
+    + thumb
+    + '<div style="padding:8px 10px;flex:1;display:flex;flex-direction:column">'
+    +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+    +     '<span style="font-size:10px;font-weight:700;color:#a78bfa">' + _escHtml(providerLabel || kind) + '</span>'
+    +     (it.duration ? '<span style="font-size:10px;color:var(--tx3)">· ' + it.duration + 's</span>' : '')
+    +     (it.credits_used ? '<span style="font-size:10px;color:var(--tx3);margin-left:auto">' + it.credits_used + ' cr</span>' : '')
+    +   '</div>'
+    +   '<div style="font-size:11px;color:var(--tx2);line-height:1.35;flex:1;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">' + _escHtml(label || '—') + '</div>'
+    +   '<div style="font-size:10px;color:var(--tx3);margin-top:6px">' + ts + '</div>'
+    +   '<div style="display:flex;gap:6px;margin-top:8px">' + postBtn + downloadBtn + deleteBtn + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+async function libDownload(id) {
+  // Authenticated download: fetch with Bearer header → blob → trigger save.
+  try {
+    var token = localStorage.getItem('ugv_token');
+    var headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    if (_activeSub) headers['X-Sub-Account-Id'] = _activeSub;
+    var resp = await fetch(API + '/api/library/content/' + id + '/download', { headers: headers });
+    if (resp.status === 402) {
+      toast('🔒 Upgrade to a paid plan to download originals', 'error');
+      return;
+    }
+    if (!resp.ok) {
+      var err = await resp.json().catch(function(){ return {detail: resp.statusText}; });
+      throw new Error(err.detail || resp.statusText);
+    }
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    // Try to extract filename from Content-Disposition; fall back to id+extension.
+    var disp = resp.headers.get('Content-Disposition') || '';
+    var m = disp.match(/filename\*?=(?:UTF-8'')?\"?([^\";]+)\"?/i);
+    a.download = m ? decodeURIComponent(m[1]) : (id + (blob.type && blob.type.indexOf('video') === 0 ? '.mp4' : ''));
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    toast('⬇️ Download started', 'success');
+  } catch (e) {
+    toast(e.message || 'Download failed', 'error');
+  }
+}
+
+async function libDelete(id) {
+  if (!confirm('Delete this item from your library? The local file will be removed.')) return;
+  try {
+    await apiFetch('/api/library/content/' + id, 'DELETE');
+    _lib.items = _lib.items.filter(function(x){ return x.id !== id; });
+    libRender();
+    toast('🗑️ Item removed', 'info');
+  } catch(e) { toast(e.message || 'Could not delete', 'error'); }
+}
+
+function libDirectPost(id) {
+  var it = _lib.items.find(function(x){ return x.id === id; });
+  if (!it) return;
+  var url = it.local_url || it.source_url || '';
+  var caption = it.caption || it.prompt || '';
+  // Pre-fill the post composer fields. The posting page reads from these IDs.
+  var img = document.getElementById('post-img');
+  var content = document.getElementById('post-content');
+  if (img) {
+    img.value = url;
+    if (typeof previewPostImg === 'function') previewPostImg(url);
+  }
+  if (content && caption) content.value = caption;
+  nav('posting');
+  toast('📤 Pre-filled — choose schedule and platform', 'success');
+}
+
+// ── Shopify product → content generation ────────────────────────────────────
+var _shopifyGen = { products: [], selected: null };
+
+async function refreshShopifyButton() {
+  var btn = document.getElementById('lib-shopify-btn');
+  if (!btn) return;
+  try {
+    var r = await apiFetch('/api/library/shopify/products');
+    btn.style.display = r && r.connected ? 'inline-flex' : 'none';
+    _shopifyGen.products = (r && r.products) || [];
+  } catch(e) {
+    btn.style.display = 'none';
+  }
+}
+
+function openShopifyGenerateModal() {
+  document.getElementById('shopify-gen-modal').style.display = 'flex';
+  document.getElementById('shopify-gen-form').style.display = 'none';
+  _shopifyGen.selected = null;
+  renderShopifyProducts();
+}
+
+function closeShopifyGenerateModal() {
+  document.getElementById('shopify-gen-modal').style.display = 'none';
+}
+
+function renderShopifyProducts() {
+  var wrap = document.getElementById('shopify-gen-products');
+  var empty = document.getElementById('shopify-gen-empty');
+  if (!_shopifyGen.products.length) {
+    if (empty) { empty.style.display = 'block'; empty.textContent = 'No Shopify products found. Connect your store from Connect → Shopify.'; }
+    if (wrap) wrap.innerHTML = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  wrap.innerHTML = _shopifyGen.products.slice(0, 60).map(function(p){
+    var sel = _shopifyGen.selected && _shopifyGen.selected.id === p.id;
+    return '<div class="sp-prod ' + (sel ? 'sel' : '') + '" onclick="selectShopifyProduct(\'' + p.id + '\')" '
+         + 'style="cursor:pointer;border:2px solid ' + (sel ? 'var(--ac)' : 'var(--border)')
+         + ';border-radius:10px;overflow:hidden;background:var(--s2)">'
+         +   (p.image
+                ? '<img src="' + p.image + '" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block">'
+                : '<div style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:var(--s3);color:var(--tx3);font-size:24px">🛍️</div>')
+         +   '<div style="padding:6px 8px;font-size:11px;color:var(--tx);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _escHtml(p.title || '') + '</div>'
+         + '</div>';
+  }).join('');
+}
+
+function selectShopifyProduct(pid) {
+  var p = _shopifyGen.products.find(function(x){ return String(x.id) === String(pid); });
+  if (!p) return;
+  _shopifyGen.selected = p;
+  document.getElementById('shopify-gen-selected-title').textContent = p.title || '';
+  document.getElementById('shopify-gen-form').style.display = 'block';
+  renderShopifyProducts();
+}
+
+async function submitShopifyGenerate() {
+  if (!_shopifyGen.selected) { toast('Pick a product first', 'error'); return; }
+  var btn = document.getElementById('shopify-gen-submit');
+  var dur = parseInt((document.getElementById('shopify-gen-duration') || {}).value || '5', 10);
+  var aspect = (document.getElementById('shopify-gen-aspect') || {}).value || '9:16';
+  var extra  = (document.getElementById('shopify-gen-extra') || {}).value || '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating…'; }
+  try {
+    var r = await apiFetch('/api/library/shopify/generate', 'POST', {
+      product_id: _shopifyGen.selected.id,
+      kind: 'video',
+      duration: dur,
+      aspect: aspect,
+      extra_prompt: extra,
+    });
+    toast('✅ Generation queued — added to your library', 'success');
+    if (typeof refreshCredits === 'function') refreshCredits();
+    closeShopifyGenerateModal();
+    libLoad();
+  } catch(e) {
+    toast(e.message || 'Generation failed', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Generate video'; }
+  }
 }
 
 function clibSetType(el) {

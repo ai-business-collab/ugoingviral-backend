@@ -705,6 +705,24 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
 
     _save_user_store(uid, ustore)
 
+    # Permanent library copy — download remote scene URLs and copy the
+    # locally-assembled file into user_content/{uid}/videos/ so the user can
+    # always find and download their generation later.
+    try:
+        from routes.content_library import add_to_library
+        if primary_url:
+            await add_to_library(
+                uid, kind="videos", provider=provider,
+                source_url=primary_url,
+                prompt=(req.scenes[0].prompt if req.scenes else ""),
+                duration=(req.scenes[0].duration if req.scenes else None),
+                aspect_ratio=req.aspect_ratio,
+                credits_used=cost,
+                extra={"mode": req.mode, "scenes": len(req.scenes)},
+            )
+    except Exception:
+        pass
+
     return {
         "session_id": session_id,
         "scenes": result_videos,
@@ -1117,6 +1135,18 @@ async def higgsfield_generate(body: dict, current_user: dict = Depends(get_curre
         "created_at":   datetime.now().isoformat(),
         "raw_result":   result if isinstance(result, dict) else None,
     })
+    # Also persist into the permanent content library (downloads the file
+    # to user_content/{user_id}/videos/ so the asset survives provider TTL).
+    try:
+        from routes.content_library import add_to_library
+        await add_to_library(
+            current_user["id"], kind="videos", provider="higgsfield",
+            source_url=_extract_video_url(result),
+            prompt=prompt, duration=duration, aspect_ratio=aspect,
+            credits_used=cost,
+        )
+    except Exception:
+        pass
     return {
         "provider":     "higgsfield",
         "credits_left": credits_left,
@@ -1159,6 +1189,16 @@ async def pika_generate(body: dict, current_user: dict = Depends(get_current_use
         "created_at":   datetime.now().isoformat(),
         "raw_result":   result if isinstance(result, dict) else None,
     })
+    try:
+        from routes.content_library import add_to_library
+        await add_to_library(
+            current_user["id"], kind="videos", provider="pika",
+            source_url=_extract_video_url(result),
+            prompt=prompt, duration=duration, aspect_ratio=aspect,
+            credits_used=cost,
+        )
+    except Exception:
+        pass
     return {
         "provider":     "pika",
         "credits_left": credits_left,

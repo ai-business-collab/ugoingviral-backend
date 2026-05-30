@@ -22,7 +22,7 @@ from services.security import (
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads, content_engine, autopilot, telegram, growth, nexora_core, nexora_events, qa_agent, affiliate, template_library, analytics, notifications, brand_kit, competitor, viral_score, caption_improver, hashtags, csv_import, video_script, reel_templates, audit, workspaces, ig_growth, webhooks
+from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads, content_engine, autopilot, telegram, growth, nexora_core, nexora_events, qa_agent, affiliate, template_library, analytics, notifications, brand_kit, competitor, viral_score, caption_improver, hashtags, csv_import, video_script, reel_templates, audit, workspaces, ig_growth, webhooks, content_library
 
 app = FastAPI(title="UgoingViral API v4")
 
@@ -78,7 +78,9 @@ os.makedirs("uploads/creators", exist_ok=True)
 os.makedirs("uploads/voice", exist_ok=True)
 os.makedirs("uploads/final", exist_ok=True)
 os.makedirs("uploads/studio", exist_ok=True)
+os.makedirs("user_content", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/user_content", StaticFiles(directory="user_content"), name="user_content")
 
 FRONTEND = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "index.html")
 ADMIN_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "admin.html")
@@ -212,6 +214,7 @@ app.include_router(agent.router)
 app.include_router(subaccounts.router)
 app.include_router(studio.router)
 app.include_router(uploads.router)
+app.include_router(content_library.router)
 app.include_router(content_engine.router)
 app.include_router(autopilot.router)
 app.include_router(telegram.router)
