@@ -621,3 +621,98 @@ async def toggle_auto_reply(req: Request):
     status = "aktiveret" if d.get("active") else "deaktiveret"
     add_log(f"📧 Auto email svar {status}", "info")
     return {"status": "ok"}
+
+
+# ── Help & Support contact form ──────────────────────────────────────────────
+
+SUPPORT_INBOX = os.getenv("SUPPORT_INBOX_EMAIL", "support@ugoingviral.com")
+
+
+@router.post("/api/support/contact")
+async def support_contact(req: Request):
+    """Forward a Help & Support message to the support inbox and confirm
+    receipt to the user. Auth is optional — anonymous users supply their
+    email in the form."""
+    d = await req.json()
+    subject = (d.get("subject") or "").strip() or "Support request"
+    message = (d.get("message") or "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+    if len(message) > 8000:
+        raise HTTPException(status_code=400, detail="Message is too long (max 8000 characters)")
+
+    # Derive the user's identity. Prefer the authenticated session, fall back
+    # to whatever they typed in the form.
+    user_email = (d.get("email") or "").strip()
+    user_name  = (d.get("name") or "").strip()
+    user_id    = ""
+    try:
+        from routes.auth import SECRET_KEY, ALGORITHM
+        from jose import jwt as _jwt
+        auth = req.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            payload = _jwt.decode(auth[7:], SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id") or ""
+            if user_id:
+                from services.users import get_user_by_id
+                u = get_user_by_id(user_id) or {}
+                user_email = user_email or u.get("email") or ""
+                user_name  = user_name  or u.get("name")  or u.get("full_name") or ""
+    except Exception:
+        pass
+
+    if not user_email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    safe_msg = (message
+                .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\n", "<br>"))
+    safe_name = (user_name or user_email).replace("<", "&lt;").replace(">", "&gt;")
+    safe_subject = subject.replace("<", "&lt;").replace(">", "&gt;")
+
+    # 1) Notify the support inbox.
+    inbox_html = f"""<!DOCTYPE html>
+<html><body style="font-family:Arial,sans-serif;background:#f4f5f7;padding:20px">
+  <div style="max-width:640px;margin:auto;background:#fff;border-radius:10px;padding:24px;border:1px solid #e5e7eb">
+    <h2 style="margin:0 0 8px;color:#111827">New Help &amp; Support message</h2>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">via /api/support/contact</p>
+    <table style="width:100%;font-size:14px;color:#111827;border-collapse:collapse">
+      <tr><td style="padding:4px 0;color:#6b7280;width:90px">From</td><td>{safe_name} &lt;{user_email}&gt;</td></tr>
+      <tr><td style="padding:4px 0;color:#6b7280">User ID</td><td>{user_id or '—'}</td></tr>
+      <tr><td style="padding:4px 0;color:#6b7280">Subject</td><td><strong>{safe_subject}</strong></td></tr>
+    </table>
+    <div style="margin-top:18px;padding:14px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;font-size:14px;line-height:1.55;color:#111827;white-space:pre-wrap">{safe_msg}</div>
+  </div>
+</body></html>"""
+    inbox_ok = send_system_email(
+        SUPPORT_INBOX,
+        f"[Support] {subject} — {user_email}",
+        inbox_html,
+    )
+
+    # 2) Confirm receipt to the user.
+    confirm_html = f"""<!DOCTYPE html>
+<html><body style="font-family:Arial,sans-serif;background:#f4f5f7;padding:20px">
+  <div style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:28px;border:1px solid #e5e7eb">
+    <h2 style="margin:0 0 10px;color:#111827">We received your message</h2>
+    <p style="font-size:14px;color:#374151;line-height:1.6">
+      Hi {safe_name or 'there'},<br><br>
+      Thanks for reaching out to UgoingViral support — we received your message and
+      <strong>we'll reply within 24 hours</strong>.
+    </p>
+    <div style="margin-top:18px;padding:14px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:6px">Your message · <em>{safe_subject}</em></div>
+      <div style="font-size:13px;color:#111827;line-height:1.55;white-space:pre-wrap">{safe_msg}</div>
+    </div>
+    <p style="font-size:12px;color:#6b7280;margin-top:18px">If anything needs adding, just reply to this email.</p>
+  </div>
+</body></html>"""
+    send_system_email(user_email, "We received your message — UgoingViral Support", confirm_html)
+
+    add_log(f"📨 Support message from {user_email} forwarded to {SUPPORT_INBOX}", "info")
+    return {
+        "status":   "ok" if inbox_ok else "queued",
+        "message":  "We received your message, we'll reply within 24 hours",
+        "to":       SUPPORT_INBOX,
+        "inbox_delivered": inbox_ok,
+    }

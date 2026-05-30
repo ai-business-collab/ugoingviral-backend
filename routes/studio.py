@@ -76,15 +76,15 @@ PROVIDERS = {
         "available": bool(RUNWAY_API_KEY),
     },
     "luma": {
-        "name": "Luma Dream Machine",
-        "tagline": "Hyperrealistisk",
+        "name": "Luma Images",
+        "tagline": "Best for images",
         "quality": 5, "speed": 2, "cost_multiplier": 1.2,
         "styles": ["photorealistic", "cinematic", "nature", "sci-fi", "fantasy"],
         "max_duration": 5,
         "available": bool(LUMA_API_KEY),
     },
     "replicate": {
-        "name": "Replicate (Kling AI)",
+        "name": "Replicate (Kling)",
         "tagline": "Hurtig & fleksibel",
         "quality": 4, "speed": 5, "cost_multiplier": 0.8,
         "styles": ["animation", "realistic", "anime", "3d", "cartoon"],

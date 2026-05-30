@@ -1787,6 +1787,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div class="ni has-sub" id="ni-settings" onclick="toggleSubMenu('settings-sub')"><span class="ico">⚙️</span><span data-i18n="nav.settings">Settings</span><span class="chevron">›</span></div>
     <div class="submenu" id="settings-sub">
       <div class="sub-item" onclick="nav('settings')">⚙️ <span data-i18n="nav.settings">Account & Interface</span></div>
+      <div class="sub-item" id="ni-help-support" onclick="nav('help-support')">💬 <span>Help &amp; Support</span></div>
       <div class="sub-item" id="ni-agency-dash-sub" style="display:none" onclick="nav('agency-dashboard')">🏢 <span>Agency Dashboard</span></div>
       <div class="sub-item" style="color:var(--red)" onclick="logout()">🚪 <span data-i18n="nav.logout">Log ud</span></div>
     </div>
@@ -3825,6 +3826,42 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     </div>
   </div>
 
+  <!-- ══ HELP & SUPPORT ════════════════════════════════════════════════════ -->
+  <div id="page-help-support" class="page">
+    <div style="max-width:720px">
+      <div class="card" style="margin-bottom:18px">
+        <div class="ctitle">💬 Help &amp; Support</div>
+        <div style="font-size:13px;color:var(--tx2);line-height:1.55;margin-bottom:18px">
+          Send us a message and our team will reply within 24 hours. You'll also get an email
+          confirming we received your request.
+        </div>
+        <form id="help-support-form" onsubmit="submitSupportMessage(event)" style="display:grid;gap:14px">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Your email *</label>
+            <input id="hs-email" type="email" required placeholder="you@example.com" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Your name</label>
+            <input id="hs-name" type="text" placeholder="Optional — how should we address you" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Subject</label>
+            <input id="hs-subject" type="text" placeholder="e.g. Trouble connecting Instagram" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px">Message *</label>
+            <textarea id="hs-message" required rows="7" placeholder="Describe what you need help with — include screenshots URLs, plan name and any error messages you see." style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px;resize:vertical;min-height:140px"></textarea>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-size:11px;color:var(--tx3)">We reply within 24 hours · <a href="mailto:support@ugoingviral.com" style="color:var(--ac)">support@ugoingviral.com</a></div>
+            <button id="hs-submit-btn" type="submit" class="btn bp" style="font-size:13px;padding:10px 22px">📨 Send message</button>
+          </div>
+        </form>
+        <div id="hs-result" style="display:none;margin-top:14px;padding:12px 14px;border-radius:10px;font-size:13px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ BILLING ═══════════════════════════════════════════════════════════ -->
   <div id="page-billing" class="page">
     <div style="max-width:960px">
@@ -4421,8 +4458,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation — included on any paid plan · 50 / 85 / 100 credits per 5s / 10s / 15s</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('higgsfield')" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Hyper Realistic</button>
-          <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" style="background:rgba(255,255,255,.05);color:var(--tx3);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
+          <button class="btn bsm" id="sp-tab-higgs" disabled title="Hyper Realistic provider is not yet available" style="background:rgba(255,255,255,.04);color:var(--tx3);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:not-allowed;opacity:.6">Hyper Realistic (Coming Soon)</button>
+          <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
         </div>
       </div>
       <div id="sp-locked" style="display:none;padding:18px;background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:10px;text-align:center;font-size:13px;color:var(--tx3)">
@@ -4464,7 +4501,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div id="sp-character-hint" style="display:none;font-size:11px;color:var(--ac3);margin-top:4px"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-          <div style="font-size:11px;color:var(--tx3)">Provider: <span id="sp-provider-lbl" style="color:#a78bfa;font-weight:700">Hyper Realistic</span> · Cost: <strong style="color:var(--ac)"><span id="sp-cost-num">50</span> credits</strong></div>
+          <div style="font-size:11px;color:var(--tx3)">Provider: <span id="sp-provider-lbl" style="color:#a78bfa;font-weight:700">Premium Animation</span> · Cost: <strong style="color:var(--ac)"><span id="sp-cost-num">50</span> credits</strong></div>
           <button class="btn bp bsm" id="sp-gen-btn" onclick="spGenerate()" style="font-size:13px;padding:8px 18px">✨ Generate video</button>
         </div>
         <div id="sp-result" style="display:none;margin-top:14px;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:12px;font-family:monospace;white-space:pre-wrap;max-height:260px;overflow:auto"></div>
@@ -6546,6 +6583,63 @@ async function loadMyVideos() {
   }
 }
 
+// ── Help & Support ──────────────────────────────────────────────────────────
+function initHelpSupport() {
+  // Prefill the form from the cached user record so signed-in users don't
+  // have to re-type their email.
+  try {
+    const u = JSON.parse(localStorage.getItem('ugv_user') || '{}');
+    const emailEl = document.getElementById('hs-email');
+    const nameEl  = document.getElementById('hs-name');
+    if (emailEl && !emailEl.value && u.email) emailEl.value = u.email;
+    if (nameEl  && !nameEl.value  && (u.name || u.company)) nameEl.value = u.name || u.company;
+  } catch (e) {}
+  // Reset any previous result panel
+  const r = document.getElementById('hs-result');
+  if (r) { r.style.display = 'none'; r.textContent = ''; }
+}
+
+async function submitSupportMessage(ev) {
+  if (ev && ev.preventDefault) ev.preventDefault();
+  const email   = (document.getElementById('hs-email').value   || '').trim();
+  const name    = (document.getElementById('hs-name').value    || '').trim();
+  const subject = (document.getElementById('hs-subject').value || '').trim();
+  const message = (document.getElementById('hs-message').value || '').trim();
+  const btn = document.getElementById('hs-submit-btn');
+  const out = document.getElementById('hs-result');
+  if (!email)   { toast('Email is required', 'error'); return false; }
+  if (!message) { toast('Please write a message', 'error'); return false; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Sending…'; }
+  try {
+    const r = await apiFetch('/api/support/contact', 'POST', { email, name, subject, message });
+    if (out) {
+      out.style.display = 'block';
+      out.style.background = 'rgba(16,185,129,.08)';
+      out.style.border = '1px solid rgba(16,185,129,.35)';
+      out.style.color = '#22c55e';
+      out.innerHTML = '✅ ' + (r && r.message || "We received your message, we'll reply within 24 hours") +
+                      ". A confirmation was sent to <strong>" + _escHtml(email) + "</strong>.";
+    }
+    toast('✅ Message sent — check your inbox for the confirmation', 'success');
+    const msgEl = document.getElementById('hs-message');
+    const subEl = document.getElementById('hs-subject');
+    if (msgEl) msgEl.value = '';
+    if (subEl) subEl.value = '';
+  } catch (e) {
+    if (out) {
+      out.style.display = 'block';
+      out.style.background = 'rgba(239,68,68,.08)';
+      out.style.border = '1px solid rgba(239,68,68,.35)';
+      out.style.color = '#ef4444';
+      out.textContent = '⚠️ ' + (e.message || 'Could not send your message. Please try again.');
+    }
+    toast(e.message || 'Could not send your message', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📨 Send message'; }
+  }
+  return false;
+}
+
 function studioRender() {
   const root = document.getElementById('studio-root');
   if (!root) return;
@@ -7994,6 +8088,7 @@ const titles = {
   history:'📚 Content History',
   subaccounts:'👥 Extra Profiles',
   studio:'🎬 Video Studio',
+  'help-support':'💬 Help & Support',
   'brand-kit':'🎨 Brand Kit',
   'content-plan':'🗓️ AI Content Plan',
   competitor:'🔍 Competitor Spy',
@@ -8061,6 +8156,7 @@ function nav(p) {
   if (p === 'billing') loadBilling();
   if (p === 'subaccounts') loadSubAccounts();
   if (p === 'studio') studioInit();
+  if (p === 'help-support') initHelpSupport();
   if (p === 'content-engine') { loadContentCalendar(); }
   if (p === 'autopilot') { loadAutoPilot(); loadFullAutoStatus(); }
   if (p === 'growth-dashboard') { loadGrowthDashboard(); }
@@ -16545,7 +16641,9 @@ function _renderAnBestPost(bp) {
 
 
 // ── Studio premium providers (Hyper Realistic + Premium Animation) ───────────
-window._spProvider = 'higgsfield';
+// Hyper Realistic (Higgsfield) is gated as "Coming Soon" in the UI; Premium
+// Animation (Pika) is the live default until the Higgsfield rollout completes.
+window._spProvider = 'pika';
 
 // Per-duration credit cost — must match _VIDEO_CREDIT_PRICES in routes/studio.py.
 var SP_DURATION_COST = {5: 50, 10: 85, 15: 100};
@@ -16571,18 +16669,20 @@ function refreshStudioPremiumGate() {
 }
 
 function spSwitchProvider(provider) {
+  // Hyper Realistic (higgsfield) is gated as Coming Soon — fall back to Pika.
+  if (provider === 'higgsfield') {
+    if (typeof toast === 'function') toast('Hyper Realistic is coming soon — using Premium Animation', 'info');
+    provider = 'pika';
+  }
   window._spProvider = provider;
-  var higgs = document.getElementById('sp-tab-higgs');
   var pika  = document.getElementById('sp-tab-pika');
   var lbl   = document.getElementById('sp-provider-lbl');
-  function setActive(el, active) {
-    el.style.background = active ? 'rgba(124,58,237,.18)' : 'rgba(255,255,255,.05)';
-    el.style.color      = active ? '#a78bfa' : 'var(--tx3)';
-    el.style.borderColor = active ? 'rgba(124,58,237,.4)' : 'var(--border)';
+  if (pika) {
+    pika.style.background = 'rgba(124,58,237,.18)';
+    pika.style.color = '#a78bfa';
+    pika.style.borderColor = 'rgba(124,58,237,.4)';
   }
-  setActive(higgs, provider === 'higgsfield');
-  setActive(pika,  provider === 'pika');
-  if (lbl) lbl.textContent = provider === 'pika' ? 'Premium Animation' : 'Hyper Realistic';
+  if (lbl) lbl.textContent = 'Premium Animation';
 }
 
 async function spGenerate() {
