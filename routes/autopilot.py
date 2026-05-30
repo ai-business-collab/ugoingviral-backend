@@ -66,12 +66,12 @@ async def toggle_autopilot(req: Request, current_user: dict = Depends(get_curren
         ustore = _load_user_store(uid)
         billing = ustore.get("billing", {})
         credits = billing.get("credits", 0)
-        if credits < 300:
+        if credits < 100:
             return {
                 "ok": False, "active": False,
                 "error": "insufficient_credits",
-                "message": "Insufficient credits. Minimum 300 credits required to activate autopilot.",
-                "credits": credits, "minimum": 300,
+                "message": "You need at least 100 credits to start Auto Pilot",
+                "credits": credits, "minimum": 100,
             }
 
     if "automation" not in store:

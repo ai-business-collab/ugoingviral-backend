@@ -5880,28 +5880,50 @@ async function refreshCredits() {
   } catch (e) { return null; }
 }
 
-// Renders the free-trial-video banner in the Video Studio. Free-plan users see
-// how many of their 3 free videos remain; once exhausted, an upgrade prompt.
+// Renders the free-trial-video banner + "Claim 3 Free Videos" button in the
+// Video Studio. The button is driven purely by the server's free-video count
+// (independent of onboarding), so it shows even if onboarding was skipped and
+// stays until free_videos_used >= 3.
 async function loadFreeVideoStatus() {
   const box = document.getElementById('studio-free-videos-notice');
   if (!box) return;
   let d;
   try { d = await apiFetch('/api/studio/free_videos'); } catch (e) { box.style.display = 'none'; return; }
   if (!d || !d.eligible) { box.style.display = 'none'; return; }
+  const limit = d.limit || 3;
+  const used = d.used || 0;
+  const remaining = (typeof d.remaining === 'number') ? d.remaining : Math.max(0, limit - used);
   box.style.display = 'block';
-  if (d.remaining > 0) {
-    box.style.background = 'linear-gradient(135deg,rgba(0,229,255,.10),rgba(124,58,237,.08))';
-    box.style.border = '1px solid rgba(0,229,255,.35)';
-    box.style.color = 'var(--tx)';
-    box.innerHTML = '🎬 <strong>You have ' + d.remaining + ' free video' + (d.remaining === 1 ? '' : 's')
-      + ' left</strong> — ' + (d.duration || 10) + ' seconds each, powered by Runway. Generate one below — no credits used.';
-  } else {
+  if (used >= limit || remaining <= 0) {
+    // All free videos used — show the upgrade prompt and hide the claim button.
     box.style.background = 'rgba(245,158,11,.08)';
     box.style.border = '1px solid rgba(245,158,11,.35)';
     box.style.color = 'var(--tx)';
     box.innerHTML = '🔒 <strong>You\'ve used all 3 free videos.</strong> '
       + '<span style="cursor:pointer;color:var(--ac);text-decoration:underline;font-weight:700" onclick="nav(\'billing\')">Upgrade to a paid plan →</span> to keep creating AI videos.';
+  } else {
+    box.style.background = 'linear-gradient(135deg,rgba(0,229,255,.10),rgba(124,58,237,.08))';
+    box.style.border = '1px solid rgba(0,229,255,.35)';
+    box.style.color = 'var(--tx)';
+    box.innerHTML =
+      '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
+      + '<div style="flex:1;min-width:180px">'
+      +   '<div style="font-weight:800;font-size:14px">🎬 You have ' + remaining + ' free video' + (remaining === 1 ? '' : 's') + ' left</div>'
+      +   '<div style="font-size:12px;color:var(--tx2);margin-top:2px">' + (d.duration || 10) + ' seconds each, powered by Runway — no credits used. (' + used + ' of ' + limit + ' used)</div>'
+      + '</div>'
+      + '<button class="btn bp bsm" onclick="claimFreeVideo()" style="white-space:nowrap;font-weight:800">🎬 Claim 3 Free Videos</button>'
+      + '</div>';
   }
+}
+
+// "Claim" simply jumps the user to the generator so they can produce a free
+// video — generation itself consumes one of the 3 free-video slots.
+function claimFreeVideo() {
+  const root = document.getElementById('studio-root');
+  if (root && root.scrollIntoView) root.scrollIntoView({behavior: 'smooth', block: 'start'});
+  const promptEl = document.getElementById('scene-prompt-0');
+  if (promptEl && promptEl.focus) setTimeout(function(){ promptEl.focus(); }, 450);
+  if (typeof toast === 'function') toast('Enter a prompt and hit Generate — your free video uses no credits!', 'info');
 }
 
 function _applyCreditsToUI(credits, maxCredits) {
@@ -15917,7 +15939,8 @@ async function toggleAutoPilot(){
     var d = await apiFetch('/api/autopilot/toggle', 'POST', {active:_apActive});
     if(!d.ok && d.error==='insufficient_credits'){
       _apActive=false; renderApToggle(false);
-      toast('You need at least 50 credits to run Auto Pilot. Redirecting to billing…', 'error');
+      var msg = d.message || 'You need at least 100 credits to start Auto Pilot';
+      toast(msg + ' — opening billing to top up…', 'error');
       setTimeout(function(){ nav('billing'); }, 1800);
       return;
     }
