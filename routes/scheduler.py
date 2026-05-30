@@ -742,44 +742,143 @@ async def send_daily_reminders():
 
 
 
+_CREDIT_USD_RATE = 0.053  # $/credit — same rate as manual custom top-up
+
+
+def _customer_default_pm(stripe, cust_id: str):
+    """Best-effort lookup of a customer's default card payment method id."""
+    try:
+        cust = stripe.Customer.retrieve(cust_id)
+        pm = (cust.get("invoice_settings") or {}).get("default_payment_method")
+        if pm:
+            return pm
+    except Exception:
+        pass
+    try:
+        pms = stripe.PaymentMethod.list(customer=cust_id, type="card", limit=1)
+        data = pms.get("data") if hasattr(pms, "get") else getattr(pms, "data", None)
+        if data:
+            first = data[0]
+            return first.get("id") if hasattr(first, "get") else getattr(first, "id", None)
+    except Exception:
+        pass
+    return None
+
+
 async def check_auto_topup():
-    """Check all users for auto top-up triggers and process if needed."""
+    """Charge enabled users' saved card via Stripe when their balance hits the
+    configured threshold, and credit the purchased amount.
+
+    A negative balance (allowed because Auto Pilot never stops mid-task) is
+    settled here too: adding the purchased credits to the current (possibly
+    negative) balance pays down the debt first. When no saved card is available
+    we can't charge silently — we notify the user with a link to top up."""
+    import os
+    from datetime import datetime
     from services.users import load_users
     from services.store import _load_user_store, _save_user_store
-    from routes.billing import PLANS
-    from routes.email import send_system_email
+
+    try:
+        import stripe
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+    except Exception:
+        stripe = None
+
     users = load_users().get("users", [])
     for user in users:
         uid = user["id"]
-        ustore = _load_user_store(uid)
-        billing = ustore.get("billing", {})
-        if not billing.get("auto_topup_enabled"):
-            continue
-        threshold = billing.get("auto_topup_threshold", 50)
-        amount = billing.get("auto_topup_amount", 100)
-        current_credits = billing.get("credits", 0)
-        if current_credits > threshold:
-            continue
-        # Check cooldown — don't top up more than once per 24h
-        from datetime import datetime, timedelta
-        last = billing.get("auto_topup_last")
-        if last:
-            try:
-                if (datetime.utcnow() - datetime.fromisoformat(last)).total_seconds() < 86400:
-                    continue
-            except Exception:
-                pass
-        # Add credits (in production this would charge the saved payment method via Stripe)
-        billing["credits"] = current_credits + amount
-        billing["auto_topup_last"] = datetime.utcnow().isoformat()
-        _save_user_store(uid, ustore)
-        # Notify user by email
         try:
-            send_system_email(
-                user["email"],
-                f"Auto Top-Up: {amount} credits added",
-                f"<p>Hi {user.get('name','there')},</p><p>Your credits were running low ({current_credits} remaining). {amount} credits have been added automatically.</p><p>New balance: {billing['credits']} credits.</p><p>Go to <a href='https://ugoingviral.com/app'>your dashboard</a> to manage auto top-up settings.</p>"
-            )
+            ustore = _load_user_store(uid)
+            billing = ustore.get("billing", {})
+            if not billing.get("auto_topup_enabled"):
+                continue
+            threshold = int(billing.get("auto_topup_threshold", 50))
+            amount = int(billing.get("auto_topup_amount", 100))   # credits to add
+            current_credits = billing.get("credits", 0)
+            # Trigger at or below the threshold (negative balances qualify too).
+            if current_credits > threshold or amount <= 0:
+                continue
+
+            # Cooldown — don't attempt more than once per 6h while still low.
+            last = billing.get("auto_topup_last_attempt") or billing.get("auto_topup_last")
+            if last:
+                try:
+                    if (datetime.utcnow() - datetime.fromisoformat(last)).total_seconds() < 6 * 3600:
+                        continue
+                except Exception:
+                    pass
+            billing["auto_topup_last_attempt"] = datetime.utcnow().isoformat()
+
+            charged = False
+            cust_id = billing.get("stripe_customer_id")
+            if stripe and stripe.api_key and cust_id:
+                try:
+                    pm_id = _customer_default_pm(stripe, cust_id)
+                    if pm_id:
+                        amount_usd = round(amount * _CREDIT_USD_RATE, 2)
+                        intent = stripe.PaymentIntent.create(
+                            amount=int(round(amount_usd * 100)),
+                            currency="usd",
+                            customer=cust_id,
+                            payment_method=pm_id,
+                            off_session=True,
+                            confirm=True,
+                            metadata={"type": "auto_topup", "credits": str(amount), "user_id": uid},
+                            description=f"UgoingViral auto top-up — {amount} credits",
+                        )
+                        status = intent.get("status") if hasattr(intent, "get") else getattr(intent, "status", "")
+                        if status == "succeeded":
+                            charged = True
+                except Exception as exc:
+                    print(f"[auto_topup] charge failed for {uid}: {str(exc)[:160]}")
+
+            if charged:
+                # Adding to a (possibly negative) balance settles any debt first.
+                billing["credits"] = current_credits + amount
+                billing["auto_topup_last"] = datetime.utcnow().isoformat()
+                _save_user_store(uid, ustore)
+                _notify_topup(uid, user, amount, current_credits, billing["credits"], charged=True)
+            else:
+                # Couldn't charge automatically — persist the attempt timestamp
+                # (already set) and prompt the user to top up manually.
+                _save_user_store(uid, ustore)
+                _notify_topup(uid, user, amount, current_credits, current_credits, charged=False)
+        except Exception:
+            pass
+
+
+def _notify_topup(uid, user, amount, before, after, charged: bool):
+    """Send email + in-app notification about an auto top-up (success or the
+    fallback 'please top up' prompt when no saved card is available)."""
+    from routes.email import send_system_email
+    try:
+        from routes.notifications import push_notification
+    except Exception:
+        push_notification = None
+
+    if charged:
+        subject = f"Auto Top-Up: {amount} credits added"
+        body = (f"<p>Hi {user.get('name','there')},</p>"
+                f"<p>Your balance was low ({before} credits) so we automatically charged your saved card "
+                f"and added {amount} credits.</p>"
+                f"<p>New balance: {after} credits.</p>"
+                f"<p>Manage auto top-up anytime in <a href='https://ugoingviral.com/app'>your dashboard</a>.</p>")
+        title, ntext = "Auto top-up complete", f"{amount} credits added automatically. New balance: {after}."
+    else:
+        subject = "Action needed: top up your credits"
+        body = (f"<p>Hi {user.get('name','there')},</p>"
+                f"<p>Your balance is low ({before} credits) and auto top-up is enabled, but we couldn't charge a "
+                f"saved card. Please <a href='https://ugoingviral.com/app'>top up here</a> to keep Auto Pilot fully funded.</p>"
+                f"<p>Tip: complete a purchase once so your card is saved for automatic top-ups.</p>")
+        title, ntext = "Top up needed", "Auto top-up couldn't charge a saved card — please top up manually."
+
+    try:
+        send_system_email(user["email"], subject, body)
+    except Exception:
+        pass
+    if push_notification:
+        try:
+            push_notification(uid, "auto_topup", title, ntext)
         except Exception:
             pass
 

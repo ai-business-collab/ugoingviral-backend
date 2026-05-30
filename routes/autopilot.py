@@ -66,12 +66,13 @@ async def toggle_autopilot(req: Request, current_user: dict = Depends(get_curren
         ustore = _load_user_store(uid)
         billing = ustore.get("billing", {})
         credits = billing.get("credits", 0)
-        if credits < 100:
+        if credits < 200:
             return {
                 "ok": False, "active": False,
                 "error": "insufficient_credits",
-                "message": "You need at least 100 credits to start Auto Pilot",
-                "credits": credits, "minimum": 100,
+                "message": "You need at least 200 credits to start Auto Pilot",
+                "credits": credits, "minimum": 200,
+                "needed": max(0, 200 - int(credits)),
             }
 
     if "automation" not in store:
@@ -118,7 +119,16 @@ async def autopilot_run_now(current_user: dict = Depends(get_current_user)):
 
 
 async def run_autopilot_credit_checker():
-    """Hourly background task: pause autopilot and alert users whose credits fall below 50."""
+    """Hourly background task for Auto Pilot users.
+
+    Auto Pilot NEVER stops itself for low credits — a task in progress always
+    runs to completion and the balance is allowed to go negative (the debt is
+    settled on the next top-up). Instead this task:
+      • sends a low-credit reminder when the balance reaches 100, and again at 50
+        (idempotent — each reminder fires once until the balance recovers above
+        the threshold), and
+      • triggers Stripe auto top-up for users who enabled it.
+    """
     import asyncio
     import os
     import httpx
@@ -141,8 +151,23 @@ async def run_autopilot_credit_checker():
         except Exception:
             pass
 
+    def _notify(uid: str, title: str, message: str):
+        try:
+            from routes.notifications import push_notification
+            push_notification(uid, "credits_low", title, message)
+        except Exception:
+            pass
+
     while True:
         await asyncio.sleep(3600)  # run every hour
+
+        # Refill balances first so reminders reflect the post-top-up balance.
+        try:
+            from routes.scheduler import check_auto_topup
+            await check_auto_topup()
+        except Exception:
+            pass
+
         try:
             users_data = load_users()
             for u in users_data.get("users", []):
@@ -155,16 +180,43 @@ async def run_autopilot_credit_checker():
                     if not auto.get("active", False):
                         continue
                     credits = ustore.get("billing", {}).get("credits", 0)
-                    if credits < 50:
-                        auto["active"] = False
-                        ustore["automation"] = auto
+                    tg_id = u.get("telegram_id") or ustore.get("telegram_chat_id")
+
+                    rem = ustore.setdefault("credit_reminders", {})
+                    changed = False
+
+                    # Reset the one-shot flags once the balance recovers, so the
+                    # reminders can fire again next time credits run low.
+                    if credits > 100 and (rem.get("100") or rem.get("50")):
+                        rem["100"] = False
+                        rem["50"] = False
+                        changed = True
+                    elif credits > 50 and rem.get("50"):
+                        rem["50"] = False
+                        changed = True
+
+                    # Reminder at 100 credits (only while above the 50 line).
+                    if 50 < credits <= 100 and not rem.get("100"):
+                        msg = (f"⚠️ UgoingViral: Auto Pilot is running low — {int(credits)} credits left. "
+                               "Top up soon to avoid a negative balance. Auto Pilot keeps running.")
+                        await _send_tg(tg_id, msg)
+                        _notify(uid, "Credits running low (100)", msg)
+                        rem["100"] = True
+                        changed = True
+
+                    # Reminder at 50 credits.
+                    if credits <= 50 and not rem.get("50"):
+                        msg = (f"⚠️ UgoingViral: Auto Pilot balance is very low — {int(credits)} credits. "
+                               "Top up now. Auto Pilot will keep finishing tasks and the balance may go negative "
+                               "(settled on your next top-up).")
+                        await _send_tg(tg_id, msg)
+                        _notify(uid, "Credits very low (50)", msg)
+                        rem["50"] = True
+                        changed = True
+
+                    if changed:
+                        ustore["credit_reminders"] = rem
                         _save_user_store(uid, ustore)
-                        tg_id = u.get("telegram_id")
-                        await _send_tg(
-                            tg_id,
-                            "⚠️ UgoingViral: Your autopilot has been paused. "
-                            "Balance below 50 credits. Top up to resume.",
-                        )
                 except Exception:
                     pass
         except Exception:

@@ -1129,6 +1129,9 @@ def _process_stripe_event(event, stripe):
                     pkgs = billing.setdefault("studio_packages", [])
                     if pkg_key and pkg_key not in pkgs:
                         pkgs.append(pkg_key)
+                # Remember the Stripe customer so auto top-up can charge off-session later.
+                if obj.get("customer"):
+                    billing["stripe_customer_id"] = obj.get("customer")
                 user_store["billing"] = billing
                 _save_user_store(user_id, user_store)
 
@@ -1142,6 +1145,10 @@ def _process_stripe_event(event, stripe):
                     billing["plan"] = plan_key
                 billing["credits"] = plan_info["credits"]
                 billing["stripe_customer_email"] = obj.get("customer_email", "")
+                # Persist the Stripe customer id so auto top-up can charge the
+                # saved card off-session.
+                if obj.get("customer"):
+                    billing["stripe_customer_id"] = obj.get("customer")
                 user_store["billing"] = billing
                 _save_user_store(user_id, user_store)
                 try:

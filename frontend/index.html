@@ -15939,9 +15939,13 @@ async function toggleAutoPilot(){
     var d = await apiFetch('/api/autopilot/toggle', 'POST', {active:_apActive});
     if(!d.ok && d.error==='insufficient_credits'){
       _apActive=false; renderApToggle(false);
-      var msg = d.message || 'You need at least 100 credits to start Auto Pilot';
-      toast(msg + ' — opening billing to top up…', 'error');
-      setTimeout(function(){ nav('billing'); }, 1800);
+      var minc = d.minimum || 200;
+      var have = (typeof d.credits === 'number') ? d.credits : 0;
+      var need = (typeof d.needed === 'number') ? d.needed : Math.max(0, minc - have);
+      var base = d.message || ('You need at least ' + minc + ' credits to start Auto Pilot');
+      var msg = base + ' — you have ' + have + ' credits, ' + need + ' more needed. Opening billing to top up…';
+      toast(msg, 'error');
+      setTimeout(function(){ nav('billing'); }, 2200);
       return;
     }
     toast(_apActive?'Auto Pilot ON ✓':'Auto Pilot OFF', _apActive?'success':'info');
