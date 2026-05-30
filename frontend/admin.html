@@ -2667,8 +2667,39 @@ function renderAffiliatesApps(apps) {
 
 function _tierBadgeAdmin(tier) {
   if (!tier) return '';
-  const color = tier.key === 'gold' ? '#ffd700' : (tier.key === 'silver' ? '#c0c0c0' : '#cd7f32');
-  return '<span style="font-size:11px;font-weight:700;color:' + color + ';background:rgba(255,255,255,.04);border:1px solid ' + color + '33;padding:3px 8px;border-radius:10px">' + esc(tier.icon || '') + ' ' + esc(tier.name || '') + ' · ' + esc(String(tier.rate || 0)) + '%</span>';
+  const color = tier.key === 'gold' ? '#ffd700' : (tier.key === 'silver' ? '#c0c0c0' : (tier.key === 'standard' ? '#00e5ff' : '#cd7f32'));
+  const manual = tier.manual ? ' <span style="font-size:9px;color:var(--tx3)">(set)</span>' : '';
+  return '<span style="font-size:11px;font-weight:700;color:' + color + ';background:rgba(255,255,255,.04);border:1px solid ' + color + '33;padding:3px 8px;border-radius:10px">' + esc(tier.icon || '') + ' ' + esc(tier.name || '') + ' · ' + esc(String(tier.rate || 0)) + '%</span>' + manual;
+}
+
+// Partner-tier selector shown per affiliate. Lets an owner/support override the
+// automatic tier with Standard (10%) / Silver (20%) / Gold (30%).
+function _tierSelectAdmin(a) {
+  const cur = (a.manual_tier || '').toLowerCase();
+  const opt = function(val, label) {
+    return '<option value="' + val + '"' + (cur === val ? ' selected' : '') + '>' + label + '</option>';
+  };
+  const safeUid = esc(a.user_id);
+  return '<select onchange="setAffiliateTier(\'' + safeUid + '\', this.value)" '
+    + 'style="margin-top:6px;font-size:11px;background:var(--glass-b,#1a1a1a);color:var(--tx);border:1px solid var(--border);border-radius:6px;padding:3px 6px">'
+    + opt('', 'Auto (by customers)')
+    + opt('standard', 'Standard · 10%')
+    + opt('silver', 'Silver · 20%')
+    + opt('gold', 'Gold · 30%')
+    + '</select>';
+}
+
+async function setAffiliateTier(uid, tier) {
+  try {
+    const r = await fetch('/api/admin/affiliates/set_tier', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+      body: JSON.stringify({user_id: uid, tier: tier}),
+    });
+    if (!r.ok) { toast('Could not update tier', 'error'); return; }
+    toast('Tier updated', 'success');
+    loadAdminAffiliates();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 function renderAffiliatesList(list) {
@@ -2692,7 +2723,7 @@ function renderAffiliatesList(list) {
       const safeUid = esc(a.user_id);
       return '<tr>'
         + '<td style="padding:10px 8px;border-bottom:1px solid var(--border)"><div style="font-weight:600">' + esc(a.name || '(no name)') + '</div><div style="font-size:11px;color:var(--tx3)">' + esc(a.email) + '</div></td>'
-        + '<td style="padding:10px 8px;border-bottom:1px solid var(--border)">' + _tierBadgeAdmin(a.tier) + '</td>'
+        + '<td style="padding:10px 8px;border-bottom:1px solid var(--border)"><div>' + _tierBadgeAdmin(a.tier) + '</div>' + _tierSelectAdmin(a) + '</td>'
         + '<td style="padding:10px 8px;border-bottom:1px solid var(--border)">' + (a.customer_count || 0) + '</td>'
         + '<td style="padding:10px 8px;border-bottom:1px solid var(--border);color:#f59e0b">$' + Number(a.pending || 0).toFixed(2) + '</td>'
         + '<td style="padding:10px 8px;border-bottom:1px solid var(--border);color:' + readyColor + ';font-weight:700">$' + Number(a.available || 0).toFixed(2) + '</td>'

@@ -1,6 +1,6 @@
 """
 UgoingViral Video Studio — Multi-scene, multi-provider AI video generation + smart clip cutter.
-Providers: Runway Gen-3, Luma Dream Machine, Replicate
+Providers: Runway Gen-3, Luma Dream Machine, Replicate, Kling AI (Hyper Realistic), Pika (Premium Animation)
 """
 import os, uuid, subprocess, json, asyncio, httpx, re, shutil
 from datetime import datetime
@@ -33,6 +33,40 @@ _PRO_PLUS = {"starter", "basic", "pro", "elite", "personal", "agency", "growth"}
 def _is_pro_plus(user_id: str) -> bool:
     plan = (_load_user_store(user_id).get("billing", {}).get("plan") or "").lower()
     return plan in _PRO_PLUS
+
+
+# ── Free trial videos ─────────────────────────────────────────────────────────
+# New (Free-plan) users get 3 free AI videos (10s each, generated via Runway)
+# before they need a paid plan. Usage is tracked per-user as `free_videos_used`.
+_FREE_VIDEO_LIMIT = 3
+_FREE_VIDEO_DURATION = 10  # seconds — each free trial video
+
+
+def _free_videos_status(user_id: str) -> dict:
+    """Return the user's free-video allowance: {plan, limit, used, remaining}.
+    Only Free-plan users get a free-video allowance; paid plans return limit 0."""
+    ustore = _load_user_store(user_id)
+    plan = (ustore.get("billing", {}).get("plan") or "free").lower()
+    limit = _FREE_VIDEO_LIMIT if plan == "free" else 0
+    used = int(ustore.get("free_videos_used", 0) or 0)
+    return {
+        "plan": plan,
+        "limit": limit,
+        "used": used,
+        "remaining": max(0, limit - used),
+        "eligible": plan == "free",
+    }
+
+
+def _consume_free_video(user_id: str) -> int:
+    """Increment and persist the user's free-video counter; returns new count."""
+    ustore = _load_user_store(user_id)
+    used = int(ustore.get("free_videos_used", 0) or 0) + 1
+    ustore["free_videos_used"] = used
+    _save_user_store(user_id, ustore)
+    return used
+
+
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ELEVENLABS_KEY    = os.getenv("ELEVENLABS_API_KEY", "")
 
@@ -374,6 +408,60 @@ async def _replicate_generate(prompt: str, duration: int = 5, aspect_ratio: str 
     return None
 
 
+async def _replicate_kling_generate(prompt: str, duration: int = 5,
+                                    aspect_ratio: str = "16:9",
+                                    image_url: str = "") -> Optional[str]:
+    """Hyper Realistic video via Kling 1.6 Pro on Replicate (klingai/kling-1.6-pro).
+    Submits an async prediction and polls until it completes, returning the
+    playable video URL."""
+    if not REPLICATE_API_KEY:
+        raise HTTPException(status_code=503, detail="Replicate API not configured (REPLICATE_API_KEY missing)")
+    # Kling accepts a limited set of aspect ratios — map anything else (e.g. 4:5)
+    # to the closest supported value so the request never bounces.
+    kling_aspect = aspect_ratio if aspect_ratio in ("16:9", "9:16", "1:1") else "9:16"
+    pred_input = {
+        "prompt":       prompt,
+        "duration":     str(duration),       # Kling expects duration as a string
+        "aspect_ratio": kling_aspect,
+        "cfg_scale":    0.5,
+    }
+    if image_url:
+        # Image-to-video reference for character consistency across a mini-series.
+        pred_input["start_image"] = image_url
+    async with httpx.AsyncClient(timeout=120) as client:
+        r = await client.post(
+            "https://api.replicate.com/v1/models/klingai/kling-1.6-pro/predictions",
+            headers={"Authorization": f"Token {REPLICATE_API_KEY}",
+                     "Content-Type": "application/json",
+                     "Prefer": "wait"},
+            json={"input": pred_input},
+        )
+        if r.status_code not in (200, 201):
+            raise HTTPException(status_code=502, detail=f"Kling AI error {r.status_code}: {r.text[:200]}")
+        data = r.json()
+        # With "Prefer: wait" Replicate may already return a finished prediction.
+        if data.get("status") == "succeeded":
+            out = data.get("output")
+            return out[0] if isinstance(out, list) and out else out
+        pred_id = data.get("id")
+        if not pred_id:
+            raise HTTPException(status_code=502, detail="Kling AI returned no prediction ID")
+        for _ in range(40):
+            await asyncio.sleep(6)
+            poll = await client.get(
+                f"https://api.replicate.com/v1/predictions/{pred_id}",
+                headers={"Authorization": f"Token {REPLICATE_API_KEY}"},
+            )
+            pdata = poll.json()
+            st = pdata.get("status")
+            if st == "succeeded":
+                out = pdata.get("output")
+                return out[0] if isinstance(out, list) and out else out
+            if st in ("failed", "canceled"):
+                raise HTTPException(status_code=502, detail=f"Kling AI generation {st}: {str(pdata.get('error',''))[:160]}")
+    raise HTTPException(status_code=504, detail="Kling AI timed out — please try again")
+
+
 async def _generate_video(prompt: str, provider: str, duration: int,
                           aspect_ratio: str, image_url: str = "") -> str:
     if provider == "runway":
@@ -539,6 +627,14 @@ def get_providers(current_user: dict = Depends(get_current_user)):
     }
 
 
+@router.get("/api/studio/free_videos")
+def get_free_videos(current_user: dict = Depends(get_current_user)):
+    """Free-video allowance for the current user (used by onboarding + studio)."""
+    status = _free_videos_status(current_user["id"])
+    status["duration"] = _FREE_VIDEO_DURATION
+    return status
+
+
 @router.post("/api/studio/estimate")
 def estimate_cost(req: StudioRequest, current_user: dict = Depends(get_current_user)):
     cost = _calc_cost(req)
@@ -585,9 +681,30 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
 
     cost = _calc_cost(req)
     uid = current_user["id"]
-    # Check if this is pack-covered (single scene from studio pack)
-    pack_scene = len(req.scenes) == 1
-    credits_left = _deduct(cost, uid=uid, pack_scene=pack_scene)
+
+    # ── Free trial videos ──────────────────────────────────────────────────
+    # Free-plan users get 3 free AI videos (generated via Runway) before any
+    # credit charge. Once the allowance is used up, video generation is gated
+    # behind a paid plan.
+    fv = _free_videos_status(uid)
+    used_free_video = False
+    if fv["eligible"]:
+        if fv["remaining"] <= 0:
+            raise HTTPException(
+                status_code=403,
+                detail="You've used all 3 free videos. Upgrade to a paid plan to keep generating videos.",
+            )
+        # Free trial videos render via Runway when it's configured.
+        if PROVIDERS.get("runway", {}).get("available"):
+            provider = "runway"
+        cost = 0
+        used_free_video = True
+        _consume_free_video(uid)
+        credits_left = _load_user_store(uid).get("billing", {}).get("credits", 0)
+    else:
+        # Check if this is pack-covered (single scene from studio pack)
+        pack_scene = len(req.scenes) == 1
+        credits_left = _deduct(cost, uid=uid, pack_scene=pack_scene)
 
     # Enhance prompts if multi-scene and enabled
     scene_prompts = [s.prompt for s in req.scenes]
@@ -723,6 +840,7 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
     except Exception:
         pass
 
+    fv_after = _free_videos_status(uid)
     return {
         "session_id": session_id,
         "scenes": result_videos,
@@ -730,6 +848,10 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
         "voice_url": voice_url,
         "credits_used": cost,
         "credits_left": credits_left,
+        "free_video_used": used_free_video,
+        "free_videos_remaining": fv_after["remaining"],
+        "free_videos_used": fv_after["used"],
+        "free_videos_limit": fv_after["limit"],
     }
 
 
@@ -1076,6 +1198,16 @@ def _charge_or_402(uid: str, amount: int) -> int:
     return billing["credits"]
 
 
+def _refund(uid: str, amount: int) -> int:
+    """Return `amount` credits to a user (used when a paid generation fails)."""
+    ustore = _load_user_store(uid)
+    billing = ustore.setdefault("billing", {})
+    billing["credits"] = int(billing.get("credits") or 0) + amount
+    ustore["billing"] = billing
+    _save_user_store(uid, ustore)
+    return billing["credits"]
+
+
 def _extract_video_url(result: dict) -> Optional[str]:
     """Best-effort extraction of a playable URL from a provider response.
     Provider schemas vary, so probe common shapes and return the first match."""
@@ -1205,4 +1337,59 @@ async def pika_generate(body: dict, current_user: dict = Depends(get_current_use
         "credits_used": cost,
         "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "image_url": image_url},
         "result":       result,
+    }
+
+
+@router.post("/api/studio/kling")
+async def kling_generate(body: dict, current_user: dict = Depends(get_current_user)):
+    """Hyper Realistic video generation via Kling 1.6 Pro (Replicate).
+    Pricing: 50 / 85 / 100 credits for 5s / 10s / 15s (see _VIDEO_CREDIT_PRICES)."""
+    uid = current_user["id"]
+    if not _is_pro_plus(uid):
+        raise HTTPException(status_code=403, detail="Hyper Realistic generation requires a paid plan")
+    if not REPLICATE_API_KEY:
+        raise HTTPException(status_code=503, detail="Hyper Realistic provider is not configured on the server")
+    prompt, duration, aspect, image_url = _validate_video_payload(body)
+
+    cost = _video_credit_cost(duration)
+    credits_left = _charge_or_402(uid, cost)
+    # Refund the charge if the provider call fails, so a failed render never
+    # silently burns the user's credits.
+    try:
+        video_url = await _replicate_kling_generate(prompt, duration, aspect, image_url)
+    except HTTPException:
+        _refund(uid, cost)
+        raise
+    except Exception as exc:
+        _refund(uid, cost)
+        raise HTTPException(status_code=502, detail=f"Kling AI: {str(exc)[:160]}")
+
+    _save_generated_video(uid, {
+        "id":           uuid.uuid4().hex[:10],
+        "url":          video_url,
+        "provider":     "kling",
+        "kind":         "hyper_realistic",
+        "duration":     duration,
+        "aspect_ratio": aspect,
+        "prompt":       prompt[:240],
+        "credits_used": cost,
+        "created_at":   datetime.now().isoformat(),
+    })
+    # Persist into the permanent content library (survives provider TTL).
+    try:
+        from routes.content_library import add_to_library
+        await add_to_library(
+            uid, kind="videos", provider="kling",
+            source_url=video_url,
+            prompt=prompt, duration=duration, aspect_ratio=aspect,
+            credits_used=cost,
+        )
+    except Exception:
+        pass
+    return {
+        "provider":     "kling",
+        "credits_left": credits_left,
+        "credits_used": cost,
+        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "image_url": image_url},
+        "result":       {"video_url": video_url},
     }

@@ -37,6 +37,27 @@ def _tier_for(customer_count: int) -> dict:
     return {"key": "bronze", "name": "Bronze", "icon": "🥉", "rate": 10, "next": 10, "next_label": "Silver"}
 
 
+# Partner tiers an admin can assign manually (overrides the automatic
+# customer-count tier above). Standard 10%, Silver 20%, Gold 30%.
+MANUAL_TIERS = {
+    "standard": {"key": "standard", "name": "Standard", "icon": "⭐", "rate": 10},
+    "silver":   {"key": "silver",   "name": "Silver",   "icon": "🥈", "rate": 20},
+    "gold":     {"key": "gold",     "name": "Gold",     "icon": "🥇", "rate": 30},
+}
+
+
+def _resolve_tier(aff: dict, customer_count: int) -> dict:
+    """Return the affiliate's effective tier. An admin-assigned `manual_tier`
+    takes precedence over the automatic customer-count tier so partner deals
+    (Standard/Silver/Gold) are honoured in every commission calculation."""
+    manual = (aff.get("manual_tier") or "").lower()
+    if manual in MANUAL_TIERS:
+        tier = dict(MANUAL_TIERS[manual])
+        tier.update({"next": None, "next_label": None, "manual": True})
+        return tier
+    return _tier_for(customer_count)
+
+
 def _load_affiliates() -> dict:
     if os.path.exists(AFFILIATES_FILE):
         try:
@@ -139,7 +160,7 @@ def my_affiliate(current_user: dict = Depends(get_current_user)):
     _save_affiliates(data)
 
     customer_count = len(set(c.get("customer_email", "") for c in commissions if c.get("customer_email")))
-    tier = _tier_for(customer_count)
+    tier = _resolve_tier(aff, customer_count)
     code = _aff_code(uid)
     return {
         "status": "approved",
@@ -287,13 +308,14 @@ def admin_list_affiliates(request: Request):
         commissions = aff.get("commissions", [])
         totals = _classify_commissions(commissions)
         customer_count = len(set(c.get("customer_email", "") for c in commissions if c.get("customer_email")))
-        tier = _tier_for(customer_count)
+        tier = _resolve_tier(aff, customer_count)
         out_aff.append({
             "user_id": uid,
             "name": aff.get("name", ""),
             "email": aff.get("email", ""),
             "status": aff.get("status", "approved"),
             "tier": tier,
+            "manual_tier": (aff.get("manual_tier") or "").lower(),
             "customer_count": customer_count,
             "payout_method": aff.get("payout_method", ""),
             "payout_info": aff.get("payout_info", ""),
@@ -434,6 +456,36 @@ async def admin_mark_paid(request: Request):
     return {"ok": True, "paid_amount": round(paid_total, 2)}
 
 
+@router.post("/api/admin/affiliates/set_tier")
+async def admin_set_tier(request: Request):
+    """Assign a partner tier to an affiliate (Standard 10% / Silver 20% / Gold 30%).
+    The manual tier overrides the automatic customer-count tier and is applied to
+    every future commission. Pass tier="" (or "auto") to clear the override."""
+    _require_owner_or_support(request)
+    body = await request.json()
+    uid = str(body.get("user_id", "")).strip()
+    tier = str(body.get("tier", "")).strip().lower()
+    if not uid:
+        raise HTTPException(status_code=422, detail="user_id required")
+    if tier in ("", "auto", "none"):
+        tier = ""
+    elif tier not in MANUAL_TIERS:
+        raise HTTPException(status_code=422, detail=f"tier must be one of {sorted(MANUAL_TIERS.keys())} (or empty to clear)")
+
+    data = _load_affiliates()
+    aff = data["affiliates"].get(uid)
+    if not aff:
+        raise HTTPException(status_code=404, detail="Affiliate not found")
+    if tier:
+        aff["manual_tier"] = tier
+    else:
+        aff.pop("manual_tier", None)
+    _save_affiliates(data)
+
+    customer_count = len(set(c.get("customer_email", "") for c in aff.get("commissions", []) if c.get("customer_email")))
+    return {"ok": True, "user_id": uid, "manual_tier": tier, "tier": _resolve_tier(aff, customer_count)}
+
+
 # ── Internal hook: record a commission when a referred user pays ──────────────
 
 def record_commission(referrer_user_id: str, customer_email: str, plan: str, amount_usd: float) -> bool:
@@ -447,7 +499,7 @@ def record_commission(referrer_user_id: str, customer_email: str, plan: str, amo
         return False
     commissions = aff.setdefault("commissions", [])
     customer_count = len(set(c.get("customer_email", "") for c in commissions if c.get("customer_email")))
-    tier = _tier_for(customer_count + 1)
+    tier = _resolve_tier(aff, customer_count + 1)
     commission = round(amount_usd * tier["rate"] / 100.0, 2)
     commissions.append({
         "date": datetime.utcnow().isoformat() + "Z",

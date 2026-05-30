@@ -3424,7 +3424,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 <!-- ══ CONTENT BIBLIOTEK (merged) ═══════════════════════════════════════ -->
 <div id="page-content-library" class="page">
   <div class="gtabs" data-group="archive">
-    <button class="gtab" data-page="content-library" onclick="nav('content-library')">🗂️ Library</button>
+    <button class="gtab active" data-page="content-library" onclick="nav('content-library')">🗂️ Library</button>
     <button class="gtab" data-page="library" onclick="nav('library')">📁 Content Mapper</button>
     <button class="gtab" data-page="history" onclick="nav('history')">📚 History</button>
   </div>
@@ -4501,7 +4501,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation — included on any paid plan · 50 / 85 / 100 credits per 5s / 10s / 15s</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button class="btn bsm" id="sp-tab-higgs" disabled title="Hyper Realistic provider is not yet available" style="background:rgba(255,255,255,.04);color:var(--tx3);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:not-allowed;opacity:.6">Hyper Realistic (Coming Soon)</button>
+          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('kling')" title="Hyper Realistic video powered by Kling AI" style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
           <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
         </div>
       </div>
@@ -4564,6 +4564,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
     </div>
+      <!-- Free trial videos status (free plan only) -->
+      <div id="studio-free-videos-notice" style="display:none;border-radius:10px;padding:12px 16px;margin-top:12px;font-size:13px"></div>
+
       <!-- Watermark notice for free users -->
       <div id="studio-watermark-notice" style="display:none;background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;margin-top:12px;font-size:12px;color:var(--tx2)">
         🔖 <strong>Free plan:</strong> Your generated videos will include a "Made with UgoingViral" watermark. <span style="cursor:pointer;color:var(--ac);text-decoration:underline" onclick="nav('billing')">Upgrade to remove it →</span>
@@ -5872,8 +5875,33 @@ async function refreshCredits() {
   try {
     const d = await apiFetch('/api/billing/credits');
     _applyCreditsToUI(d.credits, d.max_credits);
+    if (typeof loadFreeVideoStatus === 'function') loadFreeVideoStatus();
     return d;
   } catch (e) { return null; }
+}
+
+// Renders the free-trial-video banner in the Video Studio. Free-plan users see
+// how many of their 3 free videos remain; once exhausted, an upgrade prompt.
+async function loadFreeVideoStatus() {
+  const box = document.getElementById('studio-free-videos-notice');
+  if (!box) return;
+  let d;
+  try { d = await apiFetch('/api/studio/free_videos'); } catch (e) { box.style.display = 'none'; return; }
+  if (!d || !d.eligible) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  if (d.remaining > 0) {
+    box.style.background = 'linear-gradient(135deg,rgba(0,229,255,.10),rgba(124,58,237,.08))';
+    box.style.border = '1px solid rgba(0,229,255,.35)';
+    box.style.color = 'var(--tx)';
+    box.innerHTML = '🎬 <strong>You have ' + d.remaining + ' free video' + (d.remaining === 1 ? '' : 's')
+      + ' left</strong> — ' + (d.duration || 10) + ' seconds each, powered by Runway. Generate one below — no credits used.';
+  } else {
+    box.style.background = 'rgba(245,158,11,.08)';
+    box.style.border = '1px solid rgba(245,158,11,.35)';
+    box.style.color = 'var(--tx)';
+    box.innerHTML = '🔒 <strong>You\'ve used all 3 free videos.</strong> '
+      + '<span style="cursor:pointer;color:var(--ac);text-decoration:underline;font-weight:700" onclick="nav(\'billing\')">Upgrade to a paid plan →</span> to keep creating AI videos.';
+  }
 }
 
 function _applyCreditsToUI(credits, maxCredits) {
@@ -6577,6 +6605,7 @@ async function studioInit() {
   }
   studioRender();
   loadMyVideos();
+  if (typeof loadFreeVideoStatus === 'function') loadFreeVideoStatus();
 }
 
 async function loadMyVideos() {
@@ -7141,9 +7170,16 @@ async function studioGenerate() {
     studioSetProgress('Done! ✅', 100, totalScenes);
     _studio.lastResult = result;
     _studio.generating = false;
-    toast(`✅ Video${totalScenes>1?' serie':''} genereret! ${result.credits_used} cr brugt`, 'success');
+    if (result.free_video_used) {
+      const left = result.free_videos_remaining;
+      toast(`✅ Free video generated! ${left} free video${left===1?'':'s'} left`, 'success');
+    } else {
+      toast(`✅ Video${totalScenes>1?' serie':''} genereret! ${result.credits_used} cr brugt`, 'success');
+    }
     studioRender();
     loadMyVideos();
+    // Keep the credit + free-video displays in sync after a generation.
+    if (typeof refreshCredits === 'function') refreshCredits();
 
     // First video bonus
     checkAndClaimBonus('first_video');
@@ -7152,6 +7188,8 @@ async function studioGenerate() {
     _studio.generating = false;
     toast('❌ ' + (e.message||'Generering fejlede'), 'error');
     studioRender();
+    // Refresh so the "all free videos used" upgrade prompt appears if relevant.
+    if (typeof loadFreeVideoStatus === 'function') loadFreeVideoStatus();
   }
 }
 
@@ -7413,6 +7451,13 @@ async function obfComplete() {
   } catch(e) {}
   // Start interactive tour after setup (only if not already done)
   setTimeout(tourStart, 400);
+}
+
+// Free-videos CTA from the onboarding welcome slide: finish onboarding and
+// jump straight into the Video Studio so the user can use a free video.
+async function obfGenerateFreeVideo() {
+  try { await obfComplete(); } catch(e) {}
+  if (typeof nav === 'function') nav('studio');
 }
 
 async function obfSaveShop() {
@@ -12336,6 +12381,15 @@ function sendQueueToPost(id) {
           <div class="obf-card-desc">Vokse dine sociale medier automatisk med planlagte opslag, auto-svar og engagement.</div>
         </div>
       </div>
+      <!-- Free videos welcome banner -->
+      <div id="obf-free-videos" style="margin-top:28px;max-width:560px;margin-left:auto;margin-right:auto;background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(124,58,237,.10));border:1px solid rgba(0,229,255,.35);border-radius:14px;padding:18px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center">
+        <div style="font-size:34px">🎬</div>
+        <div style="flex:1;min-width:200px;text-align:left">
+          <div style="font-size:16px;font-weight:800;color:var(--tx)">You have <span style="color:var(--ac)">3 free videos</span> — generate now</div>
+          <div style="font-size:12px;color:var(--tx2);margin-top:3px">3 AI videos (10 seconds each), powered by Runway. No credit card needed.</div>
+        </div>
+        <button class="obf-btn" style="white-space:nowrap" onclick="obfGenerateFreeVideo()">✨ Generate now</button>
+      </div>
     </div>
 
     <!-- SLIDE 2: MAIN GOAL -->
@@ -12627,7 +12681,7 @@ function libItemHtml(it) {
   var kind  = it.kind || 'videos';
   var ts    = (it.created_at || '').slice(0, 16).replace('T', ' ');
   var label = (it.prompt || it.product_title || '').slice(0, 110);
-  var providerLabel = (it.provider || '').replace('higgsfield','Hyper Realistic').replace('pika','Premium Animation');
+  var providerLabel = (it.provider || '').replace('higgsfield','Hyper Realistic').replace('kling','Hyper Realistic (Kling AI)').replace('pika','Premium Animation');
   var thumb;
   if (kind === 'videos' && url) {
     thumb = '<video src="' + url + '" controls preload="metadata" style="width:100%;aspect-ratio:9/16;object-fit:cover;background:#000;border-radius:8px 8px 0 0"></video>';
@@ -16917,9 +16971,9 @@ function _renderAnBestPost(bp) {
 
 
 // ── Studio premium providers (Hyper Realistic + Premium Animation) ───────────
-// Hyper Realistic (Higgsfield) is gated as "Coming Soon" in the UI; Premium
-// Animation (Pika) is the live default until the Higgsfield rollout completes.
-window._spProvider = 'pika';
+// Hyper Realistic is powered by Kling AI (Kling 1.6 Pro via Replicate); Premium
+// Animation is powered by Pika. Both are live on any paid plan.
+window._spProvider = 'kling';
 
 // Per-duration credit cost — must match _VIDEO_CREDIT_PRICES in routes/studio.py.
 var SP_DURATION_COST = {5: 50, 10: 85, 15: 100};
@@ -16945,20 +16999,22 @@ function refreshStudioPremiumGate() {
 }
 
 function spSwitchProvider(provider) {
-  // Hyper Realistic (higgsfield) is gated as Coming Soon — fall back to Pika.
-  if (provider === 'higgsfield') {
-    if (typeof toast === 'function') toast('Hyper Realistic is coming soon — using Premium Animation', 'info');
-    provider = 'pika';
-  }
+  // Hyper Realistic is powered by Kling AI; 'higgsfield' kept as a legacy alias.
+  if (provider === 'higgsfield') provider = 'kling';
+  if (provider !== 'kling' && provider !== 'pika') provider = 'kling';
   window._spProvider = provider;
+  var kling = document.getElementById('sp-tab-higgs');
   var pika  = document.getElementById('sp-tab-pika');
   var lbl   = document.getElementById('sp-provider-lbl');
-  if (pika) {
-    pika.style.background = 'rgba(124,58,237,.18)';
-    pika.style.color = '#a78bfa';
-    pika.style.borderColor = 'rgba(124,58,237,.4)';
+  var active = provider === 'kling' ? kling : pika;
+  var idle   = provider === 'kling' ? pika  : kling;
+  // Active tab: solid accent; idle tab: dimmed.
+  if (active) { active.style.opacity = '1'; active.style.outline = '2px solid currentColor'; active.style.outlineOffset = '-2px'; }
+  if (idle)   { idle.style.opacity = '.55'; idle.style.outline = 'none'; }
+  if (lbl) {
+    lbl.textContent = provider === 'kling' ? 'Hyper Realistic (Kling AI)' : 'Premium Animation';
+    lbl.style.color = provider === 'kling' ? 'var(--ac)' : '#a78bfa';
   }
-  if (lbl) lbl.textContent = 'Premium Animation';
 }
 
 async function spGenerate() {
@@ -16979,9 +17035,9 @@ async function spGenerate() {
   if (chosenChar && chosenChar.image_url) payload.image_url = chosenChar.image_url;
   btn.disabled = true; btn.textContent = '⏳ Generating…';
   out.style.display = 'block';
-  out.textContent   = 'Sending request to ' + (window._spProvider === 'pika' ? 'Premium Animation' : 'Hyper Realistic') + '…';
+  out.textContent   = 'Sending request to ' + (window._spProvider === 'pika' ? 'Premium Animation' : 'Hyper Realistic (Kling AI)') + '…';
   try {
-    var endpoint = window._spProvider === 'pika' ? '/api/studio/pika' : '/api/studio/higgsfield';
+    var endpoint = window._spProvider === 'pika' ? '/api/studio/pika' : '/api/studio/kling';
     var r = await apiFetch(endpoint, 'POST', payload);
     out.textContent = JSON.stringify(r, null, 2);
     // Trust the server-reported cost so the toast can't disagree with the deduction.
@@ -17152,6 +17208,8 @@ async function spSaveCharacter() {
   var origGate = window.refreshStudioPremiumGate;
   window.refreshStudioPremiumGate = function() {
     if (typeof origGate === 'function') origGate.apply(this, arguments);
+    // Reflect the current provider selection on the tab buttons.
+    if (typeof spSwitchProvider === 'function') spSwitchProvider(window._spProvider || 'kling');
     if (done) return;
     var form = document.getElementById('sp-form');
     if (form && form.style.display !== 'none') {
