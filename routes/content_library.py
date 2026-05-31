@@ -190,20 +190,23 @@ def _is_paid_plan(user_id: str) -> bool:
 # ── HTTP endpoints ────────────────────────────────────────────────────────────
 
 
-@router.get("/api/library/content")
-async def list_library_content(kind: str = "", current_user: dict = Depends(get_current_user)):
-    """Return the user's saved library items.
+# Default library folders (virtual — derived from item kind / upload flag).
+DEFAULT_FOLDERS = [
+    {"key": "videos",  "label": "Videos",  "icon": "🎬"},
+    {"key": "images",  "label": "Images",  "icon": "🖼️"},
+    {"key": "audio",   "label": "Audio",   "icon": "🎵"},
+    {"key": "posts",   "label": "Posts",   "icon": "📅"},
+    {"key": "uploads", "label": "Uploads", "icon": "⬆️"},
+]
 
-    Optional `kind` filter — "videos" | "images" | "posts". The Posts folder
-    aggregates the existing post-log entries (scheduled + published) so the
-    Library can show them alongside generated media.
-    """
-    uid = current_user["id"]
-    ustore = _load_user_store(uid)
+
+def _merged_items(ustore: dict, include_posts: bool = True) -> list:
+    """Merge saved library items with legacy generated videos and (optionally)
+    the scheduled/published post log into one list the library UI can render."""
     items = list(ustore.get("library_items", []) or [])
 
-    # Backfill: include legacy generated_videos rows so accounts created
-    # before the library existed still see their past Studio generations.
+    # Backfill: include legacy generated_videos rows so accounts created before
+    # the library existed still see their past Studio generations.
     seen_ids = {i.get("id") for i in items}
     for v in (ustore.get("generated_videos") or []):
         if v.get("id") in seen_ids:
@@ -223,9 +226,9 @@ async def list_library_content(kind: str = "", current_user: dict = Depends(get_
             "created_at":   v.get("created_at") or "",
         })
 
-    if kind == "posts" or kind == "":
-        # Mirror scheduled/published posts into the library view so the UI can
-        # show them under the Posts folder without duplicating storage.
+    if include_posts:
+        # Mirror scheduled/published posts so they show under the Posts folder
+        # without duplicating storage.
         for p in (ustore.get("scheduled_posts") or []):
             items.append({
                 "id":          p.get("id") or uuid.uuid4().hex[:12],
@@ -239,16 +242,111 @@ async def list_library_content(kind: str = "", current_user: dict = Depends(get_
                 "scheduled_at": p.get("scheduled_at") or "",
                 "created_at":  p.get("created_at") or p.get("scheduled_at") or "",
             })
+    return items
 
-    if kind:
+
+def _folder_counts(ustore: dict) -> dict:
+    """Item counts for each default folder + each custom folder."""
+    allitems = _merged_items(ustore, include_posts=True)
+    counts = {
+        "videos":  sum(1 for i in allitems if i.get("kind") == "videos"),
+        "images":  sum(1 for i in allitems if i.get("kind") == "images"),
+        "audio":   sum(1 for i in allitems if i.get("kind") == "audio"),
+        "posts":   sum(1 for i in allitems if i.get("kind") == "posts"),
+        "uploads": sum(1 for i in allitems if i.get("is_upload")),
+    }
+    custom = {}
+    for name in (ustore.get("library_custom_folders") or []):
+        custom[name] = sum(1 for i in allitems if (i.get("folder") or "") == name)
+    return {"defaults": counts, "custom": custom}
+
+
+@router.get("/api/library/content")
+async def list_library_content(kind: str = "", folder: str = "", current_user: dict = Depends(get_current_user)):
+    """Return the user's saved library items.
+
+    `kind`   — default folder filter: videos | images | audio | posts | uploads
+    `folder` — a custom folder name (overrides `kind`); returns items tagged to it.
+    """
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    # Posts only need merging for the Posts/all/custom views.
+    include_posts = (not kind) or kind in ("posts",) or bool(folder)
+    items = _merged_items(ustore, include_posts=include_posts)
+
+    if folder:
+        items = [i for i in items if (i.get("folder") or "") == folder]
+    elif kind == "uploads":
+        items = [i for i in items if i.get("is_upload")]
+    elif kind:
         items = [i for i in items if i.get("kind") == kind]
 
     items.sort(key=lambda x: x.get("created_at") or "", reverse=True)
     return {
         "items":     items,
         "can_download": _is_paid_plan(uid),
-        "plan":       _load_user_store(uid).get("billing", {}).get("plan", "free"),
+        "plan":       ustore.get("billing", {}).get("plan", "free"),
+        "folders":    _folder_counts(ustore),
     }
+
+
+@router.get("/api/library/content_folders")
+async def get_content_folders(current_user: dict = Depends(get_current_user)):
+    """Default + custom library folders with item counts."""
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    counts = _folder_counts(ustore)
+    return {
+        "defaults": [{**f, "count": counts["defaults"].get(f["key"], 0)} for f in DEFAULT_FOLDERS],
+        "custom":   [{"name": n, "count": c} for n, c in counts["custom"].items()],
+    }
+
+
+@router.post("/api/library/content_folders")
+async def create_content_folder(body: dict, current_user: dict = Depends(get_current_user)):
+    uid = current_user["id"]
+    name = (body.get("name") or "").strip()[:60]
+    if not name:
+        raise HTTPException(status_code=400, detail="Folder name required")
+    reserved = {f["key"] for f in DEFAULT_FOLDERS} | {f["label"].lower() for f in DEFAULT_FOLDERS}
+    if name.lower() in reserved:
+        raise HTTPException(status_code=409, detail="That name is reserved for a default folder")
+    ustore = _load_user_store(uid)
+    folders = ustore.setdefault("library_custom_folders", [])
+    if name not in folders:
+        folders.append(name)
+        _save_user_store(uid, ustore)
+    return {"ok": True, "folders": folders}
+
+
+@router.delete("/api/library/content_folders/{name}")
+async def delete_content_folder(name: str, current_user: dict = Depends(get_current_user)):
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    folders = [f for f in (ustore.get("library_custom_folders") or []) if f != name]
+    ustore["library_custom_folders"] = folders
+    # Untag any items that lived in the deleted folder (the files are kept).
+    for it in (ustore.get("library_items") or []):
+        if (it.get("folder") or "") == name:
+            it["folder"] = ""
+    _save_user_store(uid, ustore)
+    return {"ok": True, "folders": folders}
+
+
+@router.post("/api/library/content/{item_id}/move")
+async def move_library_item(item_id: str, body: dict, current_user: dict = Depends(get_current_user)):
+    """Move an item into a custom folder (or pass folder="" to remove it)."""
+    uid = current_user["id"]
+    target = (body.get("folder") or "").strip()
+    ustore = _load_user_store(uid)
+    if target and target not in (ustore.get("library_custom_folders") or []):
+        raise HTTPException(status_code=404, detail="Folder not found")
+    item = next((x for x in (ustore.get("library_items") or []) if x.get("id") == item_id), None)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found (only saved items can be moved)")
+    item["folder"] = target
+    _save_user_store(uid, ustore)
+    return {"ok": True, "id": item_id, "folder": target}
 
 
 @router.get("/api/library/content/{item_id}/download")

@@ -268,5 +268,29 @@
       "total": 8,
       "failures": "health_check, user_signup, user_login, billing_plan, admin_login, autopilot_toggle, content_engine, upload_media"
     }
+  },
+  {
+    "event": "error.critical",
+    "timestamp": "2026-05-31T04:00:02.198261Z",
+    "platform": "ugoingviral",
+    "data": {
+      "source": "qa_cron",
+      "run_id": "20260531T040002Z",
+      "failed": 1,
+      "total": 8,
+      "failures": "health_check, user_signup, user_login, billing_plan, admin_login, autopilot_toggle, content_engine, upload_media"
+    }
+  },
+  {
+    "event": "error.critical",
+    "timestamp": "2026-05-31T10:00:02.725333Z",
+    "platform": "ugoingviral",
+    "data": {
+      "source": "qa_cron",
+      "run_id": "20260531T100002Z",
+      "failed": 1,
+      "total": 8,
+      "failures": "health_check, user_signup, user_login, billing_plan, admin_login, autopilot_toggle, content_engine, upload_media"
+    }
   }
 ]

@@ -3435,17 +3435,14 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input class="fi" id="clib-search" placeholder="🔍 Search..." style="width:120px" oninput="libRender()">
         <button class="btn bg bsm" id="lib-shopify-btn" onclick="openShopifyGenerateModal()" style="display:none">🛒 Generate from Shopify products</button>
+        <button class="btn bg bsm" onclick="libNewFolder()">📁 New Folder</button>
         <button class="btn bp bsm" onclick="document.getElementById('clib-file-upload').click()">⬆️ Upload</button>
         <input type="file" id="clib-file-upload" accept=".mp4,.mov,.mp3,.wav,.aac,.jpg,.jpeg,.png,.gif,.webp,video/*,image/*,audio/*" multiple style="display:none" onchange="clibUploadFiles(this)">
       </div>
     </div>
     <div style="font-size:11px;color:var(--tx3);margin:-4px 0 12px">Upload your own files — mp4, mov, mp3, wav, aac, jpg, png, gif, webp · up to 500 MB each.</div>
     <div id="clib-upload-zone"></div>
-    <div class="clib-type-tabs" role="tablist">
-      <div class="clib-type-tab on" data-t="videos"  onclick="libSetFolder(this)">🎬 Videos</div>
-      <div class="clib-type-tab"    data-t="images"  onclick="libSetFolder(this)">🖼️ Images</div>
-      <div class="clib-type-tab"    data-t="posts"   onclick="libSetFolder(this)">📅 Posts</div>
-    </div>
+    <div class="clib-type-tabs" id="clib-folder-tabs" role="tablist"></div>
     <div id="lib-plan-banner" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);font-size:12px;color:var(--tx2)">
       🔒 You're on the <strong style="color:var(--ac)">Free plan</strong> — downloads are available on any paid plan. <a onclick="nav('billing')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Upgrade to download →</a>
     </div>
@@ -12661,22 +12658,64 @@ async function loadClib() {
     clibRenderRandomFolders();
   } catch(e) {}
   clibFiles = libFiles.slice(); // share with existing lib
-  // New content management view — Videos / Images / Posts folders.
-  libLoad();
+  // New content management view — folder tabs + content grid.
+  libLoadFolders();
   refreshShopifyButton();
 }
 
 // ── Content Library v2 — folder-based view backed by /api/library/content ──
+// `view` is either {type:'default', key:'videos'|'images'|'audio'|'posts'|'uploads'}
+// or {type:'custom', key:'<folder name>'}.
 var _lib = {
-  folder: 'videos',
+  view: {type: 'default', key: 'videos'},
+  defaults: [],
+  custom: [],
   items: [],
   canDownload: false,
   plan: 'free',
 };
 
-async function libLoad() {
+// Load the folder list (default + custom) with counts, render the tab bar,
+// then load the active folder's items.
+async function libLoadFolders() {
   try {
-    var r = await apiFetch('/api/library/content?kind=' + encodeURIComponent(_lib.folder));
+    var r = await apiFetch('/api/library/content_folders');
+    _lib.defaults = r.defaults || [];
+    _lib.custom   = r.custom || [];
+  } catch(e) { _lib.defaults = []; _lib.custom = []; }
+  // If the active custom folder was deleted, fall back to Videos.
+  if (_lib.view.type === 'custom' && !_lib.custom.some(function(f){ return f.name === _lib.view.key; })) {
+    _lib.view = {type: 'default', key: 'videos'};
+  }
+  libRenderTabs();
+  libLoad();
+}
+
+function libRenderTabs() {
+  var bar = document.getElementById('clib-folder-tabs');
+  if (!bar) return;
+  var html = '';
+  (_lib.defaults || []).forEach(function(f) {
+    var on = (_lib.view.type === 'default' && _lib.view.key === f.key);
+    html += '<div class="clib-type-tab' + (on ? ' on' : '') + '" ondragover="event.preventDefault()" ondrop="libDropOnDefault(event)" data-type="default" data-key="' + f.key + '" onclick="libSetFolder(\'default\',\'' + f.key + '\')">' +
+              f.icon + ' ' + _escHtml(f.label) + ' <span style="opacity:.6;font-weight:700">' + (f.count || 0) + '</span></div>';
+  });
+  (_lib.custom || []).forEach(function(f) {
+    var on = (_lib.view.type === 'custom' && _lib.view.key === f.name);
+    var safe = _escHtml(f.name);
+    var js = f.name.replace(/'/g, "\\'");
+    html += '<div class="clib-type-tab' + (on ? ' on' : '') + '" ondragover="event.preventDefault()" ondrop="libDropOnCustom(event,\'' + js + '\')" data-type="custom" data-key="' + safe + '" onclick="libSetFolder(\'custom\',\'' + js + '\')" oncontextmenu="event.preventDefault();libDeleteFolder(\'' + js + '\')" title="Right-click to delete folder">' +
+              '📁 ' + safe + ' <span style="opacity:.6;font-weight:700">' + (f.count || 0) + '</span></div>';
+  });
+  bar.innerHTML = html;
+}
+
+async function libLoad() {
+  var qs = (_lib.view.type === 'custom')
+    ? 'folder=' + encodeURIComponent(_lib.view.key)
+    : 'kind=' + encodeURIComponent(_lib.view.key);
+  try {
+    var r = await apiFetch('/api/library/content?' + qs);
     _lib.items = r.items || [];
     _lib.canDownload = !!r.can_download;
     _lib.plan = r.plan || 'free';
@@ -12686,12 +12725,45 @@ async function libLoad() {
   libRender();
 }
 
-function libSetFolder(el) {
-  document.querySelectorAll('.clib-type-tab').forEach(function(t){ t.classList.remove('on'); });
-  el.classList.add('on');
-  _lib.folder = el.dataset.t || 'videos';
+function libSetFolder(type, key) {
+  _lib.view = {type: type, key: key};
+  libRenderTabs();
   libLoad();
 }
+
+// ── Custom folders: create / delete / move ──────────────────────────────────
+async function libNewFolder() {
+  var name = (prompt('New folder name:') || '').trim();
+  if (!name) return;
+  try {
+    await apiFetch('/api/library/content_folders', 'POST', {name: name});
+    toast('📁 Folder "' + name + '" created', 'success');
+    _lib.view = {type: 'custom', key: name};
+    libLoadFolders();
+  } catch(e) { toast(e.message || 'Could not create folder', 'error'); }
+}
+
+async function libDeleteFolder(name) {
+  if (!confirm('Delete folder "' + name + '"? Items inside are kept (just un-filed).')) return;
+  try {
+    await apiFetch('/api/library/content_folders/' + encodeURIComponent(name), 'DELETE');
+    toast('🗑️ Folder deleted', 'info');
+    libLoadFolders();
+  } catch(e) { toast(e.message || 'Could not delete folder', 'error'); }
+}
+
+async function libMoveItem(id, folder) {
+  try {
+    await apiFetch('/api/library/content/' + id + '/move', 'POST', {folder: folder});
+    toast(folder ? ('📁 Moved to "' + folder + '"') : 'Removed from folder', 'success');
+    libLoadFolders();
+  } catch(e) { toast(e.message || 'Move failed', 'error'); }
+}
+
+// Drag & drop: dragstart stores the item id; dropping on a folder tab moves it.
+function libDragStart(ev, id) { ev.dataTransfer.setData('text/plain', id); ev.dataTransfer.effectAllowed = 'move'; }
+function libDropOnCustom(ev, folder) { ev.preventDefault(); var id = ev.dataTransfer.getData('text/plain'); if (id) libMoveItem(id, folder); }
+function libDropOnDefault(ev) { ev.preventDefault(); var id = ev.dataTransfer.getData('text/plain'); if (id) libMoveItem(id, ''); }
 
 function libRender() {
   var grid = document.getElementById('lib-grid');
@@ -12707,8 +12779,12 @@ function libRender() {
   if (banner) banner.style.display = _lib.canDownload ? 'none' : 'block';
 
   if (!items.length) {
-    var emptyLabel = _lib.folder === 'images' ? 'No images yet — generate or upload above'
-                    : _lib.folder === 'posts'  ? 'No scheduled or published posts yet'
+    var k = _lib.view.key;
+    var emptyLabel = _lib.view.type === 'custom' ? 'This folder is empty — move items here from another folder'
+                    : k === 'images'  ? 'No images yet — generate or upload above'
+                    : k === 'audio'   ? 'No audio yet — upload mp3, wav or aac above'
+                    : k === 'posts'   ? 'No scheduled or published posts yet'
+                    : k === 'uploads' ? 'No uploads yet — click Upload above'
                     : 'No videos yet — head to Video Studio to generate one';
     grid.innerHTML = '<div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🗂️</div>' + emptyLabel + '</div>';
     return;
@@ -12728,30 +12804,109 @@ function libItemHtml(it) {
     thumb = '<video src="' + url + '" controls preload="metadata" style="width:100%;aspect-ratio:9/16;object-fit:cover;background:#000;border-radius:8px 8px 0 0"></video>';
   } else if (kind === 'images' && url) {
     thumb = '<div style="width:100%;aspect-ratio:1/1;background:#000;border-radius:8px 8px 0 0;overflow:hidden"><img src="' + url + '" style="width:100%;height:100%;object-fit:cover"></div>';
+  } else if (kind === 'audio' && url) {
+    thumb = '<div style="width:100%;aspect-ratio:1/1;background:linear-gradient(135deg,rgba(0,229,255,.10),rgba(124,58,237,.14));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;border-radius:8px 8px 0 0">' +
+              '<div style="font-size:46px">🎵</div>' +
+              '<audio src="' + url + '" controls style="width:100%"></audio>' +
+            '</div>';
   } else if (kind === 'posts') {
     thumb = '<div style="width:100%;aspect-ratio:1/1;background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(0,229,255,.10));display:flex;align-items:center;justify-content:center;font-size:46px;border-radius:8px 8px 0 0">📅</div>';
   } else {
     thumb = '<div style="width:100%;aspect-ratio:1/1;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--tx3);border-radius:8px 8px 0 0">⏳</div>';
   }
-  // Buttons — Download gated by plan; Direct Post always available.
+  // Post Now + Schedule (Task 4) — available for video / image / audio items.
+  var actionBtns = '';
+  if (kind !== 'posts') {
+    actionBtns = '<div style="display:flex;gap:6px;margin-top:8px">'
+      + '<button class="btn bp bsm" style="flex:1" onclick="libPostNow(\'' + id + '\')">⚡ Post Now</button>'
+      + '<button class="btn bg bsm" style="flex:1" onclick="libSchedule(\'' + id + '\')">📅 Schedule</button>'
+      + '</div>';
+  }
   var downloadBtn = _lib.canDownload
-    ? '<button class="btn bp bsm" style="flex:1" onclick="libDownload(\'' + id + '\')">⬇️ Download</button>'
-    : '<button class="btn bg bsm" style="flex:1" onclick="nav(\'billing\')" title="Upgrade to download">🔒 Upgrade to download</button>';
-  var postBtn = '<button class="btn bp bsm" style="flex:1" onclick="libDirectPost(\'' + id + '\')">📤 Direct post</button>';
+    ? '<button class="btn bg bsm" style="flex:1" onclick="libDownload(\'' + id + '\')">⬇️ Download</button>'
+    : '<button class="btn bg bsm" style="flex:1" onclick="nav(\'billing\')" title="Upgrade to download">🔒 Download</button>';
   var deleteBtn = '<button class="btn bg bsm" style="padding:6px 8px" onclick="libDelete(\'' + id + '\')" title="Delete">🗑️</button>';
-  return '<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column">'
+  // Move-to-folder picker (only for real saved items, not the posts mirror).
+  var moveSel = '';
+  if (kind !== 'posts') {
+    var opts = '<option value="">📁 Move to…</option>';
+    (_lib.custom || []).forEach(function(f) {
+      var sel = ((it.folder || '') === f.name) ? ' selected' : '';
+      opts += '<option value="' + _escHtml(f.name) + '"' + sel + '>' + _escHtml(f.name) + '</option>';
+    });
+    if ((it.folder || '')) opts += '<option value="__none__">✕ Remove from folder</option>';
+    moveSel = '<select class="fs" style="margin-top:6px;width:100%;font-size:11px" onchange="libMoveSelect(this,\'' + id + '\')">' + opts + '</select>';
+  }
+  return '<div draggable="' + (kind !== 'posts') + '" ondragstart="libDragStart(event,\'' + id + '\')" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column">'
     + thumb
     + '<div style="padding:8px 10px;flex:1;display:flex;flex-direction:column">'
     +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
     +     '<span style="font-size:10px;font-weight:700;color:#a78bfa">' + _escHtml(providerLabel || kind) + '</span>'
     +     (it.duration ? '<span style="font-size:10px;color:var(--tx3)">· ' + it.duration + 's</span>' : '')
+    +     (it.is_upload ? '<span style="font-size:9px;font-weight:700;color:var(--ac);background:rgba(0,229,255,.08);border-radius:5px;padding:1px 5px">UPLOAD</span>' : '')
     +     (it.credits_used ? '<span style="font-size:10px;color:var(--tx3);margin-left:auto">' + it.credits_used + ' cr</span>' : '')
     +   '</div>'
     +   '<div style="font-size:11px;color:var(--tx2);line-height:1.35;flex:1;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">' + _escHtml(label || '—') + '</div>'
     +   '<div style="font-size:10px;color:var(--tx3);margin-top:6px">' + ts + '</div>'
-    +   '<div style="display:flex;gap:6px;margin-top:8px">' + postBtn + downloadBtn + deleteBtn + '</div>'
+    +   actionBtns
+    +   '<div style="display:flex;gap:6px;margin-top:6px">' + downloadBtn + deleteBtn + '</div>'
+    +   moveSel
     + '</div>'
     + '</div>';
+}
+
+// Move-to-folder dropdown handler (treats the "remove" sentinel as un-filing).
+function libMoveSelect(sel, id) {
+  var v = sel.value;
+  if (v === '') return;
+  libMoveItem(id, v === '__none__' ? '' : v);
+}
+
+// ── Post Now / Schedule from the library (Task 4) ──────────────────────────
+// Pre-fills the post composer with the item's media + caption, then opens the
+// scheduler. Post Now clears the time (post immediately); Schedule focuses the
+// date/time picker so the user can choose when.
+function _libComposerFill(id) {
+  var it = _lib.items.find(function(x){ return x.id === id; });
+  if (!it) return null;
+  var url = it.local_url || it.source_url || '';
+  var caption = it.caption || it.prompt || '';
+  var img = document.getElementById('post-img');
+  var content = document.getElementById('post-content');
+  if (img) { img.value = url; if (typeof previewPostImg === 'function') previewPostImg(url); }
+  if (content) content.value = caption;
+  return it;
+}
+
+function libPostNow(id) {
+  if (!_libComposerFill(id)) return;
+  nav('posting');
+  setTimeout(function() {
+    if (typeof switchPostTab === 'function') switchPostTab('schedule');
+    var t = document.getElementById('post-time');
+    if (t) t.value = '';   // empty = post now
+    var btnRow = document.getElementById('post-content');
+    if (btnRow && btnRow.scrollIntoView) btnRow.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 140);
+  toast('⚡ Pre-filled — pick platform and hit Post nu', 'success');
+}
+
+function libSchedule(id) {
+  if (!_libComposerFill(id)) return;
+  nav('posting');
+  setTimeout(function() {
+    if (typeof switchPostTab === 'function') switchPostTab('schedule');
+    var t = document.getElementById('post-time');
+    if (t) {
+      // Default to tomorrow 09:00 and focus the picker so they choose date/time.
+      var d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
+      var pad = function(n){ return ('0' + n).slice(-2); };
+      t.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      if (t.scrollIntoView) t.scrollIntoView({behavior:'smooth', block:'center'});
+      if (t.focus) t.focus();
+    }
+  }, 140);
+  toast('📅 Pre-filled — choose a date & time to schedule', 'success');
 }
 
 async function libDownload(id) {
