@@ -3446,7 +3446,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div id="lib-plan-banner" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);font-size:12px;color:var(--tx2)">
       🔒 You're on the <strong style="color:var(--ac)">Free plan</strong> — downloads are available on any paid plan. <a onclick="nav('billing')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Upgrade to download →</a>
     </div>
-    <div id="lib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
+    <div id="clib-content-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
       <div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🗂️</div>Loading library…</div>
     </div>
   </div>
@@ -12704,8 +12704,9 @@ function libRenderTabs() {
     var on = (_lib.view.type === 'custom' && _lib.view.key === f.name);
     var safe = _escHtml(f.name);
     var js = f.name.replace(/'/g, "\\'");
-    html += '<div class="clib-type-tab' + (on ? ' on' : '') + '" ondragover="event.preventDefault()" ondrop="libDropOnCustom(event,\'' + js + '\')" data-type="custom" data-key="' + safe + '" onclick="libSetFolder(\'custom\',\'' + js + '\')" oncontextmenu="event.preventDefault();libDeleteFolder(\'' + js + '\')" title="Right-click to delete folder">' +
-              '📁 ' + safe + ' <span style="opacity:.6;font-weight:700">' + (f.count || 0) + '</span></div>';
+    html += '<div class="clib-type-tab' + (on ? ' on' : '') + '" ondragover="event.preventDefault()" ondrop="libDropOnCustom(event,\'' + js + '\')" data-type="custom" data-key="' + safe + '" onclick="libSetFolder(\'custom\',\'' + js + '\')" title="Drag items here to file them">' +
+              '📁 ' + safe + ' <span style="opacity:.6;font-weight:700">' + (f.count || 0) + '</span>' +
+              '<span onclick="event.stopPropagation();libDeleteFolder(\'' + js + '\')" title="Delete folder" style="margin-left:8px;cursor:pointer;font-weight:700;opacity:.55;padding:0 2px">✕</span></div>';
   });
   bar.innerHTML = html;
 }
@@ -12766,7 +12767,7 @@ function libDropOnCustom(ev, folder) { ev.preventDefault(); var id = ev.dataTran
 function libDropOnDefault(ev) { ev.preventDefault(); var id = ev.dataTransfer.getData('text/plain'); if (id) libMoveItem(id, ''); }
 
 function libRender() {
-  var grid = document.getElementById('lib-grid');
+  var grid = document.getElementById('clib-content-grid');
   if (!grid) return;
   var q = (((document.getElementById('clib-search') || {}).value) || '').toLowerCase();
   var items = _lib.items.filter(function(it){
@@ -12792,18 +12793,35 @@ function libRender() {
   grid.innerHTML = items.map(libItemHtml).join('');
 }
 
+// Human-readable file size from an item's stored metadata.
+function _libSize(it) {
+  if (it.size_mb) return it.size_mb + ' MB';
+  var b = it.size_bytes || 0;
+  if (!b) return '';
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+  if (b >= 1024) return Math.round(b / 1024) + ' KB';
+  return b + ' B';
+}
+
+// Friendly display name: original upload name, product title, or prompt snippet.
+function _libName(it) {
+  return it.original_name || it.product_title || (it.prompt || '').slice(0, 80) ||
+         (it.kind === 'videos' ? 'Video' : it.kind === 'images' ? 'Image' : it.kind === 'audio' ? 'Audio' : 'Item');
+}
+
 function libItemHtml(it) {
   var id    = it.id || '';
   var url   = it.local_url || it.source_url || '';
   var kind  = it.kind || 'videos';
   var ts    = (it.created_at || '').slice(0, 16).replace('T', ' ');
-  var label = (it.prompt || it.product_title || '').slice(0, 110);
+  var name  = _libName(it);
+  var size  = _libSize(it);
   var providerLabel = (it.provider || '').replace('higgsfield','Hyper Realistic').replace('kling','Hyper Realistic (Kling AI)').replace('pika','Premium Animation');
   var thumb;
   if (kind === 'videos' && url) {
-    thumb = '<video src="' + url + '" controls preload="metadata" style="width:100%;aspect-ratio:9/16;object-fit:cover;background:#000;border-radius:8px 8px 0 0"></video>';
+    thumb = '<video src="' + url + '" controls preload="metadata" draggable="false" style="width:100%;aspect-ratio:9/16;object-fit:cover;background:#000;border-radius:8px 8px 0 0"></video>';
   } else if (kind === 'images' && url) {
-    thumb = '<div style="width:100%;aspect-ratio:1/1;background:#000;border-radius:8px 8px 0 0;overflow:hidden"><img src="' + url + '" style="width:100%;height:100%;object-fit:cover"></div>';
+    thumb = '<div style="width:100%;aspect-ratio:1/1;background:#000;border-radius:8px 8px 0 0;overflow:hidden"><img src="' + url + '" draggable="false" loading="lazy" style="width:100%;height:100%;object-fit:cover"></div>';
   } else if (kind === 'audio' && url) {
     thumb = '<div style="width:100%;aspect-ratio:1/1;background:linear-gradient(135deg,rgba(0,229,255,.10),rgba(124,58,237,.14));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;border-radius:8px 8px 0 0">' +
               '<div style="font-size:46px">🎵</div>' +
@@ -12837,17 +12855,25 @@ function libItemHtml(it) {
     if ((it.folder || '')) opts += '<option value="__none__">✕ Remove from folder</option>';
     moveSel = '<select class="fs" style="margin-top:6px;width:100%;font-size:11px" onchange="libMoveSelect(this,\'' + id + '\')">' + opts + '</select>';
   }
+  // "In folder" badge — shows which custom folder this item currently lives in.
+  var folderBadge = (it.folder || '')
+    ? '<span style="font-size:9px;font-weight:700;color:#a78bfa;background:rgba(167,139,250,.12);border-radius:5px;padding:1px 6px">📁 ' + _escHtml(it.folder) + '</span>'
+    : '';
+  // Meta line: size · date created.
+  var metaBits = [];
+  if (size) metaBits.push(size);
+  if (ts) metaBits.push(ts);
   return '<div draggable="' + (kind !== 'posts') + '" ondragstart="libDragStart(event,\'' + id + '\')" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column">'
     + thumb
     + '<div style="padding:8px 10px;flex:1;display:flex;flex-direction:column">'
-    +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+    +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">'
     +     '<span style="font-size:10px;font-weight:700;color:#a78bfa">' + _escHtml(providerLabel || kind) + '</span>'
     +     (it.duration ? '<span style="font-size:10px;color:var(--tx3)">· ' + it.duration + 's</span>' : '')
     +     (it.is_upload ? '<span style="font-size:9px;font-weight:700;color:var(--ac);background:rgba(0,229,255,.08);border-radius:5px;padding:1px 5px">UPLOAD</span>' : '')
     +     (it.credits_used ? '<span style="font-size:10px;color:var(--tx3);margin-left:auto">' + it.credits_used + ' cr</span>' : '')
     +   '</div>'
-    +   '<div style="font-size:11px;color:var(--tx2);line-height:1.35;flex:1;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">' + _escHtml(label || '—') + '</div>'
-    +   '<div style="font-size:10px;color:var(--tx3);margin-top:6px">' + ts + '</div>'
+    +   '<div title="' + _escHtml(name) + '" style="font-size:12px;font-weight:600;color:var(--tx);line-height:1.35;flex:1;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + _escHtml(name) + '</div>'
+    +   '<div style="font-size:10px;color:var(--tx3);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">' + _escHtml(metaBits.join(' · ')) + folderBadge + '</div>'
     +   actionBtns
     +   '<div style="display:flex;gap:6px;margin-top:6px">' + downloadBtn + deleteBtn + '</div>'
     +   moveSel
@@ -12888,7 +12914,7 @@ function libPostNow(id) {
     var btnRow = document.getElementById('post-content');
     if (btnRow && btnRow.scrollIntoView) btnRow.scrollIntoView({behavior:'smooth', block:'center'});
   }, 140);
-  toast('⚡ Pre-filled — pick platform and hit Post nu', 'success');
+  toast('⚡ Pre-filled — pick a platform and hit Post', 'success');
 }
 
 function libSchedule(id) {
