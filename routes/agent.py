@@ -358,11 +358,18 @@ def _build_system(plan: str, ctx: str, agent_name: str = "") -> str:
 PLATFORM FEATURES:
 - Content Generator: captions, hooks, scripts, hashtags for IG/TikTok/YouTube/Facebook
 - Content Pipeline: image → AI scripts → Runway video → ElevenLabs voice → final video
+- Video Studio: AI video generation (Quick Video, Hyper Realistic, Premium Animation) + upload your own clips. A "✂️ Smart Cutting" feature (auto-cut video to the best moments) is coming soon.
+- Content Library & Media Library: browse, organise and reuse every generated/uploaded video, image and audio file. Each item has ⚡ Post Now and 📅 Schedule buttons.
 - Post & Schedule: calendar scheduling to multiple platforms simultaneously
 - Automation: auto-like, auto-follow, auto-comment, engagement rules
 - Billing: credits system, plans Free→Personal (0–2499 kr/mo)
 - Connect: link social accounts (Instagram, TikTok, YouTube, Facebook, X, Telegram)
 - Statistics: follower growth, views, likes, comments
+
+FOLDER SYSTEM (Content Library + Media Library):
+- Folders are UNIFIED and shared between the Content Library and the Media Library — a folder created in one appears in the other.
+- To create a folder: click "📁 New Folder". To move an item into a folder: drag it onto a folder tab, or use the "Move to…" dropdown on the item.
+- To delete a custom folder: press the ✕ on its tab (or right-click it) in the Content Library, or pick it in the Media Library dropdown and press "🗑️ Delete folder". Deleting a folder keeps the items — they just become un-filed. Default folders (Videos, Images, Audio, Posts, Uploads) cannot be deleted.
 
 CREDIT COSTS: Script 5cr · Image 8cr · Video 5s 20cr · Video 15s 40cr · Video 30s 80cr · Voice 15cr · Assembly 2cr · Post 1cr
 

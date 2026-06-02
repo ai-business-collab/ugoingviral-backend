@@ -57,26 +57,42 @@ async def save_youtube_api(req: Request):
     return {"status": "ok"}
 
 # ── Medie bibliotek ──────────────────────────────────────────────────────────
+# Folders are UNIFIED across the Media Library and the Content Library: both
+# read/write the same per-user `library_custom_folders` list, so a folder
+# created in either library shows up — and is deletable — in both.
 @router.get("/api/library/folders")
-def get_lib_folders():
-    return {"folders": store.get("lib_folders", [])}
+def get_lib_folders(current_user: dict = Depends(get_current_user)):
+    ustore = _load_user_store(current_user["id"])
+    return {"folders": ustore.get("library_custom_folders", []) or []}
 
 @router.post("/api/library/folders")
-async def create_lib_folder(req: Request):
+async def create_lib_folder(req: Request, current_user: dict = Depends(get_current_user)):
     d = await req.json()
-    name = d.get("name","").strip()
-    if not name: return {"status":"error"}
-    if "lib_folders" not in store: store["lib_folders"] = []
-    if name not in store.get("lib_folders", {}):
-        store.get("lib_folders", {}).append(name)
-        save_store()
-    return {"status":"ok", "folders": store.get("lib_folders", {})}
+    name = (d.get("name") or "").strip()[:60]
+    if not name:
+        return {"status": "error", "folders": []}
+    # Don't collide with the default content-library folders.
+    reserved = {"videos", "images", "audio", "posts", "uploads"}
+    if name.lower() in reserved:
+        return {"status": "error", "detail": "That name is reserved", "folders": []}
+    ustore = _load_user_store(current_user["id"])
+    folders = ustore.setdefault("library_custom_folders", [])
+    if name not in folders:
+        folders.append(name)
+        _save_user_store(current_user["id"], ustore)
+    return {"status": "ok", "folders": folders}
 
 @router.delete("/api/library/folders/{name}")
-def delete_lib_folder(name: str):
-    store["lib_folders"] = [f for f in store.get("lib_folders",[]) if f != name]
-    save_store()
-    return {"status":"ok"}
+def delete_lib_folder(name: str, current_user: dict = Depends(get_current_user)):
+    ustore = _load_user_store(current_user["id"])
+    folders = [f for f in (ustore.get("library_custom_folders") or []) if f != name]
+    ustore["library_custom_folders"] = folders
+    # Un-file any saved items that lived in the deleted folder (files are kept).
+    for it in (ustore.get("library_items") or []):
+        if (it.get("folder") or "") == name:
+            it["folder"] = ""
+    _save_user_store(current_user["id"], ustore)
+    return {"status": "ok", "folders": folders}
 
 @router.delete("/api/automation/log")
 def clear_log():

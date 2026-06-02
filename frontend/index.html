@@ -3410,11 +3410,12 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <input class="fi" id="lib-search" placeholder="🔍 Search..." style="width:140px" oninput="filterLibrary()">
         <select class="fs" id="lib-folder-filter" style="width:140px" onchange="filterLibrary()"><option value="">📁 All folders</option></select>
         <button class="btn bg bsm" onclick="document.getElementById('lib-folder-modal').style.display='flex'">📁 New folder</button>
+        <button class="btn bg bsm" onclick="deleteLibFolderSelected()" title="Delete the folder selected in the dropdown">🗑️ Delete folder</button>
         <button class="btn bp bsm" onclick="document.getElementById('lib-upload').click()">⬆️ Upload</button>
         <input type="file" id="lib-upload" accept="image/*,video/*" multiple style="display:none" onchange="uploadLibFiles(this)">
       </div>
     </div>
-    <div class="info-box" style="margin-bottom:16px">📸 Upload images and videos. Organize them in folders and send straight to Post or the Content Generator.</div>
+    <div class="info-box" style="margin-bottom:16px">📸 Upload images and videos. Folders are <strong>shared with your Content Library</strong> — create one here and it appears there too. 💡 <strong>Use the "Move to…" menu on each item</strong> to file it into a folder · pick a folder above and press <strong>🗑️ Delete folder</strong> to remove a custom folder (items are kept, just un-filed).</div>
     <div id="lib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px">
       <div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🖼️</div>No files yet — click ⬆️ Upload</div>
     </div>
@@ -3443,6 +3444,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div style="font-size:11px;color:var(--tx3);margin:-4px 0 12px">Upload your own files — mp4, mov, mp3, wav, aac, jpg, png, gif, webp · up to 500 MB each.</div>
     <div id="clib-upload-zone"></div>
     <div class="clib-type-tabs" id="clib-folder-tabs" role="tablist"></div>
+    <div style="font-size:11px;color:var(--tx3);margin:8px 0 12px;display:flex;gap:14px;flex-wrap:wrap">
+      <span>💡 <strong>Drag items onto a folder tab</strong> to move them — or use the <strong>"Move to…"</strong> menu on each item.</span>
+      <span>🗑️ <strong>Press ✕ on a folder tab</strong> (or right-click it) to delete a custom folder.</span>
+      <span>📁 Folders are <strong>shared with your Media Library</strong>.</span>
+    </div>
     <div id="lib-plan-banner" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);font-size:12px;color:var(--tx2)">
       🔒 You're on the <strong style="color:var(--ac)">Free plan</strong> — downloads are available on any paid plan. <a onclick="nav('billing')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Upgrade to download →</a>
     </div>
@@ -4503,6 +4509,20 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <input type="file" id="studio-file-upload" accept=".mp4,.mov,.mp3,.wav,.aac,.jpg,.jpeg,.png,.gif,.webp,video/*,image/*,audio/*" multiple style="display:none" onchange="studioUploadFiles(this)">
       </div>
       <div id="studio-upload-zone"></div>
+    </div>
+
+    <!-- ══ Smart Cutting (coming soon) ════════════════════════════════════ -->
+    <div id="studio-smartcut-card" style="margin-top:18px;background:linear-gradient(135deg,rgba(0,229,255,.05),rgba(124,58,237,.05));border:1px solid rgba(0,229,255,.22);border-radius:14px;padding:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:30px">✂️</div>
+          <div>
+            <div style="font-size:15px;font-weight:800;color:var(--tx);display:flex;align-items:center;gap:8px">Smart Cutting <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:var(--ac);background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.35);border-radius:6px;padding:2px 7px">COMING SOON</span></div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:3px">AI will automatically cut your video to the best moments — no manual editing.</div>
+          </div>
+        </div>
+        <button class="btn bg bsm" onclick="smartCuttingComingSoon()" style="font-weight:700">✂️ Smart Cutting</button>
+      </div>
     </div>
 
     <!-- ══ Premium video providers (Hyper Realistic + Premium Animation) — any paid plan ══ -->
@@ -10946,18 +10966,57 @@ function renderLibrary(files) {
     var f = files[i];
     var idx = libFiles.indexOf(f);
     var imgHtml = f.type === 'video' ? '<div style="font-size:32px;text-align:center">&#127916;</div>' : '<img src="' + f.url + '" style="width:100%;height:100%;object-fit:cover">';
-    html += '<div class="lib-item">';
+    // Move-to-folder dropdown — built from the shared folder list.
+    var moveOpts = '<option value="">📁 Move to…</option>';
+    libFolders.forEach(function(fn) {
+      var sel = (f.folder === fn) ? ' selected' : '';
+      moveOpts += '<option value="' + fn + '"' + sel + '>' + fn + '</option>';
+    });
+    if (f.folder) moveOpts += '<option value="__none__">✕ Remove from folder</option>';
+    html += '<div class="lib-item" draggable="true" data-idx="' + idx + '" ondragstart="libMediaDragStart(event,' + idx + ')">';
     html += '<div style="height:110px;overflow:hidden;background:var(--s3);display:flex;align-items:center;justify-content:center">' + imgHtml + '</div>';
     html += '<div style="padding:8px"><div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + f.name + '</div>';
-    html += '<div style="font-size:10px;color:var(--tx3)">' + (f.folder || 'Ingen mappe') + '</div></div>';
+    html += '<div style="font-size:10px;color:var(--tx3)">' + (f.folder ? '📁 ' + f.folder : 'No folder') + '</div></div>';
     html += '<div style="padding:0 8px 8px;display:flex;gap:4px">';
     html += '<button class="btn bg bsm lib-post" data-idx="' + idx + '" style="flex:1">Post</button>';
     html += '<button class="btn bg bsm lib-gen" data-idx="' + idx + '" style="flex:1">Content</button>';
-    html += '</div></div>';
+    html += '</div>';
+    html += '<div style="padding:0 8px 8px"><select class="fs lib-move" data-idx="' + idx + '" style="width:100%;font-size:11px">' + moveOpts + '</select></div>';
+    html += '</div>';
   }
   grid.innerHTML = html;
   grid.querySelectorAll('.lib-post').forEach(function(el) { el.addEventListener('click', function() { sendLibToPost(parseInt(this.dataset.idx)); }); });
   grid.querySelectorAll('.lib-gen').forEach(function(el) { el.addEventListener('click', function() { sendLibToGen(parseInt(this.dataset.idx)); }); });
+  grid.querySelectorAll('.lib-move').forEach(function(el) { el.addEventListener('change', function() { moveLibItem(parseInt(this.dataset.idx), this.value); }); });
+}
+
+// Move a Media Library item into a shared folder (client-side index list).
+function moveLibItem(idx, folder) {
+  var f = libFiles[idx];
+  if (!f) return;
+  if (folder === '') return;
+  f.folder = (folder === '__none__') ? '' : folder;
+  filterLibrary();
+  toast(f.folder ? ('📁 Moved to "' + f.folder + '"') : 'Removed from folder', 'success');
+}
+
+// Drag a Media Library item — folder tabs / drop zones read this id.
+function libMediaDragStart(ev, idx) { ev.dataTransfer.setData('text/plain', 'media:' + idx); ev.dataTransfer.effectAllowed = 'move'; }
+
+// Delete the custom folder currently chosen in the filter dropdown.
+async function deleteLibFolderSelected() {
+  var sel = document.getElementById('lib-folder-filter');
+  var name = sel ? sel.value : '';
+  if (!name) { toast('Pick a folder in the dropdown first', 'error'); return; }
+  if (!confirm('Delete folder "' + name + '"? Items inside are kept (just un-filed). This also removes it from the Content Library.')) return;
+  try {
+    await apiFetch('/api/library/folders/' + encodeURIComponent(name), 'DELETE');
+    libFiles.forEach(function(f) { if (f.folder === name) f.folder = ''; });
+    sel.value = '';
+    loadLibFolders();
+    filterLibrary();
+    toast('🗑️ Folder "' + name + '" deleted', 'info');
+  } catch(e) { toast(e.message || 'Could not delete folder', 'error'); }
 }
 
 function sendLibToPost(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('post-img'); if (el) el.value = f.url; nav('posting'); toast('📸 Selected for post', 'success'); }
@@ -12704,7 +12763,7 @@ function libRenderTabs() {
     var on = (_lib.view.type === 'custom' && _lib.view.key === f.name);
     var safe = _escHtml(f.name);
     var js = f.name.replace(/'/g, "\\'");
-    html += '<div class="clib-type-tab' + (on ? ' on' : '') + '" ondragover="event.preventDefault()" ondrop="libDropOnCustom(event,\'' + js + '\')" data-type="custom" data-key="' + safe + '" onclick="libSetFolder(\'custom\',\'' + js + '\')" title="Drag items here to file them">' +
+    html += '<div class="clib-type-tab' + (on ? ' on' : '') + '" ondragover="event.preventDefault()" ondrop="libDropOnCustom(event,\'' + js + '\')" data-type="custom" data-key="' + safe + '" onclick="libSetFolder(\'custom\',\'' + js + '\')" oncontextmenu="event.preventDefault();libDeleteFolder(\'' + js + '\')" title="Drag items here to file them · right-click or press ✕ to delete">' +
               '📁 ' + safe + ' <span style="opacity:.6;font-weight:700">' + (f.count || 0) + '</span>' +
               '<span onclick="event.stopPropagation();libDeleteFolder(\'' + js + '\')" title="Delete folder" style="margin-left:8px;cursor:pointer;font-weight:700;opacity:.55;padding:0 2px">✕</span></div>';
   });
@@ -13209,6 +13268,11 @@ function studioUploadFiles(input) {
   _ugvHandleUploads(input, 'studio-upload-zone', function(){
     if (typeof loadMyVideos === 'function') loadMyVideos();
   });
+}
+
+// Smart Cutting — placeholder until the AI auto-cut feature ships.
+function smartCuttingComingSoon() {
+  toast('✂️ Coming Soon — AI will automatically cut your video to the best moments', 'info');
 }
 
 // Content Library upload handler — refreshes the library after each batch.
