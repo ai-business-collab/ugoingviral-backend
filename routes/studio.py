@@ -16,6 +16,10 @@ from credit_costs import VIDEO_GENERATION, VIDEO_EDITING, VOICE_OVER
 router = APIRouter()
 
 RUNWAY_API_KEY    = os.getenv("RUNWAY_API_KEY", "")
+# Runway model ids. Short clips (≤10s) use gen3a_turbo; longer 30s clips use the
+# gen4.5 model which supports extended durations. Both are env-overridable.
+RUNWAY_MODEL_SHORT = os.getenv("RUNWAY_MODEL", "gen3a_turbo")
+RUNWAY_MODEL_LONG  = os.getenv("RUNWAY_MODEL_LONG", "gen4.5")
 LUMA_API_KEY      = os.getenv("LUMA_API_KEY", "")
 REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
 # Hyper Realistic + Premium Animation (Pro+ video providers). Base URLs are env-configurable
@@ -85,6 +89,21 @@ def _save_generated_video(uid: str, entry: dict) -> None:
     history = ustore.setdefault("generated_videos", [])
     history.insert(0, entry)
     ustore["generated_videos"] = history[:100]
+    _save_user_store(uid, ustore)
+
+
+def _update_generated_video(uid: str, vid_id: str, patch: dict) -> None:
+    """Patch fields on an existing generated_videos entry (used by the queue to
+    fill in the URL/status once a queued render completes)."""
+    if not uid or not vid_id:
+        return
+    ustore = _load_user_store(uid)
+    history = ustore.get("generated_videos", []) or []
+    for entry in history:
+        if entry.get("id") == vid_id:
+            entry.update(patch)
+            break
+    ustore["generated_videos"] = history
     _save_user_store(uid, ustore)
 
 STUDIO_COSTS = {
@@ -288,12 +307,18 @@ async def _runway_generate(prompt: str, image_url: str, duration: int,
     ar_map = {"16:9": "1280:720", "9:16": "720:1280", "1:1": "1024:1024", "4:5": "864:1080"}
     wh = ar_map.get(aspect_ratio, "1280:720")
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    # Longer clips (30s) use the gen4.5 model; shorter clips use gen3a_turbo.
+    is_long = duration > 15
+    model = RUNWAY_MODEL_LONG if is_long else RUNWAY_MODEL_SHORT
+    # gen3a_turbo caps at 10s; gen4.5 supports up to 30s.
+    capped_duration = min(duration, 30) if is_long else min(duration, 10)
+    # Long renders take longer — give them a roomier client timeout.
+    async with httpx.AsyncClient(timeout=120 if is_long else 60) as client:
         # Create generation
         payload = {
             "promptText": prompt,
-            "model": "gen3a_turbo",
-            "duration": min(duration, 10),
+            "model": model,
+            "duration": capped_duration,
             "ratio": wh,
         }
         if image_url:
@@ -312,8 +337,8 @@ async def _runway_generate(prompt: str, image_url: str, duration: int,
         if not task_id:
             raise HTTPException(status_code=500, detail="Runway returnerede intet task ID")
 
-        # Poll for completion (max 3 minutes)
-        for _ in range(36):
+        # Poll for completion — 3 min for short clips, 6 min for 30s gen4.5.
+        for _ in range(72 if is_long else 36):
             await asyncio.sleep(5)
             poll = await client.get(
                 f"https://api.dev.runwayml.com/v1/tasks/{task_id}",
@@ -1127,9 +1152,9 @@ def face_scene_presets(current_user: dict = Depends(get_current_user)):
 # env-configurable so they can be retargeted without a code change.
 
 # Per-duration pricing for premium video providers (Hyper Realistic + Premium
-# Animation). Only the three documented durations are accepted; durations
+# Animation). 30s long-form clips are rendered by Runway gen4.5. Durations
 # outside the table are rejected by _validate_video_payload below.
-_VIDEO_CREDIT_PRICES = {5: 50, 10: 85, 15: 100}
+_VIDEO_CREDIT_PRICES = {5: 50, 10: 85, 15: 100, 30: 120}
 _ASPECT_OK           = {"16:9", "9:16", "1:1", "4:5"}
 _ALLOWED_DURATIONS   = sorted(_VIDEO_CREDIT_PRICES.keys())
 
@@ -1191,7 +1216,11 @@ def _charge_or_402(uid: str, amount: int) -> int:
     billing = ustore.setdefault("billing", {})
     have = int(billing.get("credits") or 0)
     if have < amount:
-        raise HTTPException(status_code=402, detail=f"Not enough credits (need {amount}, have {have})")
+        short = amount - have
+        raise HTTPException(
+            status_code=402,
+            detail=f"You need {short} more credits — tap here to top up",
+        )
     billing["credits"] = have - amount
     ustore["billing"] = billing
     _save_user_store(uid, ustore)
@@ -1234,162 +1263,280 @@ def _extract_video_url(result: dict) -> Optional[str]:
     return None
 
 
-@router.post("/api/studio/higgsfield")
-async def higgsfield_generate(body: dict, current_user: dict = Depends(get_current_user)):
-    if not _is_pro_plus(current_user["id"]):
-        raise HTTPException(status_code=403, detail="Hyper Realistic generation requires a paid plan")
-    if not HIGGSFIELD_API_KEY:
-        raise HTTPException(status_code=503, detail="Hyper Realistic provider is not configured on the server")
-    prompt, duration, aspect, image_url = _validate_video_payload(body)
+# ── Video generation queue ───────────────────────────────────────────────────
+# Premium video renders (Hyper Realistic / Premium Animation / 30s gen4.5) are
+# slow and the providers throttle aggressively. Rather than blocking the request
+# (and erroring out when throttled), every render is added to a queue:
+#   • max MAX_CONCURRENT_VIDEOS render at once;
+#   • the rest wait and report their live position;
+#   • a throttled/temporarily-unavailable render is automatically re-queued
+#     (with backoff) instead of failing;
+#   • when a render finishes the user gets an in-app notification and the video
+#     appears in My Videos.
+MAX_CONCURRENT_VIDEOS = 3
+_VQ_MAX_RETRIES       = 6
+_VQ_RETRY_BACKOFF_S   = 20      # base seconds; grows per retry
 
-    cost = _video_credit_cost(duration)
-    credits_left = _charge_or_402(current_user["id"], cost)
-    payload = {
-        "prompt":       prompt,
-        "duration":     duration,
-        "aspect_ratio": aspect,
-        "metadata":     {"user_id": current_user["id"], "source": "ugoingviral"},
-    }
-    if image_url:
-        payload["image_url"] = image_url
-    result = await _call_video_provider(
-        HIGGSFIELD_API_URL, HIGGSFIELD_API_KEY, payload, label="Hyper Realistic"
-    )
-    _save_generated_video(current_user["id"], {
-        "id":           uuid.uuid4().hex[:10],
-        "url":          _extract_video_url(result),
-        "provider":     "higgsfield",
-        "kind":         "hyper_realistic",
-        "duration":     duration,
-        "aspect_ratio": aspect,
-        "prompt":       prompt[:240],
-        "credits_used": cost,
-        "created_at":   datetime.now().isoformat(),
-        "raw_result":   result if isinstance(result, dict) else None,
-    })
-    # Also persist into the permanent content library (downloads the file
-    # to user_content/{user_id}/videos/ so the asset survives provider TTL).
-    try:
-        from routes.content_library import add_to_library
-        await add_to_library(
-            current_user["id"], kind="videos", provider="higgsfield",
-            source_url=_extract_video_url(result),
-            prompt=prompt, duration=duration, aspect_ratio=aspect,
-            credits_used=cost,
-        )
-    except Exception:
-        pass
+_vq_pending: list = []          # FIFO of job dicts awaiting a free slot
+_vq_active:  dict = {}          # job_id -> job dict currently rendering
+_vq_jobs:    dict = {}          # job_id -> job dict (all known jobs this session)
+
+
+def _is_throttle_error(exc: Exception) -> bool:
+    """True when an exception looks like a provider being busy / rate-limited /
+    temporarily unavailable — i.e. something a retry could fix."""
+    status = getattr(exc, "status_code", None)
+    if status in (408, 425, 429, 500, 502, 503, 504):
+        return True
+    msg = str(getattr(exc, "detail", "") or exc).lower()
+    return any(s in msg for s in (
+        "rate limit", "ratelimit", "too many", "busy", "throttle",
+        "unavailable", "timeout", "timed out", "temporarily",
+    ))
+
+
+def _vq_kind_for(provider: str, duration: int) -> str:
+    if duration >= 30:
+        return "hyper_realistic"      # 30s long-form via Runway gen4.5
+    return "premium_animation" if provider == "pika" else "hyper_realistic"
+
+
+def _vq_live_position(job_id: str) -> int:
+    """1-based position in the waiting line (0 if it's already rendering/done)."""
+    for i, j in enumerate(_vq_pending):
+        if j["id"] == job_id:
+            return i + 1
+    return 0
+
+
+def _vq_public(job: dict) -> dict:
     return {
-        "provider":     "higgsfield",
+        "id":         job["id"],
+        "status":     job["status"],          # queued | processing | done | failed
+        "provider":   job["provider"],
+        "duration":   job["duration"],
+        "prompt":     (job.get("prompt") or "")[:80],
+        "video_url":  job.get("video_url"),
+        "error":      job.get("error"),
+        "position":   _vq_live_position(job["id"]),
+        "queue_total": len(_vq_pending) + len(_vq_active),
+        "active":     len(_vq_active),
+        "max":        MAX_CONCURRENT_VIDEOS,
+        "created_at": job.get("created_at"),
+    }
+
+
+async def _vq_run_provider(job: dict):
+    """Dispatch a job to its provider. Returns (video_url, raw_result).
+    Raises on failure (HTTPException carries the provider status code)."""
+    provider = job["provider"]
+    prompt, duration, aspect, image_url = job["prompt"], job["duration"], job["aspect"], job["image_url"]
+
+    # 30s long-form clips are rendered by Runway gen4.5 regardless of the
+    # premium provider the user picked (Kling/Pika top out at 15s).
+    if duration >= 30:
+        url = await _runway_generate(prompt, image_url, duration, aspect)
+        return url, {"provider": "runway_gen45", "video_url": url}
+
+    if provider == "pika":
+        payload = {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "user_id": job["uid"]}
+        if image_url:
+            payload["image_url"] = image_url
+        result = await _call_video_provider(PIKA_API_URL, PIKA_API_KEY, payload, label="Premium Animation")
+        return _extract_video_url(result), result
+
+    if provider == "higgsfield":
+        payload = {"prompt": prompt, "duration": duration, "aspect_ratio": aspect,
+                   "metadata": {"user_id": job["uid"], "source": "ugoingviral"}}
+        if image_url:
+            payload["image_url"] = image_url
+        result = await _call_video_provider(HIGGSFIELD_API_URL, HIGGSFIELD_API_KEY, payload, label="Hyper Realistic")
+        return _extract_video_url(result), result
+
+    # default: Kling (Hyper Realistic via Replicate)
+    url = await _replicate_kling_generate(prompt, duration, aspect, image_url)
+    return url, {"provider": "kling", "video_url": url}
+
+
+def _vq_pump() -> None:
+    """Start as many queued jobs as free slots allow (max MAX_CONCURRENT_VIDEOS)."""
+    while _vq_pending and len(_vq_active) < MAX_CONCURRENT_VIDEOS:
+        job = _vq_pending.pop(0)
+        job["status"] = "processing"
+        _vq_active[job["id"]] = job
+        asyncio.create_task(_vq_process(job))
+
+
+async def _vq_requeue_after(job: dict, delay: float) -> None:
+    """Put a throttled job back in line after a backoff delay, then pump."""
+    await asyncio.sleep(delay)
+    job["status"] = "queued"
+    _vq_pending.append(job)
+    _vq_pump()
+
+
+async def _vq_process(job: dict) -> None:
+    """Render one job. Frees its slot when done and pumps the next one."""
+    uid = job["uid"]
+    try:
+        video_url, raw = await _vq_run_provider(job)
+        # Success — record the URL and notify.
+        job["status"]    = "done"
+        job["video_url"] = video_url
+        _update_generated_video(uid, job["id"], {
+            "url": video_url, "status": "done",
+            "raw_result": raw if isinstance(raw, dict) else None,
+        })
+        try:
+            from routes.content_library import add_to_library
+            await add_to_library(
+                uid, kind="videos", provider=job["provider"],
+                source_url=video_url, prompt=job["prompt"],
+                duration=job["duration"], aspect_ratio=job["aspect"],
+                credits_used=job["cost"],
+            )
+        except Exception:
+            pass
+        try:
+            from routes.notifications import push_notification
+            push_notification(
+                uid, "video_ready", "🎬 Your video is ready",
+                f"Your {job['duration']}s video has finished — open My Videos to watch it.",
+            )
+        except Exception:
+            pass
+    except Exception as exc:
+        if _is_throttle_error(exc) and job["retries"] < _VQ_MAX_RETRIES:
+            # Throttled / busy — re-queue automatically, no error shown.
+            job["retries"] += 1
+            delay = _VQ_RETRY_BACKOFF_S * job["retries"]
+            _vq_active.pop(job["id"], None)
+            asyncio.create_task(_vq_requeue_after(job, delay))
+            _vq_pump()
+            return
+        # Permanent failure — refund credits and surface a friendly message.
+        job["status"] = "failed"
+        job["error"]  = "Something went wrong — please try again in a moment"
+        _refund(uid, job["cost"])
+        _update_generated_video(uid, job["id"], {"status": "failed", "error": job["error"]})
+        try:
+            from routes.notifications import push_notification
+            push_notification(
+                uid, "video_ready", "⚠️ Video render failed",
+                f"{job['error']}. Your {job['cost']} credits have been refunded.",
+            )
+        except Exception:
+            pass
+    finally:
+        _vq_active.pop(job["id"], None)
+        _vq_pump()
+
+
+def _enqueue_video(uid: str, provider: str, prompt: str, duration: int,
+                   aspect: str, image_url: str, cost: int) -> dict:
+    """Create a queued render job, mirror it into My Videos as a placeholder,
+    and kick the pump. Returns the public job view (with live position)."""
+    job_id = uuid.uuid4().hex[:10]
+    job = {
+        "id": job_id, "uid": uid, "provider": provider, "prompt": prompt,
+        "duration": duration, "aspect": aspect, "image_url": image_url,
+        "cost": cost, "status": "queued", "retries": 0,
+        "video_url": None, "error": None,
+        "created_at": datetime.now().isoformat(),
+    }
+    _vq_jobs[job_id] = job
+    _vq_pending.append(job)
+    # Placeholder in My Videos so the user sees it immediately as "processing".
+    _save_generated_video(uid, {
+        "id": job_id, "url": None, "provider": provider,
+        "kind": _vq_kind_for(provider, duration), "duration": duration,
+        "aspect_ratio": aspect, "prompt": prompt[:240], "credits_used": cost,
+        "created_at": job["created_at"], "status": "queued",
+    })
+    _vq_pump()
+    return _vq_public(job)
+
+
+@router.get("/api/studio/queue")
+def studio_queue(current_user: dict = Depends(get_current_user)):
+    """List the caller's render jobs with live queue positions."""
+    uid = current_user["id"]
+    jobs = [_vq_public(j) for j in _vq_jobs.values() if j["uid"] == uid]
+    jobs.sort(key=lambda j: j.get("created_at") or "", reverse=True)
+    return {
+        "jobs":   jobs,
+        "active": len(_vq_active),
+        "queued": len(_vq_pending),
+        "max":    MAX_CONCURRENT_VIDEOS,
+    }
+
+
+@router.get("/api/studio/queue/{job_id}")
+def studio_queue_item(job_id: str, current_user: dict = Depends(get_current_user)):
+    job = _vq_jobs.get(job_id)
+    if not job or job["uid"] != current_user["id"]:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return _vq_public(job)
+
+
+def _provider_configured(provider: str, duration: int) -> bool:
+    """Whether the provider needed for this render has an API key configured.
+    30s renders use Runway gen4.5, so they need RUNWAY_API_KEY."""
+    if duration >= 30:
+        return bool(RUNWAY_API_KEY)
+    if provider == "pika":
+        return bool(PIKA_API_KEY)
+    if provider == "higgsfield":
+        return bool(HIGGSFIELD_API_KEY)
+    return bool(REPLICATE_API_KEY)
+
+
+async def _queue_premium_render(body: dict, uid: str, provider: str) -> dict:
+    """Shared entry point for the premium video endpoints. Validates, charges
+    credits, and adds the render to the queue. Never errors on provider
+    throttling — that's handled by the queue with automatic re-queueing."""
+    if not _is_pro_plus(uid):
+        raise HTTPException(status_code=403, detail="Premium video generation requires a paid plan")
+    prompt, duration, aspect, image_url = _validate_video_payload(body)
+    if not _provider_configured(provider, duration):
+        raise HTTPException(
+            status_code=503,
+            detail="Our video servers are temporarily unavailable — please try again shortly",
+        )
+    cost = _video_credit_cost(duration)
+    credits_left = _charge_or_402(uid, cost)
+    job = _enqueue_video(uid, provider, prompt, duration, aspect, image_url, cost)
+    if job["status"] == "processing":
+        message = "Your video is generating now — it'll appear in My Videos when it's ready"
+    else:
+        message = f"Your video is generating — position {job['position']} in queue"
+    return {
+        "queued":       True,
+        "job_id":       job["id"],
+        "status":       job["status"],
+        "position":     job["position"],
+        "queue_total":  job["queue_total"],
+        "message":      message,
+        "provider":     provider,
         "credits_left": credits_left,
         "credits_used": cost,
         "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "image_url": image_url},
-        "result":       result,
     }
+
+
+@router.post("/api/studio/higgsfield")
+async def higgsfield_generate(body: dict, current_user: dict = Depends(get_current_user)):
+    return await _queue_premium_render(body, current_user["id"], "higgsfield")
 
 
 @router.post("/api/studio/pika")
 async def pika_generate(body: dict, current_user: dict = Depends(get_current_user)):
-    if not _is_pro_plus(current_user["id"]):
-        raise HTTPException(status_code=403, detail="Premium Animation generation requires a paid plan")
-    if not PIKA_API_KEY:
-        raise HTTPException(status_code=503, detail="Premium Animation provider is not configured on the server")
-    prompt, duration, aspect, image_url = _validate_video_payload(body)
-
-    cost = _video_credit_cost(duration)
-    credits_left = _charge_or_402(current_user["id"], cost)
-    payload = {
-        "prompt":       prompt,
-        "duration":     duration,
-        "aspect_ratio": aspect,
-        "user_id":      current_user["id"],
-    }
-    if image_url:
-        payload["image_url"] = image_url
-    result = await _call_video_provider(
-        PIKA_API_URL, PIKA_API_KEY, payload, label="Premium Animation"
-    )
-    _save_generated_video(current_user["id"], {
-        "id":           uuid.uuid4().hex[:10],
-        "url":          _extract_video_url(result),
-        "provider":     "pika",
-        "kind":         "premium_animation",
-        "duration":     duration,
-        "aspect_ratio": aspect,
-        "prompt":       prompt[:240],
-        "credits_used": cost,
-        "created_at":   datetime.now().isoformat(),
-        "raw_result":   result if isinstance(result, dict) else None,
-    })
-    try:
-        from routes.content_library import add_to_library
-        await add_to_library(
-            current_user["id"], kind="videos", provider="pika",
-            source_url=_extract_video_url(result),
-            prompt=prompt, duration=duration, aspect_ratio=aspect,
-            credits_used=cost,
-        )
-    except Exception:
-        pass
-    return {
-        "provider":     "pika",
-        "credits_left": credits_left,
-        "credits_used": cost,
-        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "image_url": image_url},
-        "result":       result,
-    }
+    return await _queue_premium_render(body, current_user["id"], "pika")
 
 
 @router.post("/api/studio/kling")
 async def kling_generate(body: dict, current_user: dict = Depends(get_current_user)):
-    """Hyper Realistic video generation via Kling 1.6 Pro (Replicate).
-    Pricing: 50 / 85 / 100 credits for 5s / 10s / 15s (see _VIDEO_CREDIT_PRICES)."""
-    uid = current_user["id"]
-    if not _is_pro_plus(uid):
-        raise HTTPException(status_code=403, detail="Hyper Realistic generation requires a paid plan")
-    if not REPLICATE_API_KEY:
-        raise HTTPException(status_code=503, detail="Hyper Realistic provider is not configured on the server")
-    prompt, duration, aspect, image_url = _validate_video_payload(body)
-
-    cost = _video_credit_cost(duration)
-    credits_left = _charge_or_402(uid, cost)
-    # Refund the charge if the provider call fails, so a failed render never
-    # silently burns the user's credits.
-    try:
-        video_url = await _replicate_kling_generate(prompt, duration, aspect, image_url)
-    except HTTPException:
-        _refund(uid, cost)
-        raise
-    except Exception as exc:
-        _refund(uid, cost)
-        raise HTTPException(status_code=502, detail=f"Kling AI: {str(exc)[:160]}")
-
-    _save_generated_video(uid, {
-        "id":           uuid.uuid4().hex[:10],
-        "url":          video_url,
-        "provider":     "kling",
-        "kind":         "hyper_realistic",
-        "duration":     duration,
-        "aspect_ratio": aspect,
-        "prompt":       prompt[:240],
-        "credits_used": cost,
-        "created_at":   datetime.now().isoformat(),
-    })
-    # Persist into the permanent content library (survives provider TTL).
-    try:
-        from routes.content_library import add_to_library
-        await add_to_library(
-            uid, kind="videos", provider="kling",
-            source_url=video_url,
-            prompt=prompt, duration=duration, aspect_ratio=aspect,
-            credits_used=cost,
-        )
-    except Exception:
-        pass
-    return {
-        "provider":     "kling",
-        "credits_left": credits_left,
-        "credits_used": cost,
-        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "image_url": image_url},
-        "result":       {"video_url": video_url},
-    }
+    """Hyper Realistic video via Kling (Replicate) — queued.
+    Pricing: 50 / 85 / 100 / 120 credits for 5s / 10s / 15s / 30s.
+    30s renders are produced by Runway gen4.5."""
+    return await _queue_premium_render(body, current_user["id"], "kling")

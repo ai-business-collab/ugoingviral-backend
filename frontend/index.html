@@ -4530,7 +4530,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-size:14px;font-weight:700;color:var(--tx)">✨ Premium video providers</div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation — included on any paid plan · 50 / 85 / 100 credits per 5s / 10s / 15s</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation — included on any paid plan · 50 / 85 / 100 / 120 credits per 5s / 10s / 15s / 30s · 30s long-form via Runway gen4.5</div>
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('kling')" title="Hyper Realistic video powered by Kling AI" style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
@@ -4552,6 +4552,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <option value="5" selected>5 s — 50 credits</option>
               <option value="10">10 s — 85 credits</option>
               <option value="15">15 s — 100 credits</option>
+              <option value="30">30 s — 120 credits (Runway gen4.5)</option>
             </select>
           </div>
           <div>
@@ -6686,9 +6687,13 @@ async function loadMyVideos() {
       const dur = v.duration ? `${v.duration}s` : '';
       const credits = (typeof v.credits_used === 'number') ? `${v.credits_used} cr` : '';
       const prompt = (v.prompt || '').slice(0, 80);
+      const st = v.status || (url ? 'done' : 'processing');
+      const placeholderLabel = st === 'queued' ? '⏳ Queued…'
+        : st === 'failed' ? '⚠️ Failed (refunded)'
+        : '🎬 Generating…';
       const player = url
         ? `<video src="${url}" controls preload="metadata" style="width:100%;aspect-ratio:9/16;object-fit:cover;background:#000;border-radius:8px 8px 0 0"></video>`
-        : `<div style="width:100%;aspect-ratio:9/16;background:var(--s2);border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3)">⏳ Processing…</div>`;
+        : `<div style="width:100%;aspect-ratio:9/16;background:var(--s2);border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3)">${placeholderLabel}</div>`;
       const downloadBtn = url
         ? `<a href="${url}" download class="btn bg bsm" style="font-size:10px;padding:4px 8px;text-decoration:none">⬇️</a>`
         : '';
@@ -17346,7 +17351,21 @@ function _renderAnBestPost(bp) {
 window._spProvider = 'kling';
 
 // Per-duration credit cost — must match _VIDEO_CREDIT_PRICES in routes/studio.py.
-var SP_DURATION_COST = {5: 50, 10: 85, 15: 100};
+var SP_DURATION_COST = {5: 50, 10: 85, 15: 100, 30: 120};
+
+// Map a technical backend/network error to a friendly, user-facing message.
+function spFriendlyError(msg) {
+  var m = (msg || '').toLowerCase();
+  if (m.indexOf('provider unavailable') >= 0 || m.indexOf('servers are temporarily') >= 0 || m.indexOf('unavailable') >= 0)
+    return 'Our video servers are busy — your video has been queued';
+  if (m.indexOf('more credits') >= 0 || m.indexOf('insufficient') >= 0 || m.indexOf('not enough credits') >= 0)
+    return msg; // already friendly ("You need X more credits — tap here to top up")
+  if (m.indexOf('rate limit') >= 0 || m.indexOf('too many') >= 0 || m.indexOf('429') >= 0)
+    return 'Too many requests — your video has been added to the queue';
+  if (m.indexOf('500') >= 0 || m.indexOf('internal') >= 0 || m.indexOf('something went wrong') >= 0)
+    return 'Something went wrong — please try again in a moment';
+  return msg || 'Something went wrong — please try again in a moment';
+}
 
 function spUpdateCost() {
   var sel = document.getElementById('sp-duration');
@@ -17409,10 +17428,8 @@ async function spGenerate() {
   try {
     var endpoint = window._spProvider === 'pika' ? '/api/studio/pika' : '/api/studio/kling';
     var r = await apiFetch(endpoint, 'POST', payload);
-    out.textContent = JSON.stringify(r, null, 2);
     // Trust the server-reported cost so the toast can't disagree with the deduction.
     var charged = (r && typeof r.credits_used === 'number') ? r.credits_used : cost;
-    // Sync every credit display from the canonical endpoint after a generation.
     if (typeof refreshCredits === 'function') refreshCredits();
     // Remember last generation so the "Save character" flow can attach it.
     window._spLastGeneration = {
@@ -17424,13 +17441,49 @@ async function spGenerate() {
     };
     if (typeof spShowSaveCharacter === 'function') spShowSaveCharacter();
     if (typeof loadMyVideos === 'function') loadMyVideos();
-    toast('✅ Generation queued — ' + charged + ' credits charged', 'success');
+    // The render is now queued — show position and start polling for the result.
+    var queueMsg = (r && r.message) || 'Your video has been queued';
+    out.textContent = '🎬 ' + queueMsg + '\n💳 ' + charged + ' credits charged.\nYou can leave this page — we\'ll notify you when it\'s ready.';
+    toast('🎬 ' + queueMsg, 'success');
+    if (r && r.job_id) spPollQueue(r.job_id);
   } catch (e) {
-    out.textContent = '⚠️ ' + (e.message || 'Generation failed');
-    toast(e.message || 'Generation failed', 'error');
+    var friendly = spFriendlyError(e.message || '');
+    out.textContent = '⚠️ ' + friendly;
+    toast(friendly, 'error');
   } finally {
     btn.disabled = false; btn.textContent = '✨ Generate video';
   }
+}
+
+// Poll a queued render until it's done/failed, updating the result box live.
+function spPollQueue(jobId) {
+  var out = document.getElementById('sp-result');
+  var tries = 0;
+  var timer = setInterval(async function() {
+    tries++;
+    if (tries > 120) { clearInterval(timer); return; }   // ~10 min safety cap
+    try {
+      var j = await apiFetch('/api/studio/queue/' + jobId, 'GET', null, false);
+      if (!j) return;
+      if (j.status === 'queued') {
+        if (out) out.textContent = '⏳ Your video is generating — position ' + (j.position || 1) + ' in queue (' + (j.active || 0) + '/' + (j.max || 3) + ' rendering now).';
+      } else if (j.status === 'processing') {
+        if (out) out.textContent = '🎬 Your video is generating now — it\'ll appear in My Videos when ready.';
+      } else if (j.status === 'done') {
+        clearInterval(timer);
+        if (out) out.textContent = '✅ Your video is ready — see it in My Videos below.';
+        toast('✅ Your video is ready!', 'success');
+        if (typeof loadMyVideos === 'function') loadMyVideos();
+        if (typeof refreshCredits === 'function') refreshCredits();
+      } else if (j.status === 'failed') {
+        clearInterval(timer);
+        if (out) out.textContent = '⚠️ ' + (j.error || 'Something went wrong — please try again in a moment') + ' (credits refunded).';
+        toast(j.error || 'Render failed — credits refunded', 'error');
+        if (typeof loadMyVideos === 'function') loadMyVideos();
+        if (typeof refreshCredits === 'function') refreshCredits();
+      }
+    } catch (e) { /* keep polling */ }
+  }, 5000);
 }
 
 // ── Saved character library (mini-series reference characters) ──────────────
