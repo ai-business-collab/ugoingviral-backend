@@ -93,6 +93,40 @@ def nexora_metrics(request: Request):
         except Exception:
             pass
 
+    # Real per-service API costs from the global usage tracker (OpenAI,
+    # ElevenLabs, Runway, Replicate, Anthropic). This is the canonical cost
+    # source used by the admin dashboard; Nex's /costs command reads it live.
+    costs = {}
+    try:
+        from services import api_tracker
+        st   = api_tracker.get_stats()
+        svc  = st.get("services", {})
+        summ = st.get("summary", {})
+        costs = {
+            "openai_today":     svc.get("openai", {}).get("today_cost", 0),
+            "openai_month":     svc.get("openai", {}).get("month_cost", 0),
+            "elevenlabs_today": svc.get("elevenlabs", {}).get("today_cost", 0),
+            "elevenlabs_month": svc.get("elevenlabs", {}).get("month_cost", 0),
+            "runway_today":     svc.get("runway", {}).get("today_cost", 0),
+            "runway_month":     svc.get("runway", {}).get("month_cost", 0),
+            "runway_seconds_today": svc.get("runway", {}).get("today_seconds", 0),
+            "runway_seconds_month": svc.get("runway", {}).get("month_seconds", 0),
+            "replicate_today":  svc.get("replicate", {}).get("today_cost", 0),
+            "replicate_month":  svc.get("replicate", {}).get("month_cost", 0),
+            "anthropic_today":  svc.get("anthropic", {}).get("today_cost", 0),
+            "anthropic_month":  svc.get("anthropic", {}).get("month_cost", 0),
+            "total_today":      summ.get("total_cost_today", 0),
+            "total_month":      summ.get("total_cost_month", 0),
+        }
+    except Exception:
+        costs = {}
+    # Fallback: if the tracker has no monthly data yet, extrapolate the rough
+    # automation-log estimate so /costs still returns a real number.
+    if not costs.get("total_month"):
+        costs.setdefault("total_today", round(api_costs_today, 4))
+        costs["total_month"] = round(api_costs_today * 30, 4)
+        costs["estimated"] = True
+
     return {
         "platform": "ugoingviral",
         "mrr": mrr,
@@ -102,6 +136,7 @@ def nexora_metrics(request: Request):
         "autopilot_active": autopilot_active,
         "credits_used_today": credits_used_today,
         "api_costs_today": round(api_costs_today, 4),
+        "costs": costs,
         "uptime": "99.9%",
     }
 

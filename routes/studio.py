@@ -158,7 +158,7 @@ ASPECT_RATIOS = {
 
 class Scene(BaseModel):
     prompt: str
-    duration: int = 5           # 5, 10, 15 seconds
+    duration: int = 5           # 5, 10, 15, or 30 seconds (30s → Runway gen4.5)
     style_hint: str = ""        # optional extra style instruction
     transition: str = "cut"     # cut, fade, dissolve
 
@@ -349,6 +349,12 @@ async def _runway_generate(prompt: str, image_url: str, duration: int,
             status = data.get("status")
             if status == "SUCCEEDED":
                 outputs = data.get("output", [])
+                # Record real Runway usage (seconds rendered) for cost tracking.
+                try:
+                    from services import api_tracker
+                    api_tracker.track("runway", "seconds", capped_duration, feature="video_generation")
+                except Exception:
+                    pass
                 return outputs[0] if outputs else None
             if status in ("FAILED", "CANCELLED"):
                 raise HTTPException(status_code=500, detail=f"Runway task fejlede: {data.get('failure','Ukendt')}")
@@ -597,6 +603,12 @@ async def _generate_voiceover(script: str) -> Optional[str]:
                       "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}},
             )
         if r.status_code == 200:
+            # Record real ElevenLabs usage (characters synthesised) for costs.
+            try:
+                from services import api_tracker
+                api_tracker.track("elevenlabs", "chars", len(script[:1000]), feature="voice_over")
+            except Exception:
+                pass
             fn = os.path.join(UPLOADS_DIR, f"voice_{uuid.uuid4().hex[:8]}.mp3")
             with open(fn, "wb") as f:
                 f.write(r.content)
