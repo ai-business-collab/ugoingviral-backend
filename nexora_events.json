@@ -436,5 +436,53 @@
       "total": 8,
       "failures": "health_check, user_signup, user_login, billing_plan, admin_login, autopilot_toggle, content_engine, upload_media"
     }
+  },
+  {
+    "event": "error.critical",
+    "timestamp": "2026-06-04T04:00:02.544818Z",
+    "platform": "ugoingviral",
+    "data": {
+      "source": "qa_cron",
+      "run_id": "20260604T040002Z",
+      "failed": 1,
+      "total": 8,
+      "failures": "health_check, user_signup, user_login, billing_plan, admin_login, autopilot_toggle, content_engine, upload_media"
+    }
+  },
+  {
+    "event": "error.critical",
+    "timestamp": "2026-06-04T10:00:02.224098Z",
+    "platform": "ugoingviral",
+    "data": {
+      "source": "qa_cron",
+      "run_id": "20260604T100002Z",
+      "failed": 1,
+      "total": 8,
+      "failures": "health_check, user_signup, user_login, billing_plan, admin_login, autopilot_toggle, content_engine, upload_media"
+    }
+  },
+  {
+    "event": "error.critical",
+    "timestamp": "2026-06-04T16:00:02.770437Z",
+    "platform": "ugoingviral",
+    "data": {
+      "source": "qa_cron",
+      "run_id": "20260604T160002Z",
+      "failed": 1,
+      "total": 8,
+      "failures": "health_check, user_signup, user_login, billing_plan, admin_login, autopilot_toggle, content_engine, upload_media"
+    }
+  },
+  {
+    "event": "error.critical",
+    "timestamp": "2026-06-04T22:00:02.221971Z",
+    "platform": "ugoingviral",
+    "data": {
+      "source": "qa_cron",
+      "run_id": "20260604T220002Z",
+      "failed": 1,
+      "total": 8,
+      "failures": "health_check, user_signup, user_login, billing_plan, admin_login, autopilot_toggle, content_engine, upload_media"
+    }
   }
 ]
