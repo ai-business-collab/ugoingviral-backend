@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta name="google-site-verification" content="165f5389ae0e6661" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UgoingViral</title>
@@ -5932,15 +5933,19 @@ async function refreshCredits() {
 async function loadFreeVideoStatus() {
   const box = document.getElementById('studio-free-videos-notice');
   const cta = document.getElementById('studio-free-cta');
+  const hideBox = function(){ if (box) box.style.display = 'none'; };
   const hideCta = function(){ if (cta) cta.style.display = 'none'; };
-  if (!box) { return; }
+  // The persistent CTA and the inline notice are independent surfaces — the CTA
+  // must not depend on the notice box existing/rendering, otherwise a missing
+  // notice element would silently hide the "Get 3 Free Videos" button.
   let d;
-  try { d = await apiFetch('/api/studio/free_videos'); } catch (e) { box.style.display = 'none'; hideCta(); return; }
-  if (!d || !d.eligible) { box.style.display = 'none'; hideCta(); return; }
+  try { d = await apiFetch('/api/studio/free_videos'); } catch (e) { hideBox(); hideCta(); return; }
+  if (!d || !d.eligible) { hideBox(); hideCta(); return; }
   const limit = d.limit || 3;
   const used = d.used || 0;
   const remaining = (typeof d.remaining === 'number') ? d.remaining : Math.max(0, limit - used);
-  // Persistent CTA button — only while free videos remain (free_videos_used < limit).
+  // Persistent CTA button — shown prominently at the top while free videos
+  // remain (free_videos_used < limit) for every free-plan user.
   if (cta) {
     if (remaining > 0) {
       cta.style.display = 'flex';
@@ -5950,6 +5955,7 @@ async function loadFreeVideoStatus() {
       cta.style.display = 'none';   // disappears completely once all 3 are used
     }
   }
+  if (!box) { return; }
   box.style.display = 'block';
   if (used >= limit || remaining <= 0) {
     // All free videos used — show the upgrade prompt and hide the claim button.
@@ -7006,7 +7012,7 @@ function studioSceneCard(scene, idx) {
     </div>
     <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">⏱️ Varighed</div>
     <div class="scene-dur-btns">
-      ${[5,10,15,30].map(d => `<div class="scene-dur-btn ${scene.duration===d?'active':''}" onclick="studioSetDur(${idx},${d})">${d}s ${d===5?'(40cr)':d===10?'(60cr)':d===15?'(80cr)':'(120cr)'}${d===30?' · gen4.5':''}</div>`).join('')}
+      ${[5,10,15,30].map(d => `<div class="scene-dur-btn ${scene.duration===d?'active':''}" onclick="studioSetDur(${idx},${d})">${d}s ${d===5?'(40cr)':d===10?'(60cr)':d===15?'(80cr)':'(120cr)'}</div>`).join('')}
     </div>
     <div class="fg" style="margin-top:10px">
       <label class="fl" style="font-size:10px">Stil hint (valgfri)</label>

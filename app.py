@@ -147,6 +147,10 @@ def tiktok_verify3():
 def tiktok_verify4():
     return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "tiktok50KIALdvtg3pFgadwqJ17IpICFOwbkpT.txt"), media_type="text/plain")
 
+@app.get("/google165f5389ae0e6661.html")
+def google_site_verification():
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "google165f5389ae0e6661.html"), media_type="text/html")
+
 @app.get("/privacy")
 def privacy_policy():
     from fastapi.responses import HTMLResponse
