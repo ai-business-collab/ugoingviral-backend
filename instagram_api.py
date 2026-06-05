@@ -133,6 +133,23 @@ async def get_account_info(ig_account_id: str, access_token: str) -> dict:
         return r.json()
 
 
+async def get_media_permalink(media_id: str, access_token: str) -> str:
+    """Fetch the public permalink (post URL) for a published media id."""
+    if not media_id:
+        return ""
+    try:
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.get(
+                f"{GRAPH_BASE}/{media_id}",
+                params={"access_token": access_token, "fields": "permalink"},
+            )
+            if r.status_code == 200:
+                return r.json().get("permalink", "") or ""
+    except Exception:
+        pass
+    return ""
+
+
 async def get_user_media(ig_account_id: str, access_token: str, limit: int = 20) -> list:
     """List the connected Instagram Business/Creator account's own posts.
 

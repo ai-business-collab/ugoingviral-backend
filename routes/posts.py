@@ -177,13 +177,15 @@ async def publish_via_api(req: Request):
         if not s.get("instagram_api_connected"):
             return {"status": "error", "message": "Instagram API ikke forbundet", "platform": platform}
         try:
-            from instagram_api import post_to_instagram, refresh_token_if_needed
+            from instagram_api import post_to_instagram, refresh_token_if_needed, get_media_permalink
             token      = s.get("instagram_api_token", "")
             ig_id      = s.get("instagram_ig_id", "")
             expires_at = s.get("instagram_api_expires")
 
             if not token or not ig_id:
                 return {"status": "error", "message": "Instagram token mangler — forbind igen", "platform": platform}
+            if not image_url and not video_url:
+                return {"status": "error", "message": "Instagram kræver et billede eller en video", "platform": platform}
 
             token, new_exp = await refresh_token_if_needed(token, expires_at)
             if new_exp:
@@ -204,15 +206,21 @@ async def publish_via_api(req: Request):
                 video_url=video_url,
                 media_type=media_type,
             )
+            # Resolve the public post URL (permalink) for a clear success message.
+            post_url = ""
+            if api_result.get("status") == "published" and api_result.get("id"):
+                post_url = await get_media_permalink(api_result["id"], token)
             result = {
                 "status":    api_result.get("status", "error"),
                 "platform":  platform,
                 "post_id":   api_result.get("id"),
+                "post_url":  post_url,
+                "url":       post_url,
                 "message":   api_result.get("message", ""),
                 "provider":  "instagram_graph_api",
             }
             add_log(
-                f"📸 Instagram API opslag: {result['status']} — {api_result.get('id', '')}",
+                f"📸 Instagram API opslag: {result['status']} — {post_url or api_result.get('id', '')}",
                 "success" if result["status"] == "published" else "error",
             )
         except Exception as e:
@@ -321,6 +329,30 @@ async def publish_via_api(req: Request):
             result = {"status": "error", "message": str(e), "platform": platform}
             add_log(f"❌ YouTube API fejl: {e}", "error")
 
+    # ── X / Twitter ────────────────────────────────────────────────────────────
+    elif platform == "twitter":
+        if not s.get("twitter_api_connected"):
+            return {"status": "error", "message": "X/Twitter API ikke forbundet", "platform": platform}
+        try:
+            from routes.twitter import post_tweet
+            api_result = await post_tweet(content)
+            result = {
+                "status":   api_result.get("status", "error"),
+                "platform": platform,
+                "tweet_id": api_result.get("tweet_id"),
+                "url":      api_result.get("url", ""),
+                "post_url": api_result.get("url", ""),
+                "message":  api_result.get("message", ""),
+                "provider": "twitter_api_v2",
+            }
+            add_log(
+                f"🐦 X/Twitter opslag: {result['status']} — {result.get('url') or ''}",
+                "success" if result["status"] == "published" else "error",
+            )
+        except Exception as e:
+            result = {"status": "error", "message": str(e), "platform": platform}
+            add_log(f"❌ X/Twitter fejl: {e}", "error")
+
     # ── Gem i post historik ──────────────────────────────────────────────────
     history_entry = {
         "id":            post_id,
@@ -331,10 +363,12 @@ async def publish_via_api(req: Request):
         "status":        result.get("status", "error"),
         "provider":      result.get("provider", "api"),
         "ig_post_id":    result.get("post_id"),
+        "ig_url":        result.get("post_url") if platform == "instagram" else None,
         "tt_publish_id": result.get("publish_id"),
-        "tt_post_url":   result.get("post_url"),
+        "tt_post_url":   result.get("post_url") if platform == "tiktok" else None,
         "yt_video_id":   result.get("video_id"),
-        "yt_url":        result.get("url"),
+        "yt_url":        result.get("url") if platform == "youtube" else None,
+        "tw_url":        result.get("url") if platform == "twitter" else None,
         "message":       result.get("message", ""),
         "posted_at":     datetime.now().isoformat(),
         "type":          "api_post",
