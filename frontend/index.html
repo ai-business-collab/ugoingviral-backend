@@ -1063,27 +1063,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 .clib-type-tab.on{background:rgba(var(--ac-rgb),.12);border-color:var(--ac);color:var(--ac)}
 .clib-map-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
 .clib-map-row:last-child{border-bottom:none}
-/* ── Leads CRM Kanban ──────────────────── */
-.crm-board{display:flex;gap:14px;overflow-x:auto;padding-bottom:14px;align-items:flex-start}
-.crm-col{flex:0 0 260px;min-width:260px;background:var(--glass-b);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;max-height:calc(100vh - 240px)}
-.crm-col.drag-over{border-color:var(--ac);background:rgba(0,229,255,.06)}
-.crm-col-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);position:sticky;top:0}
-.crm-col-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--tx);display:flex;align-items:center;gap:7px}
-.crm-col-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.crm-col-count{font-size:11px;font-weight:800;color:var(--tx2);background:var(--s);border:1px solid var(--border);border-radius:20px;padding:1px 9px;min-width:22px;text-align:center}
-.crm-col-body{padding:10px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;min-height:60px}
-.crm-card{background:var(--s);border:1px solid var(--border);border-radius:10px;padding:11px 12px;cursor:grab;transition:border-color .15s,box-shadow .15s,transform .05s;position:relative}
-.crm-card:hover{border-color:var(--ac);box-shadow:0 4px 14px rgba(0,0,0,.25)}
-.crm-card.dragging{opacity:.45;cursor:grabbing}
-.crm-card-name{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:3px;padding-right:18px;word-break:break-word}
-.crm-card-meta{font-size:11px;color:var(--tx3);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.crm-card-note{font-size:11px;color:var(--tx2);margin-top:6px;line-height:1.5;word-break:break-word}
-.crm-card-val{font-size:11px;font-weight:700;color:#22c55e}
-.crm-card-del{position:absolute;top:7px;right:8px;cursor:pointer;color:var(--tx3);font-size:13px;line-height:1;opacity:0;transition:opacity .15s}
-.crm-card:hover .crm-card-del{opacity:.7}
-.crm-card-del:hover{color:#ef4444;opacity:1}
-.crm-empty{font-size:11px;color:var(--tx3);text-align:center;padding:18px 8px;border:1px dashed var(--border);border-radius:8px}
-@media (max-width:640px){.crm-col{flex-basis:230px;min-width:230px}}
 /* ── Pipeline preview & history ────────── */
 .pipe-prev-item{background:var(--glass);border:2px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--tx);cursor:pointer;transition:all .2s;margin-bottom:8px;line-height:1.6;display:flex;gap:10px;align-items:flex-start}
 .pipe-prev-item.on{border-color:var(--ac);background:rgba(var(--ac-rgb),.06)}
@@ -1774,7 +1753,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" onclick="nav('inbox')">📥 <span>Inbox</span></div>
       <div class="sub-item" onclick="nav('autodm')">💬 <span>Auto DM</span></div>
       <div class="sub-item" onclick="nav('autocomments')">💭 <span>Auto Comments</span></div>
-      <div class="sub-item" id="ni-leads" onclick="nav('leads')">🧲 <span>Leads CRM</span></div>
     </div>
 
     <!-- ── STATISTIK ── -->
@@ -3972,67 +3950,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <button class="btn bsm" style="background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.4);color:#ef4444;white-space:nowrap;margin-left:16px;font-weight:700" onclick="openDeleteAccountModal()">Delete</button>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ LEADS CRM ═════════════════════════════════════════════════════════ -->
-  <div id="page-leads" class="page">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
-      <div>
-        <div style="font-size:22px;font-weight:800;color:var(--tx)">🧲 Leads CRM</div>
-        <div style="font-size:12px;color:var(--tx3);margin-top:2px">Track outreach leads through your sales pipeline — drag cards between stages.</div>
-      </div>
-      <button class="btn bp" onclick="openLeadModal()">＋ Add lead</button>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 16px">
-      <input class="fi" id="crm-search" placeholder="🔍 Search leads by name, handle, note…" style="flex:1;min-width:220px;max-width:420px" oninput="renderLeadsBoard()">
-      <select class="fs" id="crm-filter-platform" onchange="renderLeadsBoard()" style="max-width:170px">
-        <option value="">All platforms</option>
-        <option value="instagram">📸 Instagram</option>
-        <option value="tiktok">🎵 TikTok</option>
-        <option value="youtube">▶️ YouTube</option>
-        <option value="facebook">📘 Facebook</option>
-        <option value="twitter">🐦 X / Twitter</option>
-        <option value="email">✉️ Email</option>
-        <option value="other">🌐 Other</option>
-      </select>
-      <span id="crm-total" style="font-size:12px;color:var(--tx3);white-space:nowrap"></span>
-    </div>
-    <div class="crm-board" id="crm-board">
-      <div style="color:var(--tx3);font-size:13px;padding:40px">Loading pipeline…</div>
-    </div>
-  </div>
-
-  <!-- Add / edit lead modal -->
-  <div id="lead-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeLeadModal()">
-    <div class="modal-box" style="width:440px;max-width:96vw">
-      <div class="ctitle" id="lead-modal-title" style="margin-bottom:14px">＋ Add lead</div>
-      <input type="hidden" id="lead-edit-id" value="">
-      <div class="fg"><label class="fl">Name *</label><input class="fi" id="lead-f-name" placeholder="Lead or company name"></div>
-      <div class="fg"><label class="fl">Handle / contact</label><input class="fi" id="lead-f-handle" placeholder="@username or email"></div>
-      <div style="display:flex;gap:10px">
-        <div class="fg" style="flex:1"><label class="fl">Platform</label>
-          <select class="fs" id="lead-f-platform">
-            <option value="">—</option>
-            <option value="instagram">📸 Instagram</option>
-            <option value="tiktok">🎵 TikTok</option>
-            <option value="youtube">▶️ YouTube</option>
-            <option value="facebook">📘 Facebook</option>
-            <option value="twitter">🐦 X / Twitter</option>
-            <option value="email">✉️ Email</option>
-            <option value="other">🌐 Other</option>
-          </select>
-        </div>
-        <div class="fg" style="flex:1"><label class="fl">Stage</label>
-          <select class="fs" id="lead-f-stage"></select>
-        </div>
-      </div>
-      <div class="fg"><label class="fl">Deal value (optional)</label><input class="fi" id="lead-f-value" placeholder="e.g. $500"></div>
-      <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="lead-f-note" rows="3" placeholder="Context, next steps…" style="resize:vertical"></textarea></div>
-      <div style="display:flex;gap:8px;margin-top:6px">
-        <button class="btn bg" style="flex:1" onclick="closeLeadModal()">Cancel</button>
-        <button class="btn bp" style="flex:1" onclick="saveLead()" id="lead-save-btn">Save lead</button>
       </div>
     </div>
   </div>
@@ -8460,176 +8377,6 @@ function setLangFromSettings(lang) {
   toast('Language updated', 'success');
 }
 
-// ── Leads CRM (Kanban pipeline) ─────────────────────────────────────────────
-var _crm = { leads: [], stages: [], dragId: null };
-var CRM_STAGE_COLORS = {
-  new:'#38bdf8', contacted:'#a78bfa', replied:'#fbbf24',
-  interested:'#22c55e', closed:'#10b981', lost:'#ef4444'
-};
-var CRM_PLAT_ICON = { instagram:'📸', tiktok:'🎵', youtube:'▶️', facebook:'📘', twitter:'🐦', email:'✉️', other:'🌐' };
-
-async function loadLeads() {
-  var board = document.getElementById('crm-board');
-  try {
-    var r = await apiFetch('/api/leads');
-    _crm.leads = r.leads || [];
-    _crm.stages = r.stages || [];
-  } catch(e) {
-    _crm.leads = []; _crm.stages = [];
-    if (board) board.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:40px">Could not load leads.</div>';
-    return;
-  }
-  // Populate the stage dropdown in the modal once we know the stages.
-  var stageSel = document.getElementById('lead-f-stage');
-  if (stageSel && _crm.stages.length) {
-    stageSel.innerHTML = _crm.stages.map(function(s){ return '<option value="' + s.key + '">' + _escHtml(s.label) + '</option>'; }).join('');
-  }
-  renderLeadsBoard();
-}
-
-function renderLeadsBoard() {
-  var board = document.getElementById('crm-board');
-  if (!board) return;
-  if (!_crm.stages.length) { board.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:40px">No pipeline stages.</div>'; return; }
-  var q = (((document.getElementById('crm-search')||{}).value) || '').toLowerCase().trim();
-  var platFilter = ((document.getElementById('crm-filter-platform')||{}).value) || '';
-  var filtered = _crm.leads.filter(function(l){
-    if (platFilter && (l.platform||'') !== platFilter) return false;
-    if (!q) return true;
-    var hay = ((l.name||'') + ' ' + (l.handle||'') + ' ' + (l.note||'') + ' ' + (l.platform||'')).toLowerCase();
-    return hay.indexOf(q) >= 0;
-  });
-  var totalEl = document.getElementById('crm-total');
-  if (totalEl) totalEl.textContent = filtered.length + ' of ' + _crm.leads.length + ' lead' + (_crm.leads.length===1?'':'s');
-  board.innerHTML = _crm.stages.map(function(s){
-    var col = filtered.filter(function(l){ return (l.stage||'new') === s.key; });
-    var color = CRM_STAGE_COLORS[s.key] || 'var(--ac)';
-    var cards = col.length
-      ? col.map(_crmCardHtml).join('')
-      : '<div class="crm-empty">Drop leads here</div>';
-    return '<div class="crm-col" data-stage="' + s.key + '" ondragover="crmDragOver(event)" ondragleave="crmDragLeave(event)" ondrop="crmDrop(event,\'' + s.key + '\')">' +
-      '<div class="crm-col-head">' +
-        '<div class="crm-col-title"><span class="crm-col-dot" style="background:' + color + '"></span>' + _escHtml(s.label) + '</div>' +
-        '<span class="crm-col-count">' + col.length + '</span>' +
-      '</div>' +
-      '<div class="crm-col-body">' + cards + '</div>' +
-    '</div>';
-  }).join('');
-}
-
-function _crmCardHtml(l) {
-  var plat = l.platform ? ((CRM_PLAT_ICON[l.platform]||'🌐') + ' ' + l.platform) : '';
-  return '<div class="crm-card" draggable="true" data-id="' + l.id + '" ondragstart="crmDragStart(event,\'' + l.id + '\')" ondragend="crmDragEnd(event)" onclick="editLead(\'' + l.id + '\')">' +
-    '<span class="crm-card-del" onclick="event.stopPropagation();deleteLead(\'' + l.id + '\')" title="Delete">🗑️</span>' +
-    '<div class="crm-card-name">' + _escHtml(l.name||'Untitled') + '</div>' +
-    '<div class="crm-card-meta">' +
-      (l.handle ? '<span>' + _escHtml(l.handle) + '</span>' : '') +
-      (plat ? '<span>' + _escHtml(plat) + '</span>' : '') +
-      (l.value ? '<span class="crm-card-val">' + _escHtml(l.value) + '</span>' : '') +
-    '</div>' +
-    (l.note ? '<div class="crm-card-note">' + _escHtml((l.note||'').slice(0,140)) + '</div>' : '') +
-  '</div>';
-}
-
-// Drag & drop — move a card to another stage and persist the change.
-function crmDragStart(ev, id) {
-  _crm.dragId = id;
-  ev.dataTransfer.effectAllowed = 'move';
-  try { ev.dataTransfer.setData('text/plain', id); } catch(e) {}
-  var el = ev.target.closest ? ev.target.closest('.crm-card') : ev.target;
-  if (el) el.classList.add('dragging');
-}
-function crmDragEnd(ev) {
-  var el = ev.target.closest ? ev.target.closest('.crm-card') : ev.target;
-  if (el) el.classList.remove('dragging');
-  document.querySelectorAll('.crm-col.drag-over').forEach(function(c){ c.classList.remove('drag-over'); });
-}
-function crmDragOver(ev) { ev.preventDefault(); ev.dataTransfer.dropEffect = 'move'; var c = ev.currentTarget; if (c) c.classList.add('drag-over'); }
-function crmDragLeave(ev) { var c = ev.currentTarget; if (c && !c.contains(ev.relatedTarget)) c.classList.remove('drag-over'); }
-async function crmDrop(ev, stage) {
-  ev.preventDefault();
-  var c = ev.currentTarget; if (c) c.classList.remove('drag-over');
-  var id = _crm.dragId || (ev.dataTransfer && ev.dataTransfer.getData('text/plain'));
-  _crm.dragId = null;
-  if (!id) return;
-  var lead = _crm.leads.find(function(l){ return l.id === id; });
-  if (!lead || (lead.stage||'new') === stage) return;
-  var prev = lead.stage;
-  lead.stage = stage;          // optimistic update
-  renderLeadsBoard();
-  try {
-    await apiFetch('/api/leads/' + id, 'PATCH', { stage: stage });
-  } catch(e) {
-    lead.stage = prev;         // revert on failure
-    renderLeadsBoard();
-    toast('Could not move lead', 'error');
-  }
-}
-
-function openLeadModal() {
-  document.getElementById('lead-edit-id').value = '';
-  document.getElementById('lead-modal-title').textContent = '＋ Add lead';
-  document.getElementById('lead-save-btn').textContent = 'Save lead';
-  ['lead-f-name','lead-f-handle','lead-f-value','lead-f-note'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-  var ps = document.getElementById('lead-f-platform'); if (ps) ps.value = '';
-  var ss = document.getElementById('lead-f-stage'); if (ss) ss.value = 'new';
-  document.getElementById('lead-modal').style.display = 'flex';
-  setTimeout(function(){ var n=document.getElementById('lead-f-name'); if(n) n.focus(); }, 50);
-}
-function closeLeadModal() { document.getElementById('lead-modal').style.display = 'none'; }
-
-function editLead(id) {
-  var l = _crm.leads.find(function(x){ return x.id === id; });
-  if (!l) return;
-  document.getElementById('lead-edit-id').value = id;
-  document.getElementById('lead-modal-title').textContent = '✏️ Edit lead';
-  document.getElementById('lead-save-btn').textContent = 'Save changes';
-  document.getElementById('lead-f-name').value = l.name || '';
-  document.getElementById('lead-f-handle').value = l.handle || '';
-  document.getElementById('lead-f-value').value = l.value || '';
-  document.getElementById('lead-f-note').value = l.note || '';
-  var ps = document.getElementById('lead-f-platform'); if (ps) ps.value = l.platform || '';
-  var ss = document.getElementById('lead-f-stage'); if (ss) ss.value = l.stage || 'new';
-  document.getElementById('lead-modal').style.display = 'flex';
-}
-
-async function saveLead() {
-  var id = document.getElementById('lead-edit-id').value;
-  var body = {
-    name:     document.getElementById('lead-f-name').value.trim(),
-    handle:   document.getElementById('lead-f-handle').value.trim(),
-    platform: document.getElementById('lead-f-platform').value,
-    value:    document.getElementById('lead-f-value').value.trim(),
-    note:     document.getElementById('lead-f-note').value.trim(),
-    stage:    document.getElementById('lead-f-stage').value,
-  };
-  if (!body.name) { toast('Enter a lead name', 'error'); return; }
-  try {
-    if (id) {
-      var upd = await apiFetch('/api/leads/' + id, 'PATCH', body);
-      var i = _crm.leads.findIndex(function(l){ return l.id === id; });
-      if (i >= 0) _crm.leads[i] = upd;
-      toast('Lead updated', 'success');
-    } else {
-      var created = await apiFetch('/api/leads', 'POST', body);
-      _crm.leads.unshift(created);
-      toast('Lead added', 'success');
-    }
-    closeLeadModal();
-    renderLeadsBoard();
-  } catch(e) { toast('Error: ' + (e.message || 'could not save'), 'error'); }
-}
-
-async function deleteLead(id) {
-  if (!confirm('Delete this lead?')) return;
-  try {
-    await apiFetch('/api/leads/' + id, 'DELETE');
-    _crm.leads = _crm.leads.filter(function(l){ return l.id !== id; });
-    renderLeadsBoard();
-    toast('Lead deleted', 'info');
-  } catch(e) { toast('Could not delete lead', 'error'); }
-}
-
 function renderSettingsPlanFeatures(d) {
   const el = document.getElementById('settings-plan-features');
   if (!el) return;
@@ -8781,7 +8528,6 @@ const titles = {
   'content-library':'🗂️ Content Library',
   history:'📚 Content History',
   subaccounts:'👥 Extra Profiles',
-  leads:'🧲 Leads CRM',
   studio:'🎬 Video Studio',
   'help-support':'💬 Help & Support',
   'brand-kit':'🎨 Brand Kit',
@@ -8850,7 +8596,6 @@ function nav(p) {
   if (p === 'posting') { loadAutoSettings(); buildAutoPlatGrid(); }
   if (p === 'billing') loadBilling();
   if (p === 'subaccounts') loadSubAccounts();
-  if (p === 'leads') loadLeads();
   if (p === 'studio') studioInit();
   if (p === 'help-support') initHelpSupport();
   if (p === 'content-engine') { loadContentCalendar(); }
