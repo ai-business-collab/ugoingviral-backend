@@ -3215,6 +3215,39 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
                 <button class="btn br bsm" onclick="disconnectTikTokAPI()">Afbryd API</button>
               </div>
             </div>
+            <!-- TikTok profile (App Review scope demo: user.info.basic / .profile / .stats) -->
+            <div id="tt-profile-demo" style="display:none;border:1px solid rgba(255,0,80,.2);border-radius:12px;padding:14px;margin-bottom:12px;background:rgba(255,0,80,.04)">
+              <div style="display:flex;gap:12px;align-items:center">
+                <img id="tt-prof-avatar" src="" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;background:#222;flex-shrink:0">
+                <div style="min-width:0;flex:1">
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span id="tt-prof-name" style="font-weight:800;font-size:15px;color:var(--tx)"></span>
+                    <span id="tt-prof-verified" style="display:none;color:#20d5ec" title="Verified">✔️</span>
+                  </div>
+                  <a id="tt-prof-link" href="#" target="_blank" rel="noopener" style="font-size:12px;color:#ff0050;text-decoration:none;word-break:break-all"></a>
+                  <div id="tt-prof-bio" style="font-size:12px;color:var(--tx2);margin-top:4px;white-space:pre-wrap"></div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                <div style="flex:1;min-width:80px;text-align:center;background:var(--s);border:1px solid var(--border);border-radius:10px;padding:8px 4px">
+                  <div id="tt-prof-followers" style="font-weight:800;font-size:16px;color:var(--tx)">–</div>
+                  <div style="font-size:10px;color:var(--tx3)">Followers</div>
+                </div>
+                <div style="flex:1;min-width:80px;text-align:center;background:var(--s);border:1px solid var(--border);border-radius:10px;padding:8px 4px">
+                  <div id="tt-prof-following" style="font-weight:800;font-size:16px;color:var(--tx)">–</div>
+                  <div style="font-size:10px;color:var(--tx3)">Following</div>
+                </div>
+                <div style="flex:1;min-width:80px;text-align:center;background:var(--s);border:1px solid var(--border);border-radius:10px;padding:8px 4px">
+                  <div id="tt-prof-likes" style="font-weight:800;font-size:16px;color:var(--tx)">–</div>
+                  <div style="font-size:10px;color:var(--tx3)">Likes</div>
+                </div>
+                <div style="flex:1;min-width:80px;text-align:center;background:var(--s);border:1px solid var(--border);border-radius:10px;padding:8px 4px">
+                  <div id="tt-prof-videos" style="font-weight:800;font-size:16px;color:var(--tx)">–</div>
+                  <div style="font-size:10px;color:var(--tx3)">Videos</div>
+                </div>
+              </div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:8px">Live data from TikTok API · scopes: user.info.basic · user.info.profile · user.info.stats</div>
+            </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectTikTokAPI()">🎵 Connect TikTok via official API</button>
             <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Requires a TikTok Business/Creator account. Gives access to direct video posting without browser automation.</div>
             <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
@@ -10212,8 +10245,11 @@ async function checkTikTokAPIStatus() {
       if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
       if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
       if (card) card.classList.add('ok');
+      loadTikTokProfile();
     } else {
       if (statusEl) statusEl.style.display = 'none';
+      const prof = document.getElementById('tt-profile-demo');
+      if (prof) prof.style.display = 'none';
       if (cs) {
         cs.textContent = wasConnected ? '⚠️ Token expired — Reconnect' : '❌ Not connected';
         cs.className = 'constatus no';
@@ -10221,6 +10257,43 @@ async function checkTikTokAPIStatus() {
       if (card) card.classList.remove('ok');
     }
   } catch(e) {}
+}
+
+// Fetch and render the connected TikTok profile (App Review scope demo).
+function _fmtCount(n) {
+  n = Number(n) || 0;
+  if (n >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+async function loadTikTokProfile() {
+  const box = document.getElementById('tt-profile-demo');
+  if (!box) return;
+  try {
+    const p = await apiFetch('/api/tiktok/profile');
+    if (!p || !p.connected || p.error) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    const set = function(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; };
+    const av = document.getElementById('tt-prof-avatar');
+    if (av) av.src = p.avatar_url || '';
+    set('tt-prof-name', p.display_name || ('@' + (p.username || 'TikTok')));
+    const ver = document.getElementById('tt-prof-verified');
+    if (ver) ver.style.display = p.is_verified ? 'inline' : 'none';
+    const link = document.getElementById('tt-prof-link');
+    if (link) {
+      const handle = p.username ? ('@' + p.username) : '';
+      const url = p.profile_deep_link || (p.username ? ('https://www.tiktok.com/@' + p.username) : '#');
+      link.textContent = handle || url;
+      link.href = url;
+      link.style.display = handle || p.profile_deep_link ? 'inline' : 'none';
+    }
+    set('tt-prof-bio', p.bio_description || '');
+    set('tt-prof-followers', _fmtCount(p.follower_count));
+    set('tt-prof-following', _fmtCount(p.following_count));
+    set('tt-prof-likes', _fmtCount(p.likes_count));
+    set('tt-prof-videos', _fmtCount(p.video_count));
+  } catch(e) { box.style.display = 'none'; }
 }
 
 async function checkTwitterAPIStatus() {
@@ -10280,7 +10353,7 @@ async function loadPostHistory() {
           <div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.content||''}</div>
           ${h.message && h.status==='error' ? `<div style="font-size:11px;color:#ef4444;margin-top:2px">${h.message}</div>` : ''}
           ${h.ig_post_id ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">Post ID: ${h.ig_post_id}</div>` : ''}
-          ${h.tt_publish_id ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">Publish ID: ${h.tt_publish_id}</div>` : ''}
+          ${h.tt_post_url ? `<div style="font-size:10px;margin-top:2px"><a href="${_escHtml(h.tt_post_url)}" target="_blank" rel="noopener" style="color:#ff0050;text-decoration:none">🎵 View on TikTok ↗</a></div>` : (h.tt_publish_id ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">Publish ID: ${h.tt_publish_id}</div>` : '')}
         </div>
       </div>`).join('');
   } catch(e) {
@@ -11601,6 +11674,33 @@ savePostSettings = async function() {
   toast('✅ Auto-post gemt!', 'success');
 };
 
+// Clear, prominent success message after a TikTok API post — shows the live
+// post URL (video.publish) when available, else a link to the creator profile.
+function showTikTokSuccess(postUrl, profileUrl, publishId) {
+  var url = postUrl || profileUrl || '';
+  toast(postUrl ? ('✅ Posted to TikTok! ' + postUrl) : '✅ Sent to TikTok — processing…', 'success');
+  var old = document.getElementById('tt-post-success'); if (old) old.remove();
+  var box = document.createElement('div');
+  box.id = 'tt-post-success';
+  box.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;max-width:520px;width:calc(100% - 32px);background:var(--s,#15171c);border:1px solid rgba(255,0,80,.4);border-radius:14px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.5)';
+  var inner = '<div style="display:flex;align-items:flex-start;gap:12px">' +
+    '<div style="font-size:24px">🎵</div>' +
+    '<div style="flex:1;min-width:0">' +
+      '<div style="font-weight:800;color:#ff0050;font-size:15px;margin-bottom:4px">' +
+        (postUrl ? '✅ Posted to TikTok!' : '✅ Sent to TikTok — processing') + '</div>' +
+      (postUrl
+        ? '<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Your video is live on TikTok:</div>' +
+          '<a href="' + _escHtml(postUrl) + '" target="_blank" rel="noopener" style="font-size:13px;color:#ff0050;font-weight:700;word-break:break-all">' + _escHtml(postUrl) + ' ↗</a>'
+        : '<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">TikTok is processing your video' + (publishId ? ' (publish id ' + _escHtml(publishId) + ')' : '') + '. It will appear on your profile shortly.</div>' +
+          (url ? '<a href="' + _escHtml(url) + '" target="_blank" rel="noopener" style="font-size:13px;color:#ff0050;font-weight:700;word-break:break-all">View your TikTok profile ↗</a>' : '')) +
+    '</div>' +
+    '<button onclick="this.closest(\'#tt-post-success\').remove()" style="background:none;border:none;color:var(--tx3);font-size:18px;cursor:pointer;line-height:1">✕</button>' +
+  '</div>';
+  box.innerHTML = inner;
+  document.body.appendChild(box);
+  setTimeout(function(){ var el = document.getElementById('tt-post-success'); if (el) el.remove(); }, 15000);
+}
+
 // Override postNow to use new platform chips
 var _origPostNow = postNow;
 postNow = async function() {
@@ -11618,9 +11718,25 @@ postNow = async function() {
   toast('⏳ Starter ' + platforms.map(function(p){return platNames[p]||p;}).join(', ') + '...', 'info');
   addLog('📤 Post nu: ' + platforms.join(', '), 'info');
   
+  var _isVideoUrl = function(u) { return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(u || ''); };
   for (var i = 0; i < platforms.length; i++) {
     var plat = platforms[i];
     try {
+      // TikTok posts via the official Content Posting API (video.publish /
+      // video.upload) so we can show the live post URL — not browser automation.
+      if (plat === 'tiktok') {
+        var ttBody = { caption: fullContent };
+        if (_isVideoUrl(imageUrl)) ttBody.video_url = imageUrl; else if (imageUrl) ttBody.image_url = imageUrl;
+        var tr = await apiFetch('/api/tiktok/post', 'POST', ttBody);
+        if ((tr.status === 'published' || tr.status === 'processing')) {
+          showTikTokSuccess(tr.post_url || '', tr.profile_url || '', tr.publish_id || '');
+          addLog('🎵 TikTok: ' + (tr.post_url || tr.message || tr.status) + (tr.publish_id ? ' (' + tr.publish_id + ')' : ''), 'success');
+        } else {
+          toast('❌ TikTok: ' + (tr.message || 'kunne ikke poste'), 'error');
+          addLog('❌ TikTok: ' + (tr.message || 'error'), 'error');
+        }
+        continue;
+      }
       var r = await apiFetch('/api/automation/playwright/post', 'POST', {
         platform: plat,
         content: fullContent,
@@ -12824,6 +12940,9 @@ function libRenderTabs() {
               '📁 ' + safe + ' <span style="opacity:.6;font-weight:700">' + (f.count || 0) + '</span>' +
               '<span onclick="event.stopPropagation();libDeleteFolder(\'' + js + '\')" title="Delete folder" style="margin-left:8px;cursor:pointer;font-weight:700;opacity:.55;padding:0 2px">✕</span></div>';
   });
+  // TikTok Videos — pulls the connected creator's own videos via video.list.
+  var ttOn = (_lib.view.type === 'tiktok');
+  html += '<div class="clib-type-tab' + (ttOn ? ' on' : '') + '" data-type="tiktok" data-key="tiktok" onclick="libSetFolder(\'tiktok\',\'tiktok\')" title="Your TikTok videos (video.list)">🎵 TikTok Videos</div>';
   bar.innerHTML = html;
 }
 
@@ -12845,7 +12964,56 @@ async function libLoad() {
 function libSetFolder(type, key) {
   _lib.view = {type: type, key: key};
   libRenderTabs();
+  if (type === 'tiktok') { libLoadTikTok(); return; }
   libLoad();
+}
+
+// Load the connected creator's own TikTok videos (video.list scope) and render
+// them into the same content grid.
+async function libLoadTikTok() {
+  var grid = document.getElementById('clib-content-grid');
+  if (grid) grid.innerHTML = '<div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🎵</div>Loading TikTok videos…</div>';
+  var banner = document.getElementById('lib-plan-banner');
+  if (banner) banner.style.display = 'none';
+  var r;
+  try { r = await apiFetch('/api/tiktok/videos'); } catch(e) { r = {connected: false, message: e.message}; }
+  if (!grid) return;
+  if (!r || !r.connected) {
+    grid.innerHTML = '<div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🎵</div>' +
+      _escHtml((r && r.message) || 'TikTok not connected') + '<br><a onclick="nav(\'connect\')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Connect TikTok →</a></div>';
+    return;
+  }
+  var vids = r.videos || [];
+  if (!vids.length) {
+    grid.innerHTML = '<div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🎵</div>' +
+      (r.error ? _escHtml(r.message || r.error) : 'No TikTok videos found on this account yet') + '</div>';
+    return;
+  }
+  grid.innerHTML = vids.map(_ttVideoCardHtml).join('');
+}
+
+function _ttVideoCardHtml(v) {
+  var title = v.title || v.video_description || 'Untitled';
+  var cover = v.cover_image_url || '';
+  var link  = v.share_url || v.embed_link || '#';
+  var views = _fmtCount(v.view_count);
+  var likes = _fmtCount(v.like_count);
+  var comments = _fmtCount(v.comment_count);
+  var dur = v.duration ? (Math.floor(v.duration / 60) + ':' + ('0' + (v.duration % 60)).slice(-2)) : '';
+  return '<div class="card" style="padding:0;overflow:hidden;border-radius:12px">' +
+    '<a href="' + _escHtml(link) + '" target="_blank" rel="noopener" style="display:block;position:relative;aspect-ratio:9/16;background:#000">' +
+      (cover ? '<img src="' + _escHtml(cover) + '" alt="" style="width:100%;height:100%;object-fit:cover">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">🎵</div>') +
+      (dur ? '<span style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;padding:2px 6px;border-radius:6px">' + dur + '</span>' : '') +
+    '</a>' +
+    '<div style="padding:10px 12px">' +
+      '<div style="font-size:12px;color:var(--tx);font-weight:600;line-height:1.4;max-height:34px;overflow:hidden">' + _escHtml(title.slice(0, 80)) + '</div>' +
+      '<div style="display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--tx3)">' +
+        '<span title="Views">▶️ ' + views + '</span>' +
+        '<span title="Likes">❤️ ' + likes + '</span>' +
+        '<span title="Comments">💬 ' + comments + '</span>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 // ── Custom folders: create / delete / move ──────────────────────────────────

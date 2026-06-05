@@ -184,6 +184,88 @@ async def tiktok_status():
     }
 
 
+async def _get_valid_tiktok_token() -> tuple[str, str]:
+    """Return (access_token, username) for the current user, refreshing the
+    token first if it is expired and a refresh_token is available. Returns
+    ("", username) when no usable token exists."""
+    tt = store.get("tiktok") or {}
+    s  = store.get("settings", {})
+    access  = tt.get("access_token")  or s.get("tiktok_access_token", "")
+    refresh = tt.get("refresh_token") or s.get("tiktok_refresh_token", "")
+    exp     = tt.get("token_expiry")  or s.get("tiktok_expires_at", "")
+    username = tt.get("username") or s.get("tiktok_username", "")
+    if not access:
+        return "", username
+    try:
+        from tiktok_api import refresh_token_if_needed
+        new_token, new_refresh, new_exp = await refresh_token_if_needed(access, refresh, exp)
+        if new_exp:
+            access = new_token
+            s["tiktok_access_token"]  = new_token
+            s["tiktok_refresh_token"] = new_refresh or refresh
+            s["tiktok_expires_at"]    = new_exp
+            if isinstance(tt, dict) and tt:
+                tt["access_token"] = new_token
+                tt["refresh_token"] = new_refresh or refresh
+                tt["token_expiry"] = new_exp
+                store["tiktok"] = tt
+            save_store()
+    except Exception as e:
+        add_log(f"⚠️ TikTok token refresh fejl: {e}", "error")
+    return access, username
+
+
+@router.get("/api/tiktok/profile")
+async def tiktok_profile():
+    """Full TikTok profile for App-Review scope demonstration:
+    user.info.basic (username, avatar), user.info.profile (bio, profile link),
+    user.info.stats (follower/following/likes/video counts)."""
+    token, username = await _get_valid_tiktok_token()
+    if not token:
+        return {"connected": False, "message": "TikTok ikke forbundet — gå til Connect"}
+    try:
+        from tiktok_api import get_user_info
+        u = await get_user_info(token)
+        # Persist the freshest username/handle for later post-URL building.
+        if u.get("username"):
+            store.get("settings", {})["tiktok_username"] = u.get("display_name") or username
+        return {
+            "connected":        True,
+            # user.info.basic
+            "open_id":          u.get("open_id", ""),
+            "union_id":         u.get("union_id", ""),
+            "display_name":     u.get("display_name", ""),
+            "avatar_url":       u.get("avatar_url_100") or u.get("avatar_url") or u.get("avatar_large_url", ""),
+            # user.info.profile
+            "username":         u.get("username", ""),
+            "bio_description":  u.get("bio_description", ""),
+            "profile_deep_link": u.get("profile_deep_link", ""),
+            "is_verified":      bool(u.get("is_verified", False)),
+            # user.info.stats
+            "follower_count":   u.get("follower_count", 0),
+            "following_count":  u.get("following_count", 0),
+            "likes_count":      u.get("likes_count", 0),
+            "video_count":      u.get("video_count", 0),
+        }
+    except Exception as e:
+        return {"connected": True, "error": str(e), "message": f"Kunne ikke hente TikTok profil: {e}"}
+
+
+@router.get("/api/tiktok/videos")
+async def tiktok_videos(cursor: int = 0, max_count: int = 20):
+    """List the connected creator's own TikTok videos (video.list scope) for the
+    Content Library "TikTok Videos" tab — thumbnail, title, views, likes."""
+    token, _username = await _get_valid_tiktok_token()
+    if not token:
+        return {"connected": False, "videos": [], "message": "TikTok ikke forbundet — gå til Connect"}
+    try:
+        from tiktok_api import get_user_videos
+        result = await get_user_videos(token, cursor=cursor, max_count=max_count)
+        return {"connected": True, **result}
+    except Exception as e:
+        return {"connected": True, "videos": [], "error": str(e), "message": f"Kunne ikke hente TikTok videoer: {e}"}
+
+
 @router.post("/api/tiktok/disconnect")
 async def tiktok_disconnect():
     for key in ("tiktok_api_connected", "tiktok_access_token", "tiktok_refresh_token",
@@ -227,12 +309,24 @@ async def tiktok_post(req: Request):
             save_store()
             token = new_token
 
+        username = (store.get("tiktok") or {}).get("username") or s.get("tiktok_username", "")
         result = await publish_to_tiktok(
             access_token=token,
             caption=caption,
             video_url=video_url,
             image_url=image_url,
             privacy_level=privacy,
+            wait_for_url=True,   # interactive post — resolve the live TikTok URL
+            username=username,
+        )
+        # Fall back to the creator's profile link when no public post URL is
+        # available (e.g. SELF_ONLY posts on an unaudited app).
+        if not result.get("post_url"):
+            result["profile_url"] = (store.get("tiktok") or {}).get("profile_deep_link") \
+                or (f"https://www.tiktok.com/@{username.lstrip('@')}" if username else "")
+        add_log(
+            f"🎵 TikTok post: {result.get('status')} — {result.get('post_url') or result.get('publish_id','')}",
+            "success" if result.get("status") in ("published", "processing") else "error",
         )
         return result
     except Exception as e:

@@ -26,7 +26,14 @@ TIKTOK_AUTH_BASE = "https://www.tiktok.com/v2/auth/authorize/"
 TIKTOK_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 TIKTOK_API_BASE  = "https://open.tiktokapis.com/v2"
 
-SCOPES = ["user.info.basic", "video.publish", "video.list"]
+SCOPES = [
+    "user.info.basic",    # username, avatar, open_id
+    "user.info.profile",  # bio_description, profile_deep_link, is_verified
+    "user.info.stats",    # follower_count, following_count, likes_count, video_count
+    "video.list",         # list the creator's own videos
+    "video.upload",       # upload video to the creator's inbox (draft)
+    "video.publish",      # direct post a video to the creator's profile
+]
 
 
 # ── OAuth Flow ────────────────────────────────────────────────────────────────
@@ -111,16 +118,59 @@ async def refresh_token_if_needed(access_token: str, refresh_token: str, expires
 
 # ── Account Info ──────────────────────────────────────────────────────────────
 
-async def get_user_info(access_token: str) -> dict:
+# All fields across user.info.basic + user.info.profile + user.info.stats. TikTok
+# returns only the fields the granted scopes allow, so requesting the full set is
+# safe — missing scopes simply omit their fields rather than erroring.
+USER_INFO_FIELDS = (
+    "open_id,union_id,avatar_url,avatar_url_100,avatar_large_url,"  # basic
+    "display_name,bio_description,profile_deep_link,is_verified,username,"  # profile
+    "follower_count,following_count,likes_count,video_count"  # stats
+)
+
+
+async def get_user_info(access_token: str, fields: str = USER_INFO_FIELDS) -> dict:
     async with httpx.AsyncClient() as c:
         r = await c.get(
             f"{TIKTOK_API_BASE}/user/info/",
             headers={"Authorization": f"Bearer {access_token}"},
-            params={"fields": "open_id,union_id,avatar_url,display_name,username"},
+            params={"fields": fields},
         )
         r.raise_for_status()
         data = r.json()
         return data.get("data", {}).get("user", {})
+
+
+# ── Video list (video.list scope) ──────────────────────────────────────────────
+
+VIDEO_LIST_FIELDS = (
+    "id,title,video_description,duration,cover_image_url,embed_link,share_url,"
+    "view_count,like_count,comment_count,share_count,create_time"
+)
+
+
+async def get_user_videos(access_token: str, cursor: int = 0, max_count: int = 20) -> dict:
+    """List the connected creator's own TikTok videos (video.list scope).
+    Returns {"videos": [...], "cursor": int, "has_more": bool}."""
+    async with httpx.AsyncClient(timeout=30) as c:
+        r = await c.post(
+            f"{TIKTOK_API_BASE}/video/list/",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json; charset=UTF-8",
+            },
+            params={"fields": VIDEO_LIST_FIELDS},
+            json={"max_count": max(1, min(int(max_count or 20), 20)), "cursor": int(cursor or 0)},
+        )
+        r.raise_for_status()
+        data = r.json()
+        if data.get("error", {}).get("code") not in ("ok", None, ""):
+            raise Exception(data.get("error", {}).get("message", "TikTok video.list error"))
+        d = data.get("data", {})
+        return {
+            "videos":   d.get("videos", []) or [],
+            "cursor":   d.get("cursor", 0),
+            "has_more": bool(d.get("has_more", False)),
+        }
 
 
 # ── Creator Info (required before posting) ───────────────────────────────────
@@ -199,6 +249,47 @@ async def get_publish_status(access_token: str, publish_id: str) -> dict:
     return {}
 
 
+def _build_post_url(post_id: str, username: str = "") -> str:
+    """Build a public TikTok video URL from a post id (and handle if known)."""
+    if not post_id:
+        return ""
+    handle = (username or "").lstrip("@").strip()
+    if handle:
+        return f"https://www.tiktok.com/@{handle}/video/{post_id}"
+    return f"https://www.tiktok.com/video/{post_id}"
+
+
+async def resolve_post_url(
+    access_token: str,
+    publish_id: str,
+    username: str = "",
+    max_attempts: int = 6,
+    delay: float = 2.0,
+) -> dict:
+    """Poll publish status until the post is live, then return its public URL.
+
+    Returns {"status": <last_status>, "post_url": <url or "">, "post_id": <id or "">}.
+    For SELF_ONLY / private posts TikTok may not expose a public id — in that case
+    post_url is "" and the caller falls back to the creator's profile link.
+    """
+    import asyncio
+    last_status = ""
+    for attempt in range(max_attempts):
+        data = await get_publish_status(access_token, publish_id)
+        last_status = data.get("status", "") or last_status
+        # TikTok ships this field name misspelled ("publicaly"); accept both.
+        ids = (data.get("publicaly_available_post_id")
+               or data.get("publicly_available_post_id") or [])
+        if ids:
+            pid = str(ids[0])
+            return {"status": last_status or "PUBLISH_COMPLETE", "post_url": _build_post_url(pid, username), "post_id": pid}
+        if last_status in ("PUBLISH_COMPLETE", "FAILED"):
+            break
+        if attempt < max_attempts - 1:
+            await asyncio.sleep(delay)
+    return {"status": last_status, "post_url": "", "post_id": ""}
+
+
 async def post_photo(
     access_token: str,
     photo_urls: list,
@@ -246,10 +337,17 @@ async def publish_to_tiktok(
     image_url: Optional[str] = None,
     image_urls: Optional[list] = None,
     privacy_level: str = "SELF_ONLY",
+    wait_for_url: bool = False,
+    username: str = "",
 ) -> dict:
     """
     Publicer til TikTok — vælger video eller foto baseret på input.
-    Returns: {"status": "published"|"processing"|"error", "publish_id": ..., "message": ...}
+    Returns: {"status": "published"|"processing"|"error", "publish_id": ...,
+              "message": ..., "post_url": <public url if resolved>}
+
+    When wait_for_url is True (interactive posting), the publish status is polled
+    so the caller can show the live TikTok post URL. Background callers (scheduler)
+    leave it False to avoid blocking.
     """
     try:
         if video_url:
@@ -260,10 +358,11 @@ async def publish_to_tiktok(
                 privacy_level=privacy_level,
             )
             publish_id = data.get("publish_id", "")
-            return {"status": "processing", "publish_id": publish_id, "message": "Video sendes til TikTok — klar om lidt"}
-
-        photos = image_urls or ([image_url] if image_url else [])
-        if photos:
+            result = {"status": "processing", "publish_id": publish_id, "message": "Video sendes til TikTok — klar om lidt", "post_url": ""}
+        else:
+            photos = image_urls or ([image_url] if image_url else [])
+            if not photos:
+                return {"status": "error", "message": "Ingen video eller billede URL"}
             data = await post_photo(
                 access_token=access_token,
                 photo_urls=photos,
@@ -271,9 +370,22 @@ async def publish_to_tiktok(
                 privacy_level=privacy_level,
             )
             publish_id = data.get("publish_id", "")
-            return {"status": "processing", "publish_id": publish_id, "message": "Foto sendes til TikTok"}
+            result = {"status": "processing", "publish_id": publish_id, "message": "Foto sendes til TikTok", "post_url": ""}
 
-        return {"status": "error", "message": "Ingen video eller billede URL"}
+        if wait_for_url and result.get("publish_id"):
+            try:
+                info = await resolve_post_url(access_token, result["publish_id"], username=username)
+                if info.get("post_url"):
+                    result["post_url"] = info["post_url"]
+                    result["post_id"] = info.get("post_id", "")
+                    result["status"] = "published"
+                    result["message"] = "Posted to TikTok"
+                elif info.get("status"):
+                    result["publish_status"] = info["status"]
+            except Exception:
+                pass  # non-fatal — the post still went through, URL just unresolved
+
+        return result
 
     except Exception as e:
         return {"status": "error", "message": str(e)}

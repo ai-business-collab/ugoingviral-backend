@@ -243,6 +243,7 @@ async def publish_via_api(req: Request):
             image_urls = image_url if isinstance(image_url, list) else None
             single_img = image_url if isinstance(image_url, str) else None
 
+            tt_username = (store.get("tiktok") or {}).get("username") or s.get("tiktok_username", "")
             api_result = await publish_to_tiktok(
                 access_token=token,
                 caption=content,
@@ -250,16 +251,20 @@ async def publish_via_api(req: Request):
                 image_url=single_img,
                 image_urls=image_urls,
                 privacy_level=d.get("privacy_level", "SELF_ONLY"),
+                wait_for_url=True,   # resolve the live TikTok post URL for the UI
+                username=tt_username,
             )
             result = {
                 "status":     api_result.get("status", "error"),
                 "platform":   platform,
                 "publish_id": api_result.get("publish_id"),
+                "post_url":   api_result.get("post_url", ""),
+                "url":        api_result.get("post_url", ""),
                 "message":    api_result.get("message", ""),
                 "provider":   "tiktok_content_posting_api",
             }
             add_log(
-                f"🎵 TikTok API opslag: {result['status']} — {api_result.get('publish_id', '')}",
+                f"🎵 TikTok API opslag: {result['status']} — {result.get('post_url') or api_result.get('publish_id', '')}",
                 "success" if result["status"] in ("published", "processing") else "error",
             )
         except Exception as e:
@@ -327,6 +332,7 @@ async def publish_via_api(req: Request):
         "provider":      result.get("provider", "api"),
         "ig_post_id":    result.get("post_id"),
         "tt_publish_id": result.get("publish_id"),
+        "tt_post_url":   result.get("post_url"),
         "yt_video_id":   result.get("video_id"),
         "yt_url":        result.get("url"),
         "message":       result.get("message", ""),
