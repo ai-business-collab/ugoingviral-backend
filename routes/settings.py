@@ -216,6 +216,14 @@ def delete_creator(cid: str):
 from routes.auth import get_current_user as _get_current_user
 from fastapi import Depends as _Depends
 
+_DEFAULT_NOTIF_PREFS = {
+    "failed_posts":    True,
+    "credit_warnings": True,
+    "weekly_summary":  False,
+    "product_updates": True,
+}
+
+
 @router.get("/api/user/profile")
 def get_user_profile(current_user: dict = _Depends(_get_current_user)):
     billing = store.get("billing", {})
@@ -223,14 +231,19 @@ def get_user_profile(current_user: dict = _Depends(_get_current_user)):
     is_free = plan == "free"
     profile = store.get("profile", {})
     watermark_enabled = True if is_free else profile.get("watermark_enabled", False)
+    notif = dict(_DEFAULT_NOTIF_PREFS)
+    notif.update(profile.get("notifications", {}) or {})
     return {
         "id": current_user["id"],
         "name": current_user.get("name", ""),
         "email": current_user.get("email", ""),
         "username": current_user.get("username", ""),
+        "avatar_url": profile.get("avatar_url", ""),
         "plan": plan,
         "is_free": is_free,
         "watermark_enabled": watermark_enabled,
+        "two_factor_enabled": bool(profile.get("two_factor_enabled", False)),
+        "notifications": notif,
     }
 
 
@@ -250,7 +263,62 @@ async def update_user_profile(request: Request, current_user: dict = _Depends(_g
         updates["username"] = username
     if updates:
         update_user(current_user["id"], updates)
+    # Avatar URL lives in the per-user store profile (not the users table).
+    if "avatar_url" in body:
+        profile = store.setdefault("profile", {})
+        profile["avatar_url"] = (body.get("avatar_url") or "").strip()
+        store["profile"] = profile
+        save_store()
     return {"ok": True}
+
+
+@router.post("/api/user/change_password")
+async def change_user_password(request: Request, current_user: dict = _Depends(_get_current_user)):
+    """Change the authenticated user's password after verifying the current one."""
+    from services.users import get_user_by_id, update_user, verify_password, pwd_context
+    body = await request.json()
+    current_pw = body.get("current_password") or ""
+    new_pw = body.get("new_password") or ""
+    if len(new_pw) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    user = get_user_by_id(current_user["id"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    hashed = user.get("hashed_password") or ""
+    # Accounts created via OAuth (Google/GitHub) may have no password yet — allow
+    # setting one without a current password in that case.
+    if hashed and not verify_password(current_pw, hashed):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    update_user(current_user["id"], {"hashed_password": pwd_context.hash(new_pw)})
+    return {"ok": True}
+
+
+@router.post("/api/user/notifications")
+async def save_notification_prefs(request: Request, current_user: dict = _Depends(_get_current_user)):
+    """Persist the user's email notification preferences."""
+    body = await request.json()
+    profile = store.setdefault("profile", {})
+    prefs = dict(_DEFAULT_NOTIF_PREFS)
+    prefs.update(profile.get("notifications", {}) or {})
+    for k in _DEFAULT_NOTIF_PREFS:
+        if k in body:
+            prefs[k] = bool(body[k])
+    profile["notifications"] = prefs
+    store["profile"] = profile
+    save_store()
+    return {"ok": True, "notifications": prefs}
+
+
+@router.post("/api/user/two_factor")
+async def set_two_factor(request: Request, current_user: dict = _Depends(_get_current_user)):
+    """Enable/disable two-factor authentication (email verification code at login)."""
+    body = await request.json()
+    enabled = bool(body.get("enabled", False))
+    profile = store.setdefault("profile", {})
+    profile["two_factor_enabled"] = enabled
+    store["profile"] = profile
+    save_store()
+    return {"ok": True, "two_factor_enabled": enabled}
 
 
 @router.post("/api/user/watermark")

@@ -27,3 +27,8 @@ __pycache__/
 *.bak
 *.bak.*
 sessions/
+
+# Logs & generated runtime data
+qa_agent.log
+qa_results.json
+nexora_events.json
