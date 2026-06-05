@@ -50,7 +50,10 @@ def _free_videos_status(user_id: str) -> dict:
     """Return the user's free-video allowance: {plan, limit, used, remaining}.
     Only Free-plan users get a free-video allowance; paid plans return limit 0."""
     ustore = _load_user_store(user_id)
-    plan = (ustore.get("billing", {}).get("plan") or "free").lower()
+    # Treat a missing/None/empty plan as "free" so users without an explicit
+    # plan value still get their free-video allowance. `ustore.get("billing")`
+    # can be None (key present but null), so guard with `or {}` before .get().
+    plan = ((ustore.get("billing") or {}).get("plan") or "free").lower()
     limit = _FREE_VIDEO_LIMIT if plan == "free" else 0
     used = int(ustore.get("free_videos_used", 0) or 0)
     return {
