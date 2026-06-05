@@ -174,6 +174,35 @@ async def youtube_status():
     }
 
 
+@router.get("/api/youtube/videos")
+async def youtube_videos(max_results: int = 20):
+    """List the connected channel's own uploaded videos for the Content Library
+    'YouTube Videos' tab — thumbnail, title, views, likes, date."""
+    yt = store.get("youtube") or {}
+    s  = store.get("settings", {})
+    access  = yt.get("access_token")  or s.get("youtube_access_token", "")
+    refresh = yt.get("refresh_token") or s.get("youtube_refresh_token", "")
+    expires = yt.get("token_expiry")  or s.get("youtube_expires_at", "")
+    if not access:
+        return {"connected": False, "videos": [], "message": "YouTube ikke forbundet — gå til Connect"}
+    try:
+        from youtube_api import refresh_token_if_needed, get_channel_videos
+        new_token, new_exp = await refresh_token_if_needed(access, refresh, expires)
+        if new_exp:
+            access = new_token
+            s["youtube_access_token"] = new_token
+            s["youtube_expires_at"]   = new_exp
+            if isinstance(yt, dict) and yt:
+                yt["access_token"] = new_token
+                yt["token_expiry"] = new_exp
+                store["youtube"] = yt
+            save_store()
+        videos = await get_channel_videos(access, max_results=max_results)
+        return {"connected": True, "videos": videos}
+    except Exception as e:
+        return {"connected": True, "videos": [], "error": str(e), "message": f"Kunne ikke hente YouTube videoer: {e}"}
+
+
 @router.post("/api/youtube/disconnect")
 async def youtube_disconnect():
     for key in ("youtube_api_connected", "youtube_access_token", "youtube_refresh_token",

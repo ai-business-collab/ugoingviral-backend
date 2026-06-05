@@ -125,6 +125,81 @@ async def get_channel_info(access_token: str) -> dict:
         return items[0] if items else {}
 
 
+async def get_channel_videos(access_token: str, max_results: int = 20) -> list:
+    """List the connected channel's own uploaded videos.
+
+    Resolves the channel's "uploads" playlist, lists its items, then enriches
+    them with statistics (views/likes). Returns a list of dicts:
+    {id, title, thumbnail, published_at, view_count, like_count, comment_count, url}.
+    """
+    headers = {"Authorization": f"Bearer {access_token}"}
+    async with httpx.AsyncClient(timeout=30) as c:
+        # 1) Find the uploads playlist for the authenticated user's channel.
+        rc = await c.get(
+            f"{API_BASE}/channels",
+            params={"part": "contentDetails", "mine": "true"},
+            headers=headers,
+        )
+        rc.raise_for_status()
+        items = rc.json().get("items", [])
+        if not items:
+            return []
+        uploads = (items[0].get("contentDetails", {})
+                   .get("relatedPlaylists", {}).get("uploads"))
+        if not uploads:
+            return []
+
+        # 2) List the most recent uploads.
+        rp = await c.get(
+            f"{API_BASE}/playlistItems",
+            params={"part": "snippet,contentDetails", "playlistId": uploads,
+                    "maxResults": max(1, min(int(max_results or 20), 50))},
+            headers=headers,
+        )
+        rp.raise_for_status()
+        pitems = rp.json().get("items", [])
+        vids = {}
+        order = []
+        for it in pitems:
+            vid = it.get("contentDetails", {}).get("videoId")
+            if not vid:
+                continue
+            sn = it.get("snippet", {})
+            thumbs = sn.get("thumbnails", {})
+            thumb = (thumbs.get("medium") or thumbs.get("high")
+                     or thumbs.get("default") or {}).get("url", "")
+            vids[vid] = {
+                "id": vid,
+                "title": sn.get("title", ""),
+                "thumbnail": thumb,
+                "published_at": sn.get("publishedAt", ""),
+                "view_count": 0, "like_count": 0, "comment_count": 0,
+                "url": f"https://www.youtube.com/watch?v={vid}",
+            }
+            order.append(vid)
+        if not order:
+            return []
+
+        # 3) Enrich with statistics in a single call.
+        try:
+            rs = await c.get(
+                f"{API_BASE}/videos",
+                params={"part": "statistics", "id": ",".join(order)},
+                headers=headers,
+            )
+            if rs.status_code == 200:
+                for v in rs.json().get("items", []):
+                    st = v.get("statistics", {})
+                    if v.get("id") in vids:
+                        vids[v["id"]]["view_count"] = int(st.get("viewCount", 0) or 0)
+                        vids[v["id"]]["like_count"] = int(st.get("likeCount", 0) or 0)
+                        vids[v["id"]]["comment_count"] = int(st.get("commentCount", 0) or 0)
+        except Exception:
+            pass
+
+        return [vids[v] for v in order]
+
+
 # ── Video Upload ──────────────────────────────────────────────────────────────
 
 async def upload_video_from_url(

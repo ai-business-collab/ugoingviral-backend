@@ -133,6 +133,39 @@ async def get_account_info(ig_account_id: str, access_token: str) -> dict:
         return r.json()
 
 
+async def get_user_media(ig_account_id: str, access_token: str, limit: int = 20) -> list:
+    """List the connected Instagram Business/Creator account's own posts.
+
+    Returns a list of dicts: {id, caption, media_type, thumbnail, permalink,
+    timestamp, like_count, comments_count}.
+    """
+    async with httpx.AsyncClient(timeout=30) as c:
+        r = await c.get(
+            f"{GRAPH_BASE}/{ig_account_id}/media",
+            params={
+                "access_token": access_token,
+                "fields": "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
+                "limit": max(1, min(int(limit or 20), 50)),
+            },
+        )
+        r.raise_for_status()
+        out = []
+        for m in r.json().get("data", []):
+            # Videos expose a thumbnail_url; images use media_url.
+            thumb = m.get("thumbnail_url") or m.get("media_url") or ""
+            out.append({
+                "id": m.get("id", ""),
+                "caption": m.get("caption", "") or "",
+                "media_type": m.get("media_type", ""),
+                "thumbnail": thumb,
+                "permalink": m.get("permalink", ""),
+                "timestamp": m.get("timestamp", ""),
+                "like_count": int(m.get("like_count", 0) or 0),
+                "comments_count": int(m.get("comments_count", 0) or 0),
+            })
+        return out
+
+
 # ── Publishing ────────────────────────────────────────────────────────────────
 
 async def create_image_container(ig_account_id: str, access_token: str, image_url: str, caption: str) -> str:

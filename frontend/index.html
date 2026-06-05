@@ -3126,8 +3126,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
           <div class="concard-actions">
-            <button class="btn bg bsm" onclick="event.stopPropagation();loadConnections();toast('🔄 Refreshed Shopify','info')">🔄 Sync</button>
-            <button class="btn bg bsm" onclick="event.stopPropagation();toggleCon('shopify')">⚙️ Manage</button>
+            <button class="btn bp bsm" onclick="event.stopPropagation();toggleCon('shopify')">🔁 Reconnect</button>
             <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('shopify')">🗑️ Disconnect</button>
           </div>
           <div class="conbody">
@@ -3153,7 +3152,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
           <div class="concard-actions">
-            <button class="btn bg bsm" onclick="event.stopPropagation();checkInstagramAPIStatus();toast('🔄 Syncing Instagram…','info')">🔄 Sync</button>
             <button class="btn bp bsm" onclick="event.stopPropagation();connectInstagramAPI()">🔁 Reconnect</button>
             <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('instagram')">🗑️ Disconnect</button>
           </div>
@@ -3163,10 +3161,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <div style="color:var(--tx2)">Account: <span id="ig-api-username" style="font-weight:600"></span></div>
               <div style="color:var(--tx3);font-size:11px" id="ig-api-expires"></div>
               <div style="color:var(--tx3);font-size:11px" id="ig-api-synced"></div>
-              <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="btn bg bsm" onclick="checkInstagramAPIStatus()">↻ Tjek status</button>
-                <button class="btn bp bsm" onclick="connectInstagramAPI()">🔄 Reconnect</button>
-              </div>
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Connect Instagram via official API</button>
 
@@ -3200,7 +3194,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
           <div class="concard-actions">
-            <button class="btn bg bsm" onclick="event.stopPropagation();checkTikTokAPIStatus();toast('🔄 Syncing TikTok…','info')">🔄 Sync</button>
             <button class="btn bp bsm" onclick="event.stopPropagation();connectTikTokAPI()">🔁 Reconnect</button>
             <button class="btn br bsm" onclick="event.stopPropagation();disconnectTikTokAPI()">🗑️ Disconnect</button>
           </div>
@@ -3209,11 +3202,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <div style="font-weight:700;color:#ff0050;margin-bottom:4px">✅ TikTok API connected</div>
               <div style="color:var(--tx2)">Account: <span id="tt-api-username" style="font-weight:600"></span></div>
               <div style="color:var(--tx3);font-size:11px" id="tt-api-synced"></div>
-              <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="btn bg bsm" onclick="checkTikTokAPIStatus()">↻ Tjek status</button>
-                <button class="btn bp bsm" onclick="connectTikTokAPI()">🔄 Reconnect</button>
-                <button class="btn br bsm" onclick="disconnectTikTokAPI()">Afbryd API</button>
-              </div>
             </div>
             <!-- TikTok profile (App Review scope demo: user.info.basic / .profile / .stats) -->
             <div id="tt-profile-demo" style="display:none;border:1px solid rgba(255,0,80,.2);border-radius:12px;padding:14px;margin-bottom:12px;background:rgba(255,0,80,.04)">
@@ -3278,8 +3266,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
           <div class="concard-actions">
-            <button class="btn bg bsm" onclick="event.stopPropagation();loadConnections();toast('🔄 Refreshed Facebook','info')">🔄 Sync</button>
-            <button class="btn bg bsm" onclick="event.stopPropagation();toggleCon('facebook')">⚙️ Manage</button>
+            <button class="btn bp bsm" onclick="event.stopPropagation();toggleCon('facebook')">🔁 Reconnect</button>
             <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('facebook')">🗑️ Disconnect</button>
           </div>
           <div class="conbody">
@@ -3306,7 +3293,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
           <div class="concard-actions">
-            <button class="btn bg bsm" onclick="event.stopPropagation();checkTwitterAPIStatus();toast('🔄 Syncing X / Twitter…','info')">🔄 Sync</button>
             <button class="btn bp bsm" onclick="event.stopPropagation();window.location.href='/api/twitter/connect'">🔁 Reconnect</button>
             <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('twitter')">🗑️ Disconnect</button>
           </div>
@@ -3315,10 +3301,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <div style="font-weight:700;color:#1da1f2;margin-bottom:4px">✅ X / Twitter API connected</div>
               <div style="color:var(--tx2)">Account: <span id="tw-api-username" style="font-weight:600"></span></div>
               <div style="color:var(--tx3);font-size:11px;margin-top:2px" id="tw-api-synced"></div>
-              <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="btn bg bsm" onclick="checkTwitterAPIStatus()">↻ Tjek status</button>
-                <button class="btn bp bsm" onclick="window.location.href='/api/twitter/connect'">🔄 Reconnect</button>
-              </div>
             </div>
             <div class="info-box" style="margin-bottom:12px">🤖 UgoingViral automatically handles the connection via our platform.</div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="window.location.href='/api/twitter/connect'">🐦 Connect X / Twitter via official API</button>
@@ -3345,7 +3327,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
           </div>
           <div class="concard-actions">
-            <button class="btn bg bsm" onclick="event.stopPropagation();checkYouTubeAPIStatus();toast('🔄 Syncing YouTube…','info')">🔄 Sync</button>
             <button class="btn bp bsm" onclick="event.stopPropagation();connectYouTubeAPI()">🔁 Reconnect</button>
             <button class="btn br bsm" onclick="event.stopPropagation();disconnectYouTubeAPI()">🗑️ Disconnect</button>
           </div>
@@ -3354,11 +3335,6 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <div style="color:#f87171;font-weight:600;margin-bottom:4px">▶️ YouTube Data API v3 connected</div>
               <div style="color:var(--tx2)">Kanal: <span id="yt-api-channel" style="color:#fff"></span></div>
               <div style="color:var(--tx3);font-size:11px" id="yt-api-synced"></div>
-              <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="btn bg bsm" onclick="checkYouTubeAPIStatus()">↻ Tjek status</button>
-                <button class="btn bp bsm" onclick="connectYouTubeAPI()">🔄 Reconnect</button>
-                <button class="btn br bsm" onclick="disconnectYouTubeAPI()">Afbryd API</button>
-              </div>
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px;background:rgba(255,0,0,.15);border-color:rgba(255,0,0,.4)" onclick="connectYouTubeAPI()">▶️ Connect YouTube via Data API v3</button>
             <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
@@ -13145,9 +13121,13 @@ function libRenderTabs() {
               '📁 ' + safe + ' <span style="opacity:.6;font-weight:700">' + (f.count || 0) + '</span>' +
               '<span onclick="event.stopPropagation();libDeleteFolder(\'' + js + '\')" title="Delete folder" style="margin-left:8px;cursor:pointer;font-weight:700;opacity:.55;padding:0 2px">✕</span></div>';
   });
-  // TikTok Videos — pulls the connected creator's own videos via video.list.
+  // Social platform tabs — pull the connected account's own content via API.
   var ttOn = (_lib.view.type === 'tiktok');
-  html += '<div class="clib-type-tab' + (ttOn ? ' on' : '') + '" data-type="tiktok" data-key="tiktok" onclick="libSetFolder(\'tiktok\',\'tiktok\')" title="Your TikTok videos (video.list)">🎵 TikTok Videos</div>';
+  html += '<div class="clib-type-tab' + (ttOn ? ' on' : '') + '" data-type="tiktok" data-key="tiktok" onclick="libSetFolder(\'tiktok\',\'tiktok\')" title="Your TikTok videos">🎵 TikTok Videos</div>';
+  var ytOn = (_lib.view.type === 'youtube');
+  html += '<div class="clib-type-tab' + (ytOn ? ' on' : '') + '" data-type="youtube" data-key="youtube" onclick="libSetFolder(\'youtube\',\'youtube\')" title="Your YouTube videos">▶️ YouTube Videos</div>';
+  var igOn = (_lib.view.type === 'instagram');
+  html += '<div class="clib-type-tab' + (igOn ? ' on' : '') + '" data-type="instagram" data-key="instagram" onclick="libSetFolder(\'instagram\',\'instagram\')" title="Your Instagram posts">📸 Instagram Posts</div>';
   bar.innerHTML = html;
 }
 
@@ -13169,8 +13149,23 @@ async function libLoad() {
 function libSetFolder(type, key) {
   _lib.view = {type: type, key: key};
   libRenderTabs();
-  if (type === 'tiktok') { libLoadTikTok(); return; }
+  if (type === 'tiktok')    { libLoadTikTok(); return; }
+  if (type === 'youtube')   { libLoadYouTube(); return; }
+  if (type === 'instagram') { libLoadInstagram(); return; }
   libLoad();
+}
+
+// Shared empty/disconnected/loading renderer for the social-platform tabs.
+function _libSocialMsg(icon, html) {
+  return '<div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1">' +
+    '<div style="font-size:40px;margin-bottom:12px;opacity:.3">' + icon + '</div>' + html + '</div>';
+}
+function _libSocialGrid(icon, platformLabel) {
+  var grid = document.getElementById('clib-content-grid');
+  if (grid) grid.innerHTML = _libSocialMsg(icon, 'Loading ' + platformLabel + '…');
+  var banner = document.getElementById('lib-plan-banner');
+  if (banner) banner.style.display = 'none';
+  return grid;
 }
 
 // Load the connected creator's own TikTok videos (video.list scope) and render
@@ -13216,6 +13211,89 @@ function _ttVideoCardHtml(v) {
         '<span title="Views">▶️ ' + views + '</span>' +
         '<span title="Likes">❤️ ' + likes + '</span>' +
         '<span title="Comments">💬 ' + comments + '</span>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+// Format an ISO date as a short, locale-aware label (e.g. "5 Jun 2026").
+function _fmtDate(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// ── YouTube Videos tab ───────────────────────────────────────────────────────
+async function libLoadYouTube() {
+  var grid = _libSocialGrid('▶️', 'YouTube videos');
+  var r;
+  try { r = await apiFetch('/api/youtube/videos'); } catch(e) { r = {connected: false, message: e.message}; }
+  if (!grid) return;
+  if (!r || !r.connected) {
+    grid.innerHTML = _libSocialMsg('▶️', 'Connect YouTube to see your videos<br><a onclick="nav(\'connect\')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Connect YouTube →</a>');
+    return;
+  }
+  var vids = r.videos || [];
+  if (!vids.length) {
+    grid.innerHTML = _libSocialMsg('▶️', r.error ? _escHtml(r.message || r.error) : 'No YouTube videos found on this channel yet');
+    return;
+  }
+  grid.innerHTML = vids.map(_ytVideoCardHtml).join('');
+}
+
+function _ytVideoCardHtml(v) {
+  var title = v.title || 'Untitled';
+  var link  = v.url || '#';
+  return '<div class="card" style="padding:0;overflow:hidden;border-radius:12px">' +
+    '<a href="' + _escHtml(link) + '" target="_blank" rel="noopener" style="display:block;position:relative;aspect-ratio:16/9;background:#000">' +
+      (v.thumbnail ? '<img src="' + _escHtml(v.thumbnail) + '" alt="" style="width:100%;height:100%;object-fit:cover">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">▶️</div>') +
+    '</a>' +
+    '<div style="padding:10px 12px">' +
+      '<div style="font-size:12px;color:var(--tx);font-weight:600;line-height:1.4;max-height:34px;overflow:hidden">' + _escHtml(title.slice(0, 90)) + '</div>' +
+      '<div style="display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--tx3);flex-wrap:wrap">' +
+        '<span title="Views">▶️ ' + _fmtCount(v.view_count) + '</span>' +
+        '<span title="Likes">❤️ ' + _fmtCount(v.like_count) + '</span>' +
+        '<span title="Comments">💬 ' + _fmtCount(v.comment_count) + '</span>' +
+        (v.published_at ? '<span title="Published" style="margin-left:auto">📅 ' + _escHtml(_fmtDate(v.published_at)) + '</span>' : '') +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+// ── Instagram Posts tab ──────────────────────────────────────────────────────
+async function libLoadInstagram() {
+  var grid = _libSocialGrid('📸', 'Instagram posts');
+  var r;
+  try { r = await apiFetch('/api/instagram/posts'); } catch(e) { r = {connected: false, message: e.message}; }
+  if (!grid) return;
+  if (!r || !r.connected) {
+    grid.innerHTML = _libSocialMsg('📸', 'Connect Instagram to see your posts<br><a onclick="nav(\'connect\')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Connect Instagram →</a>');
+    return;
+  }
+  var posts = r.posts || [];
+  if (!posts.length) {
+    grid.innerHTML = _libSocialMsg('📸', r.error ? _escHtml(r.message || r.error) : 'No Instagram posts found on this account yet');
+    return;
+  }
+  grid.innerHTML = posts.map(_igPostCardHtml).join('');
+}
+
+function _igPostCardHtml(p) {
+  var caption = p.caption || '(no caption)';
+  var link = p.permalink || '#';
+  var typeBadge = p.media_type === 'VIDEO' ? '🎬' : (p.media_type === 'CAROUSEL_ALBUM' ? '🖼️' : '');
+  return '<div class="card" style="padding:0;overflow:hidden;border-radius:12px">' +
+    '<a href="' + _escHtml(link) + '" target="_blank" rel="noopener" style="display:block;position:relative;aspect-ratio:1/1;background:#000">' +
+      (p.thumbnail ? '<img src="' + _escHtml(p.thumbnail) + '" alt="" style="width:100%;height:100%;object-fit:cover">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">📸</div>') +
+      (typeBadge ? '<span style="position:absolute;top:6px;right:8px;font-size:14px">' + typeBadge + '</span>' : '') +
+    '</a>' +
+    '<div style="padding:10px 12px">' +
+      '<div style="font-size:12px;color:var(--tx);font-weight:500;line-height:1.4;max-height:34px;overflow:hidden">' + _escHtml(caption.slice(0, 90)) + '</div>' +
+      '<div style="display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--tx3);flex-wrap:wrap">' +
+        '<span title="Likes">❤️ ' + _fmtCount(p.like_count) + '</span>' +
+        '<span title="Comments">💬 ' + _fmtCount(p.comments_count) + '</span>' +
+        (p.timestamp ? '<span title="Posted" style="margin-left:auto">📅 ' + _escHtml(_fmtDate(p.timestamp)) + '</span>' : '') +
       '</div>' +
     '</div>' +
   '</div>';

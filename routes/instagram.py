@@ -86,6 +86,29 @@ async def instagram_api_status():
         "mode": "api" if connected else "playwright"
     }
 
+@router.get("/api/instagram/posts")
+async def instagram_posts(limit: int = 20):
+    """List the connected Instagram account's own posts for the Content Library
+    'Instagram Posts' tab — thumbnail, caption, likes/comments, date."""
+    s = store.get("settings", {})
+    token = s.get("instagram_api_token")
+    ig_id = s.get("instagram_ig_id")
+    if not token or not ig_id:
+        return {"connected": False, "posts": [], "message": "Instagram ikke forbundet — gå til Connect"}
+    try:
+        from instagram_api import get_user_media, refresh_token_if_needed
+        expires_at = s.get("instagram_api_expires")
+        token, new_expires = await refresh_token_if_needed(token, expires_at)
+        if new_expires:
+            s["instagram_api_expires"] = new_expires
+            s["instagram_api_token"]   = token
+            save_store()
+        posts = await get_user_media(ig_id, token, limit=limit)
+        return {"connected": True, "posts": posts}
+    except Exception as e:
+        return {"connected": True, "posts": [], "error": str(e), "message": f"Kunne ikke hente Instagram opslag: {e}"}
+
+
 @router.post("/api/instagram/post")
 async def instagram_api_post(req: Request):
     """Post til Instagram via officiel API"""
