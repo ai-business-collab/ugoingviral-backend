@@ -48,20 +48,20 @@ _FREE_VIDEO_DURATION = 10  # seconds — each free trial video
 
 def _free_videos_status(user_id: str) -> dict:
     """Return the user's free-video allowance: {plan, limit, used, remaining}.
-    Only Free-plan users get a free-video allowance; paid plans return limit 0."""
+    EVERY user gets 3 free AI videos regardless of plan — eligibility is gated
+    only on usage (free_videos_used < limit), never on the plan value."""
     ustore = _load_user_store(user_id)
-    # Treat a missing/None/empty plan as "free" so users without an explicit
-    # plan value still get their free-video allowance. `ustore.get("billing")`
-    # can be None (key present but null), so guard with `or {}` before .get().
+    # `ustore.get("billing")` can be None (key present but null), so guard with
+    # `or {}` before .get(); plan is informational only here.
     plan = ((ustore.get("billing") or {}).get("plan") or "free").lower()
-    limit = _FREE_VIDEO_LIMIT if plan == "free" else 0
+    limit = _FREE_VIDEO_LIMIT  # all plans get the free-video allowance
     used = int(ustore.get("free_videos_used", 0) or 0)
     return {
         "plan": plan,
         "limit": limit,
         "used": used,
         "remaining": max(0, limit - used),
-        "eligible": plan == "free",
+        "eligible": used < limit,  # only gate on usage, never on plan
     }
 
 

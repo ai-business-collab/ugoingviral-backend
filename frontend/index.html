@@ -3164,8 +3164,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Connect Instagram via official API</button>
 
-            <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Official API for Business/Creator accounts.</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Connect your Instagram account to post content automatically.</div>
             <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
             <details style="display:none;margin-bottom:10px">
               <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Connect manually for automation</summary>
@@ -3237,7 +3236,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <div style="font-size:10px;color:var(--tx3);margin-top:8px">Live data from TikTok API · scopes: user.info.basic · user.info.profile · user.info.stats</div>
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="connectTikTokAPI()">🎵 Connect TikTok via official API</button>
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Requires a TikTok Business/Creator account. Gives access to direct video posting without browser automation.</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Connect your TikTok account to post videos automatically.</div>
             <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
             <details style="display:none;margin-bottom:10px">
               <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Connect manually for automation</summary>
@@ -3270,7 +3269,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('facebook')">🗑️ Disconnect</button>
           </div>
           <div class="conbody">
-            <div class="info-box" style="margin-bottom:12px">💡 <strong>Tip:</strong> Connect your Instagram to your Facebook page — your Instagram posts will automatically upload to Facebook too. Do it in Facebook → Settings → Instagram.</div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Connect your Facebook Page to post content automatically.</div>
 
             <div class="fg"><label class="fl">Email</label><input class="fi" id="fb-user" placeholder="din@email.dk"></div>
             <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="fb-pass" placeholder="Adgangskode"></div>
@@ -3302,8 +3301,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <div style="color:var(--tx2)">Account: <span id="tw-api-username" style="font-weight:600"></span></div>
               <div style="color:var(--tx3);font-size:11px;margin-top:2px" id="tw-api-synced"></div>
             </div>
-            <div class="info-box" style="margin-bottom:12px">🤖 UgoingViral automatically handles the connection via our platform.</div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px" onclick="window.location.href='/api/twitter/connect'">🐦 Connect X / Twitter via official API</button>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Connect your X (Twitter) account to post automatically.</div>
             <div class="fg"><label class="fl">Brugernavn / Email</label><input class="fi" id="tw-user" placeholder="@brugernavn"></div>
             <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="tw-pass" placeholder="Adgangskode"></div>
             <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('twitter')">💾 Gem</button><button class="btn bg bsm" onclick="testLogin('twitter')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('twitter')">🗑️ Slet</button></div>
@@ -3337,6 +3336,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <div style="color:var(--tx3);font-size:11px" id="yt-api-synced"></div>
             </div>
             <button class="btn bp" style="width:100%;margin-bottom:12px;font-size:13px;background:rgba(255,0,0,.15);border-color:rgba(255,0,0,.4)" onclick="connectYouTubeAPI()">▶️ Connect YouTube via Data API v3</button>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Connect your YouTube account to upload videos automatically.</div>
             <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
             <details style="display:none;margin-bottom:12px">
               <summary style="cursor:pointer;font-size:12px;color:var(--tx3);padding:6px 0">▸ Connect manually for automation</summary>
@@ -7555,7 +7555,8 @@ async function obfInit() {
     try { d = await apiFetch('/api/onboarding/status') || {}; } catch(e) { d = {}; }
     if (seen) {
       obfRenderWidget(d.widget);
-      setTimeout(tourStart, 500);
+      // Returning user who hasn't taken the tour yet — offer it (don't auto-run).
+      setTimeout(obfShowTourPrompt, 500);
       return;
     }
     const nameEl = document.getElementById('obf-name');
@@ -7636,12 +7637,67 @@ function obfSelectGoal(el) {
 }
 
 async function obfNext() {
+  // Step 2 of the welcome sequence: after the user clicks "Get started" on the
+  // welcome slide, surface the free-videos offer before continuing setup.
+  if (_obfSlide === 1) {
+    var shown = await obfMaybeShowFreeOffer();
+    if (shown) return;  // wait for the user to act on the offer
+  }
   if (_obfSlide === 2 && !_obfGoal) { return; } // require a goal pick
   if (_obfSlide === 4) await obfSaveShop();
   if (_obfSlide === 6) { await obfSaveProfile(); await obfComplete(); return; }
   _obfSlide++;
   obfUpdate();
 }
+
+// ── Sequenced onboarding steps: free-videos offer + tour prompt ──────────────
+var _obfFreeShown = false;       // free-videos offer shown once per onboarding
+var _obfSuppressTour = false;    // skip the tour prompt (e.g. user jumped to Studio)
+
+// Show the free-videos offer (step 2). Returns true if it was shown so the
+// caller pauses the wizard until the user acts. Every user with free videos
+// remaining is eligible — never gated on plan.
+async function obfMaybeShowFreeOffer() {
+  if (_obfFreeShown) return false;
+  _obfFreeShown = true;
+  var d = {};
+  try { d = await apiFetch('/api/studio/free_videos') || {}; } catch(e) { d = {}; }
+  var remaining = (typeof d.remaining === 'number') ? d.remaining : (d.limit || 3);
+  if (d && d.eligible && remaining > 0) {
+    var cnt = document.getElementById('ob-free-count');
+    if (cnt) cnt.textContent = remaining;
+    var m = document.getElementById('ob-free-modal');
+    if (m) { m.style.display = 'flex'; return true; }
+  }
+  return false;  // not eligible — continue the wizard normally
+}
+
+function _obfHideFree() { var m = document.getElementById('ob-free-modal'); if (m) m.style.display = 'none'; }
+
+// "Get 3 Free Videos" — finish onboarding and jump straight into the Studio.
+function obfFreeAccept() {
+  _obfHideFree();
+  _obfSuppressTour = true;   // user is heading to Studio; don't interrupt with a tour
+  obfGenerateFreeVideo();
+}
+
+// "Maybe later" — close the offer and continue the setup wizard.
+function obfFreeContinue() {
+  _obfHideFree();
+  _obfSlide++;
+  obfUpdate();
+}
+
+// Step 3: ask whether to take the tour (instead of auto-starting it).
+function obfShowTourPrompt() {
+  if (_obfSuppressTour) return;
+  if (localStorage.getItem(_tourKey())) return;  // already toured
+  var m = document.getElementById('ob-tour-modal');
+  if (m) m.style.display = 'flex';
+}
+function _obfHideTour() { var m = document.getElementById('ob-tour-modal'); if (m) m.style.display = 'none'; }
+function obfTourAccept() { _obfHideTour(); setTimeout(tourStart, 300); }
+function obfTourSkip() { _obfHideTour(); try { localStorage.setItem(_tourKey(), '1'); } catch(e) {} }
 
 function obfBack() {
   if (_obfSlide > 1) { _obfSlide--; obfUpdate(); }
@@ -7659,8 +7715,9 @@ async function obfComplete() {
     const d = await apiFetch('/api/onboarding/status');
     obfRenderWidget(d.widget);
   } catch(e) {}
-  // Start interactive tour after setup (only if not already done)
-  setTimeout(tourStart, 400);
+  // Step 3: offer the interactive tour as a choice (Show me around / Skip)
+  // instead of auto-starting it.
+  setTimeout(obfShowTourPrompt, 400);
 }
 
 // Free-videos CTA from the onboarding welcome slide: finish onboarding and
@@ -12832,15 +12889,6 @@ function sendQueueToPost(id) {
           <div class="obf-card-desc">Vokse dine sociale medier automatisk med planlagte opslag, auto-svar og engagement.</div>
         </div>
       </div>
-      <!-- Free videos welcome banner -->
-      <div id="obf-free-videos" style="margin-top:28px;max-width:560px;margin-left:auto;margin-right:auto;background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(124,58,237,.10));border:1px solid rgba(0,229,255,.35);border-radius:14px;padding:18px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center">
-        <div style="font-size:34px">🎬</div>
-        <div style="flex:1;min-width:200px;text-align:left">
-          <div style="font-size:16px;font-weight:800;color:var(--tx)">You have <span style="color:var(--ac)">3 free videos</span> — generate now</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:3px">3 AI videos (10 seconds each), powered by Runway. No credit card needed.</div>
-        </div>
-        <button class="obf-btn" style="white-space:nowrap" onclick="obfGenerateFreeVideo()">✨ Generate now</button>
-      </div>
     </div>
 
     <!-- SLIDE 2: MAIN GOAL -->
@@ -13011,6 +13059,28 @@ function sendQueueToPost(id) {
       <button class="obf-back" id="obf-back-btn" onclick="obfBack()" style="display:none">← Tilbage</button>
       <button class="obf-btn" id="obf-next-btn" onclick="obfNext()">Kom i gang →</button>
     </div>
+  </div>
+</div>
+
+<!-- ONBOARDING STEP 2 — FREE VIDEOS OFFER (shown after "Get Started") -->
+<div id="ob-free-modal" class="modal-overlay" style="display:none;z-index:8600">
+  <div class="modal-box" style="width:440px;max-width:94vw;text-align:center">
+    <div style="font-size:46px;margin-bottom:8px">🎬</div>
+    <div style="font-size:21px;font-weight:800;color:var(--tx);margin-bottom:6px">You have <span style="color:var(--ac)" id="ob-free-count">3</span> free videos</div>
+    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:22px">Generate up to 3 AI videos (10 seconds each), powered by Runway — no credits used and no card required.</div>
+    <button class="btn bp" style="width:100%;font-size:14px;font-weight:700;margin-bottom:10px" onclick="obfFreeAccept()">🎬 Get 3 Free Videos</button>
+    <button class="btn bg" style="width:100%" onclick="obfFreeContinue()">Maybe later — continue setup →</button>
+  </div>
+</div>
+
+<!-- ONBOARDING STEP 3 — TOUR PROMPT (shown after setup completes) -->
+<div id="ob-tour-modal" class="modal-overlay" style="display:none;z-index:8600">
+  <div class="modal-box" style="width:420px;max-width:94vw;text-align:center">
+    <div style="font-size:46px;margin-bottom:8px">🧭</div>
+    <div style="font-size:21px;font-weight:800;color:var(--tx);margin-bottom:6px">Want a quick tour?</div>
+    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:22px">We'll show you around the dashboard in under a minute.</div>
+    <button class="btn bp" style="width:100%;font-size:14px;font-weight:700;margin-bottom:10px" onclick="obfTourAccept()">🧭 Show me around</button>
+    <button class="btn bg" style="width:100%" onclick="obfTourSkip()">Skip for now</button>
   </div>
 </div>
 

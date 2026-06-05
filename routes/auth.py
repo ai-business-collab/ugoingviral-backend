@@ -152,12 +152,14 @@ async def register(request: Request, req: RegisterRequest):
         from services.store import _load_user_store, _save_user_store
         _ustore = _load_user_store(user["id"])
         _ustore = _ensure_default_workspace(_ustore)
-        # Always default new users to the free plan in their user store so the
-        # free-video allowance (and anything else gated on plan) works even if
-        # billing data is partially initialized.
+        # New-user defaults: free plan + 50 starter credits, and a fresh
+        # free-video allowance (3 free AI videos for every new user).
         _billing = _ustore.get("billing") or {}
         _billing["plan"] = _billing.get("plan") or "free"
+        _billing["credits"] = 50
         _ustore["billing"] = _billing
+        _ustore["free_videos_used"] = 0
+        _ustore["free_videos_skipped"] = False
         _save_user_store(user["id"], _ustore)
     except Exception:
         pass
