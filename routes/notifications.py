@@ -20,10 +20,41 @@ _TYPE_META = {
     "follower_milestone": {"icon": "🎉", "color": "#22c55e"},
     "credits_low":        {"icon": "⚠️",  "color": "#f59e0b"},
     "autopilot_posted":   {"icon": "🚀",  "color": "#00e5ff"},
+    "auto_topup":         {"icon": "💳",  "color": "#22c55e"},
+    "post_published":     {"icon": "✅",  "color": "#22c55e"},
+    "video_ready":        {"icon": "🎬",  "color": "#a78bfa"},
     "referral_upgraded":  {"icon": "🎁",  "color": "#a78bfa"},
     "plan_upgraded":      {"icon": "💎",  "color": "#f59e0b"},
     "system":             {"icon": "ℹ️",  "color": "#6b7280"},
 }
+
+# Credit balance that triggers a low-credits notification.
+_CREDITS_LOW_THRESHOLD = 100
+
+
+def _check_credit_notification(uid: str) -> None:
+    """Push a one-shot low-credits notification when the balance drops below the
+    threshold. Re-arms automatically once the balance recovers, so the user gets
+    one alert per low-credit episode instead of a notification on every load."""
+    try:
+        ustore  = _load_user_store(uid)
+        credits = ustore.get("billing", {}).get("credits", 0) or 0
+        flagged = ustore.get("_credits_low_notified", False)
+
+        if credits < _CREDITS_LOW_THRESHOLD and not flagged:
+            push_notification(
+                uid, "credits_low", "Credits running low",
+                f"You have {int(credits)} credits left. Top up to keep creating content.",
+            )
+            # Reload — push_notification persisted the appended notification.
+            ustore = _load_user_store(uid)
+            ustore["_credits_low_notified"] = True
+            _save_user_store(uid, ustore)
+        elif credits >= _CREDITS_LOW_THRESHOLD and flagged:
+            ustore["_credits_low_notified"] = False
+            _save_user_store(uid, ustore)
+    except Exception:
+        pass
 
 
 def push_notification(uid: str, notif_type: str, title: str, message: str):
@@ -50,7 +81,12 @@ def push_notification(uid: str, notif_type: str, title: str, message: str):
 
 @router.get("/api/notifications")
 def get_notifications(current_user: dict = Depends(get_current_user)):
-    notifs = list(store.get("notifications", []))
+    uid = current_user["id"]
+    # Generate any due credit notifications, then read fresh from disk so they
+    # are reflected immediately (the context store is stale by this point).
+    _check_credit_notification(uid)
+    ustore = _load_user_store(uid)
+    notifs = list(ustore.get("notifications", []))
     notifs_sorted = sorted(notifs, key=lambda n: n.get("created_at", ""), reverse=True)[:50]
     unread = sum(1 for n in notifs if not n.get("read"))
     for n in notifs_sorted:
@@ -88,6 +124,8 @@ def get_prefs(current_user: dict = Depends(get_current_user)):
         "follower_milestone": prefs.get("follower_milestone", True),
         "credits_low":        prefs.get("credits_low", True),
         "autopilot_posted":   prefs.get("autopilot_posted", True),
+        "post_published":     prefs.get("post_published", True),
+        "video_ready":        prefs.get("video_ready", True),
         "referral_upgraded":  prefs.get("referral_upgraded", True),
     }
 
@@ -99,6 +137,8 @@ async def save_prefs(request: Request, current_user: dict = Depends(get_current_
         "follower_milestone": bool(body.get("follower_milestone", True)),
         "credits_low":        bool(body.get("credits_low", True)),
         "autopilot_posted":   bool(body.get("autopilot_posted", True)),
+        "post_published":     bool(body.get("post_published", True)),
+        "video_ready":        bool(body.get("video_ready", True)),
         "referral_upgraded":  bool(body.get("referral_upgraded", True)),
     }
     store["notification_prefs"] = prefs

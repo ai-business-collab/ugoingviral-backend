@@ -30,6 +30,15 @@ _PLATFORM_NAMES = {
 _GRAPH_API = "https://graph.facebook.com/v19.0"
 _YT_API    = "https://www.googleapis.com/youtube/v3"
 _TT_API    = "https://open.tiktokapis.com/v2"
+_X_API     = "https://api.twitter.com/2"
+
+# Instagram analytics are gated behind Meta App Review. Until the advanced
+# permissions are approved we surface a clear placeholder instead of an error.
+_IG_PLACEHOLDER = {
+    "connected": False,
+    "placeholder": True,
+    "note": "Waiting for Meta approval",
+}
 
 
 # ── existing dashboard endpoint ───────────────────────────────────────────────
@@ -417,6 +426,113 @@ def fetch_tiktok_analytics(user_id: str) -> dict:
         return {"connected": True, "error": str(exc)}
 
 
+def _refresh_twitter_token_sync(refresh_token: str) -> dict:
+    """Exchange a Twitter refresh_token for a fresh access_token (sync)."""
+    client_id     = os.getenv("TWITTER_CLIENT_ID", "")
+    client_secret = os.getenv("TWITTER_CLIENT_SECRET", "")
+    if not client_id or not refresh_token:
+        return {}
+    try:
+        resp = httpx.post(
+            f"{_X_API}/oauth2/token",
+            data={
+                "grant_type":    "refresh_token",
+                "refresh_token": refresh_token,
+                "client_id":     client_id,
+            },
+            auth=(client_id, client_secret),
+            timeout=15.0,
+        )
+        return resp.json()
+    except Exception:
+        return {}
+
+
+def fetch_twitter_analytics(user_id: str) -> dict:
+    """Fetch X / Twitter follower count via the v2 API using the stored token."""
+    ustore   = _load_user_store(user_id)
+    settings = ustore.get("settings", {})
+    token    = settings.get("twitter_access_token")
+    refresh  = settings.get("twitter_refresh_token")
+    if not token:
+        return {"connected": False}
+
+    def _me(tok: str):
+        return httpx.get(
+            f"{_X_API}/users/me",
+            params={"user.fields": "public_metrics,name,username"},
+            headers={"Authorization": f"Bearer {tok}"},
+            timeout=15.0,
+        )
+
+    try:
+        resp = _me(token)
+        # Token expired — refresh once and retry.
+        if resp.status_code == 401 and refresh:
+            data = _refresh_twitter_token_sync(refresh)
+            new_token = data.get("access_token")
+            if new_token:
+                token = new_token
+                ustore["settings"]["twitter_access_token"] = new_token
+                if data.get("refresh_token"):
+                    ustore["settings"]["twitter_refresh_token"] = data["refresh_token"]
+                _save_user_store(user_id, ustore)
+                resp = _me(token)
+
+        if resp.status_code != 200:
+            return {"connected": True, "error": f"X API {resp.status_code}"}
+
+        data    = resp.json().get("data", {}) or {}
+        metrics = data.get("public_metrics", {}) or {}
+        return {
+            "connected":    True,
+            "followers":    metrics.get("followers_count", 0),
+            "following":    metrics.get("following_count", 0),
+            "tweet_count":  metrics.get("tweet_count", 0),
+            "display_name": data.get("name", ""),
+            "username":     data.get("username", settings.get("twitter_username", "")),
+            "fetched_at":   datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as exc:
+        _LOGGER.error("Twitter analytics error for %s: %s", user_id, exc)
+        return {"connected": True, "error": str(exc)}
+
+
+def fetch_facebook_analytics(user_id: str) -> dict:
+    """Fetch Facebook Page follower count via the Graph API.
+
+    Facebook uses a single Page Access Token (FACEBOOK_ACCESS_TOKEN in .env).
+    Until that token is set we return a placeholder instead of an error.
+    """
+    token = os.getenv("FACEBOOK_ACCESS_TOKEN", "").strip()
+    if not token:
+        return {"connected": False, "placeholder": True, "note": "Waiting for token setup"}
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            resp = client.get(
+                f"{_GRAPH_API}/me",
+                params={
+                    "fields": "name,fan_count,followers_count",
+                    "access_token": token,
+                },
+            )
+        if resp.status_code != 200:
+            return {"connected": True, "error": f"Facebook API {resp.status_code}"}
+        data = resp.json()
+        followers = data.get("followers_count") or data.get("fan_count") or 0
+        return {
+            "connected":  True,
+            "followers":  followers,
+            "page_likes": data.get("fan_count", 0),
+            "page_name":  data.get("name", ""),
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as exc:
+        _LOGGER.error("Facebook analytics error for %s: %s", user_id, exc)
+        return {"connected": True, "error": str(exc)}
+
+
 # ── platform analytics endpoint ───────────────────────────────────────────────
 
 @router.get("/api/analytics/platform")
@@ -440,10 +556,9 @@ async def platform_analytics(current_user: dict = Depends(get_current_user)):
         return cached
 
     result: dict = {}
-    if settings.get("instagram_api_connected"):
-        result["instagram"] = await _get("instagram", fetch_instagram_analytics)
-    else:
-        result["instagram"] = {"connected": False}
+
+    # Instagram — gated behind Meta App Review; always a placeholder for now.
+    result["instagram"] = dict(_IG_PLACEHOLDER)
 
     if settings.get("youtube_api_connected"):
         result["youtube"] = await _get("youtube", fetch_youtube_analytics)
@@ -455,7 +570,47 @@ async def platform_analytics(current_user: dict = Depends(get_current_user)):
     else:
         result["tiktok"] = {"connected": False}
 
+    if settings.get("twitter_api_connected"):
+        result["twitter"] = await _get("twitter", fetch_twitter_analytics)
+    else:
+        result["twitter"] = {"connected": False}
+
+    # Facebook — single shared Page token; placeholder until it is configured.
+    if os.getenv("FACEBOOK_ACCESS_TOKEN", "").strip():
+        result["facebook"] = await _get("facebook", fetch_facebook_analytics)
+    else:
+        result["facebook"] = {"connected": False, "placeholder": True,
+                              "note": "Waiting for token setup"}
+
+    # Record a daily follower snapshot so growth-over-time is available even for
+    # platforms whose APIs only expose a point-in-time count (YouTube, TikTok, X).
+    result["follower_history"] = _record_follower_snapshot(uid, ustore, result)
+
     return result
+
+
+def _record_follower_snapshot(uid: str, ustore: dict, result: dict) -> list:
+    """Upsert today's follower counts into a rolling 60-day history and return
+    the last 30 days for charting."""
+    try:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        hist  = [h for h in ustore.get("follower_history", []) if h.get("date") != today]
+        snap  = {"date": today}
+        for key in ("youtube", "tiktok", "twitter", "facebook"):
+            d = result.get(key, {})
+            if d.get("connected") and not d.get("error"):
+                count = d.get("followers", d.get("subscribers"))
+                if count is not None:
+                    snap[key] = count
+        # Only persist a snapshot if at least one platform reported a count.
+        if len(snap) > 1:
+            hist.append(snap)
+            hist = sorted(hist, key=lambda h: h.get("date", ""))[-60:]
+            ustore["follower_history"] = hist
+            _save_user_store(uid, ustore)
+        return hist[-30:]
+    except Exception:
+        return ustore.get("follower_history", [])[-30:]
 
 
 # ── background sync task ──────────────────────────────────────────────────────
@@ -488,14 +643,17 @@ async def run_analytics_sync():
                     pa       = ustore.setdefault("platform_analytics", {})
                     changed  = False
 
-                    if settings.get("instagram_api_connected"):
-                        pa["instagram"] = await asyncio.to_thread(fetch_instagram_analytics, uid)
-                        changed = True
                     if settings.get("youtube_api_connected"):
                         pa["youtube"] = await asyncio.to_thread(fetch_youtube_analytics, uid)
                         changed = True
                     if settings.get("tiktok_api_connected"):
                         pa["tiktok"] = await asyncio.to_thread(fetch_tiktok_analytics, uid)
+                        changed = True
+                    if settings.get("twitter_api_connected"):
+                        pa["twitter"] = await asyncio.to_thread(fetch_twitter_analytics, uid)
+                        changed = True
+                    if os.getenv("FACEBOOK_ACCESS_TOKEN", "").strip():
+                        pa["facebook"] = await asyncio.to_thread(fetch_facebook_analytics, uid)
                         changed = True
 
                     if changed:

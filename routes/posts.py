@@ -419,6 +419,26 @@ async def publish_via_api(req: Request):
             break
 
     save_store()
+
+    # Notify the user that their post went live (success only).
+    if result.get("status") in ("published", "processing"):
+        try:
+            from services.store import _uid_ctx
+            _uid = _uid_ctx.get(None)
+            if _uid:
+                from routes.notifications import push_notification
+                _plat_label = {
+                    "instagram": "Instagram", "tiktok": "TikTok", "youtube": "YouTube",
+                    "twitter": "X / Twitter", "facebook": "Facebook",
+                }.get(platform, platform.title())
+                _url = result.get("post_url") or result.get("url") or ""
+                _msg = f"Your post to {_plat_label} was published successfully."
+                if _url:
+                    _msg += f" View it: {_url}"
+                push_notification(_uid, "post_published", "Post published 🎉", _msg)
+        except Exception:
+            pass
+
     return result
 
 

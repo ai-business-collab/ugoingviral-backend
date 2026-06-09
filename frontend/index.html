@@ -435,6 +435,16 @@ body.light #clock {
    inline max-width. Make it shrinkable too so its grid/flex children don't push out. */
 .page > div[style*="max-width"] { min-width: 0; }
 
+/* ── Analytics page: keep every box inside its column so cards never overlap
+   the sidebar, even with all platform cards rendered. ── */
+#page-analytics, #page-analytics * { min-width: 0; }
+#page-analytics .g2 { width: 100%; }
+#page-analytics .card { max-width: 100%; overflow: hidden; }
+#page-analytics .stat-kpi { overflow: hidden; }
+#page-analytics .stat-kpi-val { overflow: hidden; text-overflow: ellipsis; }
+/* Platform cards: allow them to shrink to fit the half-width column they live in. */
+#an-platform-cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; }
+
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
@@ -1844,7 +1854,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <div id="notif-list" style="max-height:360px;overflow-y:auto"></div>
           <div style="padding:10px 16px;border-top:1px solid var(--border)">
-            <button class="btn bg bsm" onclick="nav('settings');toggleNotifPanel();setTimeout(function(){document.getElementById('notif-prefs-card')?.scrollIntoView({behavior:'smooth'})},350)" style="font-size:11px;width:100%;text-align:center">Notification preferences →</button>
+            <button class="btn bg bsm" onclick="nav('settings');toggleNotifPanel();setTimeout(function(){document.getElementById('sec-notif')?.scrollIntoView({behavior:'smooth'})},350)" style="font-size:11px;width:100%;text-align:center">Notification preferences →</button>
           </div>
         </div>
       </div>
@@ -17644,14 +17654,16 @@ function _nTimeAgo(iso) {
 
 async function loadNotifPrefs() {
   try {
-    var r = await apiFetch('/api/notifications/prefs');
-    var d = await r.json();
+    // apiFetch already returns parsed JSON — no second .json() call.
+    var d = await apiFetch('/api/notifications/prefs');
     var list = document.getElementById('notif-prefs-list');
     if (!list) return;
     var items = [
       {key:'follower_milestone', label:'Follower milestones', desc:'When you reach 100, 500, 1k+ followers'},
-      {key:'credits_low',        label:'Low credits warning', desc:'When you have fewer than 20 credits left'},
+      {key:'credits_low',        label:'Low credits warning', desc:'When you have fewer than 100 credits left'},
       {key:'autopilot_posted',   label:'Auto Pilot posted', desc:'Each time Auto Pilot publishes content'},
+      {key:'post_published',     label:'Post published', desc:'When a post is published to a platform'},
+      {key:'video_ready',        label:'Video ready', desc:'When a video you generated finishes rendering'},
       {key:'referral_upgraded',  label:'Referral upgrades', desc:'When someone you referred upgrades to a paid plan'},
     ];
     list.innerHTML = items.map(function(it) {
@@ -17666,7 +17678,7 @@ async function loadNotifPrefs() {
 
 async function saveNotifPrefs() {
   var prefs = {};
-  ['follower_milestone','credits_low','autopilot_posted','referral_upgraded'].forEach(function(k) {
+  ['follower_milestone','credits_low','autopilot_posted','post_published','video_ready','referral_upgraded'].forEach(function(k) {
     var el = document.getElementById('notif-pref-' + k);
     prefs[k] = el ? el.classList.contains('on') : true;
   });
@@ -17680,7 +17692,8 @@ async function saveNotifPrefs() {
 window.addEventListener('load', function() {
   setTimeout(function() {
     function _pollNotif() {
-      apiFetch('/api/notifications').then(function(r){return r.json();}).then(function(d){ _setNotifBadge(d.unread||0); }).catch(function(){});
+      // apiFetch already returns parsed JSON — no second .json() call.
+      apiFetch('/api/notifications').then(function(d){ _setNotifBadge((d && d.unread)||0); }).catch(function(){});
     }
     _pollNotif();
     setInterval(_pollNotif, 120000);
@@ -17823,7 +17836,7 @@ function _renderAnEmptyState() {
   var p = _anState.platform || {};
   var hasPosts   = (k.total_posts_30d || 0) > 0;
   var hasContent = (k.content_generated_30d || 0) > 0;
-  var hasPlatform = ['instagram','youtube','tiktok'].some(function(key) {
+  var hasPlatform = ['youtube','tiktok','twitter','facebook','instagram'].some(function(key) {
     var v = p[key] || {};
     return v.connected && !v.error && ((v.followers || v.subscribers || 0) > 0);
   });
@@ -17850,29 +17863,43 @@ async function _loadPlatformAnalytics() {
 function _renderAnFollowerChart(data) {
   var wrap = document.getElementById('an-follower-chart');
   if (!wrap) return;
-  var ig = (data && data.instagram) || {};
-  var series = Array.isArray(ig.follower_series_7d) ? ig.follower_series_7d : [];
-  if (!series.length) {
-    wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0">' + t('an.connectPlatformsHint') + '</div>';
+  var hist = (data && data.follower_history) || [];
+  var metaMap = {
+    youtube:  {icon:'▶️', label:'YouTube subscribers'},
+    tiktok:   {icon:'🎵', label:'TikTok followers'},
+    twitter:  {icon:'🐦', label:'X followers'},
+    facebook: {icon:'📘', label:'Facebook followers'},
+  };
+  // Pick the platform with the most history points and a non-zero latest count.
+  var best = null, bestPts = 0, bestSeries = [];
+  ['youtube','tiktok','twitter','facebook'].forEach(function(key) {
+    var pts = hist.filter(function(h){ return h[key] != null; }).map(function(h){ return h[key]; });
+    if (pts.length > bestPts && pts[pts.length - 1] > 0) { bestPts = pts.length; best = key; bestSeries = pts; }
+  });
+  if (!best || bestPts < 2) {
+    wrap.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0;line-height:1.6">'
+      + 'Growth over time will appear here once we have a few days of data from your connected platforms (YouTube, TikTok, X).'
+      + '</div>';
     return;
   }
-  var minV = Math.min.apply(null, series);
-  var maxV = Math.max.apply(null, series);
+  var m = metaMap[best];
+  var minV = Math.min.apply(null, bestSeries);
+  var maxV = Math.max.apply(null, bestSeries);
   var span = Math.max(1, maxV - minV);
-  var bars = series.map(function(v, i) {
+  var bars = bestSeries.map(function(v, i) {
     var pct = Math.round(((v - minV) / span) * 80) + 10; // 10..90 %
-    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0" title="Day ' + (i + 1) + ': ' + v.toLocaleString() + '">'
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0" title="Day ' + (i + 1) + ': ' + Number(v).toLocaleString() + '">'
       + '<div style="width:100%;background:linear-gradient(0deg,var(--ac),var(--ac2));border-radius:3px 3px 0 0;height:' + pct + '%;min-height:4px;transition:height .3s"></div>'
       + '<div style="font-size:9px;color:var(--tx3)">d' + (i + 1) + '</div>'
       + '</div>';
   }).join('');
-  var growth = ig.follower_growth_7d || 0;
+  var growth = bestSeries[bestSeries.length - 1] - bestSeries[0];
   var growthCol = growth >= 0 ? '#22c55e' : '#ef4444';
   var growthSign = growth > 0 ? '+' : '';
-  wrap.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">'
-    + '<div><span style="font-size:22px;font-weight:700;color:var(--tx)">' + (ig.followers || 0).toLocaleString() + '</span>'
-    + ' <span style="font-size:11px;color:var(--tx3);margin-left:6px">📸 ' + t('an.followers') + '</span></div>'
-    + '<div style="font-size:12px;font-weight:700;color:' + growthCol + '">' + growthSign + growth.toLocaleString() + ' / 7d</div>'
+  wrap.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:8px;flex-wrap:wrap">'
+    + '<div style="min-width:0"><span style="font-size:22px;font-weight:700;color:var(--tx)">' + Number(bestSeries[bestSeries.length - 1]).toLocaleString() + '</span>'
+    + ' <span style="font-size:11px;color:var(--tx3);margin-left:6px">' + m.icon + ' ' + m.label + '</span></div>'
+    + '<div style="font-size:12px;font-weight:700;color:' + growthCol + '">' + growthSign + Number(growth).toLocaleString() + ' over ' + bestPts + 'd</div>'
     + '</div>'
     + '<div style="display:flex;align-items:flex-end;gap:3px;height:80px">' + bars + '</div>';
 }
@@ -17881,47 +17908,61 @@ function _renderPlatformCards(data) {
   var wrap = document.getElementById('an-platform-cards');
   if (!wrap) return;
   var meta = {
-    instagram: {icon:'📸', label:'Instagram', color:'#E1306C'},
-    youtube:   {icon:'▶️',   label:'YouTube',   color:'#FF0000'},
-    tiktok:    {icon:'🎵', label:'TikTok',    color:'#00f2ea'},
+    instagram: {icon:'📸', label:'Instagram',  color:'#E1306C'},
+    youtube:   {icon:'▶️', label:'YouTube',    color:'#FF0000'},
+    tiktok:    {icon:'🎵', label:'TikTok',     color:'#00f2ea'},
+    twitter:   {icon:'🐦', label:'X / Twitter', color:'#1d9bf0'},
+    facebook:  {icon:'📘', label:'Facebook',   color:'#1877f2'},
   };
+  var cardBase = 'padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border);min-width:0;overflow:hidden';
+  function header(m) {
+    return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'
+      + '<span style="font-size:20px">' + m.icon + '</span>'
+      + '<span style="font-weight:600;font-size:13px;color:var(--tx2)">' + m.label + '</span></div>';
+  }
   var cards = [];
-  ['instagram','youtube','tiktok'].forEach(function(key) {
+  ['youtube','tiktok','twitter','instagram','facebook'].forEach(function(key) {
     var m = meta[key];
     var d = (data && data[key]) || {};
+
+    // Placeholder cards (e.g. Instagram pending Meta approval, Facebook pending token).
+    if (d.placeholder) {
+      cards.push('<div style="' + cardBase + ';opacity:0.7">'
+        + header(m)
+        + '<div style="font-size:12px;color:#f59e0b;font-weight:600">⏳ ' + (d.note || 'Coming soon') + '</div></div>');
+      return;
+    }
     if (!d.connected) {
-      cards.push('<div style="padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border);opacity:0.55">'
-        + '<div style="font-size:20px;margin-bottom:5px">' + m.icon + '</div>'
-        + '<div style="font-weight:600;font-size:13px;color:var(--tx2);margin-bottom:3px">' + m.label + '</div>'
+      cards.push('<div style="' + cardBase + ';opacity:0.55">'
+        + header(m)
         + '<div style="font-size:11px;color:var(--tx3)">' + t('common.notConnected') + '</div></div>');
       return;
     }
     if (d.error) {
-      cards.push('<div style="padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">'
-        + '<div style="font-size:20px;margin-bottom:5px">' + m.icon + '</div>'
-        + '<div style="font-weight:600;font-size:13px;color:var(--tx2);margin-bottom:3px">' + m.label + '</div>'
+      cards.push('<div style="' + cardBase + '">'
+        + header(m)
         + '<div style="font-size:11px;color:#ef4444">' + String(d.error).slice(0,80) + '</div></div>');
       return;
     }
+
     var followers = (d.followers !== undefined ? d.followers : d.subscribers) || 0;
     var followerLabel = key === 'youtube' ? t('an.subscribers') : t('an.followers');
     var extra = '';
-    if (key === 'instagram') {
-      var g = d.follower_growth_7d || 0;
-      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">' + t('an.growth7d') + ': ' + (g >= 0 ? '+' : '') + Number(g).toLocaleString() + '</div>'
-        + '<div style="font-size:11px;color:var(--tx3)">' + t('an.reach7d') + ': ' + Number(d.reach_7d || 0).toLocaleString() + '</div>';
-    } else if (key === 'youtube') {
+    if (key === 'youtube') {
       extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">' + t('an.totalViews') + ': ' + Number(d.total_views || 0).toLocaleString() + '</div>'
         + '<div style="font-size:11px;color:var(--tx3)">' + t('an.videos') + ': ' + (d.video_count || 0) + '</div>';
     } else if (key === 'tiktok') {
       extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">' + t('an.totalLikes') + ': ' + Number(d.total_likes || 0).toLocaleString() + '</div>'
         + '<div style="font-size:11px;color:var(--tx3)">' + t('an.videos') + ': ' + (d.video_count || 0) + '</div>';
+    } else if (key === 'twitter') {
+      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">Tweets: ' + Number(d.tweet_count || 0).toLocaleString() + '</div>'
+        + (d.username ? '<div style="font-size:11px;color:var(--tx3)">@' + d.username + '</div>' : '');
+    } else if (key === 'facebook') {
+      extra = '<div style="font-size:11px;color:var(--tx3);margin-top:3px">Page likes: ' + Number(d.page_likes || 0).toLocaleString() + '</div>';
     }
     var ts = d.fetched_at ? new Date(d.fetched_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
-    cards.push('<div style="padding:14px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">'
-      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'
-      + '<span style="font-size:20px">' + m.icon + '</span>'
-      + '<span style="font-weight:600;font-size:13px;color:var(--tx2)">' + m.label + '</span></div>'
+    cards.push('<div style="' + cardBase + '">'
+      + header(m)
       + '<div style="font-size:24px;font-weight:700;color:' + m.color + ';line-height:1">' + Number(followers).toLocaleString() + '</div>'
       + '<div style="font-size:10px;color:var(--tx3);margin-bottom:5px">' + followerLabel + '</div>'
       + extra
