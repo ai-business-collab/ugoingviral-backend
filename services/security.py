@@ -7,11 +7,14 @@ import os
 import re
 import json
 import time
+from collections import defaultdict, deque
 from threading import Lock
 from typing import Optional
 
 from fastapi import Request
+from fastapi.responses import JSONResponse
 from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 
@@ -33,7 +36,48 @@ def _rate_key(request: Request) -> str:
     return f"ip:{get_remote_address(request)}"
 
 
+# Global default: 60 requests / minute per user (or per IP if unauthenticated).
+# In-memory storage (no Redis) — fine for a single-process deployment.
 limiter = Limiter(key_func=_rate_key, default_limits=["60/minute"])
+
+_FRIENDLY_RATE_MSG = "Too many requests — please wait a moment"
+
+
+def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """Friendly 429 for any limit breach (global 60/min or per-route limits)."""
+    return JSONResponse(
+        status_code=429,
+        content={"detail": _FRIENDLY_RATE_MSG},
+        headers={"Retry-After": "60"},
+    )
+
+
+# ── Video-generation limiter (10 / hour / user, in-memory sliding window) ─────
+_VIDEO_LIMIT  = 10
+_VIDEO_WINDOW = 3600  # seconds
+_video_lock   = Lock()
+_video_hits: dict = defaultdict(deque)
+
+
+def check_video_rate_limit(user_id: str) -> bool:
+    """Return True if the user may start another video render, recording the hit.
+    Returns False once they have hit 10 renders within the last hour."""
+    if not user_id:
+        return True
+    now = time.time()
+    with _video_lock:
+        dq = _video_hits[user_id]
+        while dq and now - dq[0] >= _VIDEO_WINDOW:
+            dq.popleft()
+        if len(dq) >= _VIDEO_LIMIT:
+            return False
+        dq.append(now)
+        return True
+
+
+def video_rate_limit_message() -> str:
+    return (f"Too many requests — you can generate up to {_VIDEO_LIMIT} videos "
+            f"per hour. Please wait a moment and try again.")
 
 
 # ── Security headers ─────────────────────────────────────────────────────────
@@ -106,11 +150,99 @@ def is_sqli_suspicious(value: str) -> bool:
     return any(p.search(value) for p in _SQLI_PATTERNS)
 
 
+# Genuine XSS injection vectors — narrow on purpose so legitimate marketing copy
+# (which may mention words like "onload" in prose) is not falsely rejected.
+_XSS_PATTERNS = [
+    re.compile(r"(?i)<\s*script\b"),
+    re.compile(r"(?i)<\s*/\s*script\s*>"),
+    re.compile(r"(?i)<\s*iframe\b"),
+    re.compile(r"(?i)javascript\s*:"),
+    re.compile(r"(?i)<\s*img[^>]+\bonerror\s*="),
+    re.compile(r"(?i)\bon(error|load|click|mouseover)\s*=\s*['\"]"),
+]
+
+
+def is_xss_suspicious(value: str) -> bool:
+    """True if the string contains a recognized XSS injection vector."""
+    if not isinstance(value, str) or len(value) > 100_000:
+        return False
+    return any(p.search(value) for p in _XSS_PATTERNS)
+
+
+def scan_payload(value, _depth: int = 0) -> Optional[str]:
+    """Recursively scan a decoded JSON payload for SQLi / XSS in any string.
+    Returns a human-readable reason on the first hit, else None."""
+    if _depth > 12:
+        return None
+    if isinstance(value, str):
+        if is_sqli_suspicious(value):
+            return "Input rejected: looks like a SQL-injection attempt."
+        if is_xss_suspicious(value):
+            return "Input rejected: looks like an XSS / script-injection attempt."
+        return None
+    if isinstance(value, dict):
+        for v in value.values():
+            reason = scan_payload(v, _depth + 1)
+            if reason:
+                return reason
+        return None
+    if isinstance(value, (list, tuple)):
+        for v in value:
+            reason = scan_payload(v, _depth + 1)
+            if reason:
+                return reason
+    return None
+
+
+# ── File-type validation by content (magic bytes, no external deps) ───────────
+def sniff_media_type(data: bytes) -> Optional[str]:
+    """Return a coarse media kind ('video'/'audio'/'image') based on the file's
+    real leading bytes, or None if it doesn't match a known signature."""
+    if not data or len(data) < 12:
+        return None
+    head = data[:16]
+
+    # MP4 / MOV / M4A — ISO base media: bytes 4..8 == 'ftyp'
+    if head[4:8] == b"ftyp":
+        brand = head[8:12]
+        if brand[:3] in (b"M4A", b"m4a"):
+            return "audio"
+        return "video"
+    # RIFF containers — AVI (video) and WAV (audio)
+    if head[:4] == b"RIFF":
+        if head[8:12] == b"AVI ":
+            return "video"
+        if head[8:12] == b"WAVE":
+            return "audio"
+    # MP3 — ID3 tag or MPEG audio frame sync
+    if head[:3] == b"ID3":
+        return "audio"
+    if head[0] == 0xFF and (head[1] & 0xE0) == 0xE0:
+        return "audio"
+    # Common images
+    if head[:3] == b"\xff\xd8\xff":
+        return "image"            # JPEG
+    if head[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image"            # PNG
+    if head[:4] == b"GIF8":
+        return "image"            # GIF
+    if head[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image"            # WEBP
+    return None
+
+
+def media_kind_matches(data: bytes, expected_kind: str) -> bool:
+    """True if the real bytes match the expected kind ('video' or 'audio')."""
+    sniffed = sniff_media_type(data)
+    return sniffed == expected_kind
+
+
 # ── Brute-force tracking ─────────────────────────────────────────────────────
-_BRUTE_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "security_log.json")
-_BRUTE_LOCK  = Lock()
-_FAIL_WINDOW = 3600   # 1 hour
-_FAIL_LIMIT  = 10
+_BRUTE_FILE     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "security_log.json")
+_BRUTE_LOCK     = Lock()
+_FAIL_WINDOW    = 300    # detection window — 5 minutes
+_FAIL_LIMIT     = 10     # block after 10 failed logins inside the window
+_BLOCK_DURATION = 900    # stay blocked for 15 minutes
 
 
 def _read_brute() -> dict:
@@ -163,7 +295,7 @@ def record_login_failure(ip: str, email: str = "") -> Optional[float]:
             data["log"] = data["log"][-1000:]
         blocked_until = None
         if len(fails) >= _FAIL_LIMIT:
-            blocked_until = now + _FAIL_WINDOW
+            blocked_until = now + _BLOCK_DURATION
             data.setdefault("blocked", {})[ip] = blocked_until
             data["log"].append({
                 "ts": now, "event": "ip_blocked", "ip": ip,
@@ -194,3 +326,91 @@ def client_ip(request: Request) -> str:
     if xff:
         return xff.split(",")[0].strip()
     return get_remote_address(request) or ""
+
+
+# ── Global input-validation middleware (pure ASGI so it can safely buffer and
+#    replay the request body) ─────────────────────────────────────────────────
+class InputValidationMiddleware:
+    """Scan every request for SQL-injection / XSS payloads and reject them with
+    a clear 400 before they reach any route handler.
+
+    - Query strings are scanned on all methods.
+    - JSON bodies are buffered, scanned, then replayed downstream untouched.
+    - multipart/form-data (file uploads) and other body types are passed
+      through unbuffered so large uploads are never held in memory.
+    """
+
+    # Trusted, signature-verified server-to-server endpoints — never scan these
+    # so a benign payload can't be rejected (e.g. a Stripe payment webhook).
+    SKIP_PREFIXES = ("/api/billing/webhook", "/api/webhooks/")
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            return await self.app(scope, receive, send)
+
+        path = scope.get("path", "")
+        if any(path.startswith(p) for p in self.SKIP_PREFIXES):
+            return await self.app(scope, receive, send)
+
+        # 1) Query string — cheap, scan for every method.
+        qs = scope.get("query_string", b"")
+        if qs:
+            try:
+                from urllib.parse import unquote_plus
+                decoded = unquote_plus(qs.decode("utf-8", "ignore"))
+            except Exception:
+                decoded = ""
+            if is_sqli_suspicious(decoded) or is_xss_suspicious(decoded):
+                return await self._reject(scope, receive, send,
+                                          "Input rejected: suspicious query parameters.")
+
+        method = scope.get("method", "")
+        ctype = ""
+        for k, v in scope.get("headers", []):
+            if k == b"content-type":
+                ctype = v.decode("latin-1", "ignore").lower()
+                break
+
+        # 2) JSON body — buffer + scan + replay. Skip non-JSON (e.g. uploads).
+        if method in ("POST", "PUT", "PATCH") and "application/json" in ctype:
+            body = b""
+            messages = []
+            more_body = True
+            while more_body:
+                message = await receive()
+                if message["type"] == "http.request":
+                    body += message.get("body", b"")
+                    more_body = message.get("more_body", False)
+                else:  # http.disconnect
+                    messages.append(message)
+                    more_body = False
+            if body:
+                try:
+                    payload = json.loads(body)
+                    reason = scan_payload(payload)
+                except Exception:
+                    reason = None  # not valid JSON — let the route handle it
+                if reason:
+                    return await self._reject(scope, receive, send, reason)
+
+            replayed = False
+
+            async def replay_receive():
+                nonlocal replayed
+                if not replayed:
+                    replayed = True
+                    return {"type": "http.request", "body": body, "more_body": False}
+                if messages:
+                    return messages.pop(0)
+                return await receive()
+
+            return await self.app(scope, replay_receive, send)
+
+        return await self.app(scope, receive, send)
+
+    async def _reject(self, scope, receive, send, detail: str):
+        response = JSONResponse(status_code=400, content={"detail": detail})
+        await response(scope, receive, send)

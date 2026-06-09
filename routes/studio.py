@@ -707,6 +707,11 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
     if not req.scenes:
         raise HTTPException(status_code=400, detail="Mindst én scene er påkrævet")
 
+    # Per-user video-generation rate limit: 10 renders / hour.
+    from services.security import check_video_rate_limit, video_rate_limit_message
+    if not check_video_rate_limit(current_user["id"]):
+        raise HTTPException(status_code=429, detail=video_rate_limit_message())
+
     provider = req.provider
     if provider not in PROVIDERS:
         provider = "runway"
@@ -1043,6 +1048,11 @@ class FaceSceneRequest(BaseModel):
 @router.post("/api/studio/face-scene")
 async def face_scene(req: FaceSceneRequest, current_user: dict = Depends(get_current_user)):
     uid = current_user["id"]
+
+    # Per-user video-generation rate limit: 10 renders / hour.
+    from services.security import check_video_rate_limit, video_rate_limit_message
+    if not check_video_rate_limit(uid):
+        raise HTTPException(status_code=429, detail=video_rate_limit_message())
 
     if not REPLICATE_API_KEY:
         raise HTTPException(status_code=503, detail="Replicate API not configured")
@@ -1512,6 +1522,10 @@ async def _queue_premium_render(body: dict, uid: str, provider: str) -> dict:
     throttling — that's handled by the queue with automatic re-queueing."""
     if not _is_pro_plus(uid):
         raise HTTPException(status_code=403, detail="Premium video generation requires a paid plan")
+    # Per-user video-generation rate limit: 10 renders / hour.
+    from services.security import check_video_rate_limit, video_rate_limit_message
+    if not check_video_rate_limit(uid):
+        raise HTTPException(status_code=429, detail=video_rate_limit_message())
     prompt, duration, aspect, image_url = _validate_video_payload(body)
     if not _provider_configured(provider, duration):
         raise HTTPException(

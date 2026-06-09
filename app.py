@@ -18,8 +18,9 @@ from services.security import (
     limiter,
     security_headers_middleware,
     body_size_middleware,
+    rate_limit_handler,
+    InputValidationMiddleware,
 )
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads, content_engine, autopilot, telegram, growth, nexora_core, nexora_events, qa_agent, affiliate, template_library, analytics, notifications, brand_kit, competitor, viral_score, caption_improver, hashtags, csv_import, video_script, reel_templates, audit, workspaces, ig_growth, webhooks, content_library
@@ -29,20 +30,30 @@ app = FastAPI(title="UgoingViral API v4")
 # Rate limiter (slowapi) — default 60/min per user (or per IP if unauthenticated).
 # Specific endpoints declare tighter limits via @limiter.limit(...) decorators.
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# Friendly 429 ("Too many requests — please wait a moment") for any breach.
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # Security: 10 MB body cap + standard hardening headers on every response.
 app.middleware("http")(body_size_middleware)
 app.middleware("http")(security_headers_middleware)
 
+# CORS — restrict to the production domain only.
+ALLOWED_ORIGINS = [
+    "https://ugoingviral.com",
+    "https://www.ugoingviral.com",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
+
+# Reject SQLi / XSS payloads globally before they reach any route handler.
+# Added last so it is the outermost middleware (buffers/replays the body once).
+app.add_middleware(InputValidationMiddleware)
 
 @app.middleware("http")
 async def user_store_middleware(request: Request, call_next):

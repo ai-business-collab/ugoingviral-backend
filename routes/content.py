@@ -378,6 +378,12 @@ async def _runway_create_and_poll(shotlist: str, image_url: str, duration: int, 
 
 @router.post("/api/content/generate_video")
 async def generate_video(req: VideoGenerateRequest):
+    # Per-user video-generation rate limit: 10 renders / hour.
+    from services.security import check_video_rate_limit, video_rate_limit_message
+    from services.store import _uid_ctx
+    _vuid = _uid_ctx.get(None)
+    if _vuid and not check_video_rate_limit(_vuid):
+        raise HTTPException(status_code=429, detail=video_rate_limit_message())
     credits_left = _deduct_credits("generate_video")
     ratio = req.ratio or RATIO_MAP.get(req.platform, "768:1280")
     duration = max(5, min(10, req.duration))

@@ -82,6 +82,19 @@ async def upload_media(
     data = await file.read()
     if len(data) > MAX_BYTES:
         raise HTTPException(status_code=413, detail="File too large. Max 500 MB.")
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty file.")
+
+    # Validate the REAL file type from its magic bytes, not just the extension
+    # or the client-supplied content-type (both are trivially spoofable).
+    from services.security import media_kind_matches
+    expected_kind = "video" if ext in ("mp4", "mov", "avi") else "audio"
+    if not media_kind_matches(data, expected_kind):
+        raise HTTPException(
+            status_code=415,
+            detail=(f"File content does not look like a valid {expected_kind} file. "
+                    "Please upload a genuine mp4, mov, mp3 or wav file."),
+        )
 
     file_id = str(uuid.uuid4())[:8]
     safe_name = f"{file_id}.{ext}"
