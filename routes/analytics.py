@@ -45,6 +45,14 @@ _IG_PLACEHOLDER = {
 
 @router.get("/api/analytics/dashboard")
 def analytics_dashboard(current_user: dict = Depends(get_current_user)):
+    from services.cache import cache_get, cache_set, user_cache_key
+    _ck = user_cache_key("analytics_dashboard")
+    _hit, _cached = cache_get(_ck)
+    if _hit:
+        return _cached
+    def _ret(v):
+        cache_set(_ck, v, 300)  # cache 5 minutes
+        return v
     now = datetime.now()
     days = 30
     day_set = set()
@@ -110,7 +118,7 @@ def analytics_dashboard(current_user: dict = Depends(get_current_user)):
             "engagement": best_eng if best_eng > 0 else None,
         }
 
-    return {
+    return _ret({
         "kpis": {
             "total_posts_30d": sum(posts_per_day.values()),
             "top_platform": top_platform,
@@ -122,7 +130,7 @@ def analytics_dashboard(current_user: dict = Depends(get_current_user)):
         "hour_heatmap": {str(h): hour_counts.get(h, 0) for h in range(24)},
         "best_post": bp_data,
         "day_labels": day_labels,
-    }
+    })
 
 
 # ── performance tracking ──────────────────────────────────────────────────────
@@ -174,21 +182,30 @@ async def update_performance(request: Request, current_user: dict = Depends(get_
 @router.get("/api/analytics/performance")
 def get_performance(current_user: dict = Depends(get_current_user)):
     """Return all tracked performance data for the current user."""
+    from services.cache import cache_get, cache_set, user_cache_key
+    _ck = user_cache_key("analytics_performance")
+    _hit, _cached = cache_get(_ck)
+    if _hit:
+        return _cached
+    def _ret(v):
+        cache_set(_ck, v, 300)  # cache 5 minutes
+        return v
+
     ustore = _load_user_store(current_user["id"])
     perf   = ustore.get("content_performance", [])
     if not perf:
-        return {"performance": [], "summary": {}}
+        return _ret({"performance": [], "summary": {}})
 
     sorted_p = sorted(perf, key=lambda x: x.get("engagement_rate", 0), reverse=True)
     avg_er   = round(sum(p.get("engagement_rate", 0) for p in perf) / len(perf), 4)
-    return {
+    return _ret({
         "performance": sorted_p[:50],
         "summary": {
             "total_tracked":   len(perf),
             "avg_engagement":  avg_er,
             "best_post":       sorted_p[0] if sorted_p else None,
         },
-    }
+    })
 
 
 # ── real platform analytics ───────────────────────────────────────────────────
@@ -538,6 +555,11 @@ def fetch_facebook_analytics(user_id: str) -> dict:
 @router.get("/api/analytics/platform")
 async def platform_analytics(current_user: dict = Depends(get_current_user)):
     """Return real platform analytics; fetches fresh data if cache is >6 h old."""
+    from services.cache import cache_get, cache_set, user_cache_key
+    _ck = user_cache_key("analytics_platform")
+    _hit, _cached = cache_get(_ck)
+    if _hit:
+        return _cached
     uid      = current_user["id"]
     ustore   = _load_user_store(uid)
     settings = ustore.get("settings", {})
@@ -586,6 +608,7 @@ async def platform_analytics(current_user: dict = Depends(get_current_user)):
     # platforms whose APIs only expose a point-in-time count (YouTube, TikTok, X).
     result["follower_history"] = _record_follower_snapshot(uid, ustore, result)
 
+    cache_set(_ck, result, 300)  # cache 5 minutes
     return result
 
 

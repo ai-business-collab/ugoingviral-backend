@@ -648,17 +648,24 @@ def get_credits(current_user: dict = Depends(get_current_user)):
     Every UI surface (top bar, pipeline, billing page, dashboard, agent)
     reads from here so the displayed number can't drift between widgets.
     """
+    from services.cache import cache_get, cache_set, user_cache_key
+    ck = user_cache_key("billing_credits")
+    hit, cached = cache_get(ck)
+    if hit:
+        return cached
     billing = store.get("billing", {})
     plan_key = billing.get("plan", "free")
     plan_info = PLANS.get(plan_key, PLANS["free"])
     credits = billing.get("credits", plan_info["credits"])
     max_credits = plan_info["credits"]
-    return {
+    result = {
         "credits": credits,
         "max_credits": max_credits,
         "plan": plan_key,
         "plan_name": plan_info["name"],
     }
+    cache_set(ck, result, 30)  # cache 30 seconds
+    return result
 
 
 @router.get("/api/billing/usage")

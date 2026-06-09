@@ -5,7 +5,7 @@ Koden er splittet i moduler under routes/ og services/
 import os
 import asyncio
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 
 _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 load_dotenv(dotenv_path=_env_path)
@@ -81,6 +81,21 @@ async def user_store_middleware(request: Request, call_next):
     response = await call_next(request)
     if tokens:
         reset_user_context(tokens)
+    return response
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Time every request and track active identities for /api/health/detailed."""
+    import time as _t
+    start = _t.perf_counter()
+    response = await call_next(request)
+    try:
+        from services.metrics import record_request
+        from services.security import _rate_key
+        record_request((_t.perf_counter() - start) * 1000.0, _rate_key(request))
+    except Exception:
+        pass
     return response
 
 os.makedirs("uploads", exist_ok=True)
@@ -207,6 +222,86 @@ def health():
     from datetime import datetime
     return {"status": "healthy", "timestamp": datetime.now().isoformat(), "version": "4.1"}
 
+
+@app.get("/api/health/detailed")
+def health_detailed(_owner=Depends(admin.require_owner)):
+    """Detailed ops/load-test view: active users, DB sizes, memory, response
+    times, and video-queue status. Owner-only (leaks infra internals)."""
+    from datetime import datetime, timezone
+    from services.metrics import response_time_stats, active_stats, memory_usage
+    from services.cache import cache_stats
+    from routes.studio import queue_stats
+
+    base = os.path.dirname(os.path.abspath(__file__))
+
+    # Database / JSON store file sizes.
+    db_files = [
+        "users.json", "data.json", "admin_users.json", "security_log.json",
+        "nexora_events.json", "customer_assignments.json", "stripe_products.json",
+        "template_library.json",
+    ]
+    sizes = {}
+    total_bytes = 0
+    for fn in db_files:
+        p = os.path.join(base, fn)
+        if os.path.exists(p):
+            sz = os.path.getsize(p)
+            sizes[fn] = round(sz / 1024 / 1024, 3)
+            total_bytes += sz
+
+    # Per-user store directory rollup.
+    ud_dir = os.path.join(base, "user_data")
+    ud_bytes = ud_count = 0
+    if os.path.isdir(ud_dir):
+        for f in os.listdir(ud_dir):
+            fp = os.path.join(ud_dir, f)
+            if os.path.isfile(fp):
+                ud_bytes += os.path.getsize(fp)
+                ud_count += 1
+
+    # Registered users + how many logged in within the last 24h.
+    total_users = active_24h = None
+    try:
+        from services.users import load_users
+        users = load_users().get("users", [])
+        total_users = len(users)
+        now = datetime.now(timezone.utc)
+        active_24h = 0
+        for u in users:
+            ll = u.get("last_login")
+            if not ll:
+                continue
+            try:
+                dt = datetime.fromisoformat(str(ll).replace("Z", ""))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if (now - dt).total_seconds() <= 86400:
+                    active_24h += 1
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "users": {
+            "registered_total": total_users,
+            "logged_in_last_24h": active_24h,
+            **active_stats(),
+        },
+        "database_files_mb": sizes,
+        "database_total_mb": round(total_bytes / 1024 / 1024, 3),
+        "user_data_dir": {
+            "files": ud_count,
+            "total_mb": round(ud_bytes / 1024 / 1024, 3),
+        },
+        "memory": memory_usage(),
+        "response_times_last_100": response_time_stats(),
+        "video_queue": queue_stats(),
+        "response_cache": cache_stats(),
+    }
+
 # Inkluder alle routes
 app.include_router(auth.router)
 app.include_router(settings.router)
@@ -279,6 +374,8 @@ async def startup_event():
     asyncio.create_task(analytics.run_analytics_sync())
     asyncio.create_task(autopilot.run_full_auto_mode())
     asyncio.create_task(agent.run_agent_tasks())
+    from services.cleanup import run_daily_cleanup
+    asyncio.create_task(run_daily_cleanup())
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon_ico():

@@ -64,6 +64,11 @@ def delete_connection(platform: str):
 
 @router.get("/api/settings/connections")
 def get_connections():
+    from services.cache import cache_get, cache_set, user_cache_key
+    ck = user_cache_key("settings_connections")
+    hit, cached = cache_get(ck)
+    if hit:
+        return cached
     s = store.get("settings", {})
     conns = {
         "shopify": bool(s.get("shopify_store") and s.get("shopify_token")),
@@ -99,6 +104,7 @@ def get_connections():
                       "last_sync": s.get("telegram_last_sync") or s.get("telegram_connected_at") or ""},
     }
     conns["meta"] = meta
+    cache_set(ck, conns, 60)  # cache 60 seconds
     return conns
 
 # ── Automation settings ───────────────────────────────────────────────────────

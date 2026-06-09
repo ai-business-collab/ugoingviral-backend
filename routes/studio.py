@@ -3,7 +3,7 @@ UgoingViral Video Studio — Multi-scene, multi-provider AI video generation + s
 Providers: Runway Gen-3, Luma Dream Machine, Replicate, Kling AI (Hyper Realistic), Pika (Premium Animation)
 """
 import os, uuid, subprocess, json, asyncio, httpx, re, shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from pydantic import BaseModel
@@ -1480,6 +1480,57 @@ def _enqueue_video(uid: str, provider: str, prompt: str, duration: int,
     })
     _vq_pump()
     return _vq_public(job)
+
+
+def queue_stats() -> dict:
+    """Snapshot of the in-memory video render queue (for health monitoring)."""
+    by_status: dict = {}
+    for j in _vq_jobs.values():
+        s = j.get("status", "unknown")
+        by_status[s] = by_status.get(s, 0) + 1
+    return {
+        "pending":          len(_vq_pending),
+        "processing":       len(_vq_active),
+        "max_concurrent":   MAX_CONCURRENT_VIDEOS,
+        "total_tracked":    len(_vq_jobs),
+        "by_status":        by_status,
+    }
+
+
+def cleanup_temporary_data(failed_max_age_h: int = 24,
+                           url_cache_max_age_days: int = 7) -> dict:
+    """Remove ONLY transient, in-memory queue records:
+
+      • failed render jobs older than `failed_max_age_h` hours, and
+      • completed ("done") job records older than `url_cache_max_age_days` days —
+        these only hold the provider's temporary CDN URL (a cache). The actual
+        video stays in the user's generated_videos list and on disk.
+
+    This NEVER touches user_content/ files, content-library items, persisted
+    generated_videos records, or anything the user paid credits for. Queued and
+    processing jobs are always left alone.
+    """
+    now = datetime.now()
+    removed_failed = 0
+    removed_url_cache = 0
+    for jid, job in list(_vq_jobs.items()):
+        status = job.get("status")
+        if status in ("queued", "processing"):
+            continue
+        try:
+            age = now - datetime.fromisoformat(job.get("created_at"))
+        except Exception:
+            continue
+        if status == "failed" and age >= timedelta(hours=failed_max_age_h):
+            _vq_jobs.pop(jid, None)
+            removed_failed += 1
+        elif status == "done" and age >= timedelta(days=url_cache_max_age_days):
+            _vq_jobs.pop(jid, None)
+            removed_url_cache += 1
+    return {
+        "failed_jobs_removed":       removed_failed,
+        "url_cache_entries_removed": removed_url_cache,
+    }
 
 
 @router.get("/api/studio/queue")
