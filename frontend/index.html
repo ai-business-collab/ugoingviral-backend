@@ -3022,10 +3022,20 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <!-- API Post Historik -->
     <div class="card" style="margin-top:16px">
       <div class="ctitle">
-        <span>📋 API Post Historik</span>
-        <button class="btn bg bsm" onclick="loadPostHistory()">↻ Opdater</button>
+        <span>📋 Post History</span>
+        <div style="display:flex;gap:8px;align-items:center;margin-left:auto">
+          <select class="fi" id="post-history-filter" style="height:30px;padding:2px 8px;font-size:12px;width:auto" onchange="loadPostHistory()">
+            <option value="">All platforms</option>
+            <option value="instagram">📸 Instagram</option>
+            <option value="tiktok">🎵 TikTok</option>
+            <option value="youtube">▶️ YouTube</option>
+            <option value="facebook">📘 Facebook</option>
+            <option value="twitter">🐦 X / Twitter</option>
+          </select>
+          <button class="btn bg bsm" onclick="loadPostHistory()">↻ Refresh</button>
+        </div>
       </div>
-      <div id="post-history-list" style="max-height:320px;overflow-y:auto">
+      <div id="post-history-list" style="max-height:400px;overflow-y:auto">
         <div style="color:var(--tx3);font-size:12px;text-align:center;padding:24px">Press refresh to load history</div>
       </div>
     </div>
@@ -10570,34 +10580,51 @@ async function disconnectTikTokAPI() {
 async function loadPostHistory() {
   const list = document.getElementById('post-history-list');
   if (!list) return;
+  const filterEl = document.getElementById('post-history-filter');
+  const filter = filterEl ? filterEl.value : '';
   try {
     const r = await apiFetch('/api/posts/history');
-    const items = r.history || [];
+    let items = r.history || [];
+    if (filter) items = items.filter(h => h.platform === filter);
     if (!items.length) {
-      list.innerHTML = '<div style="color:var(--tx3);font-size:12px;text-align:center;padding:24px">Ingen API opslag endnu</div>';
+      list.innerHTML = `<div style="color:var(--tx3);font-size:12px;text-align:center;padding:24px">${filter ? 'No posts on this platform yet' : 'No posts yet'}</div>`;
       return;
     }
     const platIcon = {instagram:'📸',tiktok:'🎵',facebook:'📘',twitter:'🐦',youtube:'▶️'};
+    const platName = {instagram:'Instagram',tiktok:'TikTok',facebook:'Facebook',twitter:'X / Twitter',youtube:'YouTube'};
     const statusColor = {published:'#10b981',processing:'#f59e0b',error:'#ef4444'};
+    const statusLabel = {published:'Posted',processing:'Processing',error:'Failed'};
+    // Build the "view live post" link for whichever platform this post is on.
+    const liveLink = (h) => {
+      const links = [
+        {url: h.ig_url, color:'#e1306c', label:'📸 View on Instagram'},
+        {url: h.tt_post_url, color:'#ff0050', label:'🎵 View on TikTok'},
+        {url: h.yt_url, color:'#ff0000', label:'▶️ View on YouTube'},
+        {url: h.tw_url, color:'#1da1f2', label:'🐦 View on X'},
+        {url: h.fb_url, color:'#1877f2', label:'📘 View on Facebook'},
+      ];
+      const found = links.find(l => l.url);
+      if (found) return `<div style="font-size:10px;margin-top:3px"><a href="${_escHtml(found.url)}" target="_blank" rel="noopener" style="color:${found.color};text-decoration:none;font-weight:600">${found.label} ↗</a></div>`;
+      const pid = h.ig_post_id || h.tt_publish_id || h.fb_post_id || h.yt_video_id || h.tweet_id;
+      if (pid && h.status !== 'error') return `<div style="font-size:10px;color:var(--tx3);margin-top:3px">Post ID: ${_escHtml(String(pid))}</div>`;
+      return '';
+    };
     list.innerHTML = items.map(h => `
       <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:20px;min-width:28px;text-align:center">${platIcon[h.platform]||'📤'}</div>
+        <div style="font-size:20px;min-width:28px;text-align:center" title="${platName[h.platform]||h.platform||''}">${platIcon[h.platform]||'📤'}</div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">
-            <span style="font-size:11px;font-weight:700;color:${statusColor[h.status]||'#888'};padding:2px 7px;border-radius:4px;background:${statusColor[h.status]||'#888'}22">${h.status||'?'}</span>
-            <span style="font-size:11px;color:var(--tx3)">${h.platform}</span>
+            <span style="font-size:11px;font-weight:700;color:${statusColor[h.status]||'#888'};padding:2px 7px;border-radius:4px;background:${statusColor[h.status]||'#888'}22">${statusLabel[h.status]||h.status||'?'}</span>
+            <span style="font-size:11px;color:var(--tx3)">${platName[h.platform]||h.platform||''}</span>
             <span style="font-size:10px;color:var(--tx3);margin-left:auto">${(h.posted_at||'').slice(0,16).replace('T',' ')}</span>
           </div>
-          <div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.content||''}</div>
-          ${h.message && h.status==='error' ? `<div style="font-size:11px;color:#ef4444;margin-top:2px">${h.message}</div>` : ''}
-          ${h.ig_url ? `<div style="font-size:10px;margin-top:2px"><a href="${_escHtml(h.ig_url)}" target="_blank" rel="noopener" style="color:#e1306c;text-decoration:none">📸 View on Instagram ↗</a></div>` : (h.ig_post_id ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">Post ID: ${h.ig_post_id}</div>` : '')}
-          ${h.tt_post_url ? `<div style="font-size:10px;margin-top:2px"><a href="${_escHtml(h.tt_post_url)}" target="_blank" rel="noopener" style="color:#ff0050;text-decoration:none">🎵 View on TikTok ↗</a></div>` : (h.tt_publish_id ? `<div style="font-size:10px;color:var(--tx3);margin-top:2px">Publish ID: ${h.tt_publish_id}</div>` : '')}
-          ${h.yt_url ? `<div style="font-size:10px;margin-top:2px"><a href="${_escHtml(h.yt_url)}" target="_blank" rel="noopener" style="color:#ff0000;text-decoration:none">▶️ View on YouTube ↗</a></div>` : ''}
-          ${h.tw_url ? `<div style="font-size:10px;margin-top:2px"><a href="${_escHtml(h.tw_url)}" target="_blank" rel="noopener" style="color:#1da1f2;text-decoration:none">🐦 View on X ↗</a></div>` : ''}
+          <div style="font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_escHtml(h.content||'')}</div>
+          ${h.message && h.status==='error' ? `<div style="font-size:11px;color:#ef4444;margin-top:3px">⚠️ ${_escHtml(h.message)}</div>` : ''}
+          ${liveLink(h)}
         </div>
       </div>`).join('');
   } catch(e) {
-    list.innerHTML = `<div style="color:#ef4444;font-size:12px;text-align:center;padding:16px">Fejl: ${e.message}</div>`;
+    list.innerHTML = `<div style="color:#ef4444;font-size:12px;text-align:center;padding:16px">Error: ${e.message}</div>`;
   }
 }
 
@@ -12008,9 +12035,10 @@ postNow = async function() {
         }
         continue;
       }
-      // Instagram (Graph API), YouTube (Data API v3) and X/Twitter (API v2)
-      // publish through the official unified endpoint and surface the live URL.
-      if (plat === 'instagram' || plat === 'youtube' || plat === 'twitter') {
+      // Instagram (Graph API), YouTube (Data API v3), X/Twitter (API v2) and
+      // Facebook (Graph API) publish through the official unified endpoint and
+      // surface the live URL.
+      if (plat === 'instagram' || plat === 'youtube' || plat === 'twitter' || plat === 'facebook') {
         var body = { platform: plat, content: fullContent };
         if (_isVideoUrl(imageUrl)) body.video_url = imageUrl; else if (imageUrl) body.image_url = imageUrl;
         if (plat === 'youtube') { body.title = (fullContent.split('\n')[0] || 'New video').slice(0, 100); }
@@ -12024,7 +12052,7 @@ postNow = async function() {
         }
         continue;
       }
-      // Facebook (no official posting API wired) — browser automation fallback.
+      // Any remaining platform — browser automation fallback.
       var r = await apiFetch('/api/automation/playwright/post', 'POST', {
         platform: plat,
         content: fullContent,

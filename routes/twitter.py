@@ -169,6 +169,16 @@ async def post_tweet(text: str) -> dict:
             tweet_id = (r.json().get("data", {}) or {}).get("id", "")
             return {"status": "published", "tweet_id": tweet_id, "url": _build_url(tweet_id)}
 
+        # 402 Payment Required — the X API tier has no posting credits.
+        # Surface a clear, non-technical message instead of a raw API error.
+        if r.status_code == 402:
+            return {
+                "status": "error",
+                "code": 402,
+                "message": ("X/Twitter posting requires an API upgrade. "
+                            "Contact support@ugoingviral.com to enable Twitter posting for your account."),
+            }
+
         # Surface a useful error message from the API response.
         err = ""
         try:

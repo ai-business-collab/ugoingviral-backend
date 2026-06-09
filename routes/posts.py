@@ -353,6 +353,38 @@ async def publish_via_api(req: Request):
             result = {"status": "error", "message": str(e), "platform": platform}
             add_log(f"❌ X/Twitter fejl: {e}", "error")
 
+    # ── Facebook ─────────────────────────────────────────────────────────────
+    elif platform == "facebook":
+        try:
+            from facebook_api import post_to_facebook, get_access_token
+            token = get_access_token()
+            if not token:
+                return {"status": "error", "message": "Facebook ikke forbundet — tilføj FACEBOOK_ACCESS_TOKEN i .env", "platform": platform}
+
+            single_img = image_url if isinstance(image_url, str) else (image_url[0] if isinstance(image_url, list) and image_url else None)
+            api_result = await post_to_facebook(
+                caption=content,
+                image_url=single_img,
+                video_url=video_url,
+                access_token=token,
+            )
+            result = {
+                "status":   api_result.get("status", "error"),
+                "platform": platform,
+                "post_id":  api_result.get("post_id") or api_result.get("id"),
+                "post_url": api_result.get("url", ""),
+                "url":      api_result.get("url", ""),
+                "message":  api_result.get("message", ""),
+                "provider": "facebook_graph_api",
+            }
+            add_log(
+                f"📘 Facebook API opslag: {result['status']} — {result.get('url') or api_result.get('id', '')}",
+                "success" if result["status"] == "published" else "error",
+            )
+        except Exception as e:
+            result = {"status": "error", "message": str(e), "platform": platform}
+            add_log(f"❌ Facebook API fejl: {e}", "error")
+
     # ── Gem i post historik ──────────────────────────────────────────────────
     history_entry = {
         "id":            post_id,
@@ -369,6 +401,8 @@ async def publish_via_api(req: Request):
         "yt_video_id":   result.get("video_id"),
         "yt_url":        result.get("url") if platform == "youtube" else None,
         "tw_url":        result.get("url") if platform == "twitter" else None,
+        "fb_url":        result.get("url") if platform == "facebook" else None,
+        "fb_post_id":    result.get("post_id") if platform == "facebook" else None,
         "message":       result.get("message", ""),
         "posted_at":     datetime.now().isoformat(),
         "type":          "api_post",
