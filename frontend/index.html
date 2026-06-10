@@ -2353,9 +2353,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div class="fg">
             <label class="fl" style="display:flex;justify-content:space-between">
               <span>Content / Caption</span>
-              <span id="content-char-count" style="font-size:10px;color:var(--tx3)">0 tegn</span>
+              <span id="content-char-count" style="font-size:10px;color:var(--tx3)">0 chars</span>
             </label>
-            <textarea class="fta" id="post-content" style="min-height:100px" placeholder="Write or select a product for auto-caption..." oninput="document.getElementById('content-char-count').textContent=this.value.length+' chars'"></textarea>
+            <textarea class="fta" id="post-content" style="min-height:100px" placeholder="Write or select a product for auto-caption..." oninput="updatePostCharCount()"></textarea>
           </div>
 
           <!-- Hashtags -->
@@ -2364,8 +2364,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <span>Hashtags</span>
               <button class="btn bg bxs" onclick="appendHashtags()">+ Add to content</button>
             </label>
-            <textarea class="fta" id="post-hashtags" style="min-height:50px;font-size:11px" placeholder="#trending #viral #dansk..."></textarea>
+            <textarea class="fta" id="post-hashtags" style="min-height:50px;font-size:11px" placeholder="#trending #viral #dansk..." oninput="updatePostCharCount()"></textarea>
           </div>
+
+          <!-- Per-platform character limits (live) -->
+          <div id="post-limit-counters" style="display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 10px"></div>
 
           <!-- Billede -->
           <div class="fg">
@@ -2375,7 +2378,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <button class="btn bg bsm" onclick="clearPostImg()" style="margin-left:8px">✕ Fjern</button>
             </div>
             <div style="display:flex;gap:6px">
-              <input class="fi" id="post-img" placeholder="Billede / video URL..." style="flex:1" oninput="window._selectedPostMediaType=null;window._selectedPostImage=this.value;previewPostImg(this.value)">
+              <input class="fi" id="post-img" placeholder="Billede / video URL..." style="flex:1" oninput="window._selectedPostMediaType=null;window._selectedPostImage=this.value;previewPostImg(this.value);updatePostCharCount()">
             </div>
           </div>
 
@@ -11313,6 +11316,7 @@ function buildPostLibGrid() {
         var imgEl = document.getElementById('post-img'); if (imgEl) imgEl.value = f.url;
         window._selectedPostImage = f.url;
         window._selectedPostMediaType = f.type === 'video' ? 'video' : 'photo';
+        updatePostCharCount();
       }
       document.getElementById('src-lib-panel').style.display = 'none';
       toast('🖼️ ' + (f ? f.name : '') + ' selected!', 'success');
@@ -11436,7 +11440,7 @@ async function deleteLibFolderSelected() {
   } catch(e) { toast(e.message || 'Could not delete folder', 'error'); }
 }
 
-function sendLibToPost(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('post-img'); if (el) el.value = f.url; window._selectedPostImage = f.url; window._selectedPostMediaType = f.type === 'video' ? 'video' : 'photo'; nav('posting'); toast('📸 Selected for post', 'success'); }
+function sendLibToPost(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('post-img'); if (el) el.value = f.url; window._selectedPostImage = f.url; window._selectedPostMediaType = f.type === 'video' ? 'video' : 'photo'; nav('posting'); if (typeof updatePostCharCount === 'function') updatePostCharCount(); toast('📸 Selected for post', 'success'); }
 function sendLibToGen(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('g-pdesc'); if (el) el.value = 'Billede: ' + f.name; nav('generator'); toast('✨ Klar', 'info'); }
 
 async function createLibFolder() {
@@ -11621,6 +11625,52 @@ var _selectedPostProductId = null;
 function togglePostPlat(el) {
   el.classList.toggle('active');
   _selectedPostPlatforms = Array.from(document.querySelectorAll('#post-plat-chips .ptab.active')).map(e => e.dataset.p);
+  updatePostCharCount();
+}
+
+// ── Per-platform character limits ─────────────────────────────────────────────
+// Lengths are counted in UTF-16 code units (JS String.length), which matches how
+// TikTok/Twitter count — an emoji counts as 2. Keep in sync with backend
+// tiktok_api.py limits and routes/content.py PLATFORM_LIMITS.
+var PLATFORM_LIMITS = {
+  instagram:     { label: '📸 Instagram',   max: 2200 },
+  twitter:       { label: '🐦 X',           max: 280 },
+  facebook:      { label: '📘 Facebook',    max: 5000 },
+  youtube:       { label: '▶️ YouTube',     max: 5000, titleMax: 100, titleLabel: 'title' },
+  tiktok_video:  { label: '🎵 TikTok video', max: 2200 },
+  tiktok_photo:  { label: '🎵 TikTok photo', max: 4000, titleMax: 90, titleLabel: 'title (auto-trimmed)' },
+};
+
+function _platLimitKey(p, mediaType) {
+  if (p === 'tiktok') return mediaType === 'photo' ? 'tiktok_photo' : 'tiktok_video';
+  return p;
+}
+
+function updatePostCharCount() {
+  var content  = (document.getElementById('post-content')  || {}).value || '';
+  var hashtags = (document.getElementById('post-hashtags') || {}).value || '';
+  var full = content + (hashtags ? '\n\n' + hashtags : '');
+  var len = full.length;
+
+  var simple = document.getElementById('content-char-count');
+  if (simple) simple.textContent = len + ' chars';
+
+  var box = document.getElementById('post-limit-counters');
+  if (!box) return;
+  var plats = (_selectedPostPlatforms && _selectedPostPlatforms.length) ? _selectedPostPlatforms : ['instagram'];
+  var mt = window._selectedPostMediaType;
+  box.innerHTML = plats.map(function(p) {
+    var info = PLATFORM_LIMITS[_platLimitKey(p, mt)] || PLATFORM_LIMITS[p];
+    if (!info) return '';
+    var over = len > info.max;
+    var warn = !over && len > info.max * 0.9;
+    var col = over ? '#ef4444' : (warn ? '#f59e0b' : 'var(--tx3)');
+    var bd  = over ? '#ef4444' : (warn ? '#f59e0b' : 'var(--bd)');
+    var txt = info.label + ': ' + len + '/' + info.max + (over ? ' ⚠ over limit' : '');
+    if (info.titleMax) txt += ' · ' + (info.titleLabel || 'title') + ' ≤' + info.titleMax;
+    return '<span style="font-size:10px;font-weight:600;color:' + col + ';border:1px solid ' + bd +
+           ';border-radius:999px;padding:3px 9px;white-space:nowrap">' + txt + '</span>';
+  }).join('');
 }
 
 // Render product grid in Post & Schedule — called on page load
@@ -11700,12 +11750,14 @@ selectPostProduct = async function(pid) {
         product_id: pid, product_title: prod.title,
         product_description: prod.description,
         content_type: 'caption', platform: _selectedPostPlatforms[0] || 'instagram',
+        media_type: window._selectedPostMediaType || 'photo',
         language: 'da', tone: 'engaging'
       });
-      if (contentEl && d.content) contentEl.value = d.content;
+      if (contentEl && d.content) { contentEl.value = d.content; updatePostCharCount(); }
     }
   } catch(e) {}
 
+  updatePostCharCount();
   toast('✅ ' + prod.title.substring(0,20) + ' selected!', 'success');
 };
 
@@ -11725,10 +11777,9 @@ function clearPostProduct() {
   if (imgEl) imgEl.value = '';
   var imgPreview = document.getElementById('post-img-preview');
   if (imgPreview) imgPreview.style.display = 'none';
-  var charCount = document.getElementById('content-char-count');
-  if (charCount) charCount.textContent = '0 tegn';
   window._selectedPostImage = null;
   window._selectedPostMediaType = null;
+  updatePostCharCount();
 }
 
 function previewPostImg(url) {
@@ -11746,6 +11797,7 @@ function clearPostImg() {
   if (preview) preview.style.display = 'none';
   window._selectedPostImage = null;
   window._selectedPostMediaType = null;
+  updatePostCharCount();
 }
 
 function appendHashtags() {
@@ -11755,8 +11807,7 @@ function appendHashtags() {
   var h = hashtags.value.trim();
   if (!h) return;
   content.value = content.value.trim() + '\n\n' + h;
-  var counter = document.getElementById('content-char-count');
-  if (counter) counter.textContent = content.value.length + ' tegn';
+  updatePostCharCount();
   toast('✅ Hashtags added!', 'success');
 }
 

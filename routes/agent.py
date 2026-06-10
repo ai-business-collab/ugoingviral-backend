@@ -366,6 +366,14 @@ PLATFORM FEATURES:
 - Connect: link social accounts (Instagram, TikTok, YouTube, Facebook, X, Telegram)
 - Statistics: follower growth, views, likes, comments
 
+PLATFORM CAPTION LIMITS (characters; emojis count as ~2):
+- TikTok video: 2200 (the caption is the video title)
+- TikTok photo: title ~90 (auto-trimmed for you) + description up to 4000 — long captions go in the description automatically
+- Instagram: 2200
+- X / Twitter: 280
+- YouTube: title 100, description 5000
+The Content Generator automatically keeps captions within the selected platform's limit, and Post & Schedule shows a live character counter per platform that warns when you go over. When a TikTok photo caption is long, it is placed in the description field, so it will still post.
+
 FOLDER SYSTEM (Content Library + Media Library):
 - Folders are UNIFIED and shared between the Content Library and the Media Library — a folder created in one appears in the other.
 - To create a folder: click "📁 New Folder". To move an item into a folder: drag it onto a folder tab, or use the "Move to…" dropdown on the item.

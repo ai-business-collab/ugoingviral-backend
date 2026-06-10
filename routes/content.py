@@ -61,9 +61,52 @@ class PipelineRequest(BaseModel):
     image_urls: List[str] = []
 
 
+# ── Platform character limits ─────────────────────────────────────────────────
+# The usable caption/body budget per platform (UTF-16 units). Kept in sync with
+# tiktok_api.py and the frontend PLATFORM_LIMITS. For TikTok the photo caption
+# goes in the long "description" field (4000), the video caption in "title"
+# (2200); the short photo title (90) is auto-trimmed server-side.
+PLATFORM_LIMITS = {
+    "instagram":    2200,
+    "twitter":      280,
+    "facebook":     5000,
+    "youtube":      5000,   # description (title capped at 100 separately)
+    "tiktok_video": 2200,
+    "tiktok_photo": 4000,
+}
+
+
+def platform_caption_limit(platform: str, media_type: str = None) -> int:
+    """Caption character budget for a platform (and TikTok media type)."""
+    p = (platform or "").lower()
+    if p == "tiktok":
+        return PLATFORM_LIMITS["tiktok_photo"] if (media_type or "").lower() == "photo" else PLATFORM_LIMITS["tiktok_video"]
+    return PLATFORM_LIMITS.get(p, 2200)
+
+
+def _fit_to_limit(text: str, limit: int) -> str:
+    """Safety net: hard-cap generated text to the limit, backing off to the last
+    word boundary so we never cut mid-word. The prompt already asks the model to
+    stay within budget; this guarantees it for strict platforms (e.g. X/280)."""
+    if not text or len(text) <= limit:
+        return text
+    cut = text[:limit]
+    sp = cut.rfind(" ")
+    if sp > limit * 0.6:
+        cut = cut[:sp]
+    return cut.rstrip()
+
+
+def _enforce_caption_limit(text: str, req: "ContentRequest") -> str:
+    if req.content_type in ("caption", "tweet", "hook", "video_description"):
+        return _fit_to_limit(text, platform_caption_limit(req.platform, getattr(req, "media_type", None)))
+    return text
+
+
 # ── AI ────────────────────────────────────────────────────────────────────────
 def _build_prompt(req: ContentRequest) -> str:
     lang = {"da": "Skriv KUN på dansk.", "en": "Write ONLY in English.", "both": "Write in both Danish and English."}.get(req.language, "Write ONLY in English.")
+    limit = platform_caption_limit(req.platform, getattr(req, "media_type", None))
     ptips = {"instagram": "emojis, max 2200 tegn, stærk åbning", "tiktok": "ultra kort, hook i 2 sek",
              "facebook": "info, CTA", "twitter": "max 280 tegn, direkte og fængende"}.get(req.platform, "")
     tmap = {
@@ -84,7 +127,11 @@ def _build_prompt(req: ContentRequest) -> str:
         if creator:
             creator_ctx = f"\nCreator: {creator['name']}. Bio: {creator.get('bio', '')}. Skriv i deres stil."
 
-    return f"{lang}\nEkspert social media creator. Platform: {req.platform.upper()} ({ptips}).{prod}{desc}{creator_ctx}\nOpgave: {tmap.get(req.content_type, 'Lav content.')}\nTone: {req.tone}\nSvar KUN med content."
+    # Hard character budget for this platform — the model must stay within it.
+    limit_rule = ""
+    if req.content_type in ("caption", "tweet", "video_description", "hook"):
+        limit_rule = f"\nVIGTIGT: Hele teksten SKAL være under {limit} tegn (inkl. emojis og mellemrum). Overskrid ALDRIG denne grænse."
+    return f"{lang}\nEkspert social media creator. Platform: {req.platform.upper()} ({ptips}).{prod}{desc}{creator_ctx}\nOpgave: {tmap.get(req.content_type, 'Lav content.')}\nTone: {req.tone}{limit_rule}\nSvar KUN med content."
 
 def _ghost_prompt(message: str, sender: str, dm: dict) -> str:
     lang = {"da": "dansk", "en": "engelsk"}.get(dm.get("reply_language", "da"), "dansk")
@@ -165,6 +212,8 @@ async def generate_content(request: Request, req: ContentRequest):
         if regen_score > score:
             result, score = regen, regen_score
 
+    result = _enforce_caption_limit(result, req)
+
     item = {"id": datetime.now().isoformat(), "type": req.content_type, "platform": req.platform,
             "product_id": req.product_id, "product": req.product_title,
             "creator_id": req.creator_id, "content": result,
@@ -204,6 +253,7 @@ async def generate_all(req: ContentRequest):
             regen_sc = _quick_score(regen, ctype)
             if regen_sc > sc:
                 text, sc = regen, regen_sc
+        text = _enforce_caption_limit(text, req)
         results[ctype] = text
         scores[ctype]  = sc
         item = {"id": f"{datetime.now().isoformat()}-{ctype}", "type": ctype, "platform": req.platform,

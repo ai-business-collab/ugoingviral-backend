@@ -308,6 +308,32 @@ async def get_creator_info(access_token: str) -> dict:
     return {}
 
 
+# ── Caption length limits ─────────────────────────────────────────────────────
+# TikTok counts text length in UTF-16 code units (like JS String.length), so an
+# emoji (🚀) counts as 2. Exceeding a field's max makes the API reject the whole
+# request with `invalid_params: "The request post info is empty or incorrect"`.
+# Empirically verified against the live API: a photo "title" of 90 units is
+# accepted, 98 is rejected — so we cap titles at 90 to stay safely under.
+TIKTOK_PHOTO_TITLE_MAX  = 90     # photo post headline
+TIKTOK_PHOTO_DESC_MAX   = 4000   # photo post body/description
+TIKTOK_VIDEO_TITLE_MAX  = 2200   # video caption (no separate description field)
+
+
+def _truncate_utf16(text: str, max_units: int) -> str:
+    """Truncate text so its UTF-16 length stays within TikTok's limit, never
+    splitting a code point. Returns "" for falsy input."""
+    if not text:
+        return ""
+    out, total = [], 0
+    for ch in text:
+        w = 2 if ord(ch) > 0xFFFF else 1
+        if total + w > max_units:
+            break
+        out.append(ch)
+        total += w
+    return "".join(out)
+
+
 # ── Video Publishing ──────────────────────────────────────────────────────────
 
 async def post_video_from_url(
@@ -326,7 +352,7 @@ async def post_video_from_url(
     privacy_level = normalize_privacy_level(privacy_level)
     payload = {
         "post_info": {
-            "title": title[:2200] if title else "",
+            "title": _truncate_utf16(title, TIKTOK_VIDEO_TITLE_MAX),
             "privacy_level": privacy_level,
             "disable_comment": disable_comment,
             "disable_duet": disable_duet,
@@ -417,11 +443,18 @@ async def post_photo(
     title: str = "",
     privacy_level: str = "SELF_ONLY",
 ) -> dict:
-    """Post foto/carousel til TikTok (Photo Post API)."""
+    """Post foto/carousel til TikTok (Photo Post API).
+
+    TikTok photo posts have a short "title" (headline, ~90 UTF-16 units) and a
+    long "description" (body, up to 4000). Sending the full caption as the title
+    overflows the limit and the API rejects it with "post info is empty or
+    incorrect", so the caption goes in description with a truncated title.
+    """
     privacy_level = normalize_privacy_level(privacy_level)
     payload = {
         "post_info": {
-            "title": title[:2200] if title else "",
+            "title": _truncate_utf16(title, TIKTOK_PHOTO_TITLE_MAX),
+            "description": _truncate_utf16(title, TIKTOK_PHOTO_DESC_MAX),
             "privacy_level": privacy_level,
             "disable_comment": False,
             "auto_add_music": True,

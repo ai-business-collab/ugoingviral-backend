@@ -29,6 +29,7 @@ class ContentRequest(BaseModel):
     product_description: Optional[str] = None; content_type: str
     platform: str; language: str = "da"; tone: str = "engaging"
     creator_id: Optional[str] = None
+    media_type: Optional[str] = None  # "video" | "photo" — picks TikTok limit
 
 class PostRequest(BaseModel):
     platform: str; content: str; image_url: Optional[str] = None
