@@ -12020,21 +12020,23 @@ savePostSettings = async function() {
 // post URL (video.publish) when available, else a link to the creator profile.
 function showTikTokSuccess(postUrl, profileUrl, publishId) {
   var url = postUrl || profileUrl || '';
-  toast(postUrl ? ('✅ Posted to TikTok! ' + postUrl) : '✅ Sent to TikTok — processing…', 'success');
+  // Dismiss the transient "Posting to TikTok…" toast so this banner is the
+  // single success message (no duplicate small toast).
+  var t = document.getElementById('toast'); if (t) t.classList.remove('show');
   var old = document.getElementById('tt-post-success'); if (old) old.remove();
   var box = document.createElement('div');
   box.id = 'tt-post-success';
   box.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;max-width:520px;width:calc(100% - 32px);background:var(--s,#15171c);border:1px solid rgba(255,0,80,.4);border-radius:14px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.5)';
-  var inner = '<div style="display:flex;align-items:flex-start;gap:12px">' +
+  // One clean message. Publish id is intentionally NOT shown to the user — it is
+  // logged in the activity log instead.
+  var inner = '<div style="display:flex;align-items:center;gap:12px">' +
     '<div style="font-size:24px">🎵</div>' +
     '<div style="flex:1;min-width:0">' +
       '<div style="font-weight:800;color:#ff0050;font-size:15px;margin-bottom:4px">' +
-        (postUrl ? '✅ Posted to TikTok!' : '✅ Sent to TikTok — processing') + '</div>' +
+        (postUrl ? '✅ Posted to TikTok!' : '✅ Posted to TikTok — processing') + '</div>' +
       (postUrl
-        ? '<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Your video is live on TikTok:</div>' +
-          '<a href="' + _escHtml(postUrl) + '" target="_blank" rel="noopener" style="font-size:13px;color:#ff0050;font-weight:700;word-break:break-all">' + _escHtml(postUrl) + ' ↗</a>'
-        : '<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">TikTok is processing your video' + (publishId ? ' (publish id ' + _escHtml(publishId) + ')' : '') + '. It will appear on your profile shortly.</div>' +
-          (url ? '<a href="' + _escHtml(url) + '" target="_blank" rel="noopener" style="font-size:13px;color:#ff0050;font-weight:700;word-break:break-all">View your TikTok profile ↗</a>' : '')) +
+        ? '<a href="' + _escHtml(postUrl) + '" target="_blank" rel="noopener" style="font-size:13px;color:#ff0050;font-weight:700;word-break:break-all">View your post ↗</a>'
+        : (url ? '<a href="' + _escHtml(url) + '" target="_blank" rel="noopener" style="font-size:13px;color:#ff0050;font-weight:700">View profile ↗</a>' : '')) +
     '</div>' +
     '<button onclick="this.closest(\'#tt-post-success\').remove()" style="background:none;border:none;color:var(--tx3);font-size:18px;cursor:pointer;line-height:1">✕</button>' +
   '</div>';
@@ -12088,7 +12090,7 @@ postNow = async function() {
   var platforms = _selectedPostPlatforms && _selectedPostPlatforms.length ? _selectedPostPlatforms : ['instagram'];
 
   var platNames = {instagram:'📸 Instagram', tiktok:'🎵 TikTok', facebook:'📘 Facebook', twitter:'🐦 X'};
-  toast('⏳ Starter ' + platforms.map(function(p){return platNames[p]||p;}).join(', ') + '...', 'info');
+  toast('⏳ Posting to ' + platforms.map(function(p){return platNames[p]||p;}).join(', ') + '...', 'info');
   addLog('📤 Post nu: ' + platforms.join(', '), 'info');
 
   var _isVideoUrl = function(u) { return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(u || ''); };
