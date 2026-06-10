@@ -39,6 +39,15 @@ TIKTOK_AUTH_BASE = "https://www.tiktok.com/v2/auth/authorize/"
 TIKTOK_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 TIKTOK_API_BASE  = "https://open.tiktokapis.com/v2"
 
+# TikTok's PULL_FROM_URL only accepts media hosted on a domain we have verified
+# in the TikTok developer portal (our own site). Media from anywhere else
+# (Shopify CDN, user-pasted links, etc.) is rejected with
+# `url_ownership_unverified`. PUBLIC_BASE_URL is that verified domain; external
+# media is downloaded and re-hosted under it before being sent to TikTok.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://ugoingviral.com").rstrip("/")
+# Directory served at {PUBLIC_BASE_URL}/user_content/ (see app.py static mount).
+_USER_CONTENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_content")
+
 # Sandbox / unaudited apps may ONLY post privately. When true, every post is
 # forced to SELF_ONLY regardless of the requested privacy level. Flip to "false"
 # in .env once the TikTok app passes audit and PUBLIC posting is approved.
@@ -83,6 +92,58 @@ def normalize_privacy_level(level: Optional[str]) -> str:
     if key in _PRIVACY_ALIASES:
         return _PRIVACY_ALIASES[key]
     return "SELF_ONLY"
+
+
+# ── Verified-domain media re-hosting ──────────────────────────────────────────
+
+_MIME_EXT = {
+    "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/png": ".png",
+    "image/webp": ".webp", "image/gif": ".gif",
+    "video/mp4": ".mp4", "video/quicktime": ".mov", "video/webm": ".webm",
+}
+
+
+def _is_verified_url(url: str) -> bool:
+    """True if the URL is already hosted on our TikTok-verified domain."""
+    return bool(url) and url.startswith(PUBLIC_BASE_URL + "/")
+
+
+async def ensure_pullable_url(url: Optional[str]) -> Optional[str]:
+    """Return a URL TikTok can PULL_FROM_URL.
+
+    If the media already lives on our verified domain it is returned unchanged.
+    Otherwise it is downloaded and re-hosted under {PUBLIC_BASE_URL}/user_content/
+    so TikTok's URL-ownership check passes. Returns the original URL on any
+    download failure so the caller still gets a (best-effort) attempt.
+    """
+    if not url or _is_verified_url(url):
+        return url
+    # Relative path already pointing at our own static content → absolutize.
+    if url.startswith("/"):
+        return PUBLIC_BASE_URL + url
+    try:
+        import hashlib
+        os.makedirs(_USER_CONTENT_DIR, exist_ok=True)
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+            r = await c.get(url)
+            r.raise_for_status()
+            content = r.content
+            ctype = (r.headers.get("content-type") or "").split(";")[0].strip().lower()
+        # Prefer the extension from the original URL; fall back to content-type.
+        base = url.split("?")[0].split("#")[0]
+        ext = os.path.splitext(base)[1].lower()
+        if ext not in _MIME_EXT.values():
+            ext = _MIME_EXT.get(ctype, ext or ".bin")
+        fname = "tt_" + hashlib.md5(url.encode()).hexdigest()[:16] + ext
+        with open(os.path.join(_USER_CONTENT_DIR, fname), "wb") as f:
+            f.write(content)
+        rehosted = f"{PUBLIC_BASE_URL}/user_content/{fname}"
+        logger.info("Re-hosted external media for TikTok: %s -> %s (%d bytes, %s)",
+                    url, rehosted, len(content), ctype or "?")
+        return rehosted
+    except Exception as e:
+        logger.warning("Failed to re-host media %s (%s); using original URL", url, e)
+        return url
 
 SCOPES = [
     "user.info.basic",    # username, avatar, open_id
@@ -401,30 +462,53 @@ async def publish_to_tiktok(
     privacy_level: str = "SELF_ONLY",
     wait_for_url: bool = False,
     username: str = "",
+    media_type: Optional[str] = None,
 ) -> dict:
     """
     Publicer til TikTok — vælger video eller foto baseret på input.
     Returns: {"status": "published"|"processing"|"error", "publish_id": ...,
               "message": ..., "post_url": <public url if resolved>}
 
+    media_type ("video"|"photo") explicitly selects the post type — pass it from
+    the caller (e.g. a content-library item's stored kind) instead of guessing
+    from the URL extension. When omitted, falls back to: video if a video_url is
+    present, otherwise photo.
+
+    All media URLs are re-hosted on our TikTok-verified domain first, so external
+    sources (Shopify CDN etc.) don't fail with url_ownership_unverified.
+
     When wait_for_url is True (interactive posting), the publish status is polled
     so the caller can show the live TikTok post URL. Background callers (scheduler)
     leave it False to avoid blocking.
     """
     try:
-        if video_url:
+        photos = list(image_urls) if image_urls else ([image_url] if image_url else [])
+        kind = (media_type or "").strip().lower()
+        if kind in ("image", "photos", "img"):
+            kind = "photo"
+        if kind not in ("video", "photo"):
+            kind = "video" if video_url else "photo"
+
+        if kind == "video":
+            # Coalesce: the caller may have placed the video URL in either field.
+            vurl = video_url or image_url or (photos[0] if photos else None)
+            if not vurl:
+                return {"status": "error", "message": "Ingen video URL"}
+            vurl = await ensure_pullable_url(vurl)
             data = await post_video_from_url(
                 access_token=access_token,
-                video_url=video_url,
+                video_url=vurl,
                 title=caption,
                 privacy_level=privacy_level,
             )
             publish_id = data.get("publish_id", "")
             result = {"status": "processing", "publish_id": publish_id, "message": "Video sendes til TikTok — klar om lidt", "post_url": ""}
         else:
-            photos = image_urls or ([image_url] if image_url else [])
+            if not photos and video_url:
+                photos = [video_url]
             if not photos:
                 return {"status": "error", "message": "Ingen video eller billede URL"}
+            photos = [await ensure_pullable_url(p) for p in photos]
             data = await post_photo(
                 access_token=access_token,
                 photo_urls=photos,

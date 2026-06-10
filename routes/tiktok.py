@@ -297,6 +297,11 @@ async def tiktok_post(req: Request):
     caption   = d.get("caption", "")
     video_url = d.get("video_url")
     image_url = d.get("image_url")
+    # Explicit media type from the frontend (derived from the content-library
+    # item's stored kind), e.g. "video" | "photo". Avoids guessing from the URL
+    # extension, which breaks on extensionless/CDN URLs. Falls back to None so
+    # publish_to_tiktok infers it from which URL is present.
+    media_type = d.get("media_type") or d.get("kind")
     # Coerce to a TikTok-valid privacy level. A missing/empty/invalid value here
     # is what TikTok rejects with "The request post info is empty or incorrect".
     privacy   = tiktok_api.normalize_privacy_level(d.get("privacy_level"))
@@ -328,6 +333,7 @@ async def tiktok_post(req: Request):
             privacy_level=privacy,
             wait_for_url=True,   # interactive post — resolve the live TikTok URL
             username=username,
+            media_type=media_type,
         )
         # Fall back to the creator's profile link when no public post URL is
         # available (e.g. SELF_ONLY posts on an unaudited app).

@@ -32,3 +32,6 @@ sessions/
 qa_agent.log
 qa_results.json
 nexora_events.json
+
+# Runtime media re-hosted for TikTok PULL_FROM_URL (regenerated on demand)
+user_content/

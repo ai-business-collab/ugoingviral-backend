@@ -957,13 +957,15 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
    ═══════════════════════════════════════════════════════ */
 #toast {
   position: fixed; top: 28px; left: 50%; z-index: 100000;
-  background: var(--glass);
+  /* Opaque (not glass) so text stays high-contrast over any page content. */
+  background: rgba(17,22,31,.98);
   backdrop-filter: blur(20px);
-  border: 1.5px solid var(--border-b);
+  border: 2px solid var(--border-b);
   border-radius: 16px; padding: 18px 28px;
-  font-size: 16px; font-weight: 600; line-height: 1.45;
-  color: var(--tx);
-  box-shadow: 0 16px 50px rgba(0,0,0,.55);
+  font-size: 16px; font-weight: 700; line-height: 1.5; letter-spacing: .2px;
+  color: #f5f7fa;
+  text-shadow: 0 1px 3px rgba(0,0,0,.7);
+  box-shadow: 0 16px 50px rgba(0,0,0,.6);
   display: flex; align-items: center; gap: 12px;
   max-width: min(560px, calc(100vw - 32px));
   min-width: 280px;
@@ -974,9 +976,9 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   pointer-events: none;
 }
 #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
-#toast.success { border-color: rgba(16,185,129,.75); background: rgba(16,185,129,.15); color: #d1fae5; }
-#toast.error   { border-color: rgba(239,68,68,.75);  background: rgba(239,68,68,.16);  color: #fee2e2; }
-#toast.info    { border-color: var(--border-ac); }
+#toast.success { border-color: #10b981; background: rgba(7,42,31,.98); color: #eafff5; }
+#toast.error   { border-color: #ef4444; background: rgba(46,18,20,.98); color: #ffeaea; }
+#toast.info    { border-color: var(--border-ac); color: #f5f7fa; }
 
 /* ═══════════════════════════════════════════════════════
    MISC
@@ -2373,7 +2375,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <button class="btn bg bsm" onclick="clearPostImg()" style="margin-left:8px">✕ Fjern</button>
             </div>
             <div style="display:flex;gap:6px">
-              <input class="fi" id="post-img" placeholder="Billede URL..." style="flex:1" oninput="previewPostImg(this.value)">
+              <input class="fi" id="post-img" placeholder="Billede / video URL..." style="flex:1" oninput="window._selectedPostMediaType=null;window._selectedPostImage=this.value;previewPostImg(this.value)">
             </div>
           </div>
 
@@ -11307,7 +11309,11 @@ function buildPostLibGrid() {
     el.addEventListener('mouseout', function() { this.style.borderColor = 'var(--bd)'; });
     el.addEventListener('click', function() {
       var f = libFiles[parseInt(this.dataset.idx)];
-      if (f) { var imgEl = document.getElementById('post-img'); if (imgEl) imgEl.value = f.url; }
+      if (f) {
+        var imgEl = document.getElementById('post-img'); if (imgEl) imgEl.value = f.url;
+        window._selectedPostImage = f.url;
+        window._selectedPostMediaType = f.type === 'video' ? 'video' : 'photo';
+      }
       document.getElementById('src-lib-panel').style.display = 'none';
       toast('🖼️ ' + (f ? f.name : '') + ' selected!', 'success');
     });
@@ -11430,7 +11436,7 @@ async function deleteLibFolderSelected() {
   } catch(e) { toast(e.message || 'Could not delete folder', 'error'); }
 }
 
-function sendLibToPost(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('post-img'); if (el) el.value = f.url; nav('posting'); toast('📸 Selected for post', 'success'); }
+function sendLibToPost(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('post-img'); if (el) el.value = f.url; window._selectedPostImage = f.url; window._selectedPostMediaType = f.type === 'video' ? 'video' : 'photo'; nav('posting'); toast('📸 Selected for post', 'success'); }
 function sendLibToGen(i) { var f = libFiles[i]; if (!f) return; var el = document.getElementById('g-pdesc'); if (el) el.value = 'Billede: ' + f.name; nav('generator'); toast('✨ Klar', 'info'); }
 
 async function createLibFolder() {
@@ -11668,6 +11674,7 @@ selectPostProduct = async function(pid) {
     var imgEl = document.getElementById('post-img');
     if (imgEl) imgEl.value = prod.image;
     window._selectedPostImage = prod.image;
+    window._selectedPostMediaType = 'photo';  // product images are still photos
     previewPostImg(prod.image);
   }
 
@@ -11720,6 +11727,8 @@ function clearPostProduct() {
   if (imgPreview) imgPreview.style.display = 'none';
   var charCount = document.getElementById('content-char-count');
   if (charCount) charCount.textContent = '0 tegn';
+  window._selectedPostImage = null;
+  window._selectedPostMediaType = null;
 }
 
 function previewPostImg(url) {
@@ -11736,6 +11745,7 @@ function clearPostImg() {
   var preview = document.getElementById('post-img-preview');
   if (preview) preview.style.display = 'none';
   window._selectedPostImage = null;
+  window._selectedPostMediaType = null;
 }
 
 function appendHashtags() {
@@ -12025,12 +12035,16 @@ postNow = async function() {
   var imageUrl = document.getElementById('post-img') ? document.getElementById('post-img').value : '';
   if (!imageUrl) imageUrl = window._selectedPostImage || null;
   var platforms = _selectedPostPlatforms && _selectedPostPlatforms.length ? _selectedPostPlatforms : ['instagram'];
-  
+
   var platNames = {instagram:'📸 Instagram', tiktok:'🎵 TikTok', facebook:'📘 Facebook', twitter:'🐦 X'};
   toast('⏳ Starter ' + platforms.map(function(p){return platNames[p]||p;}).join(', ') + '...', 'info');
   addLog('📤 Post nu: ' + platforms.join(', '), 'info');
-  
+
   var _isVideoUrl = function(u) { return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(u || ''); };
+  // Prefer the explicit kind captured when the media was picked from the
+  // content library / product (videos and extensionless CDN URLs can't be told
+  // apart by extension). Fall back to extension sniffing for typed URLs.
+  var mediaType = window._selectedPostMediaType || (imageUrl ? (_isVideoUrl(imageUrl) ? 'video' : 'photo') : null);
   for (var i = 0; i < platforms.length; i++) {
     var plat = platforms[i];
     try {
@@ -12038,7 +12052,10 @@ postNow = async function() {
       // video.upload) so we can show the live post URL — not browser automation.
       if (plat === 'tiktok') {
         var ttBody = { caption: fullContent };
-        if (_isVideoUrl(imageUrl)) ttBody.video_url = imageUrl; else if (imageUrl) ttBody.image_url = imageUrl;
+        if (imageUrl) {
+          ttBody.media_type = mediaType;
+          if (mediaType === 'video') ttBody.video_url = imageUrl; else ttBody.image_url = imageUrl;
+        }
         var tr = await apiFetch('/api/tiktok/post', 'POST', ttBody);
         if ((tr.status === 'published' || tr.status === 'processing')) {
           showTikTokSuccess(tr.post_url || '', tr.profile_url || '', tr.publish_id || '');
