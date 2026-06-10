@@ -210,7 +210,7 @@ body.light {
 .lib-item{background:var(--s2);border:1px solid var(--bd);border-radius:12px;overflow:hidden;transition:all .2s;cursor:pointer}
 .lib-item:hover{transform:translateY(-2px);border-color:var(--ac)}
 #toast {
-  transition: unset !important;
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1), opacity .4s ease !important;
 }
 .tog { transition: background-color .25s cubic-bezier(.34,1.56,.64,1), border-color .25s !important; }
 .tog::after { transition: transform .25s cubic-bezier(.34,1.56,.64,1) !important; }
@@ -956,25 +956,27 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
    TOAST
    ═══════════════════════════════════════════════════════ */
 #toast {
-  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  position: fixed; top: 28px; left: 50%; z-index: 100000;
   background: var(--glass);
   backdrop-filter: blur(20px);
-  border: 1px solid var(--border-b);
-  border-radius: 12px; padding: 12px 18px;
-  font-size: 13px; font-weight: 500;
+  border: 1.5px solid var(--border-b);
+  border-radius: 16px; padding: 18px 28px;
+  font-size: 16px; font-weight: 600; line-height: 1.45;
   color: var(--tx);
-  box-shadow: var(--shadow-lg);
-  display: flex; align-items: center; gap: 8px;
-  max-width: 320px;
-  transform: translateY(80px) scale(.9);
+  box-shadow: 0 16px 50px rgba(0,0,0,.55);
+  display: flex; align-items: center; gap: 12px;
+  max-width: min(560px, calc(100vw - 32px));
+  min-width: 280px;
+  /* Hidden state: parked above the top edge, slides DOWN into view. */
+  transform: translateX(-50%) translateY(-160px);
   opacity: 0;
-  transition: all .3s var(--spring);
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1), opacity .4s ease;
   pointer-events: none;
 }
-#toast.show { transform: none; opacity: 1; pointer-events: auto; }
-#toast.success { border-color: rgba(var(--ac3-rgb),.4); }
-#toast.error { border-color: rgba(239,68,68,.4); }
-#toast.info { border-color: var(--border-ac); }
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
+#toast.success { border-color: rgba(16,185,129,.75); background: rgba(16,185,129,.15); color: #d1fae5; }
+#toast.error   { border-color: rgba(239,68,68,.75);  background: rgba(239,68,68,.16);  color: #fee2e2; }
+#toast.info    { border-color: var(--border-ac); }
 
 /* ═══════════════════════════════════════════════════════
    MISC
@@ -11244,7 +11246,9 @@ function toast(msg,type='info'){
   const el=document.getElementById('toast');
   el.textContent=msg; el.className='show '+type;
   clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
+  // Stay visible at least 6s; give longer messages a little extra reading time.
+  const ms=Math.max(6000, Math.min(12000, 6000 + (msg||'').length*40));
+  toastTimer=setTimeout(()=>el.classList.remove('show'),ms);
 }
 
 // ── Post source picker ────────────────────────────────────────────────────────

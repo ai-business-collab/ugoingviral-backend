@@ -26,6 +26,51 @@ TIKTOK_AUTH_BASE = "https://www.tiktok.com/v2/auth/authorize/"
 TIKTOK_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 TIKTOK_API_BASE  = "https://open.tiktokapis.com/v2"
 
+# Sandbox / unaudited apps may ONLY post privately. When true, every post is
+# forced to SELF_ONLY regardless of the requested privacy level. Flip to "false"
+# in .env once the TikTok app passes audit and PUBLIC posting is approved.
+TIKTOK_SANDBOX = os.getenv("TIKTOK_SANDBOX", "true").strip().lower() not in ("false", "0", "no", "")
+
+# The only privacy levels TikTok's Content Posting API accepts. Sending anything
+# else (or an empty/None value) makes the API reject the whole request with
+# `invalid_params: "The request post info is empty or incorrect"`.
+VALID_PRIVACY_LEVELS = {
+    "PUBLIC_TO_EVERYONE",
+    "MUTUAL_FOLLOW_FRIENDS",
+    "FOLLOWER_OF_CREATOR",
+    "SELF_ONLY",
+}
+
+# Friendly aliases callers/older frontends might send → canonical TikTok value.
+_PRIVACY_ALIASES = {
+    "PUBLIC": "PUBLIC_TO_EVERYONE",
+    "EVERYONE": "PUBLIC_TO_EVERYONE",
+    "PRIVATE": "SELF_ONLY",
+    "ONLY_ME": "SELF_ONLY",
+    "SELF": "SELF_ONLY",
+    "FRIENDS": "MUTUAL_FOLLOW_FRIENDS",
+    "MUTUAL": "MUTUAL_FOLLOW_FRIENDS",
+    "FOLLOWERS": "FOLLOWER_OF_CREATOR",
+}
+
+
+def normalize_privacy_level(level: Optional[str]) -> str:
+    """Coerce any caller-supplied privacy value into a TikTok-valid one.
+
+    Guarantees post_info.privacy_level is never empty/None/invalid — the root
+    cause of TikTok's "request post info is empty or incorrect" error. In
+    sandbox mode (TIKTOK_SANDBOX), always returns SELF_ONLY since unaudited
+    apps cannot post publicly.
+    """
+    if TIKTOK_SANDBOX:
+        return "SELF_ONLY"
+    key = (level or "").strip().upper()
+    if key in VALID_PRIVACY_LEVELS:
+        return key
+    if key in _PRIVACY_ALIASES:
+        return _PRIVACY_ALIASES[key]
+    return "SELF_ONLY"
+
 SCOPES = [
     "user.info.basic",    # username, avatar, open_id
     "user.info.profile",  # bio_description, profile_deep_link, is_verified
@@ -204,6 +249,7 @@ async def post_video_from_url(
     Post video til TikTok via URL pull (ingen fil-upload nødvendigt).
     privacy_level: PUBLIC_TO_EVERYONE | MUTUAL_FOLLOW_FRIENDS | SELF_ONLY
     """
+    privacy_level = normalize_privacy_level(privacy_level)
     payload = {
         "post_info": {
             "title": title[:2200] if title else "",
@@ -297,6 +343,7 @@ async def post_photo(
     privacy_level: str = "SELF_ONLY",
 ) -> dict:
     """Post foto/carousel til TikTok (Photo Post API)."""
+    privacy_level = normalize_privacy_level(privacy_level)
     payload = {
         "post_info": {
             "title": title[:2200] if title else "",

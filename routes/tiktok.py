@@ -289,7 +289,10 @@ async def tiktok_post(req: Request):
     caption   = d.get("caption", "")
     video_url = d.get("video_url")
     image_url = d.get("image_url")
-    privacy   = d.get("privacy_level", "SELF_ONLY")
+    # Coerce to a TikTok-valid privacy level. A missing/empty/invalid value here
+    # is what TikTok rejects with "The request post info is empty or incorrect".
+    from tiktok_api import normalize_privacy_level
+    privacy   = normalize_privacy_level(d.get("privacy_level"))
 
     s = store.get("settings", {})
     token   = s.get("tiktok_access_token")
