@@ -12,10 +12,23 @@ API reference: https://developers.tiktok.com/doc/content-posting-api-get-started
 
 import httpx
 import os
+import json as _json
+import logging
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 from datetime import datetime, timedelta
 from typing import Optional
+
+logger = logging.getLogger("tiktok_api")
+# The app configures no root logging handler, so INFO would otherwise be dropped.
+# Attach our own stdout handler so the exact TikTok payloads are visible in the
+# service journal (journalctl -u ugoingviral) for debugging post failures.
+if not logger.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(asctime)s [tiktok_api] %(levelname)s %(message)s"))
+    logger.addHandler(_h)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
 
 # ── Config ────────────────────────────────────────────────────────────────────
 TIKTOK_CLIENT_KEY    = os.getenv("TIKTOK_CLIENT_KEY", "")
@@ -263,6 +276,7 @@ async def post_video_from_url(
             "video_url": video_url,
         },
     }
+    logger.info("TikTok VIDEO init payload -> %s", _json.dumps(payload, ensure_ascii=False))
     async with httpx.AsyncClient(timeout=30) as c:
         r = await c.post(
             f"{TIKTOK_API_BASE}/post/publish/video/init/",
@@ -359,6 +373,7 @@ async def post_photo(
         "media_type": "PHOTO",
         "post_mode": "DIRECT_POST",
     }
+    logger.info("TikTok PHOTO init payload -> %s", _json.dumps(payload, ensure_ascii=False))
     async with httpx.AsyncClient(timeout=30) as c:
         r = await c.post(
             f"{TIKTOK_API_BASE}/post/publish/content/init/",

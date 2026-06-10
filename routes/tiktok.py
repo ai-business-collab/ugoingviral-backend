@@ -1,9 +1,16 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse, HTMLResponse
 from datetime import datetime, timedelta
+import logging
+import json as _json
 from services.store import store, save_store, add_log
+# Imported at module load (not lazily) so tiktok_api's logger — which logs the
+# exact payloads sent to TikTok — is configured at startup, ensuring the request
+# body is logged even on the very first post.
+import tiktok_api
 
 router = APIRouter()
+logger = logging.getLogger("tiktok_api")
 
 
 def _popup_close_html(platform: str, status: str, message: str = "") -> str:
@@ -286,13 +293,13 @@ async def tiktok_disconnect():
 async def tiktok_post(req: Request):
     """Direkte TikTok post endpoint"""
     d = await req.json()
+    logger.info("TikTok /post request body -> %s", _json.dumps(d, ensure_ascii=False))
     caption   = d.get("caption", "")
     video_url = d.get("video_url")
     image_url = d.get("image_url")
     # Coerce to a TikTok-valid privacy level. A missing/empty/invalid value here
     # is what TikTok rejects with "The request post info is empty or incorrect".
-    from tiktok_api import normalize_privacy_level
-    privacy   = normalize_privacy_level(d.get("privacy_level"))
+    privacy   = tiktok_api.normalize_privacy_level(d.get("privacy_level"))
 
     s = store.get("settings", {})
     token   = s.get("tiktok_access_token")

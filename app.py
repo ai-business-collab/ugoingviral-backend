@@ -177,6 +177,18 @@ def tiktok_verify4():
 def google_site_verification():
     return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "google165f5389ae0e6661.html"), media_type="text/html")
 
+
+@app.get("/tiktok5DeyUFarAWVKpYgiI4AY3N60qCV7OMUL.txt")
+def tiktok_verification():
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse("tiktok-developers-site-verification=5DeyUFarAWVKpYgiI4AY3N60qCV7OMUL")
+
+
+@app.get("/tiktokUJvH5NFKcwM74RMxCIlNWbMBVKicbMp1.txt")
+def tiktok_verification_sandbox():
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse("tiktok-developers-site-verification=UJvH5NFKcwM74RMxCIlNWbMBVKicbMp1")
+
 @app.get("/privacy")
 def privacy_policy():
     from fastapi.responses import HTMLResponse
