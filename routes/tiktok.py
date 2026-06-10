@@ -344,6 +344,26 @@ async def tiktok_post(req: Request):
             f"🎵 TikTok post: {result.get('status')} — {result.get('post_url') or result.get('publish_id','')}",
             "success" if result.get("status") in ("published", "processing") else "error",
         )
+
+        # Record to the shared post history so TikTok posts show up in Recent
+        # Posts / Post History alongside every other platform (same entry shape
+        # as routes/posts.py publish_via_api).
+        history_entry = {
+            "platform":      "tiktok",
+            "content":       caption,
+            "status":        result.get("status", "error"),
+            "provider":      "tiktok_content_posting_api",
+            "tt_publish_id": result.get("publish_id"),
+            "tt_post_url":   result.get("post_url") or result.get("profile_url") or "",
+            "message":       result.get("message", ""),
+            "posted_at":     datetime.now().isoformat(),
+            "type":          "api_post",
+        }
+        history = store.setdefault("post_history", [])
+        history.insert(0, history_entry)
+        store["post_history"] = history[:200]
+        save_store()
+
         return result
     except Exception as e:
         return {"status": "error", "message": str(e)}

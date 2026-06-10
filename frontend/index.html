@@ -11954,30 +11954,68 @@ async function loadRecentPosts() {
       }
     }
     
-    // Vis seneste postede fra scheduler_log
+    // Recent posts: combine manual API posts (post_history — includes TikTok)
+    // with auto-posted entries from the scheduler log, newest first. Shows
+    // platform, status, date and a link to the live post.
     var log = r.last_posts || {};
     var list = document.getElementById('recent-posts-list');
     if (!list) return;
-    // Filtrer kun entries der har produkt-info (ikke bare True)
-    var entries = Object.entries(log)
+    var platIcon = {instagram:'📸', tiktok:'🎵', facebook:'📘', twitter:'🐦', youtube:'▶️'};
+    var platName = {instagram:'Instagram', tiktok:'TikTok', facebook:'Facebook', twitter:'X', youtube:'YouTube'};
+    var statusColor = {published:'#10b981', processing:'#f59e0b', error:'#ef4444'};
+    var statusLabel = {published:'Posted', processing:'Processing', error:'Failed'};
+    var combined = [];
+
+    // Manual API posts (Instagram, TikTok, YouTube, X, Facebook).
+    try {
+      var hr = await apiFetch('/api/posts/history');
+      (hr.history || []).forEach(function(h) {
+        combined.push({
+          ts:       h.posted_at || '',
+          platform: h.platform || '',
+          title:    h.content || 'Post',
+          status:   h.status || '',
+          link:     h.ig_url || h.tt_post_url || h.yt_url || h.tw_url || h.fb_url || '',
+        });
+      });
+    } catch(e) {}
+
+    // Auto-posted entries from the scheduler log.
+    Object.entries(log)
       .filter(function(e) { return e[1] && typeof e[1] === 'object' && e[1].product; })
-      .sort(function(a,b) { return b[0].localeCompare(a[0]); })
-      .slice(0, 8);
-    if (!entries.length) {
+      .forEach(function(e) {
+        var v = e[1], key = e[0];
+        combined.push({
+          ts:       (v.date && v.time) ? (v.date + 'T' + v.time) : key,
+          platform: v.platform || '',
+          title:    v.product || 'Opslag',
+          status:   'published',
+          link:     '',
+        });
+      });
+
+    combined.sort(function(a, b) { return (b.ts || '').localeCompare(a.ts || ''); });
+    combined = combined.slice(0, 8);
+
+    if (!combined.length) {
       list.innerHTML = '<div style="color:var(--tx3);font-size:12px;text-align:center;padding:16px">Ingen opslag postet endnu</div>';
       return;
     }
-    list.innerHTML = entries.map(function(e) {
-      var key = e[0]; var v = e[1];
-      var platIcon = {instagram:'📸', tiktok:'🎵', facebook:'📘', twitter:'🐦'};
-      var icon = platIcon[v.platform||''] || '📤';
+    list.innerHTML = combined.map(function(p) {
+      var icon = platIcon[p.platform] || '📤';
+      var sc = statusColor[p.status] || '#888';
+      var sl = statusLabel[p.status] || (p.status || '');
+      var when = (p.ts || '').slice(0, 16).replace('T', ' ');
+      var linkHtml = p.link ? '<a href="' + _escHtml(p.link) + '" target="_blank" rel="noopener" style="font-size:10px;color:var(--ac);text-decoration:none;font-weight:600;flex-shrink:0">View ↗</a>' : '';
       return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd2)">' +
         '<div style="font-size:16px">' + icon + '</div>' +
         '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (v.product||'Opslag').substring(0,28) + '</div>' +
-        '<div style="font-size:10px;color:var(--tx2)">' + (v.date||key.split('_')[0]||'') + ' kl. ' + (v.time||key.split('_')[1]||'') + '</div>' +
+          '<div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escHtml((p.title || '').substring(0, 40)) + '</div>' +
+          '<div style="font-size:10px;color:var(--tx2)">' + (platName[p.platform] || p.platform || '') + (when ? ' · ' + when : '') + '</div>' +
         '</div>' +
-        '<div style="font-size:10px;color:var(--ac3);font-weight:600">✅</div></div>';
+        '<span style="font-size:9px;font-weight:700;color:' + sc + ';background:' + sc + '22;padding:2px 6px;border-radius:4px;flex-shrink:0">' + sl + '</span>' +
+        linkHtml +
+      '</div>';
     }).join('');
   } catch(e) {}
 }

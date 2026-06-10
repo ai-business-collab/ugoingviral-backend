@@ -149,9 +149,21 @@ Tone: {dm.get('reply_tone', 'venlig')}. Skriv på {lang}. Max 3 sætninger. Brug
 Kundens besked: "{message}"
 Svar direkte og naturligt."""
 
-async def _call_ai(prompt: str) -> str:
+def _lang_system(language: str) -> str:
+    """System prompt that enforces the requested output language across every AI
+    provider. The user prompt also states the language, but OpenAI in particular
+    needs it in the system role to reliably comply."""
+    return {
+        "da":   "Du er en ekspert i social media content. Svar KUN på dansk — aldrig på andre sprog.",
+        "en":   "You are a social media content expert. Respond ONLY in English — never any other language.",
+        "both": "You are a social media content expert. Respond in BOTH Danish and English.",
+    }.get((language or "da").lower(), "Du er en ekspert i social media content. Svar KUN på dansk — aldrig på andre sprog.")
+
+
+async def _call_ai(prompt: str, language: str = "da") -> str:
     import os
     s = store.get("settings", {})
+    system = _lang_system(language)
     
     # Try Anthropic (user key first, then env)
     anthropic_key = (s.get("anthropic_key","") if s.get("anthropic_key") and "••••" not in s.get("anthropic_key","") else "") or os.getenv("ANTHROPIC_API_KEY","")
@@ -160,7 +172,7 @@ async def _call_ai(prompt: str) -> str:
             async with httpx.AsyncClient() as c:
                 r = await c.post("https://api.anthropic.com/v1/messages",
                     headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                    json={"model": "claude-haiku-4-5", "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
+                    json={"model": "claude-haiku-4-5", "max_tokens": 800, "system": system, "messages": [{"role": "user", "content": prompt}]},
                     timeout=30)
                 r.raise_for_status()
                 return r.json()["content"][0]["text"]
@@ -173,17 +185,24 @@ async def _call_ai(prompt: str) -> str:
             async with httpx.AsyncClient() as c:
                 r = await c.post("https://api.openai.com/v1/chat/completions",
                     headers={"Authorization": f"Bearer {openai_key}", "content-type": "application/json"},
-                    json={"model": "gpt-4o-mini", "max_tokens": 800, "messages": [{"role": "system", "content": "You are a social media content expert. Always respond in English only. Never use any other language."}, {"role": "user", "content": "You must respond in English only. Do not use any other language.\n\n" + prompt}]},
+                    json={"model": "gpt-4o-mini", "max_tokens": 800, "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]},
                     timeout=30)
                 r.raise_for_status()
                 return r.json()["choices"][0]["message"]["content"]
         except: pass
+    is_en = (language or "da").lower() == "en"
     demos = {
-        "caption": "🔥 Transform your body this week!\n\nConsistency is the key to results. Start today! 💪\n\n#fitness #motivation #health #gym #workout",
-        "hook": "⚡ Stop — dette SKAL du se!",
-        "reel_script": "[HOOK 0-2s] Vidste du dette?! 🤯\n[PROBLEM 2-5s] Du spilder tid\n[LØSNING 5-20s] Vi gjort det nemt 👇\n[CTA 20-30s] Link i bio — gratis fragt!",
+        "caption": ("🔥 Transform your body this week!\n\nConsistency is the key to results. Start today! 💪\n\n#fitness #motivation #health #gym #workout"
+                    if is_en else
+                    "🔥 Forvandl din krop i denne uge!\n\nKonsistens er nøglen til resultater. Start i dag! 💪\n\n#fitness #motivation #sundhed #træning #gym"),
+        "hook": "⚡ Stop — you NEED to see this!" if is_en else "⚡ Stop — dette SKAL du se!",
+        "reel_script": ("[HOOK 0-2s] Did you know this?! 🤯\n[PROBLEM 2-5s] You're wasting time\n[SOLUTION 5-20s] We made it easy 👇\n[CTA 20-30s] Link in bio — free shipping!"
+                        if is_en else
+                        "[HOOK 0-2s] Vidste du dette?! 🤯\n[PROBLEM 2-5s] Du spilder tid\n[LØSNING 5-20s] Vi gjorde det nemt 👇\n[CTA 20-30s] Link i bio — gratis fragt!"),
         "hashtags": "#trending #viral #fitness #health #gym #workout #motivation #lifestyle #wellness #fitnessmotivation #fyp #foryoupage #explore #instagood #reels",
-        "tweet": "⚡ Nyt produkt der er ved at sælge ud — se det nu! Link i bio 🔥 #trending #nyt",
+        "tweet": ("⚡ New product selling out fast — check it now! Link in bio 🔥 #trending #new"
+                  if is_en else
+                  "⚡ Nyt produkt der er ved at sælge ud — se det nu! Link i bio 🔥 #trending #nyt"),
     }
     for k in demos:
         if k in prompt.lower(): return demos[k]
@@ -195,7 +214,7 @@ async def _call_ai(prompt: str) -> str:
 async def generate_content(request: Request, req: ContentRequest):
     from routes.viral_score import _rule_score
 
-    result = await _call_ai(_build_prompt(req))
+    result = await _call_ai(_build_prompt(req), req.language)
 
     # Score content — auto-regenerate once if score is too low
     def _quick_score(text: str) -> int:
@@ -207,7 +226,7 @@ async def generate_content(request: Request, req: ContentRequest):
 
     score = _quick_score(result)
     if score < 40:
-        regen = await _call_ai(_build_prompt(req))
+        regen = await _call_ai(_build_prompt(req), req.language)
         regen_score = _quick_score(regen)
         if regen_score > score:
             result, score = regen, regen_score
@@ -246,10 +265,10 @@ async def generate_all(req: ContentRequest):
     if req.platform == "twitter": types = ["tweet", "hashtags"]
     for ctype in types:
         req.content_type = ctype
-        text = await _call_ai(_build_prompt(req))
+        text = await _call_ai(_build_prompt(req), req.language)
         sc   = _quick_score(text, ctype)
         if sc < 40 and ctype in ("caption", "tweet"):
-            regen    = await _call_ai(_build_prompt(req))
+            regen    = await _call_ai(_build_prompt(req), req.language)
             regen_sc = _quick_score(regen, ctype)
             if regen_sc > sc:
                 text, sc = regen, regen_sc
@@ -278,7 +297,7 @@ def clear_history():
 @router.post("/api/dm/reply")
 async def dm_reply(req: DMReplyRequest):
     dm = store.get("dm_settings", {})
-    reply = await _call_ai(_ghost_prompt(req.message, req.sender_name, dm))
+    reply = await _call_ai(_ghost_prompt(req.message, req.sender_name, dm), dm.get("reply_language", "da"))
     return {"reply": reply, "ghost_mode": dm.get("ghost_mode", True)}
 
 

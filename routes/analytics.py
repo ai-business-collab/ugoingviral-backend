@@ -176,6 +176,13 @@ async def update_performance(request: Request, current_user: dict = Depends(get_
 
     ustore["content_performance"] = perf[-500:]
     _save_user_store(uid, ustore)
+
+    # Invalidate this user's cached analytics so the new/updated record is
+    # reflected immediately (GET /performance and the dashboard cache for 5 min).
+    from services.cache import cache_invalidate
+    cache_invalidate(f"analytics_performance:{uid}")
+    cache_invalidate(f"analytics_dashboard:{uid}")
+
     return {"ok": True, "post_id": post_id, "engagement_rate": engagement_rate}
 
 
