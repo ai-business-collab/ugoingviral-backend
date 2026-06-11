@@ -14,7 +14,12 @@ Environment="PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright"
 Environment="YOUTUBE_REDIRECT_URI=https://ugoingviral.com/api/youtube/callback"
 EnvironmentFile=-/root/ugoingviral-backend/.env
 
-ExecStart=/opt/ugoingviral/bin/uvicorn app:app --host 0.0.0.0 --port 8000
+# 2 workers (host has 2 vCPUs — one worker per core). Background scheduler/
+# autopilot loops are gated to a single leader worker via flock (see app.py),
+# so they never run more than once. In-memory state (response cache, video
+# render queue, slowapi rate-limiter) is per-worker — see load_test_results.md
+# "Multi-worker shared-state" section for the documented limitations.
+ExecStart=/opt/ugoingviral/bin/uvicorn app:app --host 0.0.0.0 --port 8000 --workers 2
 Restart=always
 # Chromium opens many file descriptors and spawns many child processes.
 # The systemd defaults (NOFILE=1024) cause Playwright to fail with

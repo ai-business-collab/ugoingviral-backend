@@ -26,6 +26,10 @@ __pycache__/
 *.pyc
 *.bak
 *.bak.*
+*.bak-*
+users.json.bak*
+*.db-wal
+*.db-shm
 sessions/
 
 # Logs & generated runtime data

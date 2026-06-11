@@ -9,7 +9,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-from services.users import create_user, get_user_by_email, get_user_by_id, update_user, verify_password
+from services.users import (
+    create_user, get_user_by_email, get_user_by_id, update_user, verify_password,
+    acreate_user, aget_user_by_email, aupdate_user, verify_password_async,
+)
 from services.security import (
     limiter,
     sanitize_string,
@@ -76,10 +79,12 @@ def _generate_verification_code() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
-def _issue_verification(user: dict) -> str:
+async def _issue_verification(user: dict) -> str:
     code = _generate_verification_code()
     expires = (datetime.utcnow() + timedelta(minutes=VERIFICATION_TTL_MIN)).isoformat()
-    update_user(user["id"], {
+    # Async DB write — never block the event loop (called on the hot register/
+    # login path).
+    await aupdate_user(user["id"], {
         "email_verified": False,
         "verification_code": code,
         "verification_expires": expires,
@@ -139,9 +144,9 @@ async def register(request: Request, req: RegisterRequest):
     req.name    = sanitize_string(req.name)
     req.company = sanitize_string(req.company)
     req.niche   = sanitize_string(req.niche)
-    if get_user_by_email(req.email):
+    if await aget_user_by_email(req.email):
         raise HTTPException(status_code=400, detail="Email er allerede i brug")
-    user = create_user(req.email, req.password, req.name, req.company, req.niche)
+    user = await acreate_user(req.email, req.password, req.name, req.company, req.niche)
     try:
         from services.db_sync import pg_create_user
         pg_create_user(user)
@@ -164,7 +169,7 @@ async def register(request: Request, req: RegisterRequest):
     except Exception:
         pass
     # Issue verification code, send welcome + verification emails.
-    code = _issue_verification(user)
+    code = await _issue_verification(user)
     try:
         import asyncio
         from routes.email import send_welcome_email
@@ -187,14 +192,14 @@ async def login(request: Request, req: LoginRequest):
     ip = client_ip(request)
     if is_ip_blocked(ip):
         raise HTTPException(status_code=429, detail="Too many failed attempts — try again later")
-    user = get_user_by_email(req.email)
-    if not user or not verify_password(req.password, user["hashed_password"]):
+    user = await aget_user_by_email(req.email)
+    if not user or not await verify_password_async(req.password, user["hashed_password"]):
         record_login_failure(ip, req.email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
     record_login_success(ip, req.email)
     # Block unverified accounts. Older accounts without the field are treated as verified.
     if user.get("email_verified") is False:
-        code = _issue_verification(user)
+        code = await _issue_verification(user)
         _send_verification_email_async(user["email"], user.get("name", ""), code)
         return {"requires_verification": True, "email": user["email"]}
     token = _create_token(user["id"], user["email"])
@@ -218,7 +223,7 @@ async def login(request: Request, req: LoginRequest):
         pass
     # Track last_login timestamp
     try:
-        update_user(user["id"], {"last_login": __import__('datetime').datetime.utcnow().isoformat()})
+        await aupdate_user(user["id"], {"last_login": __import__('datetime').datetime.utcnow().isoformat()})
     except Exception:
         pass
     return {"token": token, "user": _safe_user(user)}
@@ -229,7 +234,7 @@ async def login(request: Request, req: LoginRequest):
 async def verify_email(request: Request, req: VerifyEmailRequest):
     email = sanitize_string(req.email).lower()
     code = (req.code or "").strip()
-    user = get_user_by_email(email)
+    user = await aget_user_by_email(email)
     if not user:
         raise HTTPException(status_code=404, detail="No account found for this email")
     if user.get("email_verified", True):
@@ -244,12 +249,12 @@ async def verify_email(request: Request, req: VerifyEmailRequest):
             raise HTTPException(status_code=400, detail="Verification code has expired — request a new one")
     except ValueError:
         pass
-    update_user(user["id"], {
+    await aupdate_user(user["id"], {
         "email_verified": True,
         "verification_code": "",
         "verification_expires": "",
     })
-    user = get_user_by_email(email)
+    user = await aget_user_by_email(email)
     token = _create_token(user["id"], user["email"])
     return {"token": token, "user": _safe_user(user)}
 
@@ -258,11 +263,11 @@ async def verify_email(request: Request, req: VerifyEmailRequest):
 @limiter.limit("3/minute")
 async def resend_verification(request: Request, req: ResendVerificationRequest):
     email = sanitize_string(req.email).lower()
-    user = get_user_by_email(email)
+    user = await aget_user_by_email(email)
     # Don't leak whether the email exists.
     if not user or user.get("email_verified", True):
         return {"ok": True}
-    code = _issue_verification(user)
+    code = await _issue_verification(user)
     _send_verification_email_async(user["email"], user.get("name", ""), code)
     return {"ok": True}
 
@@ -279,7 +284,7 @@ async def update_profile(req: UpdateProfileRequest, current_user: dict = Depends
         v = getattr(req, f, "").strip()
         if v is not None:
             updates[f] = v
-    updated = update_user(current_user["id"], updates)
+    updated = await aupdate_user(current_user["id"], updates)
     if not updated:
         raise HTTPException(status_code=404, detail="Bruger ikke fundet")
     return _safe_user(updated)
@@ -336,9 +341,9 @@ async def google_callback(code: str = None, error: str = None):
     if not email:
         return RedirectResponse("/?error=google_no_email")
 
-    user = get_user_by_email(email)
+    user = await aget_user_by_email(email)
     if not user:
-        user = create_user(email, os.urandom(24).hex(), name, "")
+        user = await acreate_user(email, os.urandom(24).hex(), name, "")
         try:
             from routes.email import send_welcome_email
             import asyncio
@@ -346,7 +351,7 @@ async def google_callback(code: str = None, error: str = None):
         except Exception:
             pass
     # OAuth provider already verified the email — mark verified.
-    update_user(user["id"], {"email_verified": True, "verification_code": "", "verification_expires": ""})
+    await aupdate_user(user["id"], {"email_verified": True, "verification_code": "", "verification_expires": ""})
 
     if not user.get("is_active"):
         return RedirectResponse("/?error=account_inactive")
@@ -430,9 +435,9 @@ async def github_callback(code: str = None, error: str = None):
 
     name = gh_user.get("name") or gh_user.get("login") or ""
 
-    user = get_user_by_email(email)
+    user = await aget_user_by_email(email)
     if not user:
-        user = create_user(email, os.urandom(24).hex(), name, "")
+        user = await acreate_user(email, os.urandom(24).hex(), name, "")
         try:
             from routes.email import send_welcome_email
             import asyncio
@@ -440,7 +445,7 @@ async def github_callback(code: str = None, error: str = None):
         except Exception:
             pass
     # OAuth provider already verified the email — mark verified.
-    update_user(user["id"], {"email_verified": True, "verification_code": "", "verification_expires": ""})
+    await aupdate_user(user["id"], {"email_verified": True, "verification_code": "", "verification_expires": ""})
 
     if not user.get("is_active"):
         return RedirectResponse("/?error=account_inactive")
@@ -455,5 +460,5 @@ async def set_niche(req: Request, current_user: dict = Depends(get_current_user)
     niche = (d.get("niche") or "").strip()
     if not niche:
         raise HTTPException(status_code=400, detail="niche required")
-    update_user(current_user["id"], {"niche": niche})
+    await aupdate_user(current_user["id"], {"niche": niche})
     return {"ok": True, "niche": niche}

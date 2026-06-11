@@ -183,3 +183,110 @@ rather than production.)
 **~10 concurrent users on the write path**; already at **100 concurrent it degrades to
 20–32 s auth latency**, and at **1,000 it collapses**. Read-only traffic against the cached
 endpoints scales far better but is held hostage by the same blocked event loop.
+
+---
+
+# Re-test after fixes (2026-06-12) — async bcrypt + SQLite + multi-worker
+
+The three bottlenecks above were fixed and the load test was re-run against an
+isolated clone of the **new** code (same methodology: copy of the real
+`users.json` — now 1,953 users — migrated to SQLite; rate limiter disabled to
+measure raw capacity; 2 uvicorn workers, matching the new production config).
+
+### What changed
+
+- **TASK 1 — async bcrypt.** `pwd_context.hash/verify` now run via
+  `asyncio.to_thread` (`hash_password_async` / `verify_password_async`) on every
+  *async* hot path (register, login, verify-email, password change). The event
+  loop is never blocked on hashing. (Admin/employee auth uses *sync* `def`
+  handlers, which already run in FastAPI's threadpool — off the event loop — so
+  no change was needed there.)
+- **TASK 2 — SQLite (aiosqlite).** `users.json` → `users.db`: `users(id PK,
+  email, data JSON)` with an index on `lower(email)`. Indexed email lookup (no
+  linear scan), ACID transactions (no torn writes), WAL mode. The sync API is
+  unchanged so all ~15 call sites kept working; the async auth path uses
+  aiosqlite. Existing `hashed_password` values are migrated verbatim, so **all
+  existing logins/JWTs keep working**. `users.json` is backed up to
+  `users.json.bak-<ts>` before migration; migration is idempotent and
+  multi-process safe (BEGIN IMMEDIATE).
+- **TASK 3 — 2 uvicorn workers** (host has 2 vCPUs). Background scheduler/
+  autopilot/billing loops are gated to a single **leader** worker via an
+  exclusive `flock` (verified: exactly one worker holds the lock), so they never
+  double-run.
+
+### Results (per-endpoint, response time in ms)
+
+**Phase 1 — 10 concurrent**  (RPS 16.7 · 0 errors · 0 corruption)
+
+| Endpoint | Err % | Avg | p95 |
+|---|---|---|---|
+| register | 0.0 % | 1525 | 1952 |
+| login | 0.0 % | 1290 | 1788 |
+| dashboard | 0.0 % | 44 | 48 |
+| credits | 0.0 % | 111 | 117 |
+| analytics | 0.0 % | 50 | 56 |
+| library | 0.0 % | 34 | 39 |
+
+**Phase 2 — 100 concurrent**  (RPS 22.7 · **0 errors** · **0 corruption**)
+
+| Endpoint | Err % | Avg | p95 | <2 s? |
+|---|---|---|---|---|
+| dashboard | 0.0 % | 440 | 1030 | ✅ |
+| credits | 0.0 % | 259 | 753 | ✅ |
+| analytics | 0.0 % | 231 | 684 | ✅ |
+| library | 0.0 % | 196 | 617 | ✅ |
+| register | 0.0 % | 7954 | 13694 | ❌ (bcrypt-bound) |
+| login | 0.0 % | 7967 | 13929 | ❌ (bcrypt-bound) |
+
+**Phase 3 — 1000 concurrent**  (extreme overload, well beyond the 100 target)
+
+| Endpoint | Err % | Avg | p95 |
+|---|---|---|---|
+| register | 59.3 % | 32581 | 58415 |
+| login | 85.5 % | 53772 | 61112 |
+| dashboard | 0.5 % | 17555 | 38893 |
+| credits | 0.0 % | 10587 | 33504 |
+| library | 0.0 % | 4743 | 15681 |
+
+### Verdict vs. target (100 concurrent, <2 s, 0 corruption)
+
+- **0 corruption — ACHIEVED.** Zero torn/half-written reads in any phase
+  (`lost_writes=0` at 10 and 100; the old JSON build reproduced a live
+  `JSONDecodeError` mid-write). Zero `database is locked` errors after the
+  transaction fix (autocommit + explicit `BEGIN IMMEDIATE` + 30 s busy_timeout
+  so contended writers queue instead of failing).
+- **Fetch endpoints <2 s — ACHIEVED.** dashboard / credits / analytics / library
+  (the operations the task names: "fetch dashboard, fetch credits, fetch
+  analytics, browse content library") are all **p95 ≤ 1.03 s** at 100 concurrent
+  with 0 errors. Vs. the old build's 0.5–3.5 s (held hostage by the blocked
+  loop) and ~100× worse on the avg — a direct result of the email index + the
+  event loop no longer being blocked by bcrypt.
+- **register / login at 100 concurrent — NOT <2 s (inherent, by design).** These
+  are bound by **bcrypt CPU**, not by I/O or locking. bcrypt cost factor 12
+  is ≈250 ms of CPU per hash; the bcrypt C-extension releases the GIL, so the
+  ceiling is ≈ (2 vCPUs ÷ 0.25 s) ≈ **8 hashes/sec** regardless of workers or
+  threads. A 100-simultaneous-hash burst therefore takes ≈12 s to drain.
+  Offloading bcrypt did its job — it stops hashing from **blocking other
+  requests** (reads stay <2 s *during* the auth-heavy phases) — but it cannot
+  beat the CPU ceiling. Lowering the cost factor would not reach <2 s for a
+  100-simultaneous burst without dropping below a safe value, so the factor was
+  **left at 12 (a security decision, deliberately not weakened)**. The real
+  levers for sub-2 s auth at this burst size are more vCPUs (horizontal scale)
+  or moving auth to a dedicated pool — recommended for phase 2.
+
+### Multi-worker shared-state — documented limitations
+
+SQLite (`users.db`, WAL) and the `user_data/*.json` files live on the
+filesystem and are correctly shared across the 2 workers. **In-memory** state is
+**per-worker** and NOT shared:
+
+| State | Module | Effect with 2 workers |
+|---|---|---|
+| Response cache | `services/cache.py` `_STORE` | Each worker warms its own cache → slightly lower hit-rate; TTL-correct, no staleness risk. |
+| Video render queue | `routes/studio.py` `_vq_*` | Per-worker queue → effective concurrency up to `MAX_CONCURRENT_VIDEOS × workers`. Generation is also per-user rate-limited (10/h) + provider-side, but pin to the leader or move to Redis/DB in phase 2 if provider limits bite. |
+| Rate limiter | slowapi (in-memory) | Per-worker counters → effective limit ≈ ×workers. Acceptable short-term; back with Redis for exact global limits. |
+| Scheduler/autopilot loops | `app.py` startup | **Gated to one leader worker via flock — runs exactly once** (verified). |
+
+**Recommendation (phase 2):** move the response cache, rate limiter and video
+queue to Redis so worker count can scale past 2 without these caveats, and
+continue the storage migration SQLite → Postgres.

@@ -27,6 +27,9 @@ import uuid
 import httpx
 
 BASE_URL   = os.getenv("LT_BASE", "http://127.0.0.1:8055")
+# Users now live in SQLite (post-migration). Verification codes are read straight
+# from the DB. (Falls back to the legacy users.json path if no DB is given.)
+USERS_DB   = os.getenv("LT_USERS_DB", "/tmp/ugv_loadtest/users.db")
 USERS_JSON = os.getenv("LT_USERS_JSON", "/tmp/ugv_loadtest/users.json")
 PASSWORD   = "loadtestPass123"
 PHASES     = [10, 100, 1000]
@@ -103,17 +106,33 @@ async def bounded_gather(coros, limit):
 
 
 def load_codes(emails):
-    """Read the clone users.json -> {email: (user_id, verification_code)}.
+    """Map each registered test email -> (user_id, verification_code).
 
-    Returns ({}, error_string) if the file is unreadable (e.g. corrupted by
-    concurrent lock-free writes — itself a finding)."""
+    Reads from the SQLite users.db (post-migration) when present, else falls
+    back to the legacy users.json. Returns ({}, error_string) if the store is
+    unreadable — which, with SQLite's atomic writes, should no longer happen
+    under concurrency (the old JSON path could be caught mid torn-write)."""
+    wanted = set(emails)
+    out = {}
+    if USERS_DB and os.path.exists(USERS_DB):
+        import sqlite3
+        try:
+            conn = sqlite3.connect(USERS_DB, timeout=10.0)
+            conn.execute("PRAGMA busy_timeout=10000")
+            for (data_str,) in conn.execute("SELECT data FROM users"):
+                u = json.loads(data_str)
+                em = u.get("email", "")
+                if em in wanted:
+                    out[em] = (u.get("id"), u.get("verification_code", ""))
+            conn.close()
+            return out, None
+        except Exception as e:
+            return {}, f"{type(e).__name__}: {e}"
     try:
         with open(USERS_JSON, "r", encoding="utf-8") as f:
             data = json.load(f)
     except Exception as e:
         return {}, f"{type(e).__name__}: {e}"
-    wanted = set(emails)
-    out = {}
     for u in data.get("users", []):
         em = u.get("email", "")
         if em in wanted:

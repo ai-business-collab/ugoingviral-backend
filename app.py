@@ -374,10 +374,56 @@ async def serve_affiliate():
     return FileResponse(p)
 
 
+# ── Multi-worker leader election ─────────────────────────────────────────────
+# With >1 uvicorn worker the startup hook runs in EVERY worker process. The
+# background loops below (scheduler, autopilot, telegram reports, auto-DM,
+# analytics sync, cleanup) MUST run on exactly one worker — otherwise scheduled
+# posts get published N times, credit/billing checks run N times, etc. We elect
+# a single leader with a non-blocking exclusive flock on a lockfile: the first
+# worker to grab it runs the loops; the others become stateless request servers.
+# The lock is held for the process lifetime (the fh is kept alive intentionally)
+# and is released automatically by the OS if that worker dies, so another worker
+# can take over on the next start.
+import logging as _logging
+logger = _logging.getLogger("ugoingviral")
+
+# Lock path is namespaced by this deployment's directory so a second copy of the
+# app on the same host (e.g. a load-test clone) can never steal the production
+# scheduler lock — each deployment elects its own single leader.
+import hashlib as _hashlib
+_APP_DIR = os.path.dirname(os.path.abspath(__file__))
+_LEADER_LOCK_PATH = os.path.join(
+    "/tmp", f"ugoingviral_scheduler_{_hashlib.md5(_APP_DIR.encode()).hexdigest()[:8]}.lock"
+)
+_leader_lock_fh = None
+
+
+def _try_become_scheduler_leader() -> bool:
+    global _leader_lock_fh
+    import fcntl
+    try:
+        fh = open(_LEADER_LOCK_PATH, "w")
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _leader_lock_fh = fh  # keep ref alive → lock held for process lifetime
+        return True
+    except Exception:
+        return False
+
+
 @app.on_event("startup")
 async def startup_event():
     from services.db import init_db
     init_db()
+    # Importing services.users runs the one-time users.json→SQLite migration
+    # (idempotent + multi-process safe via BEGIN IMMEDIATE). Touch it here so the
+    # DB is ready and migrated before the first request, in every worker.
+    import services.users  # noqa: F401
+
+    if not _try_become_scheduler_leader():
+        logger.info("Worker %s: standby (scheduler leader already elected) — "
+                    "serving requests only, background loops skipped", os.getpid())
+        return
+    logger.info("Worker %s: elected scheduler leader — starting background loops", os.getpid())
     asyncio.create_task(scheduler.run_scheduler())
     asyncio.create_task(autopilot.run_autopilot_credit_checker())
     asyncio.create_task(telegram.run_daily_reports())

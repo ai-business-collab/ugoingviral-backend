@@ -281,21 +281,25 @@ async def update_user_profile(request: Request, current_user: dict = _Depends(_g
 @router.post("/api/user/change_password")
 async def change_user_password(request: Request, current_user: dict = _Depends(_get_current_user)):
     """Change the authenticated user's password after verifying the current one."""
-    from services.users import get_user_by_id, update_user, verify_password, pwd_context
+    from services.users import (
+        aget_user_by_id, aupdate_user, verify_password_async, hash_password_async,
+    )
     body = await request.json()
     current_pw = body.get("current_password") or ""
     new_pw = body.get("new_password") or ""
     if len(new_pw) < 6:
         raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
-    user = get_user_by_id(current_user["id"])
+    user = await aget_user_by_id(current_user["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     hashed = user.get("hashed_password") or ""
     # Accounts created via OAuth (Google/GitHub) may have no password yet — allow
     # setting one without a current password in that case.
-    if hashed and not verify_password(current_pw, hashed):
+    # bcrypt verify/hash run off the event loop (async).
+    if hashed and not await verify_password_async(current_pw, hashed):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
-    update_user(current_user["id"], {"hashed_password": pwd_context.hash(new_pw)})
+    new_hash = await hash_password_async(new_pw)
+    await aupdate_user(current_user["id"], {"hashed_password": new_hash})
     return {"ok": True}
 
 
