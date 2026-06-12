@@ -25,7 +25,8 @@ QA_EMAIL      = "qa-auto@ugoingviral.com"
 QA_PASSWORD   = "QaAuto2026!"
 RESULTS_FILE  = os.path.join(BASE_DIR, "qa_results.json")
 USER_DATA_DIR = os.path.join(BASE_DIR, "user_data")
-USERS_FILE    = os.path.join(BASE_DIR, "users.json")
+USERS_FILE    = os.path.join(BASE_DIR, "users.json")   # legacy (pre-SQLite migration)
+USERS_DB      = os.path.join(BASE_DIR, "users.db")     # SQLite store (current source of truth)
 NEXORA_KEY    = os.getenv("NEXORA_API_KEY", "nexora-core-2026")
 NEXORA_URL    = "https://nex-core.tech/api/qa/report"
 TG_BOT_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -61,8 +62,22 @@ class QARunner:
     def _auth_headers(self):
         return {"Authorization": f"Bearer {self.token}"}
 
+    @staticmethod
+    def _db_conn():
+        """Open the SQLite user store the way the app does (WAL + busy_timeout)
+        so QA writes queue behind the live app's writers instead of erroring on
+        a locked DB. Users migrated from users.json → users.db, so the JSON file
+        is now stale; QA must read/write the DB to affect the running app."""
+        import sqlite3
+        conn = sqlite3.connect(USERS_DB, timeout=30.0, isolation_level=None)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA busy_timeout=30000")
+        return conn
+
     def _bypass_email_verification(self, email: str) -> str | None:
-        """Mark a qa- test user as email_verified=True directly in users.json.
+        """Mark a qa- test user as email_verified=True directly in the SQLite
+        user store (users.db). Users are stored as a JSON blob in the `data`
+        column, so we read-modify-write that blob.
 
         Only operates on emails starting with 'qa-' so production flow is never
         affected. Returns the user_id if the bypass was applied, else None.
@@ -70,22 +85,25 @@ class QARunner:
         if not email or not email.startswith("qa-"):
             return None
         try:
-            if not os.path.exists(USERS_FILE):
-                return None
-            with open(USERS_FILE, encoding="utf-8") as f:
-                data = json.load(f)
-            users = data.get("users", data) if isinstance(data, dict) else data
-            uid = None
-            for u in users:
-                if (u.get("email") or "").lower() == email.lower():
-                    u["email_verified"] = True
-                    u["verification_code"] = ""
-                    u["verification_expires"] = ""
-                    uid = u.get("id")
-                    break
-            with open(USERS_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            return uid
+            conn = self._db_conn()
+            try:
+                row = conn.execute(
+                    "SELECT id, data FROM users WHERE lower(email) = ? LIMIT 1",
+                    (email.lower(),),
+                ).fetchone()
+                if not row:
+                    return None
+                user = json.loads(row["data"])
+                user["email_verified"]      = True
+                user["verification_code"]   = ""
+                user["verification_expires"] = ""
+                conn.execute(
+                    "UPDATE users SET data = ? WHERE id = ?",
+                    (json.dumps(user, ensure_ascii=False), row["id"]),
+                )
+                return user.get("id") or row["id"]
+            finally:
+                conn.close()
         except Exception:
             return None
 
@@ -132,7 +150,12 @@ class QARunner:
         return None, None, email
 
     def _set_billing(self, user_id: str, plan: str, credits: int) -> bool:
-        """Directly write billing plan + credits into the user's JSON store."""
+        """Write billing plan + credits into the user's per-user store
+        (user_data/{user_id}.json). Billing is NOT in users.db — the app reads
+        it from the ContextVar-backed per-user store (services.store), keyed by
+        user_id, as store["billing"] = {"plan", "credits"}. Returns True on success."""
+        if not user_id:
+            return False
         user_file = os.path.join(USER_DATA_DIR, f"{user_id}.json")
         try:
             data = {}
@@ -150,15 +173,29 @@ class QARunner:
             return False
 
     def _remove_fresh_user(self, user_id: str, email: str):
-        """Delete a disposable test user from users.json and remove their data file."""
+        """Delete a disposable test user from the SQLite store (and clean up any
+        stale legacy JSON + per-user data file)."""
+        try:
+            conn = self._db_conn()
+            try:
+                conn.execute(
+                    "DELETE FROM users WHERE id = ? OR lower(email) = ?",
+                    (user_id, (email or "").lower()),
+                )
+            finally:
+                conn.close()
+        except Exception:
+            pass
+        # Legacy cleanup — harmless if the files no longer exist.
         try:
             if os.path.exists(USERS_FILE):
                 with open(USERS_FILE, encoding="utf-8") as f:
                     users = json.load(f)
-                users = [u for u in users
-                         if u.get("id") != user_id and u.get("email") != email]
-                with open(USERS_FILE, "w", encoding="utf-8") as f:
-                    json.dump(users, f, indent=2, ensure_ascii=False)
+                if isinstance(users, list):
+                    users = [u for u in users
+                             if u.get("id") != user_id and u.get("email") != email]
+                    with open(USERS_FILE, "w", encoding="utf-8") as f:
+                        json.dump(users, f, indent=2, ensure_ascii=False)
         except Exception:
             pass
         user_file = os.path.join(USER_DATA_DIR, f"{user_id}.json")
