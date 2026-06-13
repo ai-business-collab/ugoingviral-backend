@@ -24,8 +24,12 @@ RUNWAY_API_KEY    = os.getenv("RUNWAY_API_KEY", "")
 RUNWAY_MODEL_SHORT = os.getenv("RUNWAY_MODEL", "gen3a_turbo")
 RUNWAY_MODEL_LONG  = os.getenv("RUNWAY_MODEL_LONG", "gen4.5")
 LUMA_API_KEY      = os.getenv("LUMA_API_KEY", "")
-# Luma Ray 3.2 (GA) — premium text/image-to-video via the Dream Machine v1 API.
-LUMA_API_BASE     = os.getenv("LUMA_API_BASE", "https://api.lumalabs.ai/dream-machine/v1")
+# Luma Ray 3.2 (GA) — premium text/image-to-video via the Luma Agents API.
+# NOTE: Ray 3.2 lives on the AGENTS platform (agents.lumalabs.ai/v1), NOT the
+# older Dream Machine API (api.lumalabs.ai/dream-machine/v1). The platform.lumalabs.ai
+# keys (luma-api-…) authenticate against the agents host. Create body uses
+# `type: "video"`; the finished MP4 URL is returned in `output[0].url`.
+LUMA_API_BASE     = os.getenv("LUMA_API_BASE", "https://agents.lumalabs.ai/v1")
 LUMA_RAY_MODEL    = os.getenv("LUMA_RAY_MODEL", "ray-3.2")
 REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
 # Hyper Realistic + Premium Animation (Pro+ video providers). Base URLs are env-configurable
@@ -461,13 +465,12 @@ async def _luma_ray_generate(prompt: str, duration: int = 5, aspect_ratio: str =
     # Luma supports 1:1, 16:9, 9:16, 4:3, 3:4, 21:9, 9:21 — map our 4:5 to 4:3.
     ar_map = {"16:9": "16:9", "9:16": "9:16", "1:1": "1:1", "4:5": "4:3"}
     payload = {
-        "generation_type": "video",
-        "model":           LUMA_RAY_MODEL,
-        "prompt":          prompt,
-        "aspect_ratio":    ar_map.get(aspect_ratio, "16:9"),
-        "duration":        f"{duration}s",
-        "resolution":      os.getenv("LUMA_RAY_RESOLUTION", "1080p"),
-        "loop":            False,
+        "model":        LUMA_RAY_MODEL,
+        "type":         "video",
+        "prompt":       prompt,
+        "aspect_ratio": ar_map.get(aspect_ratio, "16:9"),
+        "duration":     f"{duration}s",
+        "resolution":   os.getenv("LUMA_RAY_RESOLUTION", "720p"),
     }
     if image_url:
         # Image-to-video: the reference image becomes the opening keyframe so a
@@ -514,7 +517,16 @@ async def _luma_ray_generate(prompt: str, duration: int = 5, aspect_ratio: str =
                 data  = poll.json()
                 state = data.get("state")
                 if state == "completed":
-                    video = (data.get("assets") or {}).get("video")
+                    # Agents API returns finished assets in output[] as
+                    # {type:"video", url:"…mp4"}. Fall back to the legacy
+                    # assets.video shape in case of API variance.
+                    video = None
+                    for item in (data.get("output") or []):
+                        if isinstance(item, dict) and item.get("type") == "video" and item.get("url"):
+                            video = item["url"]
+                            break
+                    if not video:
+                        video = (data.get("assets") or {}).get("video")
                     if not video:
                         raise HTTPException(status_code=502, detail="Luma Ray completed but returned no video URL")
                     try:
@@ -525,7 +537,7 @@ async def _luma_ray_generate(prompt: str, duration: int = 5, aspect_ratio: str =
                     logger.info("Luma Ray generation %s completed", gen_id)
                     return video
                 if state == "failed":
-                    reason = str(data.get("failure_reason") or "unknown")
+                    reason = str(data.get("failure_reason") or data.get("failure_code") or "unknown")
                     if _luma_text_is_funds(reason):
                         logger.error("Luma Ray generation %s failed — Luma account funds/quota: %s",
                                      gen_id, reason)
