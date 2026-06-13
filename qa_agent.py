@@ -1,7 +1,7 @@
 #!/opt/ugoingviral/bin/python3
 """UgoingViral QA Agent — Standalone cron script"""
 import os, sys, json, time, argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -1507,6 +1507,176 @@ class QARunner:
         self._remove_fresh_user(uid, email)
 
     # ------------------------------------------------------------------
+    # Suite 17 — Auto Pilot toggle, content generation, scheduling, and
+    #            in-platform agent platform commands (no real social posts)
+    # ------------------------------------------------------------------
+
+    def suite17_autopilot_posting(self):
+        print("\n=== SUITE 17: Auto Pilot + Posting + Agent ===")
+
+        token, uid, email = self._fresh_user("s17")
+        if not uid:
+            self._fail("s17_register", "could not create test user")
+            return
+        # Pro plan + enough credits to clear the 200-credit Auto Pilot floor.
+        self._set_billing(uid, "pro", 500)
+        h = {"Authorization": f"Bearer {token}"}
+
+        try:
+            # ── 1. Auto Pilot can be ENABLED via API ──────────────────────────
+            try:
+                r = self.client.post("/api/autopilot/toggle",
+                                     json={"active": True}, headers=h)
+                d = r.json() if r.status_code == 200 else {}
+                if r.status_code == 200 and d.get("ok") is True and d.get("active") is True:
+                    self._pass("s17_autopilot_enable", "active=True")
+                else:
+                    self._fail("s17_autopilot_enable",
+                               f"status={r.status_code} body={r.text[:120]}")
+            except Exception as e:
+                self._fail("s17_autopilot_enable", str(e))
+
+            # status endpoint should reflect the enabled state
+            try:
+                r = self.client.get("/api/autopilot/status", headers=h)
+                if r.status_code == 200 and r.json().get("active") is True:
+                    self._pass("s17_autopilot_status_active")
+                else:
+                    self._fail("s17_autopilot_status_active",
+                               f"status={r.status_code} body={r.text[:120]}")
+            except Exception as e:
+                self._fail("s17_autopilot_status_active", str(e))
+
+            # ── 2. Auto Pilot can be DISABLED via API ─────────────────────────
+            try:
+                r = self.client.post("/api/autopilot/toggle",
+                                     json={"active": False}, headers=h)
+                d = r.json() if r.status_code == 200 else {}
+                if r.status_code == 200 and d.get("ok") is True and d.get("active") is False:
+                    self._pass("s17_autopilot_disable", "active=False")
+                else:
+                    self._fail("s17_autopilot_disable",
+                               f"status={r.status_code} body={r.text[:120]}")
+            except Exception as e:
+                self._fail("s17_autopilot_disable", str(e))
+
+            # ── 3. Content generation returns content WITHOUT posting ─────────
+            if self.skip_ai:
+                self._pass("s17_content_gen_no_post", "--skip-ai flag set")
+            else:
+                try:
+                    # baseline scheduled-post count before generating
+                    base = self.client.get("/api/posts/scheduled", headers=h)
+                    base_n = len(base.json().get("posts", [])) if base.status_code == 200 else 0
+
+                    r = self.client.post("/api/content/generate", headers=h,
+                                         json={"content_type": "caption",
+                                               "platform": "tiktok",
+                                               "product_title": "vores nye kaffemaskine",
+                                               "language": "da", "tone": "engaging"},
+                                         timeout=40)
+                    if r.status_code in (200, 201) and (r.json().get("content") or "").strip():
+                        # confirm nothing was published/scheduled as a side effect
+                        after = self.client.get("/api/posts/scheduled", headers=h)
+                        after_n = len(after.json().get("posts", [])) if after.status_code == 200 else 0
+                        if after_n == base_n:
+                            self._pass("s17_content_gen_no_post",
+                                       f"content returned, scheduled unchanged ({after_n})")
+                        else:
+                            self._fail("s17_content_gen_no_post",
+                                       f"content gen created {after_n - base_n} post(s) — should not post")
+                    elif r.status_code in (402, 403):
+                        self._pass("s17_content_gen_no_post", f"gated status={r.status_code}")
+                    else:
+                        self._fail("s17_content_gen_no_post",
+                                   f"status={r.status_code} body={r.text[:120]}")
+                except Exception as e:
+                    self._fail("s17_content_gen_no_post", str(e))
+
+            # ── 4. Scheduled post creation + listing ──────────────────────────
+            test_caption = f"QA scheduled post {int(time.time())}"
+            try:
+                future = (datetime.utcnow() + timedelta(days=2)).isoformat()
+                r = self.client.post("/api/posts/schedule", headers=h,
+                                     json={"platform": "tiktok",
+                                           "content": test_caption,
+                                           "scheduled_time": future,
+                                           "mode": "ui"})
+                if r.status_code == 200 and r.json().get("status") == "scheduled":
+                    self._pass("s17_schedule_create", f"id={r.json().get('id')}")
+                else:
+                    self._fail("s17_schedule_create",
+                               f"status={r.status_code} body={r.text[:120]}")
+            except Exception as e:
+                self._fail("s17_schedule_create", str(e))
+
+            try:
+                r = self.client.get("/api/posts/scheduled", headers=h)
+                posts = r.json().get("posts", []) if r.status_code == 200 else []
+                if r.status_code == 200 and any(p.get("content") == test_caption for p in posts):
+                    self._pass("s17_schedule_list", f"{len(posts)} post(s) listed")
+                else:
+                    self._fail("s17_schedule_list",
+                               f"status={r.status_code} scheduled post not found in list")
+            except Exception as e:
+                self._fail("s17_schedule_list", str(e))
+
+            # ── 5. Agent executes "lav et opslag om [topic]" → returns content ─
+            if self.skip_ai:
+                self._pass("s17_agent_make_post", "--skip-ai flag set")
+            else:
+                try:
+                    r = self.client.post("/api/agent/chat", headers=h,
+                                         json={"message": "Lav et opslag om vores nye kaffemaskine",
+                                               "history": [], "context": ""},
+                                         timeout=40)
+                    resp = (r.json().get("response") or "") if r.status_code == 200 else ""
+                    if r.status_code == 200 and len(resp.strip()) > 20:
+                        self._pass("s17_agent_make_post", f"{len(resp)} chars returned")
+                    else:
+                        self._fail("s17_agent_make_post",
+                                   f"status={r.status_code} body={r.text[:120]}")
+                except Exception as e:
+                    self._fail("s17_agent_make_post", str(e))
+
+            # ── 6. Agent responds to platform commands (TikTok / schedule / stats)
+            if self.skip_ai:
+                self._pass("s17_agent_platform_commands", "--skip-ai flag set")
+            else:
+                platform_cmds = [
+                    ("tiktok_post",    "Lav et TikTok opslag om vores nye produkt"),
+                    ("schedule_week",  "Planlæg 3 opslag til næste uge"),
+                    ("show_stats",     "Vis mig mine statistikker"),
+                ]
+                cmd_ok = 0
+                details = []
+                for key, msg in platform_cmds:
+                    try:
+                        r = self.client.post("/api/agent/chat", headers=h,
+                                             json={"message": msg, "history": [], "context": ""},
+                                             timeout=40)
+                        if r.status_code == 200:
+                            body = r.json()
+                            resp = (body.get("response") or "").strip()
+                            acts = body.get("actions", []) or []
+                            if len(resp) > 10 or acts:
+                                cmd_ok += 1
+                                details.append(f"{key}:{len(resp)}c/{len(acts)}act")
+                            else:
+                                details.append(f"{key}:empty")
+                        else:
+                            details.append(f"{key}:HTTP{r.status_code}")
+                    except Exception as e:
+                        details.append(f"{key}:err {str(e)[:30]}")
+                if cmd_ok == len(platform_cmds):
+                    self._pass("s17_agent_platform_commands", "; ".join(details))
+                else:
+                    self._fail("s17_agent_platform_commands",
+                               f"{cmd_ok}/{len(platform_cmds)} ok — " + "; ".join(details))
+        finally:
+            self._remove_fresh_user(uid, email)
+
+    # ------------------------------------------------------------------
     # Entry point
     # ------------------------------------------------------------------
 
@@ -1530,6 +1700,7 @@ class QARunner:
         self.suite14_anti_ban()
         self.suite15_analytics()
         self.suite16_ui_regressions()
+        self.suite17_autopilot_posting()
         self._cleanup()
 
         passed = sum(1 for r in self.results if r["status"] == "PASS")
