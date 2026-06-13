@@ -4667,11 +4667,12 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-size:14px;font-weight:700;color:var(--tx)">✨ Premium video providers</div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation — included on any paid plan · 50 / 85 / 100 / 120 credits per 5s / 10s / 15s / 30s · 30s long-form via Runway gen4.5</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation + Ultra Cinematic — included on any paid plan · 50 / 85 / 100 / 120 credits per 5s / 10s / 15s / 30s · 30s long-form via Runway gen4.5</div>
         </div>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('kling')" title="Hyper Realistic video powered by Kling AI" style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
           <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
+          <button class="btn bsm" id="sp-tab-luma" onclick="spSwitchProvider('luma_ray')" title="Ultra Cinematic — powered by Luma Ray 3.2 (text & image-to-video)" style="background:rgba(16,185,129,.16);color:#34d399;border:1px solid rgba(16,185,129,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">🎬 Ultra Cinematic</button>
         </div>
       </div>
       <div id="sp-locked" style="display:none;padding:18px;background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:10px;text-align:center;font-size:13px;color:var(--tx3)">
@@ -6852,8 +6853,8 @@ async function loadMyVideos() {
       list.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--tx3);text-align:center;padding:24px">No videos yet — generate one above and it will appear here.</div>';
       return;
     }
-    const kindLabel = {normal:'Normal', hyper_realistic:'Hyper Realistic', premium_animation:'Premium Animation', legacy:'Legacy'};
-    const kindColor = {normal:'var(--ac)', hyper_realistic:'#a78bfa', premium_animation:'#f472b6', legacy:'var(--tx3)'};
+    const kindLabel = {normal:'Normal', hyper_realistic:'Hyper Realistic', premium_animation:'Premium Animation', luma_ray:'Ultra Cinematic', legacy:'Legacy'};
+    const kindColor = {normal:'var(--ac)', hyper_realistic:'#a78bfa', premium_animation:'#f472b6', luma_ray:'#34d399', legacy:'var(--tx3)'};
     list.innerHTML = videos.slice(0, 24).map(v => {
       const k = v.kind || 'normal';
       const url = v.url || (v.assembled_url || '');
@@ -18191,22 +18192,32 @@ function refreshStudioPremiumGate() {
   document.getElementById('sp-form').style.display   = allowed ? 'block' : 'none';
 }
 
+// Premium provider tabs: Hyper Realistic (Kling), Premium Animation (Pika),
+// Luma Ray 3.2. Keyed by provider id → {tab element id, label, accent colour}.
+var SP_PROVIDERS = {
+  kling:    {tab: 'sp-tab-higgs', label: 'Hyper Realistic (Kling AI)', color: 'var(--ac)'},
+  pika:     {tab: 'sp-tab-pika',  label: 'Premium Animation',          color: '#a78bfa'},
+  luma_ray: {tab: 'sp-tab-luma',  label: 'Ultra Cinematic',            color: '#34d399'},
+};
+
 function spSwitchProvider(provider) {
-  // Hyper Realistic is powered by Kling AI; 'higgsfield' kept as a legacy alias.
+  // 'higgsfield' kept as a legacy alias for Hyper Realistic (Kling).
   if (provider === 'higgsfield') provider = 'kling';
-  if (provider !== 'kling' && provider !== 'pika') provider = 'kling';
+  if (!SP_PROVIDERS[provider]) provider = 'kling';
   window._spProvider = provider;
-  var kling = document.getElementById('sp-tab-higgs');
-  var pika  = document.getElementById('sp-tab-pika');
-  var lbl   = document.getElementById('sp-provider-lbl');
-  var active = provider === 'kling' ? kling : pika;
-  var idle   = provider === 'kling' ? pika  : kling;
-  // Active tab: solid accent; idle tab: dimmed.
-  if (active) { active.style.opacity = '1'; active.style.outline = '2px solid currentColor'; active.style.outlineOffset = '-2px'; }
-  if (idle)   { idle.style.opacity = '.55'; idle.style.outline = 'none'; }
+  Object.keys(SP_PROVIDERS).forEach(function(key) {
+    var el = document.getElementById(SP_PROVIDERS[key].tab);
+    if (!el) return;
+    if (key === provider) {
+      el.style.opacity = '1'; el.style.outline = '2px solid currentColor'; el.style.outlineOffset = '-2px';
+    } else {
+      el.style.opacity = '.55'; el.style.outline = 'none';
+    }
+  });
+  var lbl = document.getElementById('sp-provider-lbl');
   if (lbl) {
-    lbl.textContent = provider === 'kling' ? 'Hyper Realistic (Kling AI)' : 'Premium Animation';
-    lbl.style.color = provider === 'kling' ? 'var(--ac)' : '#a78bfa';
+    lbl.textContent = SP_PROVIDERS[provider].label;
+    lbl.style.color = SP_PROVIDERS[provider].color;
   }
 }
 
@@ -18228,9 +18239,11 @@ async function spGenerate() {
   if (chosenChar && chosenChar.image_url) payload.image_url = chosenChar.image_url;
   btn.disabled = true; btn.textContent = '⏳ Generating…';
   out.style.display = 'block';
-  out.textContent   = 'Sending request to ' + (window._spProvider === 'pika' ? 'Premium Animation' : 'Hyper Realistic (Kling AI)') + '…';
+  var provLabel = (SP_PROVIDERS[window._spProvider] || SP_PROVIDERS.kling).label;
+  out.textContent   = 'Sending request to ' + provLabel + '…';
   try {
-    var endpoint = window._spProvider === 'pika' ? '/api/studio/pika' : '/api/studio/kling';
+    var SP_ENDPOINTS = {kling: '/api/studio/kling', pika: '/api/studio/pika', luma_ray: '/api/studio/luma'};
+    var endpoint = SP_ENDPOINTS[window._spProvider] || SP_ENDPOINTS.kling;
     var r = await apiFetch(endpoint, 'POST', payload);
     // Trust the server-reported cost so the toast can't disagree with the deduction.
     var charged = (r && typeof r.credits_used === 'number') ? r.credits_used : cost;

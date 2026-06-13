@@ -1,10 +1,13 @@
 """
 UgoingViral Video Studio — Multi-scene, multi-provider AI video generation + smart clip cutter.
-Providers: Runway Gen-3, Luma Dream Machine, Replicate, Kling AI (Hyper Realistic), Pika (Premium Animation)
+Providers: Runway Gen-3, Luma Dream Machine, Replicate, Kling AI (Hyper Realistic),
+Pika (Premium Animation), Luma Ray 3.2 (premium text/image-to-video).
 """
-import os, uuid, subprocess, json, asyncio, httpx, re, shutil
+import os, uuid, subprocess, json, asyncio, httpx, re, shutil, logging, time as _time
 from datetime import datetime, timedelta
 from typing import List, Optional
+
+logger = logging.getLogger("ugoingviral.studio")
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from pydantic import BaseModel
 from routes.auth import get_current_user
@@ -21,6 +24,9 @@ RUNWAY_API_KEY    = os.getenv("RUNWAY_API_KEY", "")
 RUNWAY_MODEL_SHORT = os.getenv("RUNWAY_MODEL", "gen3a_turbo")
 RUNWAY_MODEL_LONG  = os.getenv("RUNWAY_MODEL_LONG", "gen4.5")
 LUMA_API_KEY      = os.getenv("LUMA_API_KEY", "")
+# Luma Ray 3.2 (GA) — premium text/image-to-video via the Dream Machine v1 API.
+LUMA_API_BASE     = os.getenv("LUMA_API_BASE", "https://api.lumalabs.ai/dream-machine/v1")
+LUMA_RAY_MODEL    = os.getenv("LUMA_RAY_MODEL", "ray-3.2")
 REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
 # Hyper Realistic + Premium Animation (Pro+ video providers). Base URLs are env-configurable
 # because both providers gate their public APIs and the canonical endpoint may
@@ -400,6 +406,133 @@ async def _luma_generate(prompt: str, duration: int = 5, aspect_ratio: str = "16
             if state == "failed":
                 raise HTTPException(status_code=500, detail=f"Luma generation fejlede: {data.get('failure_reason','')}")
     return None
+
+
+# ── Luma Ray 3.2 (GA) — premium text/image-to-video ───────────────────────────
+# Luma publishes a 10 req/min + 4 concurrent-job rate limit. We enforce BOTH
+# globally: a single rate gate spaces out every Luma HTTP call (create + each
+# poll) so the whole process never exceeds 10/min, and a semaphore caps Luma
+# generations at 4 in flight. (The render queue already caps total concurrent
+# renders at MAX_CONCURRENT_VIDEOS=3, so we stay comfortably under 4.)
+_LUMA_MAX_PER_MIN    = 10
+_LUMA_MAX_CONCURRENT = 4
+_luma_call_times: list = []                 # monotonic timestamps of recent Luma calls
+_luma_rate_lock      = asyncio.Lock()
+_luma_concurrency    = asyncio.Semaphore(_LUMA_MAX_CONCURRENT)
+
+
+async def _luma_rate_gate() -> None:
+    """Block until issuing another Luma API request keeps us within 10/min."""
+    async with _luma_rate_lock:
+        while True:
+            now = _time.monotonic()
+            cutoff = now - 60.0
+            while _luma_call_times and _luma_call_times[0] < cutoff:
+                _luma_call_times.pop(0)
+            if len(_luma_call_times) < _LUMA_MAX_PER_MIN:
+                _luma_call_times.append(now)
+                return
+            await asyncio.sleep(max(0.1, _luma_call_times[0] + 60.0 - now + 0.05))
+
+
+def _luma_text_is_funds(text: str) -> bool:
+    """Heuristic: does this Luma error look like the Luma ACCOUNT being out of
+    money/quota (an ops problem) rather than a bad request?"""
+    t = (text or "").lower()
+    return any(s in t for s in (
+        "insufficient", "not enough", "out of credit", "payment", "billing",
+        "balance", "funds", "quota", "subscription", "exceeded",
+    ))
+
+
+async def _luma_ray_generate(prompt: str, duration: int = 5, aspect_ratio: str = "16:9",
+                             image_url: str = "") -> Optional[str]:
+    """Generate a clip with Luma Ray 3.2. Text-to-video by default; image-to-video
+    when `image_url` is supplied (used as the first keyframe). Submits the
+    generation, polls until completed, and returns the playable MP4 URL.
+
+    Respects Luma's 10 req/min + 4 concurrent limits via the shared gate +
+    semaphore. Raises HTTPException on failure; AUTH failures and Luma-ACCOUNT
+    insufficient-funds are logged with detail and raised as non-retryable errors
+    so the render queue refunds the user's credits and shows a friendly message
+    (rather than burning retries against a problem only Michael can fix)."""
+    if not LUMA_API_KEY:
+        raise HTTPException(status_code=503, detail="Luma Ray not configured (LUMA_API_KEY missing)")
+    # Luma supports 1:1, 16:9, 9:16, 4:3, 3:4, 21:9, 9:21 — map our 4:5 to 4:3.
+    ar_map = {"16:9": "16:9", "9:16": "9:16", "1:1": "1:1", "4:5": "4:3"}
+    payload = {
+        "generation_type": "video",
+        "model":           LUMA_RAY_MODEL,
+        "prompt":          prompt,
+        "aspect_ratio":    ar_map.get(aspect_ratio, "16:9"),
+        "duration":        f"{duration}s",
+        "resolution":      os.getenv("LUMA_RAY_RESOLUTION", "1080p"),
+        "loop":            False,
+    }
+    if image_url:
+        # Image-to-video: the reference image becomes the opening keyframe so a
+        # saved character look carries into the clip.
+        payload["keyframes"] = {"frame0": {"type": "image", "url": image_url}}
+    headers = {"Authorization": f"Bearer {LUMA_API_KEY}", "Content-Type": "application/json"}
+
+    async with _luma_concurrency:
+        async with httpx.AsyncClient(timeout=60) as client:
+            await _luma_rate_gate()
+            r = await client.post(f"{LUMA_API_BASE}/generations", headers=headers, json=payload)
+            # Auth + funds are NON-retryable (status not in the queue's throttle
+            # set, detail free of throttle keywords) so the job fails fast and
+            # refunds rather than burning 6 retries on a problem only Michael can
+            # fix. Real 5xx fall through and DO get retried by the queue.
+            if r.status_code in (401, 403):
+                logger.error("Luma Ray AUTH FAILED (HTTP %s) — LUMA_API_KEY rejected by Luma. "
+                             "Response: %s", r.status_code, r.text[:200])
+                raise HTTPException(status_code=401, detail="Luma authentication failed")
+            if r.status_code == 402 or (r.status_code >= 400 and _luma_text_is_funds(r.text)):
+                logger.error("Luma Ray INSUFFICIENT FUNDS / quota on the Luma ACCOUNT — top up at "
+                             "lumalabs.ai. HTTP %s response: %s", r.status_code, r.text[:300])
+                raise HTTPException(status_code=402, detail="Luma account is out of credits")
+            if r.status_code not in (200, 201):
+                logger.warning("Luma Ray create failed HTTP %s: %s", r.status_code, r.text[:300])
+                # Pass the provider status through: 4xx → permanent (bad request),
+                # 5xx → the queue treats it as throttle and retries.
+                raise HTTPException(status_code=r.status_code, detail=f"Luma Ray error {r.status_code}: {r.text[:160]}")
+            gen_id = (r.json() or {}).get("id")
+            if not gen_id:
+                raise HTTPException(status_code=502, detail="Luma Ray returned no generation ID")
+            logger.info("Luma Ray generation %s submitted (model=%s, %ss, %s)",
+                        gen_id, LUMA_RAY_MODEL, duration, payload["aspect_ratio"])
+
+            # Poll until completed. Ray clips render in ~1–4 min; 8s spacing keeps
+            # us well within 10/min even with several jobs polling concurrently.
+            for _ in range(48):
+                await asyncio.sleep(8)
+                await _luma_rate_gate()
+                poll = await client.get(f"{LUMA_API_BASE}/generations/{gen_id}", headers=headers)
+                if poll.status_code != 200:
+                    logger.info("Luma Ray poll %s: HTTP %s", gen_id, poll.status_code)
+                    continue
+                data  = poll.json()
+                state = data.get("state")
+                if state == "completed":
+                    video = (data.get("assets") or {}).get("video")
+                    if not video:
+                        raise HTTPException(status_code=502, detail="Luma Ray completed but returned no video URL")
+                    try:
+                        from services import api_tracker
+                        api_tracker.track("luma", "seconds", duration, feature="video_generation")
+                    except Exception:
+                        pass
+                    logger.info("Luma Ray generation %s completed", gen_id)
+                    return video
+                if state == "failed":
+                    reason = str(data.get("failure_reason") or "unknown")
+                    if _luma_text_is_funds(reason):
+                        logger.error("Luma Ray generation %s failed — Luma account funds/quota: %s",
+                                     gen_id, reason)
+                        raise HTTPException(status_code=402, detail="Luma account is out of credits")
+                    logger.warning("Luma Ray generation %s failed: %s", gen_id, reason)
+                    raise HTTPException(status_code=502, detail=f"Luma Ray failed: {reason[:160]}")
+    raise HTTPException(status_code=504, detail="Luma Ray timed out — please try again")
 
 
 # ── Replicate (Kling / CogVideoX) ─────────────────────────────────────────────
@@ -1323,6 +1456,8 @@ def _is_throttle_error(exc: Exception) -> bool:
 def _vq_kind_for(provider: str, duration: int) -> str:
     if duration >= 30:
         return "hyper_realistic"      # 30s long-form via Runway gen4.5
+    if provider == "luma_ray":
+        return "luma_ray"
     return "premium_animation" if provider == "pika" else "hyper_realistic"
 
 
@@ -1362,6 +1497,10 @@ async def _vq_run_provider(job: dict):
     if duration >= 30:
         url = await _runway_generate(prompt, image_url, duration, aspect)
         return url, {"provider": "runway_gen45", "video_url": url}
+
+    if provider == "luma_ray":
+        url = await _luma_ray_generate(prompt, duration, aspect, image_url)
+        return url, {"provider": "luma_ray", "model": LUMA_RAY_MODEL, "video_url": url}
 
     if provider == "pika":
         payload = {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "user_id": job["uid"]}
@@ -1560,6 +1699,8 @@ def _provider_configured(provider: str, duration: int) -> bool:
     30s renders use Runway gen4.5, so they need RUNWAY_API_KEY."""
     if duration >= 30:
         return bool(RUNWAY_API_KEY)
+    if provider == "luma_ray":
+        return bool(LUMA_API_KEY)
     if provider == "pika":
         return bool(PIKA_API_KEY)
     if provider == "higgsfield":
@@ -1620,3 +1761,12 @@ async def kling_generate(body: dict, current_user: dict = Depends(get_current_us
     Pricing: 50 / 85 / 100 / 120 credits for 5s / 10s / 15s / 30s.
     30s renders are produced by Runway gen4.5."""
     return await _queue_premium_render(body, current_user["id"], "kling")
+
+
+@router.post("/api/studio/luma")
+async def luma_ray_generate_endpoint(body: dict, current_user: dict = Depends(get_current_user)):
+    """Luma Ray 3.2 premium video (text-to-video, or image-to-video when an
+    image_url/character reference is supplied) — queued.
+    Pricing: 50 / 85 / 100 / 120 credits for 5s / 10s / 15s / 30s (same premium
+    tier as the other providers). 30s renders are produced by Runway gen4.5."""
+    return await _queue_premium_render(body, current_user["id"], "luma_ray")
