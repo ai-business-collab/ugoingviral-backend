@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Request, Depends
 from typing import Optional, List
 import httpx, os, json, asyncio, shutil
 from datetime import datetime, timedelta
 from services.store import store, save_store, add_log
+from routes.auth import get_current_user
 from models import Settings, ApiToggle, PlatformAutomation, ContentRequest, PostRequest, DMReplyRequest, AutomationSettings, DMSettings, ManualProduct, Creator, PlaywrightPost
 
 router = APIRouter()
@@ -10,7 +11,7 @@ router = APIRouter()
 
 # ── Posts ─────────────────────────────────────────────────────────────────────
 @router.post("/api/posts/schedule")
-def schedule_post(post: PostRequest):
+def schedule_post(post: PostRequest, current_user: dict = Depends(get_current_user)):
     item = {"id": datetime.now().isoformat(), "platform": post.platform, "content": post.content,
             "image_url": post.image_url, "scheduled_time": post.scheduled_time or datetime.now().isoformat(),
             "product_id": post.product_id, "creator_id": post.creator_id,
@@ -26,10 +27,10 @@ def schedule_post(post: PostRequest):
     return {"status": "scheduled", "id": item["id"]}
 
 @router.get("/api/posts/scheduled")
-def get_scheduled(): return {"posts": store.get("scheduled_posts", {})}
+def get_scheduled(current_user: dict = Depends(get_current_user)): return {"posts": store.get("scheduled_posts", {})}
 
 @router.delete("/api/posts/all")
-def delete_all_posts():
+def delete_all_posts(current_user: dict = Depends(get_current_user)):
     count = len(store.get("scheduled_posts", []))
     store["scheduled_posts"] = []
     store["scheduler_log"] = {}
@@ -37,7 +38,7 @@ def delete_all_posts():
     return {"status": "deleted", "count": count}
 
 @router.delete("/api/posts/day/{date_str}")
-def delete_day(date_str: str):
+def delete_day(date_str: str, current_user: dict = Depends(get_current_user)):
     before = len(store.get("scheduled_posts", {}))
     store["scheduled_posts"] = [p for p in store.get("scheduled_posts", {}) if not p.get("scheduled_time","").startswith(date_str)]
     log = store.get("scheduler_log", {})
@@ -47,7 +48,7 @@ def delete_day(date_str: str):
     return {"status": "deleted", "count": before - len(store.get("scheduled_posts", {}))}
 
 @router.delete("/api/posts/range/{start}/{end}")
-def delete_range(start: str, end: str):
+def delete_range(start: str, end: str, current_user: dict = Depends(get_current_user)):
     from datetime import datetime, timedelta
     try:
         start_dt = datetime.fromisoformat(start)
@@ -71,7 +72,7 @@ def delete_range(start: str, end: str):
     return {"status": "deleted", "count": before - len(store.get("scheduled_posts", {}))}
 
 @router.patch("/api/posts/{pid}/reschedule")
-async def reschedule_post(pid: str, request: Request):
+async def reschedule_post(pid: str, request: Request, current_user: dict = Depends(get_current_user)):
     """Update a post's scheduled_time for calendar drag-to-reschedule."""
     try:
         body = await request.json()
@@ -90,7 +91,7 @@ async def reschedule_post(pid: str, request: Request):
 
 
 @router.delete("/api/posts/{pid}")
-def delete_post(pid: str):
+def delete_post(pid: str, current_user: dict = Depends(get_current_user)):
     store["scheduled_posts"] = [p for p in store.get("scheduled_posts", {}) if p["id"] != pid]
     save_store(); return {"status": "deleted"}
 
@@ -98,14 +99,14 @@ def delete_post(pid: str):
 # ── Repost ─────────────────────────────────────────────────────────────────────
 
 @router.get("/api/posts/repost/settings")
-def get_repost_settings():
+def get_repost_settings(current_user: dict = Depends(get_current_user)):
     return store.get("repost_settings", {
         "enabled": False, "interval_days": 7, "max_per_week": 3, "platforms": []
     })
 
 
 @router.post("/api/posts/repost/settings")
-async def save_repost_settings(req: Request):
+async def save_repost_settings(req: Request, current_user: dict = Depends(get_current_user)):
     d = await req.json()
     store["repost_settings"] = {
         "enabled": bool(d.get("enabled", False)),
@@ -118,7 +119,7 @@ async def save_repost_settings(req: Request):
 
 
 @router.post("/api/posts/repost")
-async def create_repost(req: Request):
+async def create_repost(req: Request, current_user: dict = Depends(get_current_user)):
     d = await req.json()
     content = d.get("content", "")
     platform = d.get("platform", "")
@@ -144,7 +145,7 @@ async def create_repost(req: Request):
 
 
 @router.get("/api/posts/repost/history")
-def get_repost_history():
+def get_repost_history(current_user: dict = Depends(get_current_user)):
     history = store.get("history", [])
     suitable = [
         h for h in history
@@ -156,7 +157,7 @@ def get_repost_history():
 # ── Unified API Publish ────────────────────────────────────────────────────────
 
 @router.post("/api/posts/publish_via_api")
-async def publish_via_api(req: Request):
+async def publish_via_api(req: Request, current_user: dict = Depends(get_current_user)):
     """
     Publicer til Instagram eller TikTok via officielle APIs.
     Falder automatisk tilbage til Playwright hvis API ikke er forbundet.
@@ -443,6 +444,6 @@ async def publish_via_api(req: Request):
 
 
 @router.get("/api/posts/history")
-def get_post_history():
+def get_post_history(current_user: dict = Depends(get_current_user)):
     """Historik over API-postede opslag"""
     return {"history": store.get("post_history", [])[:50]}
