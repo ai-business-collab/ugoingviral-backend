@@ -328,12 +328,15 @@ nav {
 /* ── PRICING ── */
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
   margin-top: 60px;
-  /* Let each card grow to its own height — otherwise the Growth card's hover
-     expansion would stretch every sibling in the same row to match. */
-  align-items: start;
+  /* Symmetric grid: every card is the same width (1fr columns) and the same
+     height. grid-auto-rows:1fr forces all rows to the tallest row's height and
+     align-items:stretch makes each card fill its row, so all boxes are
+     identical in size regardless of how many features they list. */
+  align-items: stretch;
+  grid-auto-rows: 1fr;
 }
 
 .price-card {
@@ -341,7 +344,12 @@ nav {
   border: 1px solid rgba(255,255,255,.06);
   border-radius: 12px;
   padding: 28px 20px;
-  transition: border-color .2s, transform .2s;
+  transition: border-color .2s, transform .2s, box-shadow .2s;
+  /* Column layout so the CTA always pins to the bottom edge and every card's
+     button lines up across the whole grid. */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 .price-card:hover { border-color: rgba(255,62,0,.4); transform: translateY(-8px); box-shadow: 0 20px 60px rgba(255,62,0,.12), 0 8px 30px rgba(0,0,0,.4); }
 .price-card.featured {
@@ -356,6 +364,9 @@ nav {
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 12px;
+  /* Reserve the tag line on every card (even those without a tag) so the plan
+     name / price / features all start at the same vertical position. */
+  min-height: 12px;
 }
 
 .price-name {
@@ -396,8 +407,9 @@ nav {
 .price-features li::before { content: "✓"; color: var(--accent); font-size: 11px; }
 .price-features li.plus { color: var(--accent); font-weight: 700; font-size: 11px; }
 .price-features li.plus::before { content: ""; display: none; }
-.price-features-extra { max-height: 0; overflow: hidden; transition: max-height .35s ease, opacity .3s ease; opacity: 0; }
-.price-card:hover .price-features-extra { max-height: 200px; opacity: 1; }
+/* Extra features are always shown so every card lists its full set up front and
+   no card changes height on hover (which previously broke the alignment). */
+.price-features-extra { overflow: visible; opacity: 1; }
 .price-card-growth { border-color: rgba(34,197,94,.2); }
 .price-card-growth:hover { border-color: rgba(34,197,94,.5) !important; box-shadow: 0 20px 60px rgba(34,197,94,.1), 0 8px 30px rgba(0,0,0,.4) !important; }
 /* The Growth plan has a "Built-in safety" block that expands inline on hover.
@@ -426,11 +438,16 @@ nav {
   color: rgba(34,197,94,.95); font-weight: 800; margin-bottom: 8px;
 }
 .price-cta {
-  display: block; margin-top: 18px; text-align: center;
+  /* margin-top:auto pushes the button to the bottom of the flex card so every
+     CTA aligns on the same baseline across all plan boxes. The 18px gap above
+     it is created by the auto margin (min spacing handled by the list below). */
+  display: block; margin-top: auto; text-align: center;
   background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
   padding: 10px; border-radius: 8px; text-decoration: none;
   transition: background .2s, transform .15s;
 }
+/* Always keep a visible gap between the last feature and the CTA. */
+.price-features-extra, .price-features:last-of-type { margin-bottom: 18px; }
 .price-cta:hover { background: #ff5520; transform: translateY(-1px); }
 .price-card.featured .price-cta { background: #fff; color: #000; }
 .price-card.featured .price-cta:hover { background: #eee; }
@@ -1069,6 +1086,7 @@ footer p { font-size: 13px; color: var(--text2); }
   <!-- LOCKED PRICES — DO NOT CHANGE WITHOUT MICHAEL'S APPROVAL -->
   <div class="pricing-grid">
     <div class="price-card">
+      <div class="price-tag" aria-hidden="true" style="visibility:hidden">&nbsp;</div>
       <div class="price-name">Free</div>
       <div class="price-amount" data-usd="0">Free<span>/mo</span></div><div style="font-size:12px;color:var(--text2);margin-top:4px">50 credits + 3 free videos</div>
       <div class="price-credits">3 free videos</div>
@@ -1087,6 +1105,7 @@ footer p { font-size: 13px; color: var(--text2); }
       <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Start Free &#8594;</a>
     </div>
     <div class="price-card">
+      <div class="price-tag" aria-hidden="true" style="visibility:hidden">&nbsp;</div>
       <div class="price-name">Starter</div>
       <div class="price-amount" data-usd="49">$49<span>/mo</span></div>
       <div class="price-credits">300 credits</div>
@@ -1106,6 +1125,7 @@ footer p { font-size: 13px; color: var(--text2); }
       <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Choose Starter &#8594;</a>
     </div>
     <div class="price-card">
+      <div class="price-tag" aria-hidden="true" style="visibility:hidden">&nbsp;</div>
       <div class="price-name">Basic</div>
       <div class="price-amount" data-usd="79">$79<span>/mo</span></div>
       <div class="price-credits">700 credits</div>
@@ -1147,6 +1167,7 @@ footer p { font-size: 13px; color: var(--text2); }
       <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Choose Pro &#8594;</a>
     </div>
     <div class="price-card">
+      <div class="price-tag" aria-hidden="true" style="visibility:hidden">&nbsp;</div>
       <div class="price-name">Elite</div>
       <div class="price-amount" data-usd="229">$229<span>/mo</span></div>
       <div class="price-credits">2,500 credits</div>
@@ -1168,6 +1189,7 @@ footer p { font-size: 13px; color: var(--text2); }
       <a onclick="openModal('register')" class="price-cta" style="cursor:pointer">Choose Elite &#8594;</a>
     </div>
     <div class="price-card">
+      <div class="price-tag" aria-hidden="true" style="visibility:hidden">&nbsp;</div>
       <div class="price-name">Personal</div>
       <div class="price-amount" data-usd="459">$459<span>/mo</span></div>
       <div class="price-credits">5,000 credits</div>
