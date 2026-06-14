@@ -2109,7 +2109,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div>
         <div class="card">
           <div class="ctitle">⚙️ Konfigurer
-            <span class="tip"><span class="tip-icon">?</span><span class="tip-box">Generér AI-tekstindhold til sociale medier. Vælg platform og tone og beskriv dit produkt — AI skriver caption, hook, hashtags eller reel-script.</span></span>
+            <span class="tip"><span class="tip-icon">?</span><span class="tip-box" data-i18n="tip.generator">Generér AI-tekstindhold til sociale medier. Vælg platform og tone og beskriv dit produkt — AI skriver caption, hook, hashtags eller reel-script.</span></span>
           </div>
           <div class="fg">
             <label class="fl">Platform</label>
@@ -2128,7 +2128,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <option value="hashtags">#️⃣ Hashtags</option>
               <option value="tweet">🐦 Tweet</option>
             </select>
-            <button class="ex-btn" style="margin-top:8px" onclick="showExample(document.getElementById('ctype').value)">▶ Se eksempel på output</button>
+            <button class="ex-btn" style="margin-top:8px" onclick="showExample(document.getElementById('ctype').value)">▶ <span data-i18n="ex.btnOutput">Se eksempel på output</span></button>
           </div>
           <div class="fg"><label class="fl">Sprog</label>
             <select class="fs" id="clang">
@@ -2768,7 +2768,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
           <div style="background:linear-gradient(135deg,rgba(var(--ac2-rgb),.08),rgba(var(--ac2-rgb),.04));border:1px solid rgba(var(--ac2-rgb),.2);border-radius:12px;padding:14px;margin-bottom:14px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <span class="ghost-badge">👻 Ghost Mode</span><span class="tip"><span class="tip-icon">?</span><span class="tip-box">AI svarer som et rigtigt menneske — afslører aldrig, at det er AI.</span></span>
+              <span class="ghost-badge">👻 Ghost Mode</span><span class="tip"><span class="tip-icon">?</span><span class="tip-box" data-i18n="tip.ghost">AI svarer som et rigtigt menneske — afslører aldrig, at det er AI.</span></span>
               <div class="tog on" id="tog-ghost" onclick="togIt(this)"></div>
             </div>
             <div style="font-size:12px;color:var(--tx2);line-height:1.6">AI responds exactly like a real human — never reveals it is AI. Varied, natural replies that sound personal.</div>
@@ -4149,7 +4149,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <!-- BONUS CREDITS -->
       <div class="card" style="margin-bottom:20px" data-bill-tab="overview">
         <div class="ctitle">🎁 Bonus credits — awarded automatically
-          <span class="tip"><span class="tip-icon">?</span><span class="tip-box">Bonus-credits tildeles automatisk, når du udfører handlingen. Ingen ekstra trin nødvendige.</span></span>
+          <span class="tip"><span class="tip-icon">?</span><span class="tip-box" data-i18n="tip.bonus">Bonus-credits tildeles automatisk, når du udfører handlingen. Ingen ekstra trin nødvendige.</span></span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px" id="bonus-grid">
           <div class="bonus-item" id="bonus-connect_social">
@@ -4679,19 +4679,19 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div id="studio-premium-card" style="display:none;margin-top:18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(0,229,255,.04));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div>
-          <div style="font-size:14px;font-weight:700;color:var(--tx)"><span data-help="Premium AI-video-motorer: Hyper Realistic (fotorealisme), Premium Animation (stiliseret) og Ultra Cinematic (biograf-look). Inkluderet på alle betalte planer.">✨ Premium video providers</span></div>
+          <div style="font-size:14px;font-weight:700;color:var(--tx)"><span data-help="help.premiumProviders">✨ Premium video providers</span></div>
           <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation + Ultra Cinematic — included on any paid plan · 50 / 85 / 100 / 120 credits per 5s / 10s / 15s / 30s · 30s long-form via Runway gen4.5</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('kling')" data-help="Mest fotorealistiske resultat med ægte fysik og lys (Kling AI). Bedst til premium produkt- og brandvideoer." style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
-          <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" data-help="Kreativ, stiliseret animation med flotte overgange og effekter (Pika) — fanger opmærksomhed i feedet." style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
-          <button class="btn bsm" id="sp-tab-luma" onclick="spSwitchProvider('luma_ray')" data-help="Storfilm-æstetik med avancerede kamerabevægelser (Luma Ray 3.2) — til de mest imponerende hero-videoer." style="background:rgba(16,185,129,.16);color:#34d399;border:1px solid rgba(16,185,129,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">🎬 Ultra Cinematic</button>
+          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('kling')" data-help="help.provKling" style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
+          <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" data-help="help.provPika" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
+          <button class="btn bsm" id="sp-tab-luma" onclick="spSwitchProvider('luma_ray')" data-help="help.provLuma" style="background:rgba(16,185,129,.16);color:#34d399;border:1px solid rgba(16,185,129,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">🎬 Ultra Cinematic</button>
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <button class="ex-btn" onclick="showExample('kling')">▶ Se eksempel: Hyper Realistic</button>
-        <button class="ex-btn" onclick="showExample('pika')">▶ Se eksempel: Premium Animation</button>
-        <button class="ex-btn" onclick="showExample('luma_ray')">▶ Se eksempel: Ultra Cinematic</button>
+        <button class="ex-btn" onclick="showExample('kling')">▶ <span data-i18n="ex.btn">Se eksempel</span>: Hyper Realistic</button>
+        <button class="ex-btn" onclick="showExample('pika')">▶ <span data-i18n="ex.btn">Se eksempel</span>: Premium Animation</button>
+        <button class="ex-btn" onclick="showExample('luma_ray')">▶ <span data-i18n="ex.btn">Se eksempel</span>: Ultra Cinematic</button>
       </div>
       <div id="sp-locked" style="display:none;padding:18px;background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:10px;text-align:center;font-size:13px;color:var(--tx3)">
         🔒 Premium providers are included on <strong style="color:var(--ac)">any paid plan</strong>. <a onclick="nav('billing')" style="cursor:pointer;color:var(--ac);text-decoration:underline">Upgrade →</a>
@@ -5518,7 +5518,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
 
   <div class="card" id="pipe-form-card" style="margin-bottom:18px">
       <div class="ctitle">🎬 Content Pipeline AI
-        <span class="tip"><span class="tip-icon">?</span><span class="tip-box">Upload produktbillede → AI genererer scripts → Video Engine laver video → Voice Engine tilføjer voiceover → samler færdig video.</span></span>
+        <span class="tip"><span class="tip-icon">?</span><span class="tip-box" data-i18n="tip.pipeline">Upload produktbillede → AI genererer scripts → Video Engine laver video → Voice Engine tilføjer voiceover → samler færdig video.</span></span>
       </div>
       <div class="info-box" style="margin-bottom:18px">💡 The system automatically generates scripts, video and voiceover and assembles them into one finished video ready to upload.</div>
 
@@ -6836,9 +6836,9 @@ var _studio = {
 };
 
 var STUDIO_MODES = [
-  { key:'single',    icon:'🎬', name:'Quick Video',      desc:'Én scene, hurtig generering',          cost:'40-80 cr', help:'Lav hurtigt én enkelt AI-video-scene ud fra din prompt — perfekt til et hurtigt Reel eller TikTok.' },
-  { key:'series',    icon:'🎞️', name:'Mini-serie',       desc:'2-6 scenes in one continuous video',   cost:'from 90 cr', help:'Saml 2–6 scener til én sammenhængende video med konsistent stil og karakter — ideelt til storytelling.' },
-  { key:'animation', icon:'✨', name:'Animation',        desc:'Animeret stil med konsistent karakter', cost:'', help:'Generér en animeret video med en gennemgående karakter/stil — godt til brand-mascot og forklaringsvideoer.' },
+  { key:'single',    icon:'🎬', name:'Quick Video',      desc:'Én scene, hurtig generering',          cost:'40-80 cr', help:'help.studioSingle' },
+  { key:'series',    icon:'🎞️', name:'Mini-serie',       desc:'2-6 scenes in one continuous video',   cost:'from 90 cr', help:'help.studioSeries' },
+  { key:'animation', icon:'✨', name:'Animation',        desc:'Animeret stil med konsistent karakter', cost:'', help:'help.studioAnimation' },
 ];
 
 var STUDIO_AR = [
@@ -6851,69 +6851,101 @@ var STUDIO_AR = [
 // ── "Se eksempel" — show the customer what each function produces ────────────
 // kind:'video' shows an example prompt + a styled preview frame describing the
 // result; kind:'text' shows real example output of exactly what the tool writes.
+// Language-specific fields live under en/da and follow the DA/EN toggle.
 var EXAMPLES = {
   single: { kind:'video', icon:'🎬', grad:'linear-gradient(135deg,#00e5ff,#0077ff)',
-    title:'Quick Video', scene:'Produkt på marmorbord, langsom zoom, blødt dagslys',
-    prompt:'Cinematisk produktvideo af en hudplejeserum på et marmorbord, langsom zoom, varmt morgenlys, 9:16',
-    desc:'Én færdig 5–8 sek. scene i din valgte format — klar til Reels/TikTok. Inkl. bevægelse, lys og stemning ud fra din prompt.' },
+    en:{ title:'Quick Video', scene:'Product on a marble table, slow zoom, soft daylight',
+      prompt:'Cinematic product video of a skincare serum on a marble table, slow zoom, warm morning light, 9:16',
+      desc:'One finished 5–8 sec scene in your chosen format — ready for Reels/TikTok. Includes motion, light and mood from your prompt.' },
+    da:{ title:'Quick Video', scene:'Produkt på marmorbord, langsom zoom, blødt dagslys',
+      prompt:'Cinematisk produktvideo af en hudplejeserum på et marmorbord, langsom zoom, varmt morgenlys, 9:16',
+      desc:'Én færdig 5–8 sek. scene i din valgte format — klar til Reels/TikTok. Inkl. bevægelse, lys og stemning ud fra din prompt.' } },
   series: { kind:'video', icon:'🎞️', grad:'linear-gradient(135deg,#7c3aed,#c026d3)',
-    title:'Mini-serie', scene:'3–6 sammenhængende scener: hook → produkt → CTA',
-    prompt:'3 scener: 1) person åbner pakke, 2) close-up af produkt, 3) tilfreds reaktion + tekst "Shop nu"',
-    desc:'2–6 sammenhængende scener samlet til én video med konsistent stil og karakter — perfekt til storytelling-reels.' },
+    en:{ title:'Mini-series', scene:'3–6 connected scenes: hook → product → CTA',
+      prompt:'3 scenes: 1) person opens package, 2) close-up of product, 3) happy reaction + "Shop now" text',
+      desc:'2–6 connected scenes combined into one video with consistent style and character — perfect for storytelling reels.' },
+    da:{ title:'Mini-serie', scene:'3–6 sammenhængende scener: hook → produkt → CTA',
+      prompt:'3 scener: 1) person åbner pakke, 2) close-up af produkt, 3) tilfreds reaktion + tekst "Shop nu"',
+      desc:'2–6 sammenhængende scener samlet til én video med konsistent stil og karakter — perfekt til storytelling-reels.' } },
   animation: { kind:'video', icon:'✨', grad:'linear-gradient(135deg,#f59e0b,#ef4444)',
-    title:'Animation', scene:'Animeret karakter i ensartet stil gennem hele videoen',
-    prompt:'Animeret maskot der præsenterer et tilbud, farverig flad illustrationsstil, energisk',
-    desc:'Animeret video med en gennemgående karakter/stil — ideel til brand-mascot, forklaringsvideoer og leg.' },
+    en:{ title:'Animation', scene:'Animated character in a consistent style throughout the video',
+      prompt:'Animated mascot presenting an offer, colorful flat illustration style, energetic',
+      desc:'Animated video with a recurring character/style — ideal for brand mascots, explainers and fun.' },
+    da:{ title:'Animation', scene:'Animeret karakter i ensartet stil gennem hele videoen',
+      prompt:'Animeret maskot der præsenterer et tilbud, farverig flad illustrationsstil, energisk',
+      desc:'Animeret video med en gennemgående karakter/stil — ideel til brand-mascot, forklaringsvideoer og leg.' } },
   kling: { kind:'video', icon:'⚡', grad:'linear-gradient(135deg,#00e5ff,#22d3ee)',
-    title:'Hyper Realistic (Kling)', scene:'Fotorealistisk bevægelse, naturligt lys',
-    prompt:'Fotorealistisk video: løber på en strand ved solopgang, slow-motion, filmisk dybde',
-    desc:'Mest fotorealistiske resultat — ægte fysik og lys. Bedst til premium produkt- og brandvideoer.' },
+    en:{ title:'Hyper Realistic (Kling)', scene:'Photorealistic motion, natural light',
+      prompt:'Photorealistic video: a runner on a beach at sunrise, slow-motion, cinematic depth',
+      desc:'Most photorealistic result — real physics and light. Best for premium product and brand videos.' },
+    da:{ title:'Hyper Realistic (Kling)', scene:'Fotorealistisk bevægelse, naturligt lys',
+      prompt:'Fotorealistisk video: løber på en strand ved solopgang, slow-motion, filmisk dybde',
+      desc:'Mest fotorealistiske resultat — ægte fysik og lys. Bedst til premium produkt- og brandvideoer.' } },
   pika: { kind:'video', icon:'🎨', grad:'linear-gradient(135deg,#7c3aed,#a78bfa)',
-    title:'Premium Animation (Pika)', scene:'Stiliseret, flydende animation med effekter',
-    prompt:'Stiliseret animation: produkt svæver gennem farverige partikler, energisk overgang',
-    desc:'Kreativ, stiliseret animation med flotte overgange og effekter — fanger opmærksomhed i feedet.' },
+    en:{ title:'Premium Animation (Pika)', scene:'Stylized, fluid animation with effects',
+      prompt:'Stylized animation: product floating through colorful particles, energetic transition',
+      desc:'Creative, stylized animation with beautiful transitions and effects — grabs attention in the feed.' },
+    da:{ title:'Premium Animation (Pika)', scene:'Stiliseret, flydende animation med effekter',
+      prompt:'Stiliseret animation: produkt svæver gennem farverige partikler, energisk overgang',
+      desc:'Kreativ, stiliseret animation med flotte overgange og effekter — fanger opmærksomhed i feedet.' } },
   luma_ray: { kind:'video', icon:'🎬', grad:'linear-gradient(135deg,#10b981,#34d399)',
-    title:'Ultra Cinematic (Luma Ray)', scene:'Biograf-look, kamerakørsel og dybde',
-    prompt:'Ultra-cinematisk kamerakørsel hen over et bjerglandskab i tåge, anamorf look',
-    desc:'Storfilm-æstetik med avancerede kamerabevægelser — til de mest imponerende hero-videoer.' },
-  caption: { kind:'text', icon:'💬', title:'Caption',
-    sample:'🌟 Stop med at lede — dette er produktet, du har manglet!\n\nVi har samlet alt det bedste i ét. Din hverdag bliver nemmere fra i dag. 💪\n\n👉 Tryk på linket i bio og oplev forskellen.\n\n#nyhed #musthave #dkbusiness #shopnu #tilbud' },
-  hook: { kind:'text', icon:'🪝', title:'Hook',
-    sample:'"Jeg troede aldrig, det ville virke … indtil jeg prøvede dette 👇"' },
-  reel_script: { kind:'text', icon:'📝', title:'Reel-script',
-    sample:'[HOOK 0–2s] "Lav DETTE før du poster igen!"\n[PROBLEM 2–5s] De fleste taber rækkevidde på de første 3 sek.\n[LØSNING 5–20s] Vis resultatet FØRST, forklar bagefter.\n[CTA 20–30s] "Følg med for flere tips — og gem den her."' },
-  hashtags: { kind:'text', icon:'#️⃣', title:'Hashtags',
-    sample:'#viral #fyp #dkbusiness #iværksætter #smågsmåforretning #tipsogtricks #reels #nyhed #musthave #tilbud #shopnu #danmark #marketing #socialmedia #vækst' },
-  tweet: { kind:'text', icon:'🐦', title:'Tweet',
-    sample:'De fleste spilder timer på indhold der aldrig bliver set.\n\n3 ting der ændrede alt for os:\n→ Hook i de første 2 sek.\n→ Post når DIN målgruppe er online\n→ Én klar CTA\n\nResten er bare gentagelse. 🔁' },
+    en:{ title:'Ultra Cinematic (Luma Ray)', scene:'Film look, camera moves and depth',
+      prompt:'Ultra-cinematic camera move across a foggy mountain landscape, anamorphic look',
+      desc:'Cinematic aesthetics with advanced camera moves — for your most impressive hero videos.' },
+    da:{ title:'Ultra Cinematic (Luma Ray)', scene:'Biograf-look, kamerakørsel og dybde',
+      prompt:'Ultra-cinematisk kamerakørsel hen over et bjerglandskab i tåge, anamorf look',
+      desc:'Storfilm-æstetik med avancerede kamerabevægelser — til de mest imponerende hero-videoer.' } },
+  caption: { kind:'text', icon:'💬',
+    en:{ title:'Caption', sample:'🌟 Stop scrolling — this is the product you\'ve been missing!\n\nWe packed all the best into one. Your day gets easier starting today. 💪\n\n👉 Tap the link in bio and feel the difference.\n\n#new #musthave #shopnow #deal #trending' },
+    da:{ title:'Caption', sample:'🌟 Stop med at lede — dette er produktet, du har manglet!\n\nVi har samlet alt det bedste i ét. Din hverdag bliver nemmere fra i dag. 💪\n\n👉 Tryk på linket i bio og oplev forskellen.\n\n#nyhed #musthave #dkbusiness #shopnu #tilbud' } },
+  hook: { kind:'text', icon:'🪝',
+    en:{ title:'Hook', sample:'"I never thought it would work … until I tried this 👇"' },
+    da:{ title:'Hook', sample:'"Jeg troede aldrig, det ville virke … indtil jeg prøvede dette 👇"' } },
+  reel_script: { kind:'text', icon:'📝',
+    en:{ title:'Reel script', sample:'[HOOK 0–2s] "Do THIS before you post again!"\n[PROBLEM 2–5s] Most people lose reach in the first 3 sec.\n[SOLUTION 5–20s] Show the result FIRST, explain after.\n[CTA 20–30s] "Follow for more tips — and save this."' },
+    da:{ title:'Reel-script', sample:'[HOOK 0–2s] "Lav DETTE før du poster igen!"\n[PROBLEM 2–5s] De fleste taber rækkevidde på de første 3 sek.\n[LØSNING 5–20s] Vis resultatet FØRST, forklar bagefter.\n[CTA 20–30s] "Følg med for flere tips — og gem den her."' } },
+  hashtags: { kind:'text', icon:'#️⃣',
+    en:{ title:'Hashtags', sample:'#viral #fyp #smallbusiness #entrepreneur #tipsandtricks #reels #new #musthave #deal #shopnow #marketing #socialmedia #growth #trending #contentcreator' },
+    da:{ title:'Hashtags', sample:'#viral #fyp #dkbusiness #iværksætter #smågsmåforretning #tipsogtricks #reels #nyhed #musthave #tilbud #shopnu #danmark #marketing #socialmedia #vækst' } },
+  tweet: { kind:'text', icon:'🐦',
+    en:{ title:'Tweet', sample:'Most people waste hours on content no one ever sees.\n\n3 things that changed everything for us:\n→ Hook in the first 2 sec\n→ Post when YOUR audience is online\n→ One clear CTA\n\nThe rest is just repetition. 🔁' },
+    da:{ title:'Tweet', sample:'De fleste spilder timer på indhold der aldrig bliver set.\n\n3 ting der ændrede alt for os:\n→ Hook i de første 2 sek.\n→ Post når DIN målgruppe er online\n→ Én klar CTA\n\nResten er bare gentagelse. 🔁' } },
 };
 
+var _exCurrentKey = null;
 function showExample(key) {
   var ex = EXAMPLES[key];
   var modal = document.getElementById('example-modal');
   var body = document.getElementById('example-modal-body');
   var titleEl = document.getElementById('example-modal-title');
   if (!ex || !modal || !body) return;
-  titleEl.textContent = (ex.icon ? ex.icon + ' ' : '') + 'Eksempel: ' + (ex.title || key);
+  _exCurrentKey = key;
+  var L = ex[currentLang] || ex.en;
+  titleEl.textContent = (ex.icon ? ex.icon + ' ' : '') + t('ex.titlePrefix') + (L.title || key);
   var html = '';
   if (ex.kind === 'video') {
     html += '<div style="border-radius:14px;overflow:hidden;border:1px solid var(--border);margin-bottom:14px">'
       + '<div style="aspect-ratio:9/16;max-height:360px;background:' + ex.grad + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;text-align:center;padding:24px">'
       + '<div style="font-size:46px">' + (ex.icon||'🎬') + '</div>'
-      + '<div style="font-size:14px;font-weight:800;letter-spacing:.3px;text-shadow:0 2px 8px rgba(0,0,0,.4)">' + ex.title + '</div>'
-      + '<div style="font-size:12px;opacity:.95;max-width:240px;line-height:1.5;text-shadow:0 1px 6px rgba(0,0,0,.5)">🎥 ' + ex.scene + '</div>'
+      + '<div style="font-size:14px;font-weight:800;letter-spacing:.3px;text-shadow:0 2px 8px rgba(0,0,0,.4)">' + L.title + '</div>'
+      + '<div style="font-size:12px;opacity:.95;max-width:240px;line-height:1.5;text-shadow:0 1px 6px rgba(0,0,0,.5)">🎥 ' + L.scene + '</div>'
       + '</div></div>'
-      + '<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Eksempel-prompt</div>'
-      + '<div style="background:var(--glass-b);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--tx);margin-bottom:12px;font-style:italic">"' + ex.prompt + '"</div>'
-      + '<div style="font-size:13px;color:var(--tx2);line-height:1.6">' + ex.desc + '</div>';
+      + '<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">' + t('ex.prompt') + '</div>'
+      + '<div style="background:var(--glass-b);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--tx);margin-bottom:12px;font-style:italic">"' + L.prompt + '"</div>'
+      + '<div style="font-size:13px;color:var(--tx2);line-height:1.6">' + L.desc + '</div>';
   } else {
-    html += '<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Sådan ser output ud</div>'
-      + '<div style="background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:16px;font-size:14px;color:var(--tx);line-height:1.65;white-space:pre-wrap">' + (ex.sample||'').replace(/</g,'&lt;') + '</div>'
-      + '<div style="font-size:12px;color:var(--tx3);margin-top:12px">Dette er et eksempel — AI tilpasser teksten til dit produkt, din niche og din tone.</div>';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">' + t('ex.output') + '</div>'
+      + '<div style="background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:16px;font-size:14px;color:var(--tx);line-height:1.65;white-space:pre-wrap">' + (L.sample||'').replace(/</g,'&lt;') + '</div>'
+      + '<div style="font-size:12px;color:var(--tx3);margin-top:12px">' + t('ex.note') + '</div>';
   }
   body.innerHTML = html;
   modal.style.display = 'flex';
 }
+// If the language flips while the modal is open, re-render it in the new language.
+window.addEventListener('langchange', function() {
+  var m = document.getElementById('example-modal');
+  if (m && m.style.display !== 'none' && _exCurrentKey) showExample(_exCurrentKey);
+});
 function closeExample() {
   var m = document.getElementById('example-modal');
   if (m) m.style.display = 'none';
@@ -7068,10 +7100,10 @@ function studioRender() {
       ${STUDIO_MODES.map(m => `
         <div class="studio-mode-btn ${_studio.mode===m.key?'active':''}" onclick="studioSetMode('${m.key}')">
           <span class="studio-mode-icon">${m.icon}</span>
-          <div class="studio-mode-name" data-help="${_escHtml(m.help||'')}">${m.name}</div>
+          <div class="studio-mode-name" data-help="${m.help||''}">${m.name}</div>
           <div class="studio-mode-desc">${m.desc}</div>
           <span class="studio-mode-cost">${m.cost}</span>
-          <button class="ex-btn" style="margin-top:8px" onclick="event.stopPropagation();showExample('${m.key}')">▶ Se eksempel</button>
+          <button class="ex-btn" style="margin-top:8px" onclick="event.stopPropagation();showExample('${m.key}')">▶ <span data-i18n="ex.btn">${t('ex.btn')}</span></button>
         </div>`).join('')}
     </div>
 
@@ -8155,6 +8187,121 @@ let currentLang = localStorage.getItem('ugv_lang') || 'en';
 
 function t(key) { return (I18N[currentLang] || I18N.en)[key] || key; }
 
+// ── i18n keys for the help tooltips / "Se eksempel" buttons / sub-page titles
+// added in the UI-polish pass. Kept bilingual so they follow the DA/EN toggle. ──
+Object.assign(I18N.en, {
+  'tip.agentHint': ' · Need help? Ask your personal AI agent.',
+  'feat.dashboard':'Your home view — quick actions, account stats, and platform status all in one place.',
+  'feat.generator':'AI Content Generator — write captions, hooks, scripts and hashtags for any platform in seconds.',
+  'feat.content-engine':'Content Engine — generate a full 30-day social media calendar tailored to your niche.',
+  'feat.content-plan':'AI Content Plan — get a strategic posting plan with timing, topics and tone for the next 30 days.',
+  'feat.studio':'Video Studio — turn a prompt into a polished AI video with voiceover, scenes and assembly.',
+  'feat.pipeline':'Content Pipeline — script → image → video → voice → finished post, in one automated flow.',
+  'feat.video-script':'AI Video Script Generator — timestamped script with hook, scenes and CTA, ready to record.',
+  'feat.reel-templates':'Story & Reel Templates — 20+ pre-built scripts by niche, ready to customize.',
+  'feat.posting':'Post & Schedule — plan, queue and auto-publish content across every connected platform.',
+  'feat.autopilot':'Auto Pilot — your social media on full autopilot: generate, schedule and post automatically.',
+  'feat.inbox':'Inbox, DM & Email — auto-reply to DMs and comments with AI in your tone of voice.',
+  'feat.creators':'Influencer Profiles — manage multiple creators, each with their own niche, style and content history.',
+  'feat.influencer-products':'Ad Products — manage product catalogs used in ads, posts and influencer campaigns.',
+  'feat.products':'Products — your full webshop catalog. AI captions auto-generated from product details.',
+  'feat.content-library':'Content Library — every piece of content you have generated, browsable by niche and platform.',
+  'feat.library':'Media Library — upload, organize and reuse your own images and videos in posts.',
+  'feat.history':'Content History — every caption, script and post you have produced, searchable.',
+  'feat.stats':'Statistics — top-line metrics across content, posts and platforms.',
+  'feat.analytics':'Analytics — deep performance breakdown per platform, audience and content type.',
+  'feat.brand-kit':'Brand Kit — your logo, colors, fonts and tone of voice so every AI output stays on-brand.',
+  'feat.hashtags':'Hashtag Research — discover and save high-performing hashtag sets per niche.',
+  'feat.competitor':'Competitor Spy — reverse-engineer any competitor: strategy, hooks and posting cadence.',
+  'feat.audit':'Account Audit — score any social account and get a tailored action plan.',
+  'feat.tools':'Tools — quick access to Brand Kit, Hashtag Research, Competitor Spy and Account Audit.',
+  'feat.connect':'Connect — link Instagram, TikTok, YouTube, Facebook and X so posts and analytics flow automatically.',
+  'feat.telegram-agent':'Telegram Agent — chat with your AI assistant from Telegram on the go.',
+  'feat.subaccounts':'Extra Profiles — manage additional brand/creator profiles under your main account.',
+  'feat.billing':'Plan & Credits — manage your subscription, buy extra credits and view payment history.',
+  'feat.affiliate':'Affiliate Program — earn recurring commission on every customer you refer.',
+  'feat.settings':'Settings — account, interface, language and notification preferences.',
+  'feat.agency-dashboard':'Agency Dashboard — manage clients, per-client content settings and white-label reports.',
+  'feat.growth-dashboard':'Growth Dashboard — auto DMs, likes and comments to grow your accounts on autopilot.',
+  'help.studioSingle':'Quickly create a single AI video scene from your prompt — perfect for a fast Reel or TikTok.',
+  'help.studioSeries':'Combine 2–6 scenes into one continuous video with consistent style and character — ideal for storytelling.',
+  'help.studioAnimation':'Generate an animated video with a recurring character/style — great for brand mascots and explainers.',
+  'help.premiumProviders':'Premium AI video engines: Hyper Realistic (photorealism), Premium Animation (stylized) and Ultra Cinematic (film look). Included on all paid plans.',
+  'help.provKling':'Most photorealistic result with real physics and light (Kling AI). Best for premium product and brand videos.',
+  'help.provPika':'Creative, stylized animation with beautiful transitions and effects (Pika) — grabs attention in the feed.',
+  'help.provLuma':'Cinematic aesthetics with advanced camera moves (Luma Ray 3.2) — for your most impressive hero videos.',
+  'tip.generator':'Generate AI text content for social media. Choose platform and tone and describe your product — AI writes caption, hook, hashtags or reel script.',
+  'tip.ghost':'AI responds like a real human — never reveals it is AI.',
+  'tip.bonus':'Bonus credits are automatically assigned when you perform the action. No extra steps needed.',
+  'tip.pipeline':'Upload product image → AI generates scripts → Video Engine creates video → Voice Engine adds voiceover → assembles finished video.',
+  'ex.btn':'View example',
+  'ex.btnOutput':'View example output',
+  'ex.titlePrefix':'Example: ',
+  'ex.prompt':'Example prompt',
+  'ex.output':'This is what the output looks like',
+  'ex.note':'This is an example — AI tailors the text to your product, niche and tone.',
+  'sub.schedule':'📅 Schedule', 'sub.autopost':'⚙️ Auto-post', 'sub.platforms':'🔗 Platforms',
+  'sub.repost':'♻️ Auto Repost', 'sub.actions':'🚀 Plan & Actions',
+  'sub.dm':'💬 Messages', 'sub.autodm':'⚙️ Auto DM', 'sub.autocomments':'💭 Auto Comments', 'sub.email':'📧 Email',
+  'sub.videoStudio':'🎬 Video Studio', 'sub.portraitStudio':'🤳 AI Portrait Studio',
+});
+Object.assign(I18N.da, {
+  'tip.agentHint': ' · Brug for hjælp? Spørg din personlige AI-agent.',
+  'feat.dashboard':'Dit overblik — hurtige handlinger, kontostatus og platformstatus samlet ét sted.',
+  'feat.generator':'AI Content Generator — skriv captions, hooks, scripts og hashtags til enhver platform på sekunder.',
+  'feat.content-engine':'Content Engine — generér en hel 30-dages social media-kalender skræddersyet til din niche.',
+  'feat.content-plan':'AI Content Plan — få en strategisk opslagsplan med timing, emner og tone for de næste 30 dage.',
+  'feat.studio':'Video Studio — lav en færdig AI-video med voiceover, scener og samling ud fra en prompt.',
+  'feat.pipeline':'Content Pipeline — script → billede → video → stemme → færdigt opslag i ét automatiseret flow.',
+  'feat.video-script':'AI Video Script Generator — script med tidskoder, hook, scener og CTA, klar til optagelse.',
+  'feat.reel-templates':'Story & Reel-skabeloner — 20+ færdige scripts efter niche, klar til at tilpasse.',
+  'feat.posting':'Opret & Planlæg — planlæg, sæt i kø og auto-publicér indhold på alle forbundne platforme.',
+  'feat.autopilot':'Auto Pilot — dine sociale medier på fuld autopilot: generér, planlæg og post automatisk.',
+  'feat.inbox':'Indbakke, DM & Email — svar automatisk på DM’er og kommentarer med AI i din tone.',
+  'feat.creators':'Influencer-profiler — håndtér flere creators, hver med egen niche, stil og indholdshistorik.',
+  'feat.influencer-products':'Annonceprodukter — håndtér produktkataloger til annoncer, opslag og influencer-kampagner.',
+  'feat.products':'Produkter — hele dit webshop-katalog. AI-captions genereres automatisk ud fra produktdata.',
+  'feat.content-library':'Content Library — alt indhold du har genereret, kan gennemses efter niche og platform.',
+  'feat.library':'Media Library — upload, organisér og genbrug dine egne billeder og videoer i opslag.',
+  'feat.history':'Indholdshistorik — hver caption, script og opslag du har lavet, søgbart.',
+  'feat.stats':'Statistik — de vigtigste tal på tværs af indhold, opslag og platforme.',
+  'feat.analytics':'Analytics — dybdegående performance pr. platform, målgruppe og indholdstype.',
+  'feat.brand-kit':'Brand Kit — dit logo, farver, fonte og tone of voice, så alt AI-output forbliver on-brand.',
+  'feat.hashtags':'Hashtag-research — find og gem hashtag-sæt der performer bedst pr. niche.',
+  'feat.competitor':'Konkurrent-spion — afkod enhver konkurrent: strategi, hooks og posting-kadence.',
+  'feat.audit':'Konto-audit — giv enhver social konto en score og få en skræddersyet handlingsplan.',
+  'feat.tools':'Værktøjer — hurtig adgang til Brand Kit, Hashtag-research, Konkurrent-spion og Konto-audit.',
+  'feat.connect':'Forbind — kobl Instagram, TikTok, YouTube, Facebook og X på, så opslag og analytics flyder automatisk.',
+  'feat.telegram-agent':'Telegram-agent — chat med din AI-assistent fra Telegram, mens du er på farten.',
+  'feat.subaccounts':'Ekstra profiler — håndtér yderligere brand-/creator-profiler under din hovedkonto.',
+  'feat.billing':'Plan & Credits — administrér dit abonnement, køb ekstra credits og se betalingshistorik.',
+  'feat.affiliate':'Affiliate-program — tjen tilbagevendende kommission for hver kunde du henviser.',
+  'feat.settings':'Indstillinger — konto, interface, sprog og notifikationspræferencer.',
+  'feat.agency-dashboard':'Agency Dashboard — håndtér kunder, per-kunde indstillinger og white-label rapporter.',
+  'feat.growth-dashboard':'Growth Dashboard — auto-DM’er, likes og kommentarer der vokser dine konti på autopilot.',
+  'help.studioSingle':'Lav hurtigt én enkelt AI-video-scene ud fra din prompt — perfekt til et hurtigt Reel eller TikTok.',
+  'help.studioSeries':'Saml 2–6 scener til én sammenhængende video med konsistent stil og karakter — ideelt til storytelling.',
+  'help.studioAnimation':'Generér en animeret video med en gennemgående karakter/stil — godt til brand-mascot og forklaringsvideoer.',
+  'help.premiumProviders':'Premium AI-video-motorer: Hyper Realistic (fotorealisme), Premium Animation (stiliseret) og Ultra Cinematic (biograf-look). Inkluderet på alle betalte planer.',
+  'help.provKling':'Mest fotorealistiske resultat med ægte fysik og lys (Kling AI). Bedst til premium produkt- og brandvideoer.',
+  'help.provPika':'Kreativ, stiliseret animation med flotte overgange og effekter (Pika) — fanger opmærksomhed i feedet.',
+  'help.provLuma':'Storfilm-æstetik med avancerede kamerabevægelser (Luma Ray 3.2) — til de mest imponerende hero-videoer.',
+  'tip.generator':'Generér AI-tekstindhold til sociale medier. Vælg platform og tone og beskriv dit produkt — AI skriver caption, hook, hashtags eller reel-script.',
+  'tip.ghost':'AI svarer som et rigtigt menneske — afslører aldrig, at det er AI.',
+  'tip.bonus':'Bonus-credits tildeles automatisk, når du udfører handlingen. Ingen ekstra trin nødvendige.',
+  'tip.pipeline':'Upload produktbillede → AI genererer scripts → Video Engine laver video → Voice Engine tilføjer voiceover → samler færdig video.',
+  'ex.btn':'Se eksempel',
+  'ex.btnOutput':'Se eksempel på output',
+  'ex.titlePrefix':'Eksempel: ',
+  'ex.prompt':'Eksempel-prompt',
+  'ex.output':'Sådan ser output ud',
+  'ex.note':'Dette er et eksempel — AI tilpasser teksten til dit produkt, din niche og din tone.',
+  'sub.schedule':'📅 Planlæg', 'sub.autopost':'⚙️ Auto-post', 'sub.platforms':'🔗 Platforme',
+  'sub.repost':'♻️ Auto-genopslag', 'sub.actions':'🚀 Planlæg & handlinger',
+  'sub.dm':'💬 Beskeder', 'sub.autodm':'⚙️ Auto DM', 'sub.autocomments':'💭 Auto-kommentarer', 'sub.email':'📧 Email',
+  'sub.videoStudio':'🎬 Video Studio', 'sub.portraitStudio':'🤳 AI Portræt Studio',
+});
+
 function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
@@ -8711,6 +8858,9 @@ function nav(p) {
   if (p === 'autorepost')   { nav('posting'); setTimeout(function(){ switchPostTab('repost'); loadRepostSettings(); },50); return; }
   if (p === 'autodm')       { nav('inbox');   setTimeout(function(){ switchInboxTab('autodm'); },50); return; }
   if (p === 'autocomments') { nav('inbox');   setTimeout(function(){ switchInboxTab('autocomments'); },50); return; }
+  // Reset any active sub-function title — a real page nav sets its own title
+  // below (a sub-tab switcher re-sets _activeSubKey right after, when relevant).
+  window._activeSubKey = null;
   // Hide email compose card when navigating away from inbox
   var compose = document.getElementById('email-compose-card');
   if (compose) compose.style.display = 'none';
@@ -8801,12 +8951,18 @@ function updateDashGreeting() {
 
 // Re-translate imperative bits when the language flips.
 window.addEventListener('langchange', function() {
-  var p = window._activePage;
-  if (p) {
-    var pageKey = 'page.' + p;
-    var i18nTitle = (I18N[currentLang] || I18N.en)[pageKey];
-    var el = document.getElementById('ptitle');
-    if (el) el.textContent = i18nTitle || titles[p] || p;
+  var el = document.getElementById('ptitle');
+  // If a sub-function (tab) is active, keep its translated title; otherwise use
+  // the active page's title.
+  if (window._activeSubKey) {
+    if (el) el.textContent = t(window._activeSubKey);
+  } else {
+    var p = window._activePage;
+    if (p) {
+      var pageKey = 'page.' + p;
+      var i18nTitle = (I18N[currentLang] || I18N.en)[pageKey];
+      if (el) el.textContent = i18nTitle || titles[p] || p;
+    }
   }
   if (window._activePage === 'dashboard') updateDashGreeting();
 });
@@ -11018,13 +11174,18 @@ function switchPostTab(tab) {
   if (tab === 'platforms') buildAutoPlatGrid();
   if (tab === 'repost') loadRepostSettings();
   // Each sub-function presents as its own titled destination (consistent nav).
-  setSubPageTitle({schedule:'📅 Schedule',autopost:'⚙️ Auto-post',platforms:'🔗 Platforms',repost:'♻️ Auto Repost',actions:'🚀 Plan & Actions'}[tab]);
+  setSubPageTitle('sub.' + tab);
 }
 
-// Make an in-page sub-function feel like its own page: set the top title and
-// scroll back to the top so it opens clean and spacious like a real page.
-function setSubPageTitle(title) {
-  if (title) { var el = document.getElementById('ptitle'); if (el) el.textContent = title; }
+// Make an in-page sub-function feel like its own page: set the top title (via
+// the i18n system so it follows the DA/EN toggle) and scroll to the top so it
+// opens clean and spacious like a real page. `key` is an i18n key.
+function setSubPageTitle(key) {
+  if (key) {
+    window._activeSubKey = key;
+    var el = document.getElementById('ptitle');
+    if (el) el.textContent = t(key);
+  }
   try { var m = document.querySelector('.main'); if (m) m.scrollTo({top:0,behavior:'smooth'}); else window.scrollTo({top:0,behavior:'smooth'}); } catch(e) {}
 }
 
@@ -11145,7 +11306,7 @@ function switchInboxTab(tab) {
   if (tab === 'email') { loadEmailSettings(); loadEmailTemplates(); }
   if (tab === 'autodm') { loadAutoDMSettings(); loadSubAccountsForDM(); }
   if (tab === 'autocomments') { loadAutoComSettings(); loadSubAccountsForDM(); }
-  setSubPageTitle({dm:'💬 Messages',autodm:'⚙️ Auto DM',autocomments:'💭 Auto Comments',email:'📧 Email'}[tab]);
+  setSubPageTitle('sub.' + tab);
 }
 
 // ── Email funktioner ─────────────────────────────────────────────────────────
@@ -14885,62 +15046,56 @@ function renderPipeContent() {
 // Inject a small ? icon next to the main title of each major feature page.
 // The existing SMART TOOLTIPS delegate handles hover positioning.
 (function() {
-  // Danish help text — every feature page gets a "?" on its title, and any
-  // element with a data-help="..." attribute gets the same consistent "?" icon.
-  var AGENT_HINT = ' · Brug for hjælp? Spørg din personlige AI-agent.';
+  // Every feature page gets a "?" on its title, and any element with a
+  // data-help="<i18n-key>" attribute gets the same consistent "?" icon. All
+  // text is resolved through the i18n system (t()) so it follows the DA/EN
+  // toggle — nothing is hardcoded to one language.
+  // page id -> i18n key (the strings live in I18N.en / I18N.da above).
   var FEATURE_TIPS = {
-    'page-dashboard':       'Dit overblik — hurtige handlinger, kontostatus og platformstatus samlet ét sted.',
-    'page-generator':       'AI Content Generator — skriv captions, hooks, scripts og hashtags til enhver platform på sekunder.',
-    'page-content-engine':  'Content Engine — generér en hel 30-dages social media-kalender skræddersyet til din niche.',
-    'page-content-plan':    'AI Content Plan — få en strategisk opslagsplan med timing, emner og tone for de næste 30 dage.',
-    'page-studio':          'Video Studio — lav en færdig AI-video med voiceover, scener og samling ud fra en prompt.',
-    'page-pipeline':        'Content Pipeline — script → billede → video → stemme → færdigt opslag i ét automatiseret flow.',
-    'page-video-script':    'AI Video Script Generator — script med tidskoder, hook, scener og CTA, klar til optagelse.',
-    'page-reel-templates':  'Story & Reel-skabeloner — 20+ færdige scripts efter niche, klar til at tilpasse.',
-    'page-posting':         'Opret & Planlæg — planlæg, sæt i kø og auto-publicér indhold på alle forbundne platforme.',
-    'page-autopilot':       'Auto Pilot — dine sociale medier på fuld autopilot: generér, planlæg og post automatisk.',
-    'page-inbox':           'Indbakke, DM & Email — svar automatisk på DM’er og kommentarer med AI i din tone.',
-    'page-creators':        'Influencer-profiler — håndtér flere creators, hver med egen niche, stil og indholdshistorik.',
-    'page-influencer-products': 'Annonceprodukter — håndtér produktkataloger til annoncer, opslag og influencer-kampagner.',
-    'page-products':        'Produkter — hele dit webshop-katalog. AI-captions genereres automatisk ud fra produktdata.',
-    'page-content-library': 'Content Library — alt indhold du har genereret, kan gennemses efter niche og platform.',
-    'page-library':         'Media Library — upload, organisér og genbrug dine egne billeder og videoer i opslag.',
-    'page-history':         'Indholdshistorik — hver caption, script og opslag du har lavet, søgbart.',
-    'page-stats':           'Statistik — de vigtigste tal på tværs af indhold, opslag og platforme.',
-    'page-analytics':       'Analytics — dybdegående performance pr. platform, målgruppe og indholdstype.',
-    'page-brand-kit':       'Brand Kit — dit logo, farver, fonte og tone of voice, så alt AI-output forbliver on-brand.',
-    'page-hashtags':        'Hashtag-research — find og gem hashtag-sæt der performer bedst pr. niche.',
-    'page-competitor':      'Konkurrent-spion — afkod enhver konkurrent: strategi, hooks og posting-kadence.',
-    'page-audit':           'Konto-audit — giv enhver social konto en score og få en skræddersyet handlingsplan.',
-    'page-tools':           'Værktøjer — hurtig adgang til Brand Kit, Hashtag-research, Konkurrent-spion og Konto-audit.',
-    'page-connect':         'Forbind — kobl Instagram, TikTok, YouTube, Facebook og X på, så opslag og analytics flyder automatisk.',
-    'page-telegram-agent':  'Telegram-agent — chat med din AI-assistent fra Telegram, mens du er på farten.',
-    'page-subaccounts':     'Ekstra profiler — håndtér yderligere brand-/creator-profiler under din hovedkonto.',
-    'page-billing':         'Plan & Credits — administrér dit abonnement, køb ekstra credits og se betalingshistorik.',
-    'page-affiliate':       'Affiliate-program — tjen tilbagevendende kommission for hver kunde du henviser.',
-    'page-settings':        'Indstillinger — konto, interface, sprog og notifikationspræferencer.',
-    'page-agency-dashboard': 'Agency Dashboard — håndtér kunder, per-kunde indstillinger og white-label rapporter.',
-    'page-growth-dashboard': 'Growth Dashboard — auto-DM’er, likes og kommentarer der vokser dine konti på autopilot.'
+    'page-dashboard':'feat.dashboard', 'page-generator':'feat.generator',
+    'page-content-engine':'feat.content-engine', 'page-content-plan':'feat.content-plan',
+    'page-studio':'feat.studio', 'page-pipeline':'feat.pipeline',
+    'page-video-script':'feat.video-script', 'page-reel-templates':'feat.reel-templates',
+    'page-posting':'feat.posting', 'page-autopilot':'feat.autopilot',
+    'page-inbox':'feat.inbox', 'page-creators':'feat.creators',
+    'page-influencer-products':'feat.influencer-products', 'page-products':'feat.products',
+    'page-content-library':'feat.content-library', 'page-library':'feat.library',
+    'page-history':'feat.history', 'page-stats':'feat.stats',
+    'page-analytics':'feat.analytics', 'page-brand-kit':'feat.brand-kit',
+    'page-hashtags':'feat.hashtags', 'page-competitor':'feat.competitor',
+    'page-audit':'feat.audit', 'page-tools':'feat.tools',
+    'page-connect':'feat.connect', 'page-telegram-agent':'feat.telegram-agent',
+    'page-subaccounts':'feat.subaccounts', 'page-billing':'feat.billing',
+    'page-affiliate':'feat.affiliate', 'page-settings':'feat.settings',
+    'page-agency-dashboard':'feat.agency-dashboard', 'page-growth-dashboard':'feat.growth-dashboard'
   };
 
-  function _makeTip(text, withAgentHint) {
+  // Resolve the current-language text for a help-tip box from its stored key.
+  function _tipText(box) {
+    return t(box.dataset.tipKey) + (box.dataset.tipHint ? t('tip.agentHint') : '');
+  }
+
+  // key = an i18n key; withAgentHint appends the translated "ask your agent" line.
+  function _makeTip(key, withAgentHint) {
     var tip = document.createElement('span');
     tip.className = 'tip help-tip';
     var iconSpan = document.createElement('span');
     iconSpan.className = 'tip-icon';
     iconSpan.textContent = '?';
-    iconSpan.setAttribute('aria-label', 'Hjælp');
+    iconSpan.setAttribute('aria-label', currentLang === 'da' ? 'Hjælp' : 'Help');
     var boxSpan = document.createElement('span');
     boxSpan.className = 'tip-box';
-    boxSpan.textContent = text + (withAgentHint ? AGENT_HINT : '');
+    boxSpan.dataset.tipKey = key;
+    if (withAgentHint) boxSpan.dataset.tipHint = '1';
+    boxSpan.textContent = _tipText(boxSpan);
     tip.appendChild(iconSpan);
     tip.appendChild(boxSpan);
     return tip;
   }
 
-  function _attachHelpTip(titleEl, text) {
+  function _attachHelpTip(titleEl, key) {
     if (!titleEl || titleEl.querySelector('.tip.help-tip')) return;
-    titleEl.appendChild(_makeTip(text, true));
+    titleEl.appendChild(_makeTip(key, true));
   }
 
   function _firstTitle(pageEl) {
@@ -14957,7 +15112,7 @@ function renderPipeContent() {
     });
   }
 
-  // Generic, consistent "?" tooltips: any element with data-help="Danish text"
+  // Generic, consistent "?" tooltips: any element with data-help="<i18n-key>"
   // gets a "?" icon appended (once). Works for static markup AND content
   // rendered later by JS — just call window.initHelpTips() after a render, or
   // rely on the MutationObserver below.
@@ -14965,12 +15120,19 @@ function renderPipeContent() {
     var scope = root && root.querySelectorAll ? root : document;
     scope.querySelectorAll('[data-help]:not([data-help-done])').forEach(function(el) {
       el.setAttribute('data-help-done', '1');
-      var txt = el.getAttribute('data-help') || '';
-      if (!txt) return;
-      el.appendChild(_makeTip(txt, false));
+      var key = el.getAttribute('data-help') || '';
+      if (!key) return;
+      el.appendChild(_makeTip(key, false));
     });
   }
   window.initHelpTips = function(root) { initFeatureHelpTips(); initDataHelpTips(root); };
+
+  // Re-translate every help tooltip when the language toggles.
+  window.addEventListener('langchange', function() {
+    document.querySelectorAll('.tip-box[data-tip-key]').forEach(function(box) {
+      box.textContent = _tipText(box);
+    });
+  });
 
   function runAll() { initFeatureHelpTips(); initDataHelpTips(document); }
 
@@ -15806,7 +15968,7 @@ function studioSwitchTab(tab) {
   tabPortrait.style.color    = isVideo ? 'var(--tx3)' : 'var(--ac)';
   tabPortrait.style.borderBottomColor = isVideo ? 'transparent' : 'var(--ac)';
 
-  if (typeof setSubPageTitle === 'function') setSubPageTitle(isVideo ? '🎬 Video Studio' : '🤳 AI Portrait Studio');
+  if (typeof setSubPageTitle === 'function') setSubPageTitle(isVideo ? 'sub.videoStudio' : 'sub.portraitStudio');
 
   if (!isVideo) {
     // Render every click and surface errors instead of leaving a blank pane.
