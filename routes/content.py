@@ -183,7 +183,16 @@ async def _call_ai(prompt: str, language: str = "da") -> str:
                     json={"model": "claude-haiku-4-5", "max_tokens": 800, "system": system, "messages": [{"role": "user", "content": prompt}]},
                     timeout=30)
                 r.raise_for_status()
-                return r.json()["content"][0]["text"]
+                _j = r.json()
+                try:
+                    _u = _j.get("usage", {})
+                    from services import api_tracker
+                    api_tracker.track("anthropic", "tokens",
+                                      _u.get("input_tokens", 0) + _u.get("output_tokens", 0),
+                                      feature="content_generate")
+                except Exception:
+                    pass
+                return _j["content"][0]["text"]
         except: pass
     
     # Try OpenAI (user key first, then env)
@@ -196,7 +205,16 @@ async def _call_ai(prompt: str, language: str = "da") -> str:
                     json={"model": "gpt-4o-mini", "max_tokens": 800, "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]},
                     timeout=30)
                 r.raise_for_status()
-                return r.json()["choices"][0]["message"]["content"]
+                _j = r.json()
+                try:
+                    _u = _j.get("usage", {})
+                    from services import api_tracker
+                    api_tracker.track("openai", "tokens",
+                                      _u.get("prompt_tokens", 0) + _u.get("completion_tokens", 0),
+                                      feature="content_generate")
+                except Exception:
+                    pass
+                return _j["choices"][0]["message"]["content"]
         except: pass
     is_en = (language or "da").lower() == "en"
     demos = {

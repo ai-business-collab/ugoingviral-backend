@@ -151,6 +151,16 @@ def _log_api_call(provider: str, model: str, action: str,
         save_store()
     except Exception:
         pass
+    # Also feed the global cost tracker (per-user attribution via ContextVar) so
+    # the admin cost dashboard sees agent chat / TTS / transcription spend too.
+    try:
+        from services import api_tracker
+        if provider in ("openai", "anthropic"):
+            api_tracker.track(provider, "tokens", (tokens_in or 0) + (tokens_out or 0), feature=action)
+        elif provider == "elevenlabs":
+            api_tracker.track("elevenlabs", "chars", tokens_in or 0, feature=action)
+    except Exception:
+        pass
 
 # ── Content performance insights ──────────────────────────────────────────────
 
@@ -542,6 +552,233 @@ def _parse_actions(text: str) -> dict:
     return {"text": clean, "actions": actions, "escalate": escalate}
 
 
+# ── UgoingViral action intent-router ──────────────────────────────────────────
+# Deterministically detect when the user is asking the agent to DO something on
+# UgoingViral (post / schedule / generate / show stats) and actually call the
+# right internal endpoint, instead of only chatting. Scope is strictly
+# UgoingViral actions — nothing external. Posting to a real social account is
+# ALWAYS gated behind an explicit "Skal jeg poste nu? Ja/Nej" confirmation
+# (stored as a pending action between messages).
+
+_PLATFORMS = {
+    "tiktok":    ("tiktok", "tik tok"),
+    "instagram": ("instagram", "insta", "ig"),
+    "youtube":   ("youtube", "yt"),
+    "facebook":  ("facebook", "fb"),
+    "twitter":   ("twitter", "x.com", " x ", "tweet"),
+}
+
+_AFFIRM = {"ja", "ja tak", "jep", "jo", "yes", "yep", "yeah", "ok", "okay", "okay ja",
+           "gør det", "goer det", "post nu", "post den", "post det", "publicer",
+           "udgiv", "send", "do it", "go", "post it", "yes please", "ja gør det"}
+_NEGATE = {"nej", "nej tak", "no", "nope", "stop", "annuller", "annullér", "cancel",
+           "vent", "ikke endnu", "not now", "drop det"}
+
+_POST_VERB_RE  = _re.compile(r"\b(post|poste|publicer|publicér|udgiv|udgive|slå\s+op|slaa\s+op|publish|share\s+it)\b", _re.I)
+_CREATE_VERB_RE = _re.compile(r"\b(lav|skriv|opret|generer|generér|create|write|make|draft)\b", _re.I)
+_SCHEDULE_RE   = _re.compile(r"\b(planl[æa]g|planlaeg|schedule|sæt\s+op|saet\s+op)\b", _re.I)
+_STATS_RE      = _re.compile(r"\b(statistik\w*|stats|analytics|mine\s+tal|resultater|hvordan\s+(klarer|går)|performance|insights?)\b", _re.I)
+_NUM_RE        = _re.compile(r"\b(\d{1,2})\b")
+_DA_HINTS = ("æ", "ø", "å", "opslag", "planl", "vis", "mine", "lav", " og ", " til ", "uge", "statistik", "skriv")
+
+
+def _is_danish(msg: str) -> bool:
+    low = (msg or "").lower()
+    if any(h in low for h in _DA_HINTS):
+        return True
+    return True  # DK-first product — default Danish when ambiguous
+
+
+def _detect_platform(msg: str) -> str:
+    low = f" {(msg or '').lower()} "
+    for plat, aliases in _PLATFORMS.items():
+        if any(a in low for a in aliases):
+            return plat
+    return ""
+
+
+def _extract_topic(msg: str) -> str:
+    """Pull the subject of a post out of phrases like 'lav et opslag om X …'."""
+    m = _re.search(r"\bom\s+(.+)", msg, _re.I) or _re.search(r"\babout\s+(.+)", msg, _re.I)
+    topic = (m.group(1) if m else msg).strip()
+    # Trim trailing "og post det til tiktok" / "and post it to tiktok"
+    topic = _re.split(r"\b(og|and|,)\b\s*(post|poste|publicer|publish|udgiv|slå|share)", topic, flags=_re.I)[0].strip()
+    for plat, aliases in _PLATFORMS.items():
+        for a in aliases:
+            topic = _re.sub(_re.escape(a), "", topic, flags=_re.I)
+    topic = _re.sub(r"\b(til|to|på|paa|for)\b\s*$", "", topic.strip(), flags=_re.I).strip(" .,-")
+    return topic[:200]
+
+
+async def _gen_caption(topic: str, platform: str, language: str) -> str:
+    """Generate one caption via the existing content engine (real AI call)."""
+    from routes.content import _call_ai, _build_prompt
+    from models import ContentRequest
+    try:
+        req = ContentRequest(content_type="caption", platform=platform or "instagram",
+                             product_title=topic or "", product_description=topic or "",
+                             language=language, tone="engaging")
+        return (await _call_ai(_build_prompt(req), language)).strip()
+    except Exception:
+        # Fallback so scheduling/posting still works if the model call fails.
+        return (f"🔥 {topic}" if topic else "🔥 Nyt opslag fra UgoingViral")
+
+
+def _log_agent_activity(uid: str, ustore: dict, description: str, kind: str, details: dict = None):
+    log = ustore.setdefault("agent_activity_log", [])
+    log.append({"ts": datetime.now().isoformat(), "day": datetime.now().strftime("%Y-%m-%d"),
+                "task_type": kind, "description": description, "details": details or {}})
+    ustore["agent_activity_log"] = log[-200:]
+
+
+def _agent_reply(uid: str, ustore: dict, user_msg: str, text: str, actions=None, save_store_now=True):
+    """Persist chat history + (optionally) the store, return the chat payload."""
+    hist = ustore.setdefault("agent_history", [])
+    hist.append({"role": "user", "content": user_msg})
+    hist.append({"role": "assistant", "content": text})
+    ustore["agent_history"] = hist[-60:]
+    if save_store_now:
+        _save_user_store(uid, ustore)
+    return {"response": text, "actions": actions or [], "escalate": False, "voice_url": None}
+
+
+class _FakeReq:
+    """Minimal stand-in for fastapi Request so we can call publish_via_api()
+    directly with a synthesized JSON body."""
+    def __init__(self, data: dict):
+        self._data = data
+    async def json(self):
+        return self._data
+
+
+async def _execute_post_now(uid: str, ustore: dict, current_user: dict, pending: dict) -> dict:
+    """Actually publish via the real posting endpoint and report the result."""
+    from routes.posts import publish_via_api
+    platform = pending.get("platform", "")
+    content  = pending.get("content", "")
+    da = pending.get("da", True)
+    try:
+        result = await publish_via_api(
+            _FakeReq({"platform": platform, "content": content,
+                      "image_url": pending.get("image_url"),
+                      "video_url": pending.get("video_url")}),
+            current_user,
+        )
+    except Exception as e:
+        result = {"status": "error", "message": str(e)[:160]}
+    status = result.get("status", "error")
+    url = result.get("post_url") or result.get("url") or ""
+    ustore.pop("agent_pending_action", None)
+    if status in ("published", "processing"):
+        _log_agent_activity(uid, ustore, f"Posted to {platform}", "post_content", {"platform": platform, "url": url})
+        msg = (f"✅ Opslaget er postet til {platform.title()}!" if da else f"✅ Posted to {platform.title()}!")
+        if url:
+            msg += f" {url}"
+    else:
+        why = result.get("message", "ukendt fejl")
+        msg = (f"⚠️ Kunne ikke poste til {platform.title()}: {why}. "
+               f"Tjek at {platform.title()} er forbundet under Connect." if da
+               else f"⚠️ Couldn't post to {platform.title()}: {why}. Make sure {platform.title()} is connected under Connect.")
+    return _agent_reply(uid, ustore, pending.get("origin_msg", ""), msg,
+                        actions=[{"type": "navigate", "page": "connect"}] if status not in ("published", "processing") else [])
+
+
+async def _route_ugv_action(uid: str, message: str, ustore: dict, current_user: dict):
+    """Return a chat payload if this message is a UgoingViral action, else None."""
+    msg = (message or "").strip()
+    low = msg.lower()
+    da = _is_danish(msg)
+
+    # 0) Resolve a pending post confirmation first.
+    pending = ustore.get("agent_pending_action")
+    if pending and pending.get("type") == "post_now":
+        if low in _AFFIRM or any(low.startswith(a) for a in _AFFIRM):
+            return await _execute_post_now(uid, ustore, current_user, pending)
+        if low in _NEGATE or any(low.startswith(n) for n in _NEGATE):
+            ustore.pop("agent_pending_action", None)
+            txt = "Ok, jeg poster ikke. Sig til hvis du vil ændre noget. 🙂" if da else "Ok, I won't post it. Let me know if you'd like to change anything. 🙂"
+            return _agent_reply(uid, ustore, msg, txt)
+        # Not a clear yes/no — clear stale pending and fall through to normal flow.
+        ustore.pop("agent_pending_action", None)
+
+    # 1) Show statistics → real numbers + navigate to stats.
+    if _STATS_RE.search(low) and not _CREATE_VERB_RE.search(low):
+        posts = ustore.get("scheduled_posts", [])
+        pending_posts = len([p for p in posts if p.get("status") == "scheduled"])
+        insights = _get_content_insights(uid)
+        conns = ustore.get("connections", {})
+        connected = [p for p, v in conns.items() if isinstance(v, dict) and v.get("username")]
+        if insights.get("total_tracked", 0) > 0:
+            avg = round(insights["avg_engagement_rate"] * 100, 1)
+            if da:
+                txt = (f"📊 Dine tal:\n• {insights['total_tracked']} opslag målt\n"
+                       f"• Gns. engagement: {avg}%\n• Bedste platform: {insights.get('best_platform','—')}\n"
+                       f"• Bedste indholdstype: {insights.get('best_content_type','—')}\n"
+                       f"• Planlagte opslag: {pending_posts}")
+            else:
+                txt = (f"📊 Your stats:\n• {insights['total_tracked']} posts tracked\n"
+                       f"• Avg engagement: {avg}%\n• Best platform: {insights.get('best_platform','—')}\n"
+                       f"• Best content type: {insights.get('best_content_type','—')}\n"
+                       f"• Scheduled posts: {pending_posts}")
+        else:
+            if da:
+                txt = (f"📊 Du har endnu ingen målte opslag.\n• Forbundne platforme: {', '.join(connected) if connected else 'ingen'}\n"
+                       f"• Planlagte opslag: {pending_posts}\nNår du poster, viser jeg din udvikling her.")
+            else:
+                txt = (f"📊 No tracked posts yet.\n• Connected platforms: {', '.join(connected) if connected else 'none'}\n"
+                       f"• Scheduled posts: {pending_posts}\nOnce you post, I'll show your growth here.")
+        return _agent_reply(uid, ustore, msg, txt, actions=[{"type": "navigate", "page": "stats"}])
+
+    # 2) Schedule N posts → actually create scheduled_posts.
+    if _SCHEDULE_RE.search(low) and ("opslag" in low or "post" in low):
+        nums = _NUM_RE.findall(low)
+        n = max(1, min(14, int(nums[0]) if nums else 1))
+        platform = _detect_platform(low) or "instagram"
+        topic = _extract_topic(msg)
+        from datetime import timedelta as _td
+        created = []
+        posts = ustore.setdefault("scheduled_posts", [])
+        for i in range(n):
+            caption = await _gen_caption(topic, platform, "da" if da else "en")
+            when = (datetime.now() + _td(days=i + 1)).replace(hour=10, minute=0, second=0, microsecond=0)
+            item = {"id": (datetime.now().isoformat() + f"_{i}"), "platform": platform,
+                    "content": caption, "image_url": "", "scheduled_time": when.isoformat(),
+                    "status": "scheduled", "mode": "agent"}
+            posts.insert(0, item)
+            created.append(item)
+        ustore["scheduled_posts"] = posts
+        _log_agent_activity(uid, ustore, f"Scheduled {n} post(s) to {platform}", "post_content",
+                            {"count": n, "platform": platform})
+        if da:
+            txt = (f"✅ Jeg har planlagt {n} opslag til {platform.title()}"
+                   + (f" om “{topic}”" if topic else "") + " — fordelt over de næste dage kl. 10:00. "
+                   "Du kan se og redigere dem i kalenderen.")
+        else:
+            txt = (f"✅ I've scheduled {n} post(s) to {platform.title()}"
+                   + (f" about “{topic}”" if topic else "") + ", spread over the next days at 10:00. "
+                   "You can view and edit them in the calendar.")
+        return _agent_reply(uid, ustore, msg, txt, actions=[{"type": "navigate", "page": "posting"}])
+
+    # 3) Post NOW to a platform → generate, then ask for confirmation.
+    platform = _detect_platform(low)
+    if platform and _POST_VERB_RE.search(low):
+        topic = _extract_topic(msg)
+        caption = await _gen_caption(topic, platform, "da" if da else "en")
+        ustore["agent_pending_action"] = {
+            "type": "post_now", "platform": platform, "content": caption,
+            "da": da, "origin_msg": msg, "ts": datetime.now().isoformat(),
+        }
+        if da:
+            txt = (f"Her er et udkast til {platform.title()}:\n\n{caption}\n\n"
+                   f"Skal jeg poste det nu til {platform.title()}? Svar **Ja** eller **Nej**.")
+        else:
+            txt = (f"Here's a draft for {platform.title()}:\n\n{caption}\n\n"
+                   f"Should I post it now to {platform.title()}? Reply **Yes** or **No**.")
+        return _agent_reply(uid, ustore, msg, txt)
+
+    return None
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/api/agent/chat")
@@ -576,6 +813,20 @@ async def agent_chat(request: Request, req: AgentRequest, current_user: dict = D
             "escalate":  False,
             "voice_url": None,
         }
+
+    # ── UgoingViral action intent-router — execute real actions, not just chat ─
+    # Detects post/schedule/stats intents (and yes/no confirmation of a pending
+    # post) and calls the matching UgoingViral endpoint deterministically.
+    try:
+        routed = await _route_ugv_action(uid, req.message or "", ustore, current_user)
+    except Exception:
+        routed = None
+    if routed is not None:
+        voice_url = None
+        if (req.voice_mode or ustore.get("agent_voice_enabled", False)) and ELEVENLABS_KEY:
+            voice_url = await _tts(routed.get("response", ""), ustore.get("agent_voice_id", ""))
+        routed["voice_url"] = voice_url
+        return routed
 
     agent_name = ustore.get("agent_name", "")
     ctx = _build_context(uid, req.context)

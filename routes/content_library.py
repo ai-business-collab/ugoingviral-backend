@@ -429,6 +429,20 @@ async def upload_to_library(
             detail="Unsupported format. Allowed: mp4, mov, mp3, wav, aac, jpg, png, gif, webp",
         )
 
+    # Per-plan storage quota — a user may keep UNLIMITED files, but their total
+    # on-disk size is bounded by their plan. Compute how much room is left before
+    # we start writing so we can reject gracefully (507) without a half-file.
+    from services import storage as _storage
+    plan = (_load_user_store(uid).get("billing", {}) or {}).get("plan", "free")
+    room_left = _storage.remaining_bytes(uid, plan)
+    if room_left <= 0:
+        summ = _storage.usage_summary(uid, plan)
+        raise HTTPException(
+            status_code=507,
+            detail=(f"Storage quota reached ({summ['used_gb']} GB of {summ['quota_gb']} GB "
+                    f"used on the {plan} plan). Delete some files or upgrade your plan."),
+        )
+
     uploads_dir = os.path.join(USER_CONTENT_DIR, uid, "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
     item_id = uuid.uuid4().hex[:12]
@@ -437,7 +451,8 @@ async def upload_to_library(
     abs_path = os.path.join(uploads_dir, filename)
 
     # Stream to disk in chunks so a 500 MB upload never loads fully into memory,
-    # and abort early if the size cap is exceeded.
+    # and abort early if EITHER the 500 MB per-file cap OR the remaining plan
+    # quota is exceeded.
     total = 0
     try:
         with open(abs_path, "wb") as out:
@@ -448,6 +463,14 @@ async def upload_to_library(
                 total += len(chunk)
                 if total > MAX_UPLOAD_BYTES:
                     raise HTTPException(status_code=413, detail="File too large. Max 500 MB per file.")
+                if total > room_left:
+                    summ = _storage.usage_summary(uid, plan)
+                    raise HTTPException(
+                        status_code=507,
+                        detail=(f"This file would exceed your {summ['quota_gb']} GB storage quota "
+                                f"on the {plan} plan ({summ['used_gb']} GB already used). "
+                                "Delete some files or upgrade your plan."),
+                    )
                 out.write(chunk)
     except HTTPException:
         _safe_remove(abs_path)
@@ -483,7 +506,9 @@ async def upload_to_library(
     ustore = _load_user_store(uid)
     items = ustore.setdefault("library_items", [])
     items.insert(0, entry)
-    ustore["library_items"] = items[:500]
+    # Files are unlimited (only per-file size + plan storage quota apply); keep a
+    # generous metadata bound so the per-user store JSON stays manageable.
+    ustore["library_items"] = items[:10000]
     _save_user_store(uid, ustore)
     return {"ok": True, "item": entry}
 

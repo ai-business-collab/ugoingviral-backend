@@ -166,14 +166,42 @@ def save_dm(s: DMSettings):
     return {"status": "saved"}
 
 # ── Image upload ──────────────────────────────────────────────────────────────
+# Images are small assets (references/thumbnails) — cap well below the 500 MB
+# media limit and enforce it server-side by streaming with an early abort.
+IMAGE_MAX_BYTES = 50 * 1024 * 1024  # 50 MB
+
+
+def _save_upload_capped(file: UploadFile, dest_path: str, max_bytes: int) -> None:
+    """Stream an UploadFile to disk, aborting with a clean 413 if it exceeds
+    max_bytes (so a huge file can never fill the disk or load into memory)."""
+    total = 0
+    try:
+        with open(dest_path, "wb") as out:
+            while True:
+                chunk = file.file.read(1024 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > max_bytes:
+                    raise HTTPException(status_code=413,
+                                        detail=f"Image too large. Max {max_bytes // (1024*1024)} MB.")
+                out.write(chunk)
+    except HTTPException:
+        try:
+            if os.path.exists(dest_path):
+                os.remove(dest_path)
+        except Exception:
+            pass
+        raise
+
+
 @router.post("/api/upload/image")
 async def upload_image(file: UploadFile = File(...)):
     ext = file.filename.split(".")[-1].lower()
     if ext not in ["jpg", "jpeg", "png", "webp", "gif"]:
         raise HTTPException(400, "Kun billeder (jpg, png, webp, gif)")
     filename = f"{datetime.now().timestamp()}.{ext}"
-    with open(f"uploads/{filename}", "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    _save_upload_capped(file, f"uploads/{filename}", IMAGE_MAX_BYTES)
     return {"url": f"http://localhost:8000/uploads/{filename}", "filename": filename}
 
 @router.post("/api/upload/creator-image")
@@ -182,8 +210,7 @@ async def upload_creator_image(file: UploadFile = File(...)):
     if ext not in ["jpg", "jpeg", "png", "webp"]:
         raise HTTPException(400, "Kun billeder")
     filename = f"creators/{datetime.now().timestamp()}.{ext}"
-    with open(f"uploads/{filename}", "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    _save_upload_capped(file, f"uploads/{filename}", IMAGE_MAX_BYTES)
     return {"url": f"http://localhost:8000/uploads/{filename}", "filename": filename}
 
 # ── Creators ──────────────────────────────────────────────────────────────────

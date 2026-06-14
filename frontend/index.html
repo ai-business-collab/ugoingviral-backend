@@ -3453,6 +3453,15 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       </div>
     </div>
     <div class="info-box" style="margin-bottom:16px">📸 Upload images and videos. Folders are <strong>shared with your Content Library</strong> — create one here and it appears there too. 💡 <strong>Use the "Move to…" menu on each item</strong> to file it into a folder · pick a folder above and press <strong>🗑️ Delete folder</strong> to remove a custom folder (items are kept, just un-filed).</div>
+    <div id="storage-usage" style="margin-bottom:16px;font-size:12px;color:var(--tx3)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span>💾 <span id="storage-text">Storage…</span></span>
+        <span id="storage-plan" style="opacity:.7"></span>
+      </div>
+      <div style="height:8px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden">
+        <div id="storage-bar" style="height:100%;width:0%;background:var(--ac);transition:width .4s"></div>
+      </div>
+    </div>
     <div id="lib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px">
       <div style="color:var(--tx3);font-size:13px;text-align:center;padding:48px;grid-column:1/-1"><div style="font-size:40px;margin-bottom:12px;opacity:.3">🖼️</div>No files yet — click ⬆️ Upload</div>
     </div>
@@ -8646,7 +8655,7 @@ function nav(p) {
   if (p === 'settings') { loadSettingsPage(); loadContentLanguage(); }
   if (p === 'telegram-agent') { loadUserTelegramStatus(); }
   if (p === 'posting') { if (!allProducts.length) { loadProducts().then(function() { renderPostingProductGrid(); loadAutoGroups(); }); } else { renderPostingProductGrid(); loadAutoGroups(); } loadRecentPosts(); loadGroups(); }
-  if (p === 'library') { loadLibFolders(); renderLibrary(libFiles); }
+  if (p === 'library') { loadLibFolders(); renderLibrary(libFiles); loadStorageUsage(); }
   if (p === 'content-library') { loadClib(); }
   if (p === 'posting') {
     if (!allProducts.length) {
@@ -11368,6 +11377,22 @@ function updateAutoPreview() {
 var libFiles = [];
 var libFolders = [];
 
+async function loadStorageUsage() {
+  try {
+    const d = await apiFetch('/api/storage/usage');
+    if (!d) return;
+    const txt = document.getElementById('storage-text');
+    const bar = document.getElementById('storage-bar');
+    const plan = document.getElementById('storage-plan');
+    if (txt) txt.textContent = d.used_gb + ' GB of ' + d.quota_gb + ' GB used (' + d.used_pct + '%)';
+    if (plan) plan.textContent = (d.plan || '').toUpperCase() + ' plan';
+    if (bar) {
+      bar.style.width = Math.min(100, d.used_pct) + '%';
+      bar.style.background = d.used_pct >= 90 ? 'var(--red,#ff4d4d)' : (d.used_pct >= 75 ? '#ffb020' : 'var(--ac)');
+    }
+  } catch (e) {}
+}
+
 async function uploadLibFiles(input) {
   for (var i = 0; i < input.files.length; i++) {
     var file = input.files[i];
@@ -11381,6 +11406,7 @@ async function uploadLibFiles(input) {
       toast('📸 ' + file.name + ' uploadet!', 'success');
     } catch(e) { toast('❌ Upload fejl', 'error'); }
   }
+  loadStorageUsage();
 }
 
 function filterLibrary() {

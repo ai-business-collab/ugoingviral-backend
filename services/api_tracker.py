@@ -10,6 +10,7 @@ COST_RATES = {
     "openai_tokens":          0.00000015,   # $0.15 / 1M tokens (gpt-4o-mini input)
     "anthropic_tokens":       0.00000025,   # $0.25 / 1M tokens (haiku input)
     "runway_seconds":         0.05,          # $0.05 / second
+    "luma_seconds":           0.05,          # $0.05 / second (Luma Ray)
     "elevenlabs_chars":       0.0003,        # $0.30 / 1000 chars
     "replicate_predictions":  0.004,         # $0.004 / prediction
     "sendgrid_emails":        0.0,           # free tier
@@ -34,8 +35,18 @@ def _save(data: dict):
 
 
 def track(service: str, metric: str, quantity: float, user_id: str = "", feature: str = ""):
-    """Record an API call. service=openai|anthropic|runway|elevenlabs|replicate|sendgrid
-       metric=tokens|seconds|chars|predictions|emails  quantity=amount used"""
+    """Record an API call. service=openai|anthropic|runway|luma|elevenlabs|replicate|sendgrid
+       metric=tokens|seconds|chars|predictions|emails  quantity=amount used
+
+    If user_id is not supplied, it is auto-resolved from the request-scoped
+    ContextVar so every call is attributed to the user who triggered it (this is
+    what powers the per-user cost breakdown on the admin panel)."""
+    if not user_id:
+        try:
+            from services.store import _uid_ctx
+            user_id = _uid_ctx.get(None) or ""
+        except Exception:
+            user_id = ""
     with _lock:
         data = _load()
         data["entries"].append({
@@ -67,6 +78,7 @@ def get_stats(month: str = None) -> dict:
         totals = {}
         costs = {}
         by_feature = {}
+        by_user = {}
         users = set()
         for e in ents:
             svc = e.get("service", "unknown")
@@ -77,10 +89,21 @@ def get_stats(month: str = None) -> dict:
             costs[svc] = costs.get(svc, 0) + cost
             feat = e.get("feature", "unknown")
             by_feature[feat] = by_feature.get(feat, 0) + cost
-            if e.get("user_id"):
-                users.add(e["user_id"])
+            uid = e.get("user_id")
+            if uid:
+                users.add(uid)
+                bu = by_user.setdefault(uid, {"cost": 0.0, "calls": 0, "by_service": {}})
+                bu["cost"] += cost
+                bu["calls"] += 1
+                bu["by_service"][svc] = round(bu["by_service"].get(svc, 0) + cost, 6)
         total_cost = sum(costs.values())
         most_expensive = max(by_feature, key=by_feature.get) if by_feature else None
+        # Ranked "which users cost the most" list.
+        top_users = sorted(
+            ({"user_id": uid, "cost": round(v["cost"], 4), "calls": v["calls"],
+              "by_service": v["by_service"]} for uid, v in by_user.items()),
+            key=lambda x: x["cost"], reverse=True,
+        )
         return {
             "totals": totals,
             "costs_by_service": costs,
@@ -89,6 +112,7 @@ def get_stats(month: str = None) -> dict:
             "most_expensive_feature": most_expensive,
             "unique_users": len(users),
             "cost_per_user": round(total_cost / max(len(users), 1), 4),
+            "top_users": top_users,
         }
 
     month_stats = agg(month_entries)

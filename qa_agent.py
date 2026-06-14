@@ -44,7 +44,7 @@ EXPECTED_CREDIT_PACKAGES = {100: 8, 350: 24, 700: 44, 1500: 79}
 # surfaces them in the same Telegram alert the QA suite already uses.
 HEALTH_CPU_WARN_PCT   = 90      # sustained CPU utilisation
 HEALTH_MEM_WARN_PCT   = 90      # system memory used
-HEALTH_DISK_WARN_PCT  = 90      # disk used on /
+HEALTH_DISK_WARN_PCT  = 80      # disk used on / (alert early — before it fills)
 HEALTH_LOAD_PER_CORE  = 4.0     # 1-min load average per CPU core
 NGINX_ACCESS_LOG      = "/var/log/nginx/access.log"
 HEALTH_REQ_WINDOW_MIN = 5       # window (minutes) for request-rate + error-rate

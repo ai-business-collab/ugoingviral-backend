@@ -79,9 +79,29 @@ async def upload_media(
             detail="Unsupported file type. Allowed: mp4, mov, mp3, wav"
         )
 
+    # Per-plan storage quota check before reading the body.
+    from services import storage as _storage
+    from services.store import _load_user_store as _lus
+    plan = (_lus(uid).get("billing", {}) or {}).get("plan", "free")
+    room_left = _storage.remaining_bytes(uid, plan)
+    if room_left <= 0:
+        summ = _storage.usage_summary(uid, plan)
+        raise HTTPException(
+            status_code=507,
+            detail=(f"Storage quota reached ({summ['used_gb']} GB of {summ['quota_gb']} GB "
+                    f"used on the {plan} plan). Delete some files or upgrade your plan."),
+        )
+
     data = await file.read()
     if len(data) > MAX_BYTES:
         raise HTTPException(status_code=413, detail="File too large. Max 500 MB.")
+    if len(data) > room_left:
+        summ = _storage.usage_summary(uid, plan)
+        raise HTTPException(
+            status_code=507,
+            detail=(f"This file would exceed your {summ['quota_gb']} GB storage quota "
+                    f"on the {plan} plan ({summ['used_gb']} GB already used)."),
+        )
     if not data:
         raise HTTPException(status_code=400, detail="Empty file.")
 
@@ -133,6 +153,16 @@ def list_uploads(current_user: dict = Depends(get_current_user)):
     if len(existing) != len(index):
         _save_index(uid, existing)
     return {"files": list(reversed(existing))}
+
+
+@router.get("/api/storage/usage")
+def storage_usage(current_user: dict = Depends(get_current_user)):
+    """Per-user storage usage vs the plan quota (for the UI usage bar)."""
+    from services import storage as _storage
+    from services.store import _load_user_store as _lus
+    uid = current_user["id"]
+    plan = (_lus(uid).get("billing", {}) or {}).get("plan", "free")
+    return _storage.usage_summary(uid, plan)
 
 
 @router.delete("/api/uploads/{file_id}")

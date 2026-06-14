@@ -668,10 +668,28 @@ def admin_api_usage(month: str = None, admin=Depends(require_owner)):
     # Real API cost stats from global tracker
     cost_stats = api_tracker.get_stats(month)
 
+    # Resolve the per-user cost ranking ("which users cost most") to email + plan.
+    users = _lu().get("users", [])
+    email_by_id = {u.get("id"): u.get("email", "") for u in users}
+    top_users_raw = (cost_stats.get("this_month") or {}).get("top_users", [])
+    top_users = []
+    for tu in top_users_raw[:25]:
+        uid = tu.get("user_id", "")
+        plan = (_load_user_store(uid).get("billing", {}) or {}).get("plan", "free") if uid else "free"
+        top_users.append({
+            "user_id": uid,
+            "email": email_by_id.get(uid, uid),
+            "plan": plan,
+            "cost": tu.get("cost", 0),
+            "calls": tu.get("calls", 0),
+            "by_service": tu.get("by_service", {}),
+        })
+
     return {
         "total_credits": total_credits,
         "by_service": service_totals,
         "by_action": action_totals,
+        "top_users": top_users,
         **cost_stats,
     }
 

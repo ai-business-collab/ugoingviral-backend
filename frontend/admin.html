@@ -1903,6 +1903,41 @@ function renderApiUsage(d) {
     </div>
   </div>`;
 
+  // Per-user cost ranking — "which users cost the most" this month.
+  const topUsers = d.top_users || [];
+  const topRows = topUsers.map((u, i) => {
+    const svcParts = Object.entries(u.by_service || {})
+      .map(([s, c]) => `${s} $${(c||0).toFixed(3)}`).join(' · ');
+    return `<tr>
+      <td style="padding:10px 16px;color:var(--tx3)">${i + 1}</td>
+      <td style="padding:10px 16px;font-weight:600">${u.email || u.user_id || '—'}</td>
+      <td style="padding:10px 16px"><span style="font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(0,229,255,.12);color:var(--ac)">${(u.plan||'free').toUpperCase()}</span></td>
+      <td style="padding:10px 16px;color:var(--ac);font-weight:700">$${(u.cost||0).toFixed(4)}</td>
+      <td style="padding:10px 16px;color:var(--tx2)">${(u.calls||0).toLocaleString()}</td>
+      <td style="padding:10px 16px;font-size:11px;color:var(--tx3)">${svcParts || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const topUsersTable = `
+  <div style="margin:0 0 24px;background:var(--glass-b);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px">💸 Top Spenders — Cost per User (this month)</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);color:var(--tx3)">
+            <th style="padding:8px 16px;text-align:left;font-weight:600">#</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">User</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">Plan</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">Cost (month)</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">API calls</th>
+            <th style="padding:8px 16px;text-align:left;font-weight:600">By service</th>
+          </tr>
+        </thead>
+        <tbody>${topRows || '<tr><td colspan="6" style="padding:24px;color:var(--tx3);text-align:center">No per-user API cost tracked yet this month</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>`;
+
   // Legacy credits breakdown
   const legacyServices = d.by_service || {};
   const legacyTotal = d.total_credits || 0;
@@ -1927,7 +1962,7 @@ function renderApiUsage(d) {
     ${legacyRows}
   </div>`;
 
-  wrap.innerHTML = summaryCards + svcTable + legacyTable;
+  wrap.innerHTML = summaryCards + svcTable + topUsersTable + legacyTable;
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────

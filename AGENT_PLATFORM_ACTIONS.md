@@ -1,11 +1,29 @@
 # In-Platform Agent — Platform Action Verification
 
+> **UPDATE 2026-06-15 — the agent now EXECUTES UgoingViral actions.**
+> A deterministic intent-router (`_route_ugv_action` in `routes/agent.py`) runs
+> before the LLM on every `/api/agent/chat` call and actually performs the
+> action when the user asks for one:
+> - **Post to a platform** ("…og post det til TikTok") → generates the caption,
+>   then asks **"Skal jeg poste nu? Ja/Nej"**; on **Ja** it calls the real
+>   `publish_via_api` endpoint and reports the result (success URL or a clear
+>   "platform not connected" message). A pending post is stored between messages
+>   in `agent_pending_action`. Posting to a real account ALWAYS confirms first.
+> - **Schedule N posts** ("Planlæg 3 opslag til næste uge") → generates N real
+>   captions and creates N `scheduled_posts` (mode `agent`) over the coming days.
+> - **Show statistics** ("Vis mig mine statistikker") → returns the user's real
+>   numbers and navigates to `stats`.
+> Scope is strictly UgoingViral actions. Anything not matching an action intent
+> falls through to the LLM assistant below (unchanged). Verified end-to-end
+> 2026-06-15 (stats, 3-post schedule, TikTok post + Ja/Nej confirmation).
+
+## Original behaviour (LLM assistant fallback)
+
 Verified 2026-06-13 against the live server (`/api/agent/chat`, `gpt` agent
 orchestrator with Claude fallback). The agent is an **LLM assistant that guides
 the UI** — it returns conversational text plus optional UI *actions*
-(`[[NAV:<page>]]`, `[[BTN:<label>:<action>]]`, `[[ESCALATE]]`). It does **not**
-call posting/scheduling/analytics endpoints itself; the frontend dispatches the
-returned actions. All requests below returned HTTP 200.
+(`[[NAV:<page>]]`, `[[BTN:<label>:<action>]]`, `[[ESCALATE]]`). For non-action
+chat it still dispatches these to the frontend. All requests below returned HTTP 200.
 
 ## Commands tested
 

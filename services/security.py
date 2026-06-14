@@ -105,18 +105,26 @@ async def security_headers_middleware(request: Request, call_next):
 
 
 # ── Body size limit ──────────────────────────────────────────────────────────
-MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB
+# JSON/form bodies are capped tight (10 MB). File uploads (multipart/form-data)
+# are media — a user's own video can legitimately be up to 500 MB — so they get
+# a higher cap here, and the upload handlers stream them to disk and enforce the
+# exact 500 MB-per-file limit themselves (services/content_library, uploads).
+MAX_BODY_SIZE        = 10 * 1024 * 1024          # 10 MB — JSON & non-upload bodies
+MAX_UPLOAD_BODY_SIZE = 512 * 1024 * 1024         # 512 MB — multipart (≈500 MB file + overhead)
 
 
 async def body_size_middleware(request: Request, call_next):
+    ctype = request.headers.get("content-type", "")
+    limit = MAX_UPLOAD_BODY_SIZE if ctype.startswith("multipart/form-data") else MAX_BODY_SIZE
     cl = request.headers.get("content-length")
     if cl:
         try:
-            if int(cl) > MAX_BODY_SIZE:
+            if int(cl) > limit:
                 from fastapi.responses import JSONResponse
+                mb = limit // (1024 * 1024)
                 return JSONResponse(
                     status_code=413,
-                    content={"detail": "Request body exceeds 10 MB limit"},
+                    content={"detail": f"Request body exceeds {mb} MB limit"},
                 )
         except ValueError:
             pass
