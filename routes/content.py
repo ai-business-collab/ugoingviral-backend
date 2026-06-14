@@ -1,13 +1,21 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Request, Depends
 from typing import Optional, List
 import httpx, os, json, asyncio, shutil, subprocess, uuid, tempfile
 from datetime import datetime
 from pydantic import BaseModel
 from services.store import store, save_store, add_log
 from services.security import limiter
+from routes.auth import get_current_user
 from models import Settings, ApiToggle, PlatformAutomation, ContentRequest, PostRequest, DMReplyRequest, AutomationSettings, DMSettings, ManualProduct, Creator, PlaywrightPost
 
-router = APIRouter()
+# SECURITY (2026-06-14 audit): every content route now requires a valid user JWT.
+# Previously most of these endpoints (generate, generate_video, generate_voice,
+# assemble_video, upload_image, …) had no auth dependency, so an unauthenticated
+# caller could trigger paid AI/render work (OpenAI/Runway/ElevenLabs) → anonymous
+# cost-abuse / DoS. A router-level dependency enforces 401 on ALL content routes
+# at once (the contextvar user-store is keyed off this same JWT). All frontend
+# callers already send the bearer token via apiFetch().
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 PIPELINE_MODEL = "claude-sonnet-4-6"
 PIPELINE_PLATFORMS = ("instagram", "tiktok", "youtube")

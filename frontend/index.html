@@ -7549,6 +7549,18 @@ async function checkUserWelcome() {
 }
 
 function logout() {
+  // Revoke the token server-side (best-effort, fire-and-forget) so a copied
+  // token can't be reused after logout, then clear local state and redirect.
+  try {
+    var token = localStorage.getItem('ugv_token');
+    if (token) {
+      fetch(API + '/api/auth/logout', {
+        method: 'POST',
+        keepalive: true,
+        headers: { 'Authorization': 'Bearer ' + token }
+      }).catch(function(){});
+    }
+  } catch (e) {}
   localStorage.removeItem('ugv_token');
   localStorage.removeItem('ugv_user');
   window.location.href = '/login';

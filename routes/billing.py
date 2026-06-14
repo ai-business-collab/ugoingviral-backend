@@ -1308,7 +1308,10 @@ def get_founding_status(current_user: dict = Depends(get_current_user)):
     }
 
 
-@router.post("/api/billing/referral_signup")
+# SECURITY (2026-06-14 audit): no longer exposed as an HTTP route. It is only
+# ever called internally from auth.register() as a plain function; exposing it
+# publicly let an unauthenticated caller forge referral relationships / invite
+# bonuses for arbitrary user_ids. The route decorator has been removed.
 def referral_signup(body: dict):
     """Called internally when a new user registers with a ref code."""
     ref_code = body.get("ref_code", "")

@@ -21,11 +21,23 @@ from services.security import (
     record_login_failure,
     record_login_success,
     client_ip,
+    revoke_token,
+    is_token_revoked,
 )
 
 router = APIRouter()
 
-SECRET_KEY = os.getenv("JWT_SECRET", "ugv-jwt-secret-change-in-production-2026")
+# Fail CLOSED on the JWT signing key. Previously this fell back to a hardcoded
+# default ("ugv-jwt-secret-change-in-production-2026"); if .env ever failed to
+# load, the app would have run with a publicly-known key, letting anyone forge
+# tokens for any user. Refuse to start instead.
+_DEFAULT_JWT_SECRET = "ugv-jwt-secret-change-in-production-2026"
+SECRET_KEY = os.getenv("JWT_SECRET", "")
+if not SECRET_KEY or SECRET_KEY == _DEFAULT_JWT_SECRET:
+    raise RuntimeError(
+        "JWT_SECRET is missing (or set to the insecure default). Refusing to "
+        "start — set a strong JWT_SECRET in .env before launch."
+    )
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
 
@@ -119,6 +131,10 @@ def _safe_user(user: dict) -> dict:
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if not credentials:
         raise HTTPException(status_code=401, detail="Token mangler")
+    # Reject tokens that have been logged out (revoked) — enforces real logout
+    # on otherwise-stateless JWTs.
+    if is_token_revoked(credentials.credentials):
+        raise HTTPException(status_code=401, detail="Token er udløbet — log ind igen")
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("user_id")
@@ -275,6 +291,29 @@ async def resend_verification(request: Request, req: ResendVerificationRequest):
 @router.get("/api/auth/me")
 async def me(current_user: dict = Depends(get_current_user)):
     return _safe_user(current_user)
+
+
+@router.post("/api/auth/logout")
+async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Revoke the presented bearer token so it can no longer be used, even
+    though JWTs are otherwise valid until their 30-day expiry. The client also
+    drops the token locally; this guarantees a stolen/copied token is dead after
+    logout."""
+    if not credentials:
+        # Nothing to revoke — treat as a no-op success so logout is idempotent.
+        return {"ok": True}
+    token = credentials.credentials
+    exp_ts = None
+    try:
+        # Decode WITHOUT verifying exp so we can still revoke a near-expiry token,
+        # and read its real exp to size the denylist entry.
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM],
+                             options={"verify_exp": False})
+        exp_ts = payload.get("exp")
+    except JWTError:
+        pass
+    revoke_token(token, exp_ts)
+    return {"ok": True}
 
 
 @router.patch("/api/auth/profile")

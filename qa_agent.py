@@ -38,6 +38,22 @@ EXPECTED_PLAN_PRICES = {
 }
 EXPECTED_CREDIT_PACKAGES = {100: 8, 350: 24, 700: 44, 1500: 79}
 
+# ── Server health / runaway-detection thresholds (2026-06-14 audit) ───────────
+# The QA agent runs every 6h; this catches resource exhaustion, DDoS/runaway
+# request spikes and elevated error rates BEFORE they take the server down, and
+# surfaces them in the same Telegram alert the QA suite already uses.
+HEALTH_CPU_WARN_PCT   = 90      # sustained CPU utilisation
+HEALTH_MEM_WARN_PCT   = 90      # system memory used
+HEALTH_DISK_WARN_PCT  = 90      # disk used on /
+HEALTH_LOAD_PER_CORE  = 4.0     # 1-min load average per CPU core
+NGINX_ACCESS_LOG      = "/var/log/nginx/access.log"
+HEALTH_REQ_WINDOW_MIN = 5       # window (minutes) for request-rate + error-rate
+HEALTH_REQ_RATE_WARN  = 1200    # requests/min averaged over the window = abnormal
+HEALTH_SPIKE_FACTOR   = 5.0     # last-minute rate > N× the window average = spike
+HEALTH_SPIKE_MIN_RPM  = 300     # ...and at least this many req/min (ignore noise)
+HEALTH_ERR_RATE_WARN  = 5.0     # percent of 5xx responses in the window
+HEALTH_ERR_MIN_SAMPLE = 30      # need at least this many requests to judge errors
+
 
 class QARunner:
     def __init__(self, skip_ai: bool = False):
@@ -1424,12 +1440,31 @@ class QARunner:
         if not TG_BOT_TOKEN or not TG_ALERT_CHAT:
             return
         failed = [r for r in summary["results"] if r["status"] == "FAIL"]
-        if not failed:
+        health_warnings = (summary.get("health") or {}).get("warnings") or []
+        # Alert if EITHER functional tests failed OR a server-health threshold
+        # was breached — so we hear about CPU/mem/disk/DDoS/error-rate problems
+        # before the box goes down, even when every functional test passes.
+        if not failed and not health_warnings:
             return
-        lines = [f"*UgoingViral QA FAILED* — {summary['timestamp']}",
-                 f"{summary['passed']}/{summary['total']} passed", ""]
-        for r in failed[:10]:
-            lines.append(f"❌ `{r['name']}`: {r['detail']}")
+        lines = []
+        if failed:
+            lines.append(f"*UgoingViral QA FAILED* — {summary['timestamp']}")
+            lines.append(f"{summary['passed']}/{summary['total']} passed")
+            lines.append("")
+            for r in failed[:10]:
+                lines.append(f"❌ `{r['name']}`: {r['detail']}")
+        if health_warnings:
+            if failed:
+                lines.append("")
+            else:
+                lines.append(f"*UgoingViral SERVER HEALTH ALERT* — {summary['timestamp']}")
+            lines.append("🚨 *Server health abnormal (act before downtime):*")
+            for w in health_warnings:
+                lines.append(f"⚠️ {w}")
+            m = (summary.get("health") or {}).get("metrics") or {}
+            lines.append(
+                f"_cpu={m.get('cpu_pct')}% mem={m.get('mem_pct')}% disk={m.get('disk_pct')}% "
+                f"req/min={m.get('req_per_min_avg')} 5xx={m.get('err_5xx_pct')}%_")
         msg = "\n".join(lines)
         try:
             httpx.post(
@@ -1680,6 +1715,178 @@ class QARunner:
     # Entry point
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Server health + runaway monitoring (CPU / memory / disk / request
+    # rate / error rate). Stdlib only — no psutil. Runs on the same host
+    # as the app (cron), so /proc and the nginx log are read directly.
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _cpu_percent(sample_s: float = 0.5) -> float:
+        """Whole-host CPU utilisation %, from two /proc/stat samples."""
+        def _read():
+            with open("/proc/stat") as f:
+                parts = f.readline().split()[1:]
+            vals = [int(x) for x in parts]
+            idle = vals[3] + (vals[4] if len(vals) > 4 else 0)  # idle + iowait
+            return sum(vals), idle
+        t1, i1 = _read()
+        time.sleep(sample_s)
+        t2, i2 = _read()
+        dt, di = (t2 - t1), (i2 - i1)
+        if dt <= 0:
+            return 0.0
+        return round((1.0 - di / dt) * 100.0, 1)
+
+    @staticmethod
+    def _mem_percent() -> float:
+        mem = {}
+        with open("/proc/meminfo") as f:
+            for line in f:
+                k, _, v = line.partition(":")
+                if v:
+                    mem[k.strip()] = int(v.strip().split()[0])  # kB
+        total, avail = mem.get("MemTotal", 0), mem.get("MemAvailable", 0)
+        return round((total - avail) / total * 100.0, 1) if total else 0.0
+
+    @staticmethod
+    def _disk_percent(path: str = "/") -> float:
+        st = os.statvfs(path)
+        total = st.f_blocks * st.f_frsize
+        free = st.f_bavail * st.f_frsize
+        return round((total - free) / total * 100.0, 1) if total else 0.0
+
+    @staticmethod
+    def _nginx_request_stats(window_min: int):
+        """Parse the tail of the nginx access log for request-rate and 5xx
+        error-rate over the last `window_min` minutes. Returns
+        (total, rpm_window, rpm_last_min, err_pct) or None if unavailable.
+        Host-wide (the log has no vhost), which is what matters for 'is the
+        box about to fall over'."""
+        import re
+        from datetime import datetime as _dt, timezone, timedelta as _td
+        if not os.path.exists(NGINX_ACCESS_LOG):
+            return None
+        # Read only the tail — access logs can be huge.
+        try:
+            with open(NGINX_ACCESS_LOG, "rb") as f:
+                f.seek(0, os.SEEK_END)
+                size = f.tell()
+                f.seek(max(0, size - 4_000_000))   # last ~4 MB
+                data = f.read().decode("latin-1", "ignore")
+        except Exception:
+            return None
+        # [14/Jun/2026:22:58:22 +0200] ... " <status> <bytes>
+        line_re = re.compile(r'\[([^\]]+)\]\s+"[^"]*"\s+(\d{3})')
+        months = {m: i for i, m in enumerate(
+            ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
+        now = _dt.now(timezone.utc)
+        win_start = now - _td(minutes=window_min)
+        last_min_start = now - _td(minutes=1)
+        total = last_min = err_5xx = 0
+        for ts_str, status in line_re.findall(data):
+            try:
+                d, mon, rest = ts_str.split("/", 2)
+                y, hh, mm, ss_tz = rest.split(":", 3)
+                ss = ss_tz.split()[0]
+                tz = ss_tz.split()[1]
+                sign = 1 if tz[0] == "+" else -1
+                off = _td(hours=int(tz[1:3]), minutes=int(tz[3:5])) * sign
+                t = _dt(int(y), months[mon], int(d), int(hh), int(mm), int(ss),
+                        tzinfo=timezone.utc) - off
+            except Exception:
+                continue
+            if t < win_start:
+                continue
+            total += 1
+            if status.startswith("5"):
+                err_5xx += 1
+            if t >= last_min_start:
+                last_min += 1
+        rpm_window = round(total / window_min, 1)
+        err_pct = round(err_5xx / total * 100.0, 1) if total else 0.0
+        return total, rpm_window, last_min, err_pct
+
+    def check_server_health(self) -> dict:
+        """Collect host + traffic metrics and flag anything abnormal. Returns
+        {'metrics': {...}, 'warnings': [str, ...]}."""
+        print("\n=== HEALTH: server + runaway monitoring ===")
+        metrics, warnings = {}, []
+
+        # CPU
+        try:
+            cpu = self._cpu_percent()
+            metrics["cpu_pct"] = cpu
+            la = os.getloadavg()[0]
+            cores = os.cpu_count() or 1
+            metrics["load_1m"] = round(la, 2)
+            metrics["load_per_core"] = round(la / cores, 2)
+            if cpu >= HEALTH_CPU_WARN_PCT:
+                warnings.append(f"CPU {cpu}% ≥ {HEALTH_CPU_WARN_PCT}%")
+            if la / cores >= HEALTH_LOAD_PER_CORE:
+                warnings.append(f"Load {la:.2f} ({la/cores:.2f}/core) — host overloaded")
+        except Exception as e:
+            metrics["cpu_error"] = str(e)
+
+        # Memory
+        try:
+            mem = self._mem_percent()
+            metrics["mem_pct"] = mem
+            if mem >= HEALTH_MEM_WARN_PCT:
+                warnings.append(f"Memory {mem}% used ≥ {HEALTH_MEM_WARN_PCT}%")
+        except Exception as e:
+            metrics["mem_error"] = str(e)
+
+        # Disk
+        try:
+            disk = self._disk_percent("/")
+            metrics["disk_pct"] = disk
+            if disk >= HEALTH_DISK_WARN_PCT:
+                warnings.append(f"Disk {disk}% used on / ≥ {HEALTH_DISK_WARN_PCT}%")
+        except Exception as e:
+            metrics["disk_error"] = str(e)
+
+        # Request rate + error rate (nginx access log, host-wide)
+        try:
+            stats = self._nginx_request_stats(HEALTH_REQ_WINDOW_MIN)
+            if stats is None:
+                metrics["traffic"] = "nginx log unavailable"
+            else:
+                total, rpm_window, last_min, err_pct = stats
+                metrics.update({
+                    "req_total_window": total,
+                    "req_per_min_avg": rpm_window,
+                    "req_last_min": last_min,
+                    "err_5xx_pct": err_pct,
+                    "window_min": HEALTH_REQ_WINDOW_MIN,
+                })
+                # Sustained high rate
+                if rpm_window >= HEALTH_REQ_RATE_WARN:
+                    warnings.append(
+                        f"Request rate {rpm_window}/min over {HEALTH_REQ_WINDOW_MIN}m "
+                        f"≥ {HEALTH_REQ_RATE_WARN}/min (possible DDoS/runaway)")
+                # Sudden spike vs the window average
+                if (last_min >= HEALTH_SPIKE_MIN_RPM and rpm_window > 0
+                        and last_min >= HEALTH_SPIKE_FACTOR * rpm_window):
+                    warnings.append(
+                        f"Traffic SPIKE: last min {last_min} req vs {rpm_window}/min avg "
+                        f"(≥{HEALTH_SPIKE_FACTOR}× — possible DDoS/runaway)")
+                # Error rate
+                if total >= HEALTH_ERR_MIN_SAMPLE and err_pct >= HEALTH_ERR_RATE_WARN:
+                    warnings.append(
+                        f"5xx error rate {err_pct}% over {HEALTH_REQ_WINDOW_MIN}m "
+                        f"≥ {HEALTH_ERR_RATE_WARN}% ({total} reqs)")
+        except Exception as e:
+            metrics["traffic_error"] = str(e)
+
+        print(f"  metrics: {json.dumps(metrics)}")
+        if warnings:
+            for w in warnings:
+                print(f"  ⚠️  {w}")
+        else:
+            print("  ✅ all health metrics within thresholds")
+        return {"metrics": metrics, "warnings": warnings}
+
     def run(self):
         print(f"UgoingViral QA Agent — {datetime.utcnow().isoformat()}Z")
         print(f"skip_ai={self.skip_ai}")
@@ -1703,6 +1910,9 @@ class QARunner:
         self.suite17_autopilot_posting()
         self._cleanup()
 
+        # Infra health + runaway monitoring (separate from functional tests).
+        health = self.check_server_health()
+
         passed = sum(1 for r in self.results if r["status"] == "PASS")
         total  = len(self.results)
         all_ok = passed == total
@@ -1715,6 +1925,7 @@ class QARunner:
             "total":      total,
             "all_pass":   all_ok,
             "results":    self.results,
+            "health":     health,
         }
 
         print(f"\n{'='*40}")

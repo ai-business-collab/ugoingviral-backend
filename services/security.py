@@ -86,6 +86,14 @@ SECURITY_HEADERS = {
     "X-Frame-Options":         "DENY",
     "X-XSS-Protection":        "1; mode=block",
     "Referrer-Policy":         "strict-origin-when-cross-origin",
+    # Force HTTPS for a year (incl. subdomains) — site is HTTPS-only behind nginx.
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    # Conservative CSP: blocks clickjacking, plugin/object injection and <base>
+    # hijacking WITHOUT restricting the SPA's inline scripts/styles (which would
+    # break the existing frontend). Tighten script-src in a future pass once the
+    # frontend is refactored away from inline handlers.
+    "Content-Security-Policy": "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
 }
 
 
@@ -318,6 +326,81 @@ def record_login_success(ip: str, email: str = "") -> None:
         if len(data["log"]) > 1000:
             data["log"] = data["log"][-1000:]
         _write_brute(data)
+
+
+# ── Token revocation (logout) ────────────────────────────────────────────────
+# JWTs are stateless, so "logout" must be enforced server-side via a denylist.
+# We store a SHA-256 of each revoked token plus its original expiry, so the file
+# stays small (expired entries are purged on access). Shared across workers via
+# the file on disk (the auth path is low-volume, so file IO is acceptable here).
+import hashlib as _hashlib
+
+_REVOKED_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "revoked_tokens.json")
+_REVOKED_LOCK = Lock()
+_revoked_cache: dict = {}
+_revoked_mtime: float = 0.0
+
+
+def _token_hash(token: str) -> str:
+    return _hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _read_revoked() -> dict:
+    try:
+        with open(_REVOKED_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _write_revoked(data: dict) -> None:
+    try:
+        with open(_REVOKED_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except Exception:
+        pass
+
+
+def revoke_token(token: str, exp_ts: Optional[float] = None) -> None:
+    """Add a token to the denylist (called on logout). `exp_ts` is the token's
+    own expiry epoch seconds so the entry can be purged once it would expire
+    on its own anyway."""
+    if not token:
+        return
+    now = time.time()
+    if exp_ts is None:
+        exp_ts = now + 30 * 24 * 3600  # default to max token lifetime
+    with _REVOKED_LOCK:
+        data = _read_revoked()
+        # Purge entries that have already expired.
+        data = {h: e for h, e in data.items() if e > now}
+        data[_token_hash(token)] = exp_ts
+        _write_revoked(data)
+        global _revoked_cache, _revoked_mtime
+        _revoked_cache = data
+        try:
+            _revoked_mtime = os.path.getmtime(_REVOKED_FILE)
+        except Exception:
+            _revoked_mtime = now
+
+
+def is_token_revoked(token: str) -> bool:
+    """True if this exact token has been revoked (logged out) and not yet
+    expired. Uses an mtime-cached read so the hot auth path avoids re-parsing
+    the file on every request."""
+    if not token:
+        return False
+    global _revoked_cache, _revoked_mtime
+    try:
+        mtime = os.path.getmtime(_REVOKED_FILE)
+    except OSError:
+        return False  # no file → nothing revoked
+    if mtime != _revoked_mtime:
+        with _REVOKED_LOCK:
+            _revoked_cache = _read_revoked()
+            _revoked_mtime = mtime
+    exp = _revoked_cache.get(_token_hash(token))
+    return bool(exp and exp > time.time())
 
 
 def client_ip(request: Request) -> str:
