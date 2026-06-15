@@ -117,6 +117,13 @@ body.light {
 .ct-state{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-top:9px;display:inline-block;padding:3px 9px;border-radius:20px;background:rgba(148,163,184,.14);color:var(--tx3)}
 .ct-state.ct-working{background:rgba(0,229,255,.14);color:var(--ac)}
 .ct-state.ct-done{background:rgba(34,197,94,.16);color:#22c55e}
+.ct-state.ct-err{background:rgba(239,68,68,.16);color:#ef4444}
+.ct-sched-row{border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--glass)}
+.ct-sched-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.ct-sched-when{font-size:12px;font-weight:700;color:var(--tx)}
+.ct-sched-btns{display:flex;gap:6px;flex-wrap:wrap}
+.ct-sched-cap{font-size:12px;color:var(--tx2);line-height:1.55;white-space:pre-wrap}
+.btn.bxs{font-size:11px;padding:4px 10px}
 .ct-feed-row{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-top:1px solid var(--border)}
 .ct-feed-row:first-child{border-top:none}
 .ct-feed-row .ct-ic{font-size:20px;flex-shrink:0;line-height:1.2}
@@ -3739,6 +3746,16 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="card" style="margin-bottom:18px">
         <div class="ctitle">👥 <span data-i18n="ct.rosterTitle">Your team</span></div>
         <div id="ct-roster" class="ct-grid" style="margin-top:6px"></div>
+      </div>
+
+      <!-- Review & approve the proposed week (human-in-the-loop) -->
+      <div class="card" id="ct-review-card" style="margin-bottom:18px;display:none">
+        <div class="ctitle">🗓️ <span data-i18n="ct.reviewTitle">Review this week's plan</span></div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:10px" data-i18n="ct.reviewNote">Nothing is posted until you approve. Approved posts are scheduled automatically.</div>
+        <div id="ct-review-list"></div>
+        <div id="ct-review-actions" style="margin-top:6px;display:none">
+          <button class="btn bp bsm" onclick="ctApproveAll()">✅ <span data-i18n="ct.approveAll">Approve all</span></button>
+        </div>
       </div>
 
       <!-- Activity feed -->
@@ -8604,6 +8621,11 @@ Object.assign(I18N.en, {
   'ct.roleDesc.scripter':'Writes hooks, scripts and captions.',
   'ct.roleDesc.publisher':'Plans and schedules publishing.',
   'ct.roleDesc.head':'Coordinates the team and assembles the plan.',
+  'ct.reviewTitle':"Review this week's plan",
+  'ct.reviewNote':'Nothing is posted until you approve. Approved posts are scheduled automatically.',
+  'ct.approve':'Approve', 'ct.edit':'Edit', 'ct.reject':'Reject', 'ct.approveAll':'Approve all',
+  'ct.save':'Save', 'ct.cancel':'Cancel', 'ct.scheduledWord':'posts scheduled',
+  'ct.statusDone':'Done', 'ct.statusError':'Error',
 });
 Object.assign(I18N.da, {
   'nav.contentTeam':'Indholdsteam', 'page.content-team':'🤝 AI Indholdsteam',
@@ -8627,6 +8649,11 @@ Object.assign(I18N.da, {
   'ct.roleDesc.scripter':'Skriver hooks, manuskripter og captions.',
   'ct.roleDesc.publisher':'Planlægger og tidsplanlægger udgivelse.',
   'ct.roleDesc.head':'Koordinerer teamet og samler planen.',
+  'ct.reviewTitle':'Gennemse ugens plan',
+  'ct.reviewNote':'Intet postes før du godkender. Godkendte opslag planlægges automatisk.',
+  'ct.approve':'Godkend', 'ct.edit':'Rediger', 'ct.reject':'Afvis', 'ct.approveAll':'Godkend alle',
+  'ct.save':'Gem', 'ct.cancel':'Annullér', 'ct.scheduledWord':'opslag planlagt',
+  'ct.statusDone':'Færdig', 'ct.statusError':'Fejl',
 });
 
 // ── AI Content Team (Part 1 — foundation) ──────────────────────────────────
@@ -8654,22 +8681,98 @@ function renderTeamRoster(states){
   }).join('');
 }
 
+var _CT_PLAT_EMOJI = {tiktok:'🎵', instagram:'📸', youtube:'▶️', facebook:'📘', twitter:'🐦', snapchat:'👻', pinterest:'📌'};
+
+// Step-by-step feed: each agent with a numbered step, status chip and result line.
 function renderTeamFeed(steps){
   var el = document.getElementById('ct-feed'); if(!el) return;
   if(!steps || !steps.length){
     el.innerHTML = '<div style="font-size:12px;color:var(--tx3)">'+_ctEsc(t('ct.feedEmpty'))+'</div>';
     return;
   }
-  el.innerHTML = steps.map(function(s){
+  el.innerHTML = steps.map(function(s, i){
     var nm = t('ct.role.'+s.role) || s.name || s.role;
+    var ok = (s.status !== 'error');
+    var chip = '<span class="ct-state '+(ok?'ct-done':'ct-err')+'">'+_ctEsc(ok?t('ct.statusDone'):t('ct.statusError'))+'</span>';
     return '<div class="ct-feed-row"><div class="ct-ic">'+_ctEsc(s.emoji||'•')+'</div>'
       + '<div style="flex:1;min-width:0">'
-      + '<div class="ct-fr-name">'+_ctEsc(nm)+'</div>'
+      + '<div class="ct-fr-name">'+(i+1)+'. '+_ctEsc(nm)+' '+chip+'</div>'
       + '<div class="ct-fr-sum">'+_ctEsc(s.summary||'')+'</div>'
       + '<div class="ct-fr-out">'+_ctEsc(s.output||'')+'</div>'
-      + '<div class="ct-fr-ts">'+_ctEsc(s.ts||'')+'</div>'
       + '</div></div>';
   }).join('');
+}
+
+// ── Review & approve the proposed week (human-in-the-loop) ──────────────────
+var CT_SCHEDULE = [];
+var _ctEditId = null;
+
+function renderTeamReview(schedule){
+  if(Array.isArray(schedule)) CT_SCHEDULE = schedule.slice();
+  var card = document.getElementById('ct-review-card');
+  var list = document.getElementById('ct-review-list');
+  var actions = document.getElementById('ct-review-actions');
+  if(!card || !list) return;
+  if(!CT_SCHEDULE.length){ card.style.display='none'; return; }
+  card.style.display=''; actions.style.display='';
+  var plats = ['tiktok','instagram','youtube','facebook','twitter'];
+  var ip = 'background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--tx);padding:5px 8px;font-family:inherit';
+  list.innerHTML = CT_SCHEDULE.map(function(s){
+    if(s.id === _ctEditId){
+      var opts = plats.map(function(p){ return '<option value="'+p+'"'+(p===s.platform?' selected':'')+'>'+(_CT_PLAT_EMOJI[p]||'')+' '+p+'</option>'; }).join('');
+      return '<div class="ct-sched-row">'
+        + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+        + '<input type="date" id="cte-date-'+s.id+'" value="'+_ctEsc(s.date)+'" style="'+ip+'">'
+        + '<input type="time" id="cte-time-'+s.id+'" value="'+_ctEsc(s.time)+'" style="'+ip+'">'
+        + '<select id="cte-plat-'+s.id+'" style="'+ip+'">'+opts+'</select></div>'
+        + '<textarea id="cte-cap-'+s.id+'" rows="4" style="width:100%;'+ip+';font-size:12px">'+_ctEsc(s.caption||s.hook||'')+'</textarea>'
+        + '<div style="display:flex;gap:6px;margin-top:8px">'
+        + '<button class="btn bp bxs" onclick="ctSaveEdit(\''+s.id+'\')">💾 '+_ctEsc(t('ct.save'))+'</button>'
+        + '<button class="btn bg bxs" onclick="ctCancelEdit()">'+_ctEsc(t('ct.cancel'))+'</button>'
+        + '</div></div>';
+    }
+    return '<div class="ct-sched-row">'
+      + '<div class="ct-sched-head">'
+      + '<span class="ct-sched-when">'+(_CT_PLAT_EMOJI[s.platform]||'📤')+' '+_ctEsc(s.platform_label||s.platform)+' · '+_ctEsc(s.day||'')+' '+_ctEsc(s.date)+' '+_ctEsc(s.time)+'</span>'
+      + '<span class="ct-sched-btns">'
+      + '<button class="btn bp bxs" onclick="ctApproveItem(\''+s.id+'\')">'+_ctEsc(t('ct.approve'))+'</button>'
+      + '<button class="btn bg bxs" onclick="ctEditItem(\''+s.id+'\')">'+_ctEsc(t('ct.edit'))+'</button>'
+      + '<button class="btn bg bxs" onclick="ctRejectItem(\''+s.id+'\')">'+_ctEsc(t('ct.reject'))+'</button>'
+      + '</span></div>'
+      + '<div class="ct-sched-cap">'+_ctEsc(s.caption||s.hook||s.idea||'')+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+function ctEditItem(id){ _ctEditId = id; renderTeamReview(); }
+function ctCancelEdit(){ _ctEditId = null; renderTeamReview(); }
+function ctRejectItem(id){ CT_SCHEDULE = CT_SCHEDULE.filter(function(s){ return s.id!==id; }); if(_ctEditId===id)_ctEditId=null; renderTeamReview(); }
+function ctSaveEdit(id){
+  var it = CT_SCHEDULE.filter(function(s){return s.id===id;})[0];
+  if(it){
+    var d=document.getElementById('cte-date-'+id), tm=document.getElementById('cte-time-'+id),
+        p=document.getElementById('cte-plat-'+id), c=document.getElementById('cte-cap-'+id);
+    if(d) it.date=d.value; if(tm) it.time=tm.value;
+    if(p){ it.platform=p.value; it.platform_label=p.value.charAt(0).toUpperCase()+p.value.slice(1); }
+    if(c) it.caption=c.value;
+  }
+  _ctEditId = null; renderTeamReview();
+}
+async function ctApproveItem(id){
+  var it = CT_SCHEDULE.filter(function(s){return s.id===id;})[0];
+  if(it) await _ctApprove([it]);
+}
+async function ctApproveAll(){ if(CT_SCHEDULE.length) await _ctApprove(CT_SCHEDULE.slice()); }
+async function _ctApprove(items){
+  try{
+    var payload = items.map(function(s){ return {id:s.id, platform:s.platform, date:s.date, time:s.time, caption:s.caption||s.hook, idea:s.idea}; });
+    var d = await apiFetch('/api/content_team/approve','POST',{items:payload});
+    var n = (d && d.scheduled) || 0;
+    toast('✅ '+n+' '+t('ct.scheduledWord'),'success');
+    var ids = {}; items.forEach(function(s){ ids[s.id]=1; });
+    CT_SCHEDULE = CT_SCHEDULE.filter(function(s){ return !ids[s.id]; });
+    renderTeamReview();
+  }catch(e){ toast(t('ct.error'),'error'); }
 }
 
 async function loadContentTeam(){
@@ -8682,6 +8785,7 @@ async function loadContentTeam(){
   try{
     var s = await apiFetch('/api/content_team/status');
     renderTeamFeed((s && s.activity) || []);
+    renderTeamReview((s && s.schedule) || []);
   }catch(e){}
 }
 
@@ -8708,6 +8812,7 @@ async function runContentTeam(){
     var done = {}; CT_AGENTS.forEach(function(a){ done[a.role] = {label:t('ct.done'), cls:'ct-done'}; });
     renderTeamRoster(done);
     renderTeamFeed((d && d.steps) || []);
+    renderTeamReview((d && d.schedule) || []);
     toast('✅ '+t('ct.ranOk'),'success');
   }catch(e){
     renderTeamRoster();

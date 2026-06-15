@@ -113,6 +113,46 @@ def _infer_platforms_from_goal(goal: str):
     return found or ["tiktok", "instagram"]
 
 
+# Local-business cue words (EN + DA). Webshops are detected from product data.
+_LOCAL_KEYWORDS = [
+    "restaurant", "cafe", "café", "salon", "clinic", "gym", "studio", "bakery",
+    "barber", "boutique", "hotel", "dealership", "shop in", "store in", "near me",
+    "in town", "local business", "klinik", "frisør", "frisor", "bageri",
+    "fitnesscenter", "lokal", "i byen", "butik i",
+]
+
+
+def _detect_user_type(signals: dict, goal: str) -> str:
+    """Adapt the team to the user: webshop (has products), local_business
+    (brand/venue cues in the goal), or creator/influencer (default — niche only)."""
+    if signals.get("is_webshop"):
+        return "webshop"
+    g = (goal or "").lower()
+    if any(k in g for k in _LOCAL_KEYWORDS):
+        return "local_business"
+    return "creator"
+
+
+def _strategy_flavour(user_type: str, lang: str):
+    """CTAs + content pillars tailored to the user type (bilingual)."""
+    if user_type == "webshop":
+        ctas = _pick(lang, ["Shop now – link in bio", "Limited-time offer", "Tap to buy"],
+                           ["Køb nu – link i bio", "Tilbud i begrænset tid", "Tryk for at købe"])
+        pillars = _pick(lang, ["Product highlights", "Education / how-to", "Social proof", "Trends"],
+                              ["Produkt-highlights", "Undervisning / how-to", "Social proof", "Trends"])
+    elif user_type == "local_business":
+        ctas = _pick(lang, ["Visit us today", "Book now", "Find us nearby"],
+                           ["Besøg os i dag", "Book nu", "Find os i nærheden"])
+        pillars = _pick(lang, ["Behind the scenes", "Customer stories", "Local community", "Offers & events"],
+                              ["Bag kulisserne", "Kundehistorier", "Lokalt fællesskab", "Tilbud & events"])
+    else:  # creator / influencer — niche/style driven, no products needed
+        ctas = _pick(lang, ["Follow for more", "Save this for later", "Comment below"],
+                           ["Følg for mere", "Gem til senere", "Skriv en kommentar"])
+        pillars = _pick(lang, ["Education / how-to", "Behind the scenes", "Storytelling", "Trends"],
+                              ["Undervisning / how-to", "Bag kulisserne", "Storytelling", "Trends"])
+    return ctas, pillars
+
+
 # ── Real data collection (Data Analyst input) ───────────────────────────────
 def _collect_signals(uid: str) -> dict:
     """Read the user's REAL signals from their per-user store: connected
@@ -271,6 +311,7 @@ class DataAnalyst(TeamAgent):
             "primary_platform": platforms[0],
             "niche": niche,
             "is_webshop": bool(sig.get("is_webshop")),
+            "user_type": _detect_user_type(sig, self.goal),
             "products": sig.get("products", []),
             "followers": sig.get("followers", 0),
             "total_views": sig.get("total_views", 0),
@@ -312,7 +353,7 @@ class ContentStrategist(TeamAgent):
         brief = self.context.get("brief") or {}
         lang = self.lang
         platforms = brief.get("platforms") or ["tiktok", "instagram"]
-        is_shop = bool(brief.get("is_webshop"))
+        user_type = brief.get("user_type") or ("webshop" if brief.get("is_webshop") else "creator")
         plan = brief.get("plan", "free")
 
         # Cadence scales with plan: Free starts light, paid plans post more.
@@ -327,17 +368,8 @@ class ContentStrategist(TeamAgent):
                     seen.add(f)
                     formats.append(f)
 
-        ctas = _pick(lang,
-            (["Shop now – link in bio", "Limited-time offer", "Tap to buy"] if is_shop
-             else ["Follow for more", "Save this for later", "Comment below"]),
-            (["Køb nu – link i bio", "Tilbud i begrænset tid", "Tryk for at købe"] if is_shop
-             else ["Følg for mere", "Gem til senere", "Skriv en kommentar"]))
-
-        pillars = _pick(lang,
-            ["Education / how-to", "Behind the scenes", "Social proof", "Trends"],
-            ["Undervisning / how-to", "Bag kulisserne", "Social proof", "Trends"])
-        if is_shop:
-            pillars = pillars[:3] + _pick(lang, ["Product highlights"], ["Produkt-highlights"])
+        # CTAs + pillars adapt to the user type (webshop / local business / creator).
+        ctas, pillars = _strategy_flavour(user_type, lang)
 
         strategy = {
             "posts_per_week": per_week,
@@ -347,6 +379,7 @@ class ContentStrategist(TeamAgent):
             "formats": formats[:6],
             "ctas": ctas,
             "pillars": pillars,
+            "user_type": user_type,
             "primary_platform": brief.get("primary_platform", platforms[0]),
         }
         self.context["strategy"] = strategy
@@ -619,15 +652,20 @@ class PublishingManager(TeamAgent):
             day_offset = min(6, round(i * 7 / max(1, n)))
             d = start + timedelta(days=day_offset)
             times = _BEST_TIMES.get(plat, _DEFAULT_TIMES)
+            hook = it.get("hook") or it.get("idea", "")
+            # A ready-to-edit caption from the script (hook → value → CTA).
+            caption = "\n\n".join(x for x in [hook, it.get("value", ""), it.get("cta", "")] if x).strip() or hook
             schedule.append({
+                "id": f"ct-{i}",
                 "date": d.isoformat(),
                 "day": d.strftime("%A"),
                 "time": times[i % len(times)],
                 "platform": plat,
                 "platform_label": _PLATFORM_LABEL.get(plat, plat),
                 "idea": it.get("idea", ""),
-                "hook": it.get("hook") or it.get("idea", ""),
-                "status": "draft",            # NOT posted — review in Part 4
+                "hook": hook,
+                "caption": caption,
+                "status": "draft",            # NOT posted — user must approve
             })
         self.context["schedule"] = schedule
         self.context["schedule_connected"] = bool(connected)
@@ -754,8 +792,63 @@ def get_status(current_user: dict = Depends(get_current_user)):
         "goal": ct.get("goal", ""),
         "last_run_at": ct.get("last_run_at", ""),
         "activity": ct.get("activity", []),
+        "schedule": ct.get("schedule", []),
+        "weekly_brief": ct.get("weekly_brief", ""),
         "roster": roster,
     }
+
+
+@router.post("/api/content_team/approve")
+async def approve_schedule(request: Request, current_user: dict = Depends(get_current_user)):
+    """Human-in-the-loop: turn the user-APPROVED draft items into real
+    scheduled_posts in the existing scheduler (reused — not duplicated). Only the
+    items sent here are scheduled; rejected items are simply never sent. Nothing
+    is published until each post's scheduled time, exactly like any other
+    scheduled post."""
+    import random
+    body = await request.json()
+    items = body.get("items") or []
+    if not isinstance(items, list) or not items:
+        raise HTTPException(status_code=400, detail="No items to approve")
+
+    scheduled = store.setdefault("scheduled_posts", [])
+    created = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        platform = (it.get("platform") or "instagram").strip().lower()
+        date = (it.get("date") or "").strip()
+        tm = (it.get("time") or "09:00").strip()
+        caption = (it.get("caption") or it.get("hook") or "").strip()
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", date) or not caption:
+            continue
+        if not re.match(r"^\d{1,2}:\d{2}$", tm):
+            tm = "09:00"
+        sid = f"ct_{date}_{tm.replace(':', '')}_{random.randint(1000, 9999)}"
+        scheduled.append({
+            "id": sid,
+            "platform": platform,
+            "content": caption,
+            "image_url": "",
+            "title": (it.get("idea") or caption)[:80],
+            "scheduled_time": f"{date}T{tm}",      # fromisoformat-compatible
+            "status": "scheduled",                  # picked up by the existing scheduler
+            "source": "content_team",
+        })
+        created.append(sid)
+    store["scheduled_posts"] = scheduled
+
+    # Record approval and drop the approved drafts from the pending plan.
+    ct = store.get("content_team", {}) or {}
+    approved_ids = {it.get("id") for it in items if isinstance(it, dict) and it.get("id")}
+    if approved_ids:
+        ct["schedule"] = [s for s in (ct.get("schedule") or []) if s.get("id") not in approved_ids]
+    ct["last_approved_at"] = _now()
+    ct["approved_total"] = (ct.get("approved_total", 0) or 0) + len(created)
+    store["content_team"] = ct
+    save_store()
+    return {"ok": True, "scheduled": len(created), "ids": created,
+            "remaining": len(ct.get("schedule", []))}
 
 
 @router.post("/api/content_team/run")
@@ -788,6 +881,10 @@ async def run_team(request: Request, current_user: dict = Depends(get_current_us
 
     ct["last_run_at"] = _now()
     ct["activity"] = steps
+    # Persist the draft artifacts so the page can re-show them and approve later.
+    ct["schedule"] = context.get("schedule", [])
+    ct["scripts"] = context.get("scripts", [])
+    ct["weekly_brief"] = context.get("weekly_brief", "")
     store["content_team"] = ct
     save_store()
 
