@@ -23,7 +23,7 @@ Endpoints (auth-gated, per-user store):
 """
 import inspect
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -46,8 +46,22 @@ AGENTS = {
 
 GOAL_MAX = 500
 IDEATE_COST = 15          # credits for the Ideator's one AI brainstorm call
+SCRIPT_COST = 20          # credits for the Scripter's one AI call (all scripts at once)
 IDEA_TARGET = 20          # ideas requested from the model (token-efficient)
 LOCKED_COUNT = 7          # winning ideas locked for the week
+
+# Sensible default posting times per platform (local 24h) — used by the
+# Publishing Manager to draft a schedule when the user has no analytics yet.
+_BEST_TIMES = {
+    "tiktok":    ["18:00", "12:00", "20:00"],
+    "instagram": ["11:00", "19:00", "13:00"],
+    "youtube":   ["15:00", "17:00"],
+    "facebook":  ["09:00", "13:00"],
+    "twitter":   ["08:00", "12:00", "17:00"],
+    "snapchat":  ["20:00"],
+    "pinterest": ["20:00", "14:00"],
+}
+_DEFAULT_TIMES = ["10:00", "14:00", "18:00"]
 
 _PLATFORM_KEYS = ["tiktok", "instagram", "youtube", "facebook", "twitter", "snapchat", "pinterest"]
 _PLATFORM_LABEL = {
@@ -481,37 +495,156 @@ class Ideator(TeamAgent):
 class Scripter(TeamAgent):
     role = "scripter"
 
-    def work(self):
-        # PART 3 will write full hooks/scripts/captions from the locked ideas.
-        locked = self.context.get("locked_ideas", [])
-        return {
-            "summary": _pick(self.lang, "Ready to script the locked ideas",
-                                        "Klar til at skrive de låste idéer"),
-            "output": _pick(self.lang,
-                f"Placeholder — Part 3 will turn the {len(locked)} locked ideas into full "
-                "hooks, video scripts and captions with hashtags.",
-                f"Pladsholder — Del 3 omsætter de {len(locked)} låste idéer til fulde hooks, "
-                "video-manuskripter og captions med hashtags."),
-            "data": {"scripts": []},
-        }
+    async def work(self):
+        locked = self.context.get("locked_ideas", []) or []
+        strat = self.context.get("strategy") or {}
+        brief = self.context.get("brief") or {}
+        lang = self.lang
+        ctas = strat.get("ctas") or _pick(lang, ["Follow for more"], ["Følg for mere"])
+        niche = brief.get("niche") or _niche_from_goal(self.goal)
+        if not locked:
+            return {"summary": _pick(lang, "No ideas to script yet", "Ingen idéer at skrive endnu"),
+                    "output": _pick(lang, "Run the Ideator first.", "Kør Idéudvikleren først."),
+                    "data": {"scripts": []}}
+
+        scripts, used_ai = [], False
+        # One AI call writes ALL scripts (token-efficient), credit-gated.
+        if _credits_available(SCRIPT_COST):
+            try:
+                scripts = await self._ai_scripts(locked, niche, ctas, lang)
+                if scripts:
+                    _charge_credits(SCRIPT_COST, "content_team_script")
+                    used_ai = True
+            except Exception:
+                scripts = []
+        if not scripts:
+            scripts = [self._template_script(idea, ctas[0], niche, lang) for idea in locked]
+        # Always align to exactly one script per locked idea.
+        if len(scripts) < len(locked):
+            for idea in locked[len(scripts):]:
+                scripts.append(self._template_script(idea, ctas[0], niche, lang))
+        scripts = scripts[:len(locked)]
+        self.context["scripts"] = scripts
+
+        sample = scripts[0]
+        src = (_pick(lang, "AI-written", "AI-skrevet") if used_ai
+               else _pick(lang, "templates (no credits / AI offline)",
+                                "skabeloner (ingen credits / AI offline)"))
+        summary = _pick(lang, f"Wrote {len(scripts)} filming-ready scripts",
+                              f"Skrev {len(scripts)} optageklare manuskripter")
+        output = _pick(lang,
+            f"{len(scripts)} scripts ready ({src}), each as Hook → Value → CTA. "
+            f"e.g. \"{sample.get('hook', '')}\" → {sample.get('cta', '')}",
+            f"{len(scripts)} manuskripter klar ({src}), hver som Hook → Værdi → CTA. "
+            f"f.eks. \"{sample.get('hook', '')}\" → {sample.get('cta', '')}")
+        return {"summary": summary, "output": output, "data": {"scripts": scripts, "ai": used_ai}}
+
+    async def _ai_scripts(self, locked, niche, ctas, lang):
+        from routes.agent import _call_claude_heavy
+        ideas_block = "\n".join(f"{i + 1}. {idea}" for i, idea in enumerate(locked))
+        system = _pick(lang,
+            "You are an expert short-form video scriptwriter. For EACH idea write a tight, "
+            "filming-ready script using Hook → Value → CTA, punchy enough to be spoken in ~20-30s. "
+            "Respond ONLY in this exact format per idea, no preamble:\n"
+            "[n]\nHOOK: <1 line>\nVALUE: <1-2 lines>\nCTA: <1 line>",
+            "Du er ekspert i short-form video-manuskripter. For HVER idé, skriv et stramt, "
+            "optageklart manuskript med Hook → Værdi → CTA, skarpt nok til ~20-30s talt. "
+            "Svar KUN i præcis dette format per idé, ingen indledning:\n"
+            "[n]\nHOOK: <1 linje>\nVALUE: <1-2 linjer>\nCTA: <1 linje>")
+        user = _pick(lang,
+            f"Goal: {self.goal}\nNiche: {niche}\nPreferred CTAs: {', '.join(ctas[:3])}\n\nIdeas:\n{ideas_block}",
+            f"Mål: {self.goal}\nNiche: {niche}\nForetrukne CTA'er: {', '.join(ctas[:3])}\n\nIdéer:\n{ideas_block}")
+        text = await _call_claude_heavy(system, [{"role": "user", "content": user}],
+                                        action="content_team_script")
+        return self._parse_scripts(text, locked)
+
+    @staticmethod
+    def _parse_scripts(text, locked):
+        chunks = [c.strip() for c in re.split(r"\[\s*\d+\s*\]", text or "") if c.strip()]
+        scripts = []
+        for idx, c in enumerate(chunks):
+            hook = value = cta = ""
+            for line in c.splitlines():
+                ls = line.strip()
+                m = re.match(r"(?i)^hook\s*[:\-]\s*(.+)$", ls)
+                if m:
+                    hook = m.group(1).strip(); continue
+                m = re.match(r"(?i)^(?:value|værdi|vaerdi)\s*[:\-]\s*(.+)$", ls)
+                if m:
+                    value = m.group(1).strip(); continue
+                m = re.match(r"(?i)^cta\s*[:\-]\s*(.+)$", ls)
+                if m:
+                    cta = m.group(1).strip(); continue
+            if hook or value:
+                idea = locked[idx] if idx < len(locked) else ""
+                scripts.append({"idea": idea, "hook": hook or idea, "value": value, "cta": cta})
+        return scripts
+
+    @staticmethod
+    def _template_script(idea, cta, niche, lang):
+        if lang == "da":
+            return {"idea": idea, "hook": idea,
+                    "value": f"Vis hurtigt 3 pointer om {niche}: problem, løsning, bevis.", "cta": cta}
+        return {"idea": idea, "hook": idea,
+                "value": f"Quickly show 3 beats about {niche}: problem, solution, proof.", "cta": cta}
 
 
 class PublishingManager(TeamAgent):
     role = "publisher"
 
     def work(self):
-        # PART 4 will queue scripts into the scheduler at the best times.
         strat = self.context.get("strategy") or {}
-        return {
-            "summary": _pick(self.lang, "Ready to schedule the week",
-                                        "Klar til at planlægge ugen"),
-            "output": _pick(self.lang,
-                f"Placeholder — Part 4 will schedule {strat.get('posts_per_week', 0)} posts/week "
-                "into the scheduler at the best times and hand them to Auto-post.",
-                f"Pladsholder — Del 4 planlægger {strat.get('posts_per_week', 0)} opslag/uge i "
-                "planlæggeren på de bedste tidspunkter og sender dem til Auto-post."),
-            "data": {"scheduled": []},
-        }
+        signals = self.context.get("signals") or {}
+        lang = self.lang
+        scripts = self.context.get("scripts") or []
+        items = scripts or [{"idea": x, "hook": x} for x in self.context.get("locked_ideas", [])]
+        if not items:
+            return {"summary": _pick(lang, "Nothing to schedule yet", "Intet at planlægge endnu"),
+                    "output": _pick(lang, "Run the Ideator and Scripter first.",
+                                          "Kør Idéudvikleren og Manuskriptforfatteren først."),
+                    "data": {"schedule": []}}
+
+        # Prefer the user's ACTUALLY connected platforms; if none are connected
+        # yet, fall back to the strategy's target platforms (flagged as proposed).
+        connected = [p for p in (signals.get("platforms") or []) if p in _PLATFORM_KEYS]
+        targets = connected or (strat.get("platforms") or ["tiktok"])
+
+        # Schedule up to the weekly cadence, spread across the next 7 days.
+        n = min(len(items), strat.get("posts_per_week", 7) or 7)
+        items = items[:n]
+        start = datetime.utcnow().date() + timedelta(days=1)
+        schedule = []
+        for i, it in enumerate(items):
+            plat = targets[i % len(targets)]
+            day_offset = min(6, round(i * 7 / max(1, n)))
+            d = start + timedelta(days=day_offset)
+            times = _BEST_TIMES.get(plat, _DEFAULT_TIMES)
+            schedule.append({
+                "date": d.isoformat(),
+                "day": d.strftime("%A"),
+                "time": times[i % len(times)],
+                "platform": plat,
+                "platform_label": _PLATFORM_LABEL.get(plat, plat),
+                "idea": it.get("idea", ""),
+                "hook": it.get("hook") or it.get("idea", ""),
+                "status": "draft",            # NOT posted — review in Part 4
+            })
+        self.context["schedule"] = schedule
+        self.context["schedule_connected"] = bool(connected)
+
+        plats = ", ".join(sorted({s["platform_label"] for s in schedule}))
+        not_connected = "" if connected else _pick(lang,
+            " ⚠️ No platforms connected yet — connect accounts to publish.",
+            " ⚠️ Ingen platforme forbundet endnu — forbind konti for at udgive.")
+        summary = _pick(lang, "Drafted the posting schedule",
+                              "Lavede udkast til udgivelsesplanen")
+        output = _pick(lang,
+            f"{len(schedule)} posts drafted across {plats} over the next 7 days "
+            f"(draft — not posted).{not_connected}",
+            f"{len(schedule)} opslag i udkast på {plats} over de næste 7 dage "
+            f"(kladde — ikke postet).{not_connected}")
+        return {"summary": summary, "output": output,
+                "data": {"schedule": schedule, "connected": bool(connected)}}
 
 
 class HeadOfContent(TeamAgent):
@@ -521,21 +654,64 @@ class HeadOfContent(TeamAgent):
         ran = self.context.get("ran_roles", [])
         brief = self.context.get("brief") or {}
         strat = self.context.get("strategy") or {}
-        locked = self.context.get("locked_ideas", [])
-        names = ", ".join(_agent_name(r, self.lang) for r in ran)
+        locked = self.context.get("locked_ideas", []) or []
+        scripts = self.context.get("scripts") or []
+        schedule = self.context.get("schedule") or []
+        lang = self.lang
+        L = lambda en, da: _pick(lang, en, da)  # noqa: E731
+        plabel = ", ".join(_PLATFORM_LABEL.get(p, p) for p in strat.get("platforms", []))
+
+        out = []
+        out.append(L(f"📋 Weekly content plan — {self.goal}",
+                     f"📋 Ugentlig indholdsplan — {self.goal}"))
+        out.append("")
+        out.append(L("🧭 Strategy", "🧭 Strategi"))
+        out.append(L(
+            f"{strat.get('posts_per_week', 0)} posts/week ({strat.get('videos_per_week', 0)} video) "
+            f"on {plabel or '–'}. Pillars: {', '.join(strat.get('pillars', [])) or '–'}. "
+            f"CTAs: {', '.join(strat.get('ctas', [])) or '–'}.",
+            f"{strat.get('posts_per_week', 0)} opslag/uge ({strat.get('videos_per_week', 0)} video) "
+            f"på {plabel or '–'}. Søjler: {', '.join(strat.get('pillars', [])) or '–'}. "
+            f"CTA'er: {', '.join(strat.get('ctas', [])) or '–'}."))
+        out.append("")
+        out.append(L(f"💡 {len(locked)} ideas + scripts", f"💡 {len(locked)} idéer + manuskripter"))
+        for i, idea in enumerate(locked):
+            sc = scripts[i] if i < len(scripts) else {}
+            out.append(f"{i + 1}. {idea}")
+            if sc:
+                hook = sc.get("hook") or idea
+                cta = sc.get("cta") or ""
+                out.append(L(f"   Hook: {hook}" + (f" · CTA: {cta}" if cta else ""),
+                             f"   Hook: {hook}" + (f" · CTA: {cta}" if cta else "")))
+        out.append("")
+        out.append(L("📅 Proposed schedule (draft — not posted)",
+                     "📅 Foreslået plan (kladde — ikke postet)"))
+        if schedule:
+            for s in schedule:
+                out.append(f"• {s['date']} {s['time']} · {s['platform_label']} — "
+                           f"{s.get('hook') or s.get('idea')}")
+        else:
+            out.append(L("No schedule — connect a platform first.",
+                         "Ingen plan — forbind en platform først."))
+        out.append("")
+        out.append(L("✅ Next steps", "✅ Næste skridt"))
+        out.append(L(
+            "Review and approve this plan. Publishing with your approval (human-in-the-loop) "
+            "lands in Part 4.",
+            "Gennemse og godkend planen. Udgivelse med din godkendelse (human-in-the-loop) "
+            "kommer i Del 4."))
+        text = "\n".join(out)
+        self.context["weekly_brief"] = text
+
         return {
-            "summary": _pick(self.lang, "Coordinated the team and assembled the plan",
-                                        "Koordinerede teamet og samlede planen"),
-            "output": _pick(self.lang,
-                f"Coordinated {len(ran)} agents ({names}). This week: {strat.get('posts_per_week', 0)} "
-                f"posts across {len(strat.get('platforms', []))} platform(s) in the "
-                f"{brief.get('niche', '?')} niche, with {len(locked)} ideas locked. "
-                "Parts 3-4 will script and schedule them.",
-                f"Koordinerede {len(ran)} agenter ({names}). Denne uge: {strat.get('posts_per_week', 0)} "
-                f"opslag på {len(strat.get('platforms', []))} platform(e) i nichen "
-                f"{brief.get('niche', '?')}, med {len(locked)} idéer låst. "
-                "Del 3-4 skriver og planlægger dem."),
-            "data": {"coordinated": ran, "locked_ideas": locked},
+            "summary": _pick(lang, "Assembled your weekly content brief",
+                                   "Samlede din ugentlige indholds-brief"),
+            "output": text,
+            "data": {
+                "weekly_brief": text,
+                "coordinated": ran,
+                "counts": {"ideas": len(locked), "scripts": len(scripts), "scheduled": len(schedule)},
+            },
         }
 
 
@@ -623,6 +799,9 @@ async def run_team(request: Request, current_user: dict = Depends(get_current_us
         "brief": context.get("brief", {}),
         "strategy": context.get("strategy", {}),
         "locked_ideas": context.get("locked_ideas", []),
+        "scripts": context.get("scripts", []),
+        "schedule": context.get("schedule", []),
+        "weekly_brief": context.get("weekly_brief", ""),
         "head": head,
         "ran_at": ct["last_run_at"],
     }
