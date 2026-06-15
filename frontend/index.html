@@ -7855,10 +7855,15 @@ function _obfKey() {
 async function obfInit() {
   try {
     const user = JSON.parse(localStorage.getItem('ugv_user') || '{}');
-    const seen = localStorage.getItem(_obfKey());
+    let seen = localStorage.getItem(_obfKey());
     // Always fetch status so we can render the widget regardless of branch.
     let d = {};
     try { d = await apiFetch('/api/onboarding/status') || {}; } catch(e) { d = {}; }
+    // The server's onboarding_completed flag is the source of truth: if the user
+    // ever finished onboarding (on ANY device), never show it again. Cache it to
+    // localStorage so later loads take the fast path. This guarantees the
+    // sequence fires exactly once per user, not once per browser.
+    if (d.completed && !seen) { try { localStorage.setItem(_obfKey(), '1'); } catch(e) {} seen = '1'; }
     if (seen) {
       obfRenderWidget(d.widget);
       // Returning user who hasn't taken the tour yet — offer it (don't auto-run).
@@ -16656,6 +16661,7 @@ function agSpeak(src) {
     if (moved) {
       var b = parseFloat(fab.style.bottom), r = parseFloat(fab.style.right);
       localStorage.setItem('ag_fab_pos', JSON.stringify({bottom: b, right: r}));
+      _persistFabPosServer({bottom: b, right: r});  // follow the account across devices
       window._fabDragged = true;   // signals the onclick attribute to skip
     }
     dragging = false; dragStart = null; fabStart = null;
@@ -16669,6 +16675,24 @@ function agSpeak(src) {
 
 // ── Agent button position controls (Settings) ───────────────────────────────
 var _FAB_DEFAULT = { bottom: 28, right: 28 };
+// Persist the choice per user (server-side) so the button follows the account
+// across devices. pos = {bottom, right} to save, or null to reset to default.
+function _persistFabPosServer(pos) {
+  try { if (typeof apiFetch === 'function') apiFetch('/api/user/fab_position', 'POST', { position: pos }, false); } catch (e) {}
+}
+// Apply the user's saved position from the server on startup (localStorage is
+// only a same-device cache; the account store is the source of truth).
+async function _syncFabPosFromServer() {
+  try {
+    var d = await apiFetch('/api/user/profile', 'GET', null, false);
+    var p = d && d.fab_position;
+    if (p && typeof p.bottom === 'number' && typeof p.right === 'number') {
+      _applyFabPos(p.bottom, p.right, false);
+      try { localStorage.setItem('ag_fab_pos', JSON.stringify({ bottom: p.bottom, right: p.right })); } catch (e) {}
+    }
+  } catch (e) {}
+}
+document.addEventListener('DOMContentLoaded', _syncFabPosFromServer);
 function _applyFabPos(bottom, right, persist) {
   var fab = document.getElementById('agent-fab');
   if (!fab) return;
@@ -16678,6 +16702,7 @@ function _applyFabPos(bottom, right, persist) {
   fab.style.right  = right + 'px';
   if (persist) {
     try { localStorage.setItem('ag_fab_pos', JSON.stringify({ bottom: bottom, right: right })); } catch (e) {}
+    _persistFabPosServer({ bottom: bottom, right: right });
   }
   if (window._ag && _ag.open && typeof agPositionPanel === 'function') agPositionPanel(bottom, right);
 }
@@ -16694,6 +16719,7 @@ function setAgentFabPos(corner) {
 }
 function resetAgentFabPos() {
   try { localStorage.removeItem('ag_fab_pos'); } catch (e) {}
+  _persistFabPosServer(null);   // clear the saved position on the account too
   _applyFabPos(_FAB_DEFAULT.bottom, _FAB_DEFAULT.right, false);
   if (typeof toast === 'function') toast('✅ ' + t('agp.saved'), 'success');
 }

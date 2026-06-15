@@ -277,6 +277,7 @@ def get_user_profile(current_user: dict = _Depends(_get_current_user)):
         "watermark_enabled": watermark_enabled,
         "two_factor_enabled": bool(profile.get("two_factor_enabled", False)),
         "notifications": notif,
+        "fab_position": profile.get("fab_position"),
     }
 
 
@@ -344,6 +345,28 @@ async def save_notification_prefs(request: Request, current_user: dict = _Depend
     store["profile"] = profile
     save_store()
     return {"ok": True, "notifications": prefs}
+
+
+@router.post("/api/user/fab_position")
+async def set_fab_position(request: Request, current_user: dict = _Depends(_get_current_user)):
+    """Persist (or reset) the floating agent button's position for this user, so
+    it follows the account across devices. position=null resets to default."""
+    body = await request.json()
+    profile = store.setdefault("profile", {})
+    pos = body.get("position")
+    if pos is None:
+        profile.pop("fab_position", None)
+    else:
+        try:
+            profile["fab_position"] = {
+                "bottom": float(pos.get("bottom")),
+                "right": float(pos.get("right")),
+            }
+        except (TypeError, ValueError, AttributeError):
+            raise HTTPException(status_code=400, detail="Invalid position")
+    store["profile"] = profile
+    save_store()
+    return {"ok": True, "fab_position": profile.get("fab_position")}
 
 
 @router.post("/api/user/two_factor")
