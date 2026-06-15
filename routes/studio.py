@@ -194,6 +194,15 @@ class ClipRequest(BaseModel):
     add_captions: bool = False
     captions_text: str = ""
 
+
+class SmartCutRequest(BaseModel):
+    video_url: str
+    remove_silence: bool = True     # auto-trim silent gaps (core v1 feature)
+    silence_db: int = -30           # loudness threshold (dBFS) for "silence"
+    min_silence: float = 0.6        # min silent duration (s) to cut
+    pad: float = 0.12               # keep this much natural pause around speech
+    max_duration: int = 0           # 0 = no cap; else trim result to N seconds
+
 class EnhancePromptsRequest(BaseModel):
     scenes: List[Scene]
     series_style: str = ""
@@ -1124,6 +1133,222 @@ async def smart_clip(req: ClipRequest, current_user: dict = Depends(get_current_
         "clips": output_clips,
         "credits_used": cost,
     }
+
+
+# ── Smart Cutter — auto-trim silence + tighten to the best moments ────────────
+SMART_CUT_COST = 10
+
+
+def _has_audio(path: str) -> bool:
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a",
+             "-show_entries", "stream=index", "-of", "csv=p=0", path],
+            capture_output=True, text=True, timeout=10)
+        return bool(r.stdout.strip())
+    except Exception:
+        return False
+
+
+def _detect_silence(path: str, noise_db: int, min_sil: float):
+    """Return list of (silence_start, silence_end) via ffmpeg silencedetect."""
+    sils, start = [], None
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-i", path, "-af",
+             f"silencedetect=noise={noise_db}dB:d={min_sil}", "-f", "null", "-"],
+            capture_output=True, text=True, timeout=240)
+        for line in r.stderr.splitlines():
+            if "silence_start:" in line:
+                try: start = float(line.split("silence_start:")[1].strip().split()[0])
+                except Exception: start = None
+            elif "silence_end:" in line:
+                try:
+                    end = float(line.split("silence_end:")[1].strip().split()[0].rstrip(","))
+                    if start is not None:
+                        sils.append((start, end)); start = None
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return sils
+
+
+def _loud_segments(total: float, sils: list, pad: float, max_segments: int = 80):
+    """Invert detected silence into the speech/loud segments to keep, padded a
+    little so cuts don't sound abrupt. Merges touching segments."""
+    sils = sorted(sils)
+    loud, cur = [], 0.0
+    for s, e in sils:
+        if s > cur:
+            loud.append([cur, s])
+        cur = max(cur, e)
+    if cur < total:
+        loud.append([cur, total])
+    out = []
+    for a, b in loud:
+        a2, b2 = max(0.0, a - pad), min(total, b + pad)
+        if b2 - a2 < 0.3:
+            continue
+        if out and a2 <= out[-1][1] + 0.05:
+            out[-1][1] = max(out[-1][1], b2)
+        else:
+            out.append([a2, b2])
+    return out[:max_segments]
+
+
+def _trim_to_max(segs: list, max_duration: float):
+    """Greedily keep segments from the start until the total reaches the cap."""
+    if not max_duration or max_duration <= 0:
+        return segs
+    kept, acc = [], 0.0
+    for a, b in segs:
+        dur = b - a
+        if acc + dur <= max_duration:
+            kept.append([a, b]); acc += dur
+        else:
+            remain = max_duration - acc
+            if remain > 0.5:
+                kept.append([a, a + remain]); acc += remain
+            break
+    return kept or segs[:1]
+
+
+def _concat_segments(src: str, segs: list, out: str, has_audio: bool) -> bool:
+    """Cut `segs` out of `src` and concatenate into `out` (re-encoded)."""
+    if not segs:
+        return False
+    fc = []
+    for i, (a, b) in enumerate(segs):
+        fc.append(f"[0:v]trim=start={a:.3f}:end={b:.3f},setpts=PTS-STARTPTS[v{i}]")
+        if has_audio:
+            fc.append(f"[0:a]atrim=start={a:.3f}:end={b:.3f},asetpts=PTS-STARTPTS[a{i}]")
+    n = len(segs)
+    joined = "".join(f"[v{i}]" + (f"[a{i}]" if has_audio else "") for i in range(n))
+    if has_audio:
+        fc.append(f"{joined}concat=n={n}:v=1:a=1[outv][outa]")
+        maps = ["-map", "[outv]", "-map", "[outa]", "-c:a", "aac"]
+    else:
+        fc.append(f"{joined}concat=n={n}:v=1:a=0[outv]")
+        maps = ["-map", "[outv]"]
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", src, "-filter_complex", ";".join(fc)] + maps +
+            ["-c:v", "libx264", "-preset", "fast", "-crf", "23", out],
+            capture_output=True, timeout=600)
+        return os.path.exists(out) and os.path.getsize(out) > 0
+    except Exception:
+        return False
+
+
+@router.post("/api/studio/smart_cut")
+async def smart_cut(req: SmartCutRequest, current_user: dict = Depends(get_current_user)):
+    """Smart Cutter — automatically trim a user's uploaded video to the best
+    moments. v1: removes silent gaps (and optionally caps the length). The cut
+    video is saved to the user's Content Library."""
+    if not _ffmpeg_available():
+        raise HTTPException(status_code=503, detail="FFmpeg is not installed on the server")
+
+    uid = current_user["id"]
+    session_id = uuid.uuid4().hex[:10]
+    src_path = os.path.join(UPLOADS_DIR, f"smartcut_src_{session_id}.mp4")
+
+    # Resolve the source video to a local file (library / uploads / http).
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+    url = (req.video_url or "").strip()
+    if url.startswith("/user_content/") or url.startswith("/uploads/"):
+        local = os.path.normpath(os.path.join(base, url.lstrip("/")))
+        if os.path.commonpath([os.path.abspath(base), local]) != os.path.abspath(base):
+            raise HTTPException(status_code=400, detail="Invalid video path")
+        if not os.path.exists(local):
+            raise HTTPException(status_code=404, detail="Video not found")
+        shutil.copy(local, src_path)
+    elif url.startswith("http"):
+        if not _download_video(url, src_path):
+            raise HTTPException(status_code=500, detail="Could not download the video")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid video URL")
+
+    try:
+        total = _get_duration(src_path)
+        if total < 1:
+            raise HTTPException(status_code=400, detail="Could not read the video duration")
+
+        has_audio = _has_audio(src_path)
+        segs, method = None, ""
+
+        if req.remove_silence and has_audio:
+            sils = _detect_silence(src_path, req.silence_db, req.min_silence)
+            loud = _loud_segments(total, sils, req.pad)
+            kept_total = sum(b - a for a, b in loud) if loud else 0
+            # Only treat it as a real silence-cut if we actually removed something.
+            if loud and kept_total < total * 0.97:
+                segs, method = loud, "silence_removal"
+
+        if segs is None:
+            # Nothing to trim by silence (or no audio). If a max length was asked
+            # for, just tighten to that; otherwise there's nothing to do.
+            if req.max_duration and req.max_duration < total:
+                segs = [[0.0, float(req.max_duration)]]
+                method = "length_trim"
+            else:
+                raise HTTPException(
+                    status_code=422,
+                    detail=("No silent sections were found to trim. Try a higher silence "
+                            "threshold, or set a target length."))
+
+        # Optional hard cap on the result length.
+        if req.max_duration and req.max_duration > 0:
+            segs = _trim_to_max(segs, float(req.max_duration))
+
+        _deduct(SMART_CUT_COST, uid)
+
+        # Render straight into the Content Library's video folder.
+        from routes.content_library import _kind_dir, _public_url
+        item_id = uuid.uuid4().hex[:12]
+        filename = f"{item_id}.mp4"
+        out_path = os.path.join(_kind_dir(uid, "videos"), filename)
+        if not _concat_segments(src_path, segs, out_path, has_audio):
+            raise HTTPException(status_code=500, detail="Smart cut failed during rendering")
+
+        new_dur = _get_duration(out_path)
+        local_url = _public_url(uid, "videos", filename)
+
+        # Register in the content library so it shows alongside other content.
+        entry = {
+            "id": item_id, "kind": "videos", "provider": "smart_cut",
+            "prompt": f"Smart Cut ({method.replace('_',' ')}) — {round(total)}s → {round(new_dur)}s",
+            "media_type": "video", "source_url": local_url, "local_url": local_url,
+            "local_path": out_path, "filename": filename,
+            "size_bytes": os.path.getsize(out_path),
+            "size_mb": round(os.path.getsize(out_path) / 1024 / 1024, 1),
+            "duration": round(new_dur), "saved_locally": True, "is_smart_cut": True,
+            "credits_used": SMART_CUT_COST, "created_at": datetime.utcnow().isoformat(),
+        }
+        ustore = _load_user_store(uid)
+        items = ustore.setdefault("library_items", [])
+        items.insert(0, entry)
+        ustore["library_items"] = items[:10000]
+        # Also surface in the studio "My videos" list.
+        gv = ustore.setdefault("generated_videos", [])
+        gv.insert(0, {**entry, "url": local_url, "kind": "smart_cut"})
+        ustore["generated_videos"] = gv[:100]
+        _save_user_store(uid, ustore)
+
+        return {
+            "ok": True,
+            "method": method,
+            "original_duration": round(total, 1),
+            "new_duration": round(new_dur, 1),
+            "removed_seconds": round(max(0, total - new_dur), 1),
+            "segments_kept": len(segs),
+            "url": local_url,
+            "credits_used": SMART_CUT_COST,
+            "item": entry,
+        }
+    finally:
+        try: os.remove(src_path)
+        except Exception: pass
 
 
 @router.get("/api/studio/history")

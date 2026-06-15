@@ -1004,6 +1004,117 @@ async def create_checkout(body: dict, current_user: dict = Depends(get_current_u
     return {"url": session.url}
 
 
+# ── Self-service subscription management (EU consumer-law requirement) ─────────
+def _stripe_or_503():
+    import stripe
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+    if not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
+    return stripe
+
+
+def _resolve_subscription_id(stripe, billing: dict):
+    """Return the user's active Stripe subscription id — from our stored id, or
+    by looking it up via their saved customer id."""
+    sub_id = billing.get("stripe_subscription_id")
+    if sub_id:
+        return sub_id
+    cust = billing.get("stripe_customer_id")
+    if not cust:
+        return None
+    try:
+        subs = stripe.Subscription.list(customer=cust, status="all", limit=20)
+        data = subs.get("data", []) if isinstance(subs, dict) else list(subs)
+        for s in data:
+            if s.get("status") in ("active", "trialing", "past_due", "unpaid"):
+                return s.get("id")
+    except Exception:
+        pass
+    return None
+
+
+def _period_end_iso(sub) -> str:
+    from datetime import datetime, timezone
+    ts = sub.get("current_period_end") if isinstance(sub, dict) else getattr(sub, "current_period_end", None)
+    if ts:
+        try:
+            return datetime.fromtimestamp(int(ts), tz=timezone.utc).isoformat()
+        except Exception:
+            pass
+    return ""
+
+
+@router.get("/api/billing/subscription_status")
+def subscription_status(current_user: dict = Depends(get_current_user)):
+    """Whether the user has a cancellable paid subscription and its state."""
+    billing = _load_user_store(current_user["id"]).get("billing", {}) or {}
+    plan = billing.get("plan", "free")
+    is_paid = plan != "free" and not billing.get("founding_member")
+    return {
+        "plan": plan,
+        "is_paid": is_paid,
+        "has_subscription": bool(is_paid and (billing.get("stripe_subscription_id") or billing.get("stripe_customer_id"))),
+        "cancel_at_period_end": bool(billing.get("cancel_at_period_end")),
+        "current_period_end": billing.get("current_period_end", ""),
+        "founding_member": bool(billing.get("founding_member")),
+    }
+
+
+@router.post("/api/billing/cancel_subscription")
+def cancel_subscription(current_user: dict = Depends(get_current_user)):
+    """Cancel at period end — the user keeps access until the period ends, then
+    drops to Free. No support contact required."""
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    billing = ustore.setdefault("billing", {})
+    if billing.get("plan", "free") == "free":
+        raise HTTPException(status_code=400, detail="You are on the Free plan — nothing to cancel.")
+    if billing.get("founding_member"):
+        raise HTTPException(status_code=400, detail="Your founding-member plan is managed manually — contact support@ugoingviral.com.")
+    stripe = _stripe_or_503()
+    sub_id = _resolve_subscription_id(stripe, billing)
+    if not sub_id:
+        raise HTTPException(status_code=404, detail="No active subscription found. If you believe this is an error, contact support@ugoingviral.com.")
+    try:
+        sub = stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not cancel with Stripe: {str(e)[:120]}")
+    billing["stripe_subscription_id"] = sub_id
+    billing["cancel_at_period_end"] = True
+    end_iso = _period_end_iso(sub)
+    if end_iso:
+        billing["current_period_end"] = end_iso
+    ustore["billing"] = billing
+    _save_user_store(uid, ustore)
+    try:
+        from routes.email import send_subscription_cancelled_email
+        if not current_user.get("email", "").startswith("qa-"):
+            send_subscription_cancelled_email(current_user["email"], current_user.get("name", ""))
+    except Exception:
+        pass
+    return {"ok": True, "cancel_at_period_end": True, "current_period_end": billing.get("current_period_end", "")}
+
+
+@router.post("/api/billing/resume_subscription")
+def resume_subscription(current_user: dict = Depends(get_current_user)):
+    """Undo a pending cancellation before the period ends."""
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    billing = ustore.setdefault("billing", {})
+    stripe = _stripe_or_503()
+    sub_id = _resolve_subscription_id(stripe, billing)
+    if not sub_id:
+        raise HTTPException(status_code=404, detail="No subscription found to resume.")
+    try:
+        stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not resume with Stripe: {str(e)[:120]}")
+    billing["cancel_at_period_end"] = False
+    ustore["billing"] = billing
+    _save_user_store(uid, ustore)
+    return {"ok": True, "cancel_at_period_end": False}
+
+
 @router.post("/api/billing/webhook")
 async def stripe_webhook(request: Request):
     """
@@ -1156,6 +1267,11 @@ def _process_stripe_event(event, stripe):
                 # saved card off-session.
                 if obj.get("customer"):
                     billing["stripe_customer_id"] = obj.get("customer")
+                # Persist the subscription id so the user can self-cancel later,
+                # and clear any stale cancellation flag from a previous sub.
+                if obj.get("subscription"):
+                    billing["stripe_subscription_id"] = obj.get("subscription")
+                billing["cancel_at_period_end"] = False
                 user_store["billing"] = billing
                 _save_user_store(user_id, user_store)
                 try:
@@ -1224,6 +1340,11 @@ def _process_stripe_event(event, stripe):
             if not billing.get("founding_member"):
                 billing["plan"] = "free"
                 billing["credits"] = PLANS["free"]["credits"]
+            # Subscription is gone — clear all subscription state so the UI shows
+            # a clean Free account and self-service resubscribe works.
+            billing["cancel_at_period_end"] = False
+            billing["current_period_end"] = ""
+            billing["stripe_subscription_id"] = ""
             user_store["billing"] = billing
             _save_user_store(user_id, user_store)
             try:
@@ -1234,6 +1355,33 @@ def _process_stripe_event(event, stripe):
                     send_subscription_cancelled_email(u["email"], u.get("name",""))
             except Exception:
                 pass
+
+    elif event["type"] == "customer.subscription.updated":
+        # Keep our cancel-at-period-end + access-end date in sync when the user
+        # cancels/resumes (including via Stripe's own portal).
+        obj = event["data"]["object"]
+        meta = obj.get("metadata") or {}
+        user_id = meta.get("user_id")
+        if not user_id and obj.get("customer"):
+            try:
+                cust = stripe.Customer.retrieve(obj.get("customer"))
+                user_id = (cust.get("metadata") or {}).get("user_id")
+            except Exception:
+                user_id = None
+        if user_id:
+            user_store = _load_user_store(user_id)
+            billing = user_store.setdefault("billing", {})
+            billing["stripe_subscription_id"] = obj.get("id") or billing.get("stripe_subscription_id", "")
+            billing["cancel_at_period_end"] = bool(obj.get("cancel_at_period_end"))
+            ts = obj.get("current_period_end")
+            if ts:
+                from datetime import datetime as _dt, timezone as _tz
+                try:
+                    billing["current_period_end"] = _dt.fromtimestamp(int(ts), tz=_tz.utc).isoformat()
+                except Exception:
+                    pass
+            user_store["billing"] = billing
+            _save_user_store(user_id, user_store)
 
     elif event["type"] == "invoice.payment_failed":
         obj = event["data"]["object"]

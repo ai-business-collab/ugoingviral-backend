@@ -41,3 +41,4 @@ api_usage_global.json
 # Runtime media re-hosted for TikTok PULL_FROM_URL (regenerated on demand)
 user_content/
 revoked_tokens.json
+anonymized_learnings.json

@@ -102,6 +102,12 @@ body.light {
 /* ── "Se eksempel" button — consistent across all video/content functions ── */
 .ex-btn{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,255,.1);color:var(--ac);border:1px solid rgba(0,229,255,.32);border-radius:8px;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .ex-btn:hover{background:rgba(0,229,255,.2);border-color:var(--ac)}
+/* ── Settings hub menu cards ─────────────────────────────── */
+.set-menu-card{display:flex;align-items:center;gap:14px;background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:pointer;transition:border-color .15s,transform .15s,background .15s}
+.set-menu-card:hover{border-color:var(--ac);transform:translateY(-2px);background:var(--glass-b)}
+.set-menu-card .smc-ic{font-size:24px;flex-shrink:0}
+.set-menu-card .smc-t{font-size:14px;font-weight:700;color:var(--tx)}
+.set-menu-card .smc-d{font-size:11px;color:var(--tx3);margin-top:2px;line-height:1.4}
 /* ── Interactive Tour ────────────────────── */
 #tour-overlay{position:fixed;inset:0;z-index:8000;pointer-events:none;display:none}
 #tour-overlay.tour-active{display:block}
@@ -3690,20 +3696,33 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
   <div id="page-settings" class="page">
     <div style="max-width:820px">
 
-      <!-- Page header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-size:22px;font-weight:800;color:var(--tx)">Settings</div>
-          <div style="font-size:12px;color:var(--tx3);margin-top:2px">Manage your profile, security, notifications, connected accounts and billing.</div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap" id="set-section-nav">
-          <a href="#sec-account"   onclick="event.preventDefault();document.getElementById('sec-account').scrollIntoView({behavior:'smooth'})"   style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">👤 Profile</a>
-          <a href="#sec-password"  onclick="event.preventDefault();document.getElementById('sec-password').scrollIntoView({behavior:'smooth'})"  style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">🔒 Security</a>
-          <a href="#sec-notif"     onclick="event.preventDefault();document.getElementById('sec-notif').scrollIntoView({behavior:'smooth'})"     style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">🔔 Notifications</a>
-          <a href="#sec-connected" onclick="event.preventDefault();document.getElementById('sec-connected').scrollIntoView({behavior:'smooth'})" style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">🔗 Accounts</a>
-          <a href="#sec-billing"   onclick="event.preventDefault();document.getElementById('sec-billing').scrollIntoView({behavior:'smooth'})"   style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">💳 Billing</a>
-          <a href="#sec-help"      onclick="event.preventDefault();document.getElementById('sec-help').scrollIntoView({behavior:'smooth'})"      style="font-size:11px;color:var(--tx3);padding:5px 10px;border-radius:14px;background:var(--glass-b);border:1px solid var(--border);text-decoration:none;font-weight:600">💬 Help</a>
-        </div>
+      <!-- Back bar — shown when a settings sub-section is open -->
+      <div id="settings-backbar" style="display:none;align-items:center;gap:12px;margin-bottom:18px">
+        <button class="btn bg bsm" onclick="settingsBackToMenu()">← <span data-i18n="set.back">Settings</span></button>
+        <div id="settings-detail-title" style="font-size:20px;font-weight:800;color:var(--tx)"></div>
+      </div>
+
+      <!-- Menu header — shown on the settings hub -->
+      <div id="settings-menu-header" style="margin-bottom:18px">
+        <div style="font-size:22px;font-weight:800;color:var(--tx)" data-i18n="set.title">Settings</div>
+        <div style="font-size:12px;color:var(--tx3);margin-top:2px" data-i18n="set.subtitle">Manage your profile, security, notifications, connected accounts and billing.</div>
+      </div>
+
+      <!-- Settings hub — a menu of cards; clicking one opens it as its own view -->
+      <div id="settings-menu" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-bottom:8px">
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-account','set.profile')"><div class="smc-ic">👤</div><div><div class="smc-t" data-i18n="set.profile">Profile</div><div class="smc-d" data-i18n="set.profileDesc">Name, username, email and photo</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-password','set.security')"><div class="smc-ic">🔒</div><div><div class="smc-t" data-i18n="set.security">Security</div><div class="smc-d" data-i18n="set.securityDesc">Password and two-factor authentication</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-notif','set.notifications')"><div class="smc-ic">🔔</div><div><div class="smc-t" data-i18n="set.notifications">Notifications</div><div class="smc-d" data-i18n="set.notificationsDesc">Choose which emails you receive</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-connected','set.accounts')"><div class="smc-ic">🔗</div><div><div class="smc-t" data-i18n="set.accounts">Connected Accounts</div><div class="smc-d" data-i18n="set.accountsDesc">Your linked social platforms</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-billing','set.billing')"><div class="smc-ic">💳</div><div><div class="smc-t" data-i18n="set.billing">Billing</div><div class="smc-d" data-i18n="set.billingDesc">Plan, credits and cancellation</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-help','set.help')"><div class="smc-ic">💬</div><div><div class="smc-t" data-i18n="set.help">Help &amp; Support</div><div class="smc-d" data-i18n="set.helpDesc">Help center, contact and legal</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-assistant','set.assistant')"><div class="smc-ic">🎙️</div><div><div class="smc-t" data-i18n="set.assistant">Personal Assistant</div><div class="smc-d" data-i18n="set.assistantDesc">Your AI assistant voice</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-agentpos','set.agentBtn')"><div class="smc-ic">🤖</div><div><div class="smc-t" data-i18n="set.agentBtn">Agent Button</div><div class="smc-d" data-i18n="set.agentBtnDesc">Position of the floating AI button</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-interface','set.interface')"><div class="smc-ic">🎨</div><div><div class="smc-t" data-i18n="set.interface">Interface &amp; Language</div><div class="smc-d" data-i18n="set.interfaceDesc">Theme, language and content preferences</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-install','set.install')"><div class="smc-ic">📱</div><div><div class="smc-t" data-i18n="set.install">Install App</div><div class="smc-d" data-i18n="set.installDesc">Add UgoingViral to your device</div></div></div>
+        <div class="set-menu-card" id="smc-workspaces" onclick="settingsOpenSection('workspace-settings-card','set.workspaces')"><div class="smc-ic">🗂️</div><div><div class="smc-t" data-i18n="set.workspaces">Workspaces</div><div class="smc-d" data-i18n="set.workspacesDesc">Separate content per workspace</div></div></div>
+        <div class="set-menu-card" id="smc-watermark" style="display:none" onclick="settingsOpenSection('watermark-settings-card','set.watermark')"><div class="smc-ic">🔖</div><div><div class="smc-t" data-i18n="set.watermark">Content Watermark</div><div class="smc-d" data-i18n="set.watermarkDesc">Watermark on generated videos</div></div></div>
+        <div class="set-menu-card" onclick="settingsOpenSection('sec-danger','set.danger')" style="border-color:rgba(239,68,68,.25)"><div class="smc-ic">⚠️</div><div><div class="smc-t" data-i18n="set.danger">Danger Zone</div><div class="smc-d" data-i18n="set.dangerDesc">Deactivate or delete your account</div></div></div>
       </div>
 
       <!-- PROFILE -->
@@ -3842,6 +3861,19 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <button class="btn bp bsm" onclick="saveAgentVoiceSettings()">💾 Save voice</button>
       </div>
 
+      <!-- AGENT BUTTON POSITION -->
+      <div class="card" id="sec-agentpos" style="margin-bottom:20px;scroll-margin-top:90px">
+        <div class="ctitle" data-i18n="agp.title">🤖 Agent Button Position</div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:14px" data-i18n="agp.desc">Choose where the floating AI assistant button sits. You can also drag the button anywhere on screen.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:360px">
+          <button class="btn bg bsm" onclick="setAgentFabPos('br')" data-i18n="agp.bottomRight">Bottom right</button>
+          <button class="btn bg bsm" onclick="setAgentFabPos('bl')" data-i18n="agp.bottomLeft">Bottom left</button>
+          <button class="btn bg bsm" onclick="setAgentFabPos('tr')" data-i18n="agp.topRight">Top right</button>
+          <button class="btn bg bsm" onclick="setAgentFabPos('tl')" data-i18n="agp.topLeft">Top left</button>
+        </div>
+        <button class="btn bp bsm" style="margin-top:14px" onclick="resetAgentFabPos()">↺ <span data-i18n="agp.reset">Reset to default</span></button>
+      </div>
+
       <!-- INTERFACE -->
       <div class="card" id="sec-interface" style="margin-bottom:20px;scroll-margin-top:90px">
         <div class="ctitle">🎨 Interface &amp; Language</div>
@@ -3950,7 +3982,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       </div>
 
       <!-- DANGER ZONE -->
-      <div class="card" style="margin-bottom:20px;border-color:rgba(239,68,68,.18)">
+      <div class="card" id="sec-danger" style="margin-bottom:20px;border-color:rgba(239,68,68,.18)">
         <div class="ctitle" style="color:#ef4444">⚠️ Danger Zone</div>
         <div class="trow" style="border-color:rgba(239,68,68,.1)">
           <div>
@@ -4092,6 +4124,12 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="gtabs" data-group="billing">
         <button class="gtab active" data-bill-key="overview" onclick="switchBillingTab('overview')">📊 Plans & Overview</button>
         <button class="gtab" data-bill-key="topup" onclick="switchBillingTab('topup')">💰 Top Up Credits</button>
+      </div>
+
+      <!-- SUBSCRIPTION MANAGEMENT (self-service cancel / resume) -->
+      <div class="card" id="subscription-card" style="margin-bottom:20px;display:none" data-bill-tab="overview">
+        <div class="ctitle">🧾 <span data-i18n="set.billing">Subscription</span></div>
+        <div id="subscription-status-body" style="font-size:13px;color:var(--tx2)"></div>
       </div>
 
       <!-- PLAN FEATURES & EXTRA PROFILES (moved from Settings) -->
@@ -4661,18 +4699,38 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div id="studio-upload-zone"></div>
     </div>
 
-    <!-- ══ Smart Cutting (coming soon) ════════════════════════════════════ -->
+    <!-- ══ Smart Cutter (FFmpeg auto-trim) ════════════════════════════════ -->
     <div id="studio-smartcut-card" style="margin-top:18px;background:linear-gradient(135deg,rgba(0,229,255,.05),rgba(124,58,237,.05));border:1px solid rgba(0,229,255,.22);border-radius:14px;padding:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="font-size:30px">✂️</div>
-          <div>
-            <div style="font-size:15px;font-weight:800;color:var(--tx);display:flex;align-items:center;gap:8px">Smart Cutting <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:var(--ac);background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.35);border-radius:6px;padding:2px 7px">COMING SOON</span></div>
-            <div style="font-size:11px;color:var(--tx3);margin-top:3px">AI will automatically cut your video to the best moments — no manual editing.</div>
-          </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="font-size:30px">✂️</div>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--tx)"><span data-i18n="sc.title">Smart Cutter</span> <span data-help="sc.help"></span></div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:3px" data-i18n="sc.desc">Automatically trims the silent gaps out of your video and tightens it to the best moments — saved to your Content Library.</div>
         </div>
-        <button class="btn bg bsm" onclick="smartCuttingComingSoon()" style="font-weight:700">✂️ Smart Cutting</button>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 160px;gap:10px;align-items:end">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase" data-i18n="sc.source">Video to cut</label>
+          <select id="smartcut-source" class="fs" style="margin-top:4px;width:100%"></select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase" data-i18n="sc.target">Target length</label>
+          <select id="smartcut-maxdur" class="fs" style="margin-top:4px;width:100%">
+            <option value="0" data-i18n="sc.auto">Auto</option>
+            <option value="15">15s</option><option value="30">30s</option>
+            <option value="60">60s</option><option value="90">90s</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <div class="trow" style="border:none;padding:0;flex:1;min-width:200px">
+          <div><div class="tname" style="font-size:13px" data-i18n="sc.removeSilence">Remove silent gaps</div></div>
+          <div class="tog on" id="tog-smartcut-silence" onclick="togIt(this)"></div>
+        </div>
+        <button class="btn bp bsm" id="smartcut-run-btn" onclick="smartCutRun()" style="font-weight:700">✂️ <span data-i18n="sc.run">Smart Cut now</span> <span style="opacity:.7">(10 cr)</span></button>
+      </div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:8px" data-i18n="sc.advanced">Advanced: AI highlight selection via scene detection is coming soon. v1 auto-trims silence and tightens length.</div>
+      <div id="smartcut-result" style="margin-top:14px;display:none"></div>
     </div>
 
     <!-- ══ Premium video providers (Hyper Realistic + Premium Animation) — any paid plan ══ -->
@@ -6357,6 +6415,89 @@ function renderBillingPage(d) {
   // Load studio packages
   loadStudioPackages();
   renderBillingPrices();
+  loadSubscriptionStatus();
+}
+
+// ── Self-service subscription cancel / resume ────────────────────────────────
+function _fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    var d = new Date(iso);
+    return d.toLocaleDateString(currentLang === 'da' ? 'da-DK' : 'en-US',
+      { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch (e) { return iso; }
+}
+
+async function loadSubscriptionStatus() {
+  var card = document.getElementById('subscription-card');
+  var body = document.getElementById('subscription-status-body');
+  if (!card || !body) return;
+  var d;
+  try { d = await apiFetch('/api/billing/subscription_status'); } catch (e) { return; }
+  if (!d) return;
+  if (!d.is_paid) {
+    // Free plan — nothing to cancel; keep the card hidden.
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  if (d.founding_member) {
+    body.innerHTML = '<div style="color:var(--tx2)">Founding-member plan — managed manually. Contact support to change it.</div>';
+    return;
+  }
+  var planName = (d.plan || '').charAt(0).toUpperCase() + (d.plan || '').slice(1);
+  if (d.cancel_at_period_end) {
+    var until = _fmtDate(d.current_period_end);
+    body.innerHTML =
+      '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px 14px;margin-bottom:14px;color:#f59e0b;font-size:13px">'
+      + '⚠️ ' + t('cancel.cancelling') + (until ? ' <strong>' + until + '</strong>.' : '.') + '</div>'
+      + '<button class="btn bp bsm" onclick="resumeSubscription()">↩️ <span data-i18n="cancel.resume">Resume subscription</span></button>';
+  } else {
+    body.innerHTML =
+      '<div style="margin-bottom:12px">Current plan: <strong style="color:var(--ac)">' + planName + '</strong>'
+      + (d.current_period_end ? ' · ' + t('cancel.accessUntil') + ' ' + _fmtDate(d.current_period_end) : '') + '</div>'
+      + '<button class="btn bsm" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444" onclick="openCancelModal()">'
+      + '<span data-i18n="cancel.btn">Cancel subscription</span></button>';
+  }
+  if (typeof applyLang === 'function') applyLang();
+}
+
+function openCancelModal() {
+  var m = document.getElementById('cancel-sub-modal');
+  if (m) m.style.display = 'flex';
+}
+function closeCancelModal() {
+  var m = document.getElementById('cancel-sub-modal');
+  if (m) m.style.display = 'none';
+}
+
+async function confirmCancelSubscription() {
+  var btn = document.getElementById('cancel-sub-confirm-btn');
+  var old = btn.innerHTML;
+  btn.disabled = true; btn.textContent = t('cancel.processing');
+  try {
+    var d = await apiFetch('/api/billing/cancel_subscription', 'POST');
+    closeCancelModal();
+    if (d) {
+      var until = _fmtDate(d.current_period_end);
+      toast('✅ ' + t('cancel.done') + (until ? ' (' + until + ')' : ''), 'success');
+    }
+    loadSubscriptionStatus();
+  } catch (e) {
+    toast('❌ ' + (e.message || 'Could not cancel'), 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = old;
+  }
+}
+
+async function resumeSubscription() {
+  try {
+    await apiFetch('/api/billing/resume_subscription', 'POST');
+    toast('✅ ' + t('cancel.resumed'), 'success');
+    loadSubscriptionStatus();
+  } catch (e) {
+    toast('❌ ' + (e.message || 'Could not resume'), 'error');
+  }
 }
 
 function switchBillingTab(tab) {
@@ -6963,6 +7104,7 @@ async function studioInit() {
   studioRender();
   loadMyVideos();
   if (typeof loadFreeVideoStatus === 'function') loadFreeVideoStatus();
+  if (typeof loadSmartCutSources === 'function') loadSmartCutSources();
 }
 
 async function loadMyVideos() {
@@ -8302,6 +8444,83 @@ Object.assign(I18N.da, {
   'sub.videoStudio':'🎬 Video Studio', 'sub.portraitStudio':'🤳 AI Portræt Studio',
 });
 
+// ── i18n for final launch-prep: Smart Cutter, Settings sub-pages, cancellation,
+//    agent-button position. Bilingual so everything follows the DA/EN toggle. ──
+Object.assign(I18N.en, {
+  'sc.title':'Smart Cutter',
+  'sc.help':'Auto-trims silent gaps out of your video and tightens it to the best moments using FFmpeg — the result is saved to your Content Library.',
+  'sc.desc':'Automatically trims the silent gaps out of your video and tightens it to the best moments — saved to your Content Library.',
+  'sc.source':'Video to cut', 'sc.target':'Target length', 'sc.auto':'Auto',
+  'sc.removeSilence':'Remove silent gaps', 'sc.run':'Smart Cut now',
+  'sc.advanced':'Advanced: AI highlight selection via scene detection is coming soon. v1 auto-trims silence and tightens length.',
+  'sc.noVideos':'No videos found — upload one first', 'sc.processing':'Processing…',
+  'sc.done':'Smart cut complete', 'sc.original':'Original', 'sc.new':'New',
+  'sc.segments':'segments kept', 'sc.saved':'Saved to your Content Library',
+  'set.title':'Settings', 'set.subtitle':'Manage your profile, security, notifications, connected accounts and billing.',
+  'set.back':'Settings', 'set.open':'Open',
+  'set.profile':'Profile', 'set.profileDesc':'Name, username, email and photo',
+  'set.security':'Security', 'set.securityDesc':'Password and two-factor authentication',
+  'set.notifications':'Notifications', 'set.notificationsDesc':'Choose which emails you receive',
+  'set.accounts':'Connected Accounts', 'set.accountsDesc':'Your linked social platforms',
+  'set.billing':'Billing', 'set.billingDesc':'Plan, credits and cancellation',
+  'set.help':'Help & Support', 'set.helpDesc':'Help center, contact and legal',
+  'set.assistant':'Personal Assistant', 'set.assistantDesc':'Your AI assistant voice',
+  'set.interface':'Interface & Language', 'set.interfaceDesc':'Theme, language and content preferences',
+  'set.install':'Install App', 'set.installDesc':'Add UgoingViral to your device',
+  'set.workspaces':'Workspaces', 'set.workspacesDesc':'Separate content per workspace',
+  'set.watermark':'Content Watermark', 'set.watermarkDesc':'Watermark on generated videos',
+  'set.agentBtn':'Agent Button', 'set.agentBtnDesc':'Position of the floating AI button',
+  'set.danger':'Danger Zone', 'set.dangerDesc':'Deactivate or delete your account',
+  'agp.title':'🤖 Agent Button Position', 'agp.desc':'Choose where the floating AI assistant button sits. You can also drag the button anywhere on screen.',
+  'agp.bottomRight':'Bottom right', 'agp.bottomLeft':'Bottom left', 'agp.topRight':'Top right', 'agp.topLeft':'Top left',
+  'agp.reset':'Reset to default', 'agp.saved':'Agent button position saved',
+  'cancel.btn':'Cancel subscription', 'cancel.title':'Cancel your subscription?',
+  'cancel.body':'Your plan stays active until the end of your current billing period — then your account moves to the Free plan. You can resubscribe any time.',
+  'cancel.confirm':'Yes, cancel', 'cancel.keep':'Keep my plan',
+  'cancel.accessUntil':'Access until', 'cancel.resume':'Resume subscription',
+  'cancel.resumed':'Subscription resumed — your plan will renew as normal.',
+  'cancel.processing':'Processing…', 'cancel.none':'You are on the Free plan — nothing to cancel.',
+  'cancel.cancelling':'Your subscription is cancelling. Access continues until',
+  'cancel.done':'Subscription cancelled. Your access continues until the date shown.',
+});
+Object.assign(I18N.da, {
+  'sc.title':'Smart Cutter',
+  'sc.help':'Klipper automatisk stille pauser ud af din video og strammer den til de bedste øjeblikke med FFmpeg — resultatet gemmes i dit Content Library.',
+  'sc.desc':'Klipper automatisk stille pauser ud af din video og strammer den til de bedste øjeblikke — gemmes i dit Content Library.',
+  'sc.source':'Video at klippe', 'sc.target':'Mållængde', 'sc.auto':'Auto',
+  'sc.removeSilence':'Fjern stille pauser', 'sc.run':'Smart Cut nu',
+  'sc.advanced':'Avanceret: AI-valg af highlights via scene-detektion kommer snart. v1 klipper stilhed væk og strammer længden.',
+  'sc.noVideos':'Ingen videoer fundet — upload en først', 'sc.processing':'Behandler…',
+  'sc.done':'Smart cut færdig', 'sc.original':'Original', 'sc.new':'Ny',
+  'sc.segments':'segmenter beholdt', 'sc.saved':'Gemt i dit Content Library',
+  'set.title':'Indstillinger', 'set.subtitle':'Administrér din profil, sikkerhed, notifikationer, forbundne konti og betaling.',
+  'set.back':'Indstillinger', 'set.open':'Åbn',
+  'set.profile':'Profil', 'set.profileDesc':'Navn, brugernavn, email og foto',
+  'set.security':'Sikkerhed', 'set.securityDesc':'Adgangskode og to-faktor-godkendelse',
+  'set.notifications':'Notifikationer', 'set.notificationsDesc':'Vælg hvilke emails du modtager',
+  'set.accounts':'Forbundne konti', 'set.accountsDesc':'Dine tilkoblede sociale platforme',
+  'set.billing':'Betaling', 'set.billingDesc':'Plan, credits og opsigelse',
+  'set.help':'Hjælp & Support', 'set.helpDesc':'Hjælpecenter, kontakt og juridisk',
+  'set.assistant':'Personlig assistent', 'set.assistantDesc':'Din AI-assistents stemme',
+  'set.interface':'Interface & Sprog', 'set.interfaceDesc':'Tema, sprog og indholdspræferencer',
+  'set.install':'Installér app', 'set.installDesc':'Føj UgoingViral til din enhed',
+  'set.workspaces':'Workspaces', 'set.workspacesDesc':'Adskil indhold pr. workspace',
+  'set.watermark':'Vandmærke', 'set.watermarkDesc':'Vandmærke på genererede videoer',
+  'set.agentBtn':'Agent-knap', 'set.agentBtnDesc':'Placering af den flydende AI-knap',
+  'set.danger':'Farezone', 'set.dangerDesc':'Deaktivér eller slet din konto',
+  'agp.title':'🤖 Agent-knappens placering', 'agp.desc':'Vælg hvor den flydende AI-assistent-knap sidder. Du kan også trække knappen hen hvor du vil på skærmen.',
+  'agp.bottomRight':'Nederst til højre', 'agp.bottomLeft':'Nederst til venstre', 'agp.topRight':'Øverst til højre', 'agp.topLeft':'Øverst til venstre',
+  'agp.reset':'Nulstil til standard', 'agp.saved':'Agent-knappens placering gemt',
+  'cancel.btn':'Opsig abonnement', 'cancel.title':'Opsig dit abonnement?',
+  'cancel.body':'Din plan er aktiv indtil udgangen af din nuværende betalingsperiode — derefter skifter din konto til Free-planen. Du kan tegne abonnement igen når som helst.',
+  'cancel.confirm':'Ja, opsig', 'cancel.keep':'Behold min plan',
+  'cancel.accessUntil':'Adgang indtil', 'cancel.resume':'Genoptag abonnement',
+  'cancel.resumed':'Abonnement genoptaget — din plan fornys som normalt.',
+  'cancel.processing':'Behandler…', 'cancel.none':'Du er på Free-planen — intet at opsige.',
+  'cancel.cancelling':'Dit abonnement er ved at blive opsagt. Adgang fortsætter indtil',
+  'cancel.done':'Abonnement opsagt. Din adgang fortsætter indtil den viste dato.',
+});
+
 function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
@@ -8541,7 +8760,61 @@ async function saveAffiliatePayout() {
   } catch(e) { toast && toast('Could not save payout info', 'error'); }
 }
 
+// ── Settings hub: a menu of cards, each opening its section as its own view ──
+var SETTINGS_SECTIONS = ['sec-account','sec-password','sec-notif','sec-connected',
+  'sec-billing','sec-help','sec-assistant','sec-agentpos','sec-interface',
+  'sec-install','workspace-settings-card','watermark-settings-card','sec-danger'];
+
+function _settingsHideAllSections() {
+  SETTINGS_SECTIONS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function settingsShowMenu() {
+  window._settingsSubKey = null;
+  var menu = document.getElementById('settings-menu');
+  var hdr  = document.getElementById('settings-menu-header');
+  var bar  = document.getElementById('settings-backbar');
+  if (menu) menu.style.display = 'grid';
+  if (hdr)  hdr.style.display = 'block';
+  if (bar)  bar.style.display = 'none';
+  _settingsHideAllSections();
+  try { var m = document.querySelector('.main'); if (m) m.scrollTo({top:0}); } catch(e) {}
+}
+
+function settingsOpenSection(id, titleKey) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var menu = document.getElementById('settings-menu');
+  var hdr  = document.getElementById('settings-menu-header');
+  var bar  = document.getElementById('settings-backbar');
+  if (menu) menu.style.display = 'none';
+  if (hdr)  hdr.style.display = 'none';
+  if (bar)  bar.style.display = 'flex';
+  _settingsHideAllSections();
+  el.style.display = 'block';
+  // In-page section title follows the DA/EN toggle (re-translated on langchange).
+  window._settingsSubKey = titleKey;
+  var tl = document.getElementById('settings-detail-title');
+  if (tl) { tl.textContent = t(titleKey); tl.dataset.titleKey = titleKey; }
+  try { var m = document.querySelector('.main'); if (m) m.scrollTo({top:0,behavior:'smooth'}); } catch(e) {}
+}
+
+function settingsBackToMenu() { settingsShowMenu(); }
+
+// Keep the open settings section's title in the right language after a toggle.
+window.addEventListener('langchange', function() {
+  if (window._settingsSubKey) {
+    var tl = document.getElementById('settings-detail-title');
+    if (tl) tl.textContent = t(window._settingsSubKey);
+  }
+});
+
 async function loadSettingsPage() {
+  // Always open on the menu hub (each section opens as its own view).
+  settingsShowMenu();
   // Set UI language dropdown
   const langSel = document.getElementById('set-ui-lang');
   if (langSel) langSel.value = currentLang;
@@ -14341,9 +14614,71 @@ function studioUploadFiles(input) {
   });
 }
 
-// Smart Cutting — placeholder until the AI auto-cut feature ships.
-function smartCuttingComingSoon() {
-  toast('✂️ Coming Soon — AI will automatically cut your video to the best moments', 'info');
+// ── Smart Cutter — FFmpeg auto-trim (silence removal + length tightening) ────
+async function loadSmartCutSources() {
+  var sel = document.getElementById('smartcut-source');
+  if (!sel) return;
+  var vids = [];
+  // User uploads + library videos are the main targets.
+  try {
+    var up = await apiFetch('/api/uploads/my');
+    (up && up.files || []).forEach(function(f) {
+      if (f.media_type === 'video' || /\.(mp4|mov|avi)$/i.test(f.filename || '')) {
+        vids.push({ url: f.url, label: f.original_name || f.filename });
+      }
+    });
+  } catch (e) {}
+  try {
+    var lib = await apiFetch('/api/library/content');
+    (lib && (lib.items || lib.content) || []).forEach(function(it) {
+      var u = it.local_url || it.source_url || it.url;
+      if (u && (it.kind === 'videos' || it.media_type === 'video')) {
+        vids.push({ url: u, label: (it.original_name || it.prompt || 'Video').slice(0, 50) });
+      }
+    });
+  } catch (e) {}
+  // De-dupe by url.
+  var seen = {}, opts = '';
+  vids.forEach(function(v) {
+    if (!v.url || seen[v.url]) return; seen[v.url] = 1;
+    opts += '<option value="' + v.url + '">' + (v.label || v.url).replace(/</g, '&lt;') + '</option>';
+  });
+  sel.innerHTML = opts || ('<option value="">' + t('sc.noVideos') + '</option>');
+}
+
+async function smartCutRun() {
+  var sel = document.getElementById('smartcut-source');
+  var url = sel && sel.value;
+  if (!url) { toast(t('sc.noVideos'), 'error'); return; }
+  var btn = document.getElementById('smartcut-run-btn');
+  var resultEl = document.getElementById('smartcut-result');
+  var removeSilence = document.getElementById('tog-smartcut-silence').classList.contains('on');
+  var maxDur = parseInt((document.getElementById('smartcut-maxdur') || {}).value || '0', 10) || 0;
+  var oldHtml = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '⏳ ' + t('sc.processing');
+  try {
+    var d = await apiFetch('/api/studio/smart_cut', 'POST', {
+      video_url: url, remove_silence: removeSilence, max_duration: maxDur
+    });
+    if (!d) return;
+    resultEl.style.display = 'block';
+    resultEl.innerHTML =
+      '<div style="background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:14px">'
+      + '<div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:8px">✅ ' + t('sc.done') + '</div>'
+      + '<div style="font-size:12px;color:var(--tx2);margin-bottom:10px">'
+      + t('sc.original') + ': ' + d.original_duration + 's → ' + t('sc.new') + ': <strong style="color:var(--ac)">' + d.new_duration + 's</strong> '
+      + '(−' + d.removed_seconds + 's, ' + d.segments_kept + ' ' + t('sc.segments') + ')</div>'
+      + '<video src="' + d.url + '" controls style="width:100%;max-height:320px;border-radius:10px;background:#000"></video>'
+      + '<div style="font-size:11px;color:var(--tx3);margin-top:8px">💾 ' + t('sc.saved') + '</div>'
+      + '</div>';
+    toast('✂️ ' + t('sc.done'), 'success');
+    if (typeof loadMyVideos === 'function') loadMyVideos();
+    if (typeof pipeLoadCredits === 'function') pipeLoadCredits();
+  } catch (e) {
+    toast('❌ ' + (e.message || 'Smart cut failed'), 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = oldHtml;
+  }
 }
 
 // Content Library upload handler — refreshes the library after each batch.
@@ -15922,16 +16257,18 @@ async function toggleWatermark(tog) {
 async function _loadWatermarkSettings() {
   try {
     const d = await apiFetch('/api/user/profile', 'GET', null, false);
-    const card = document.getElementById('watermark-settings-card');
     const tog  = document.getElementById('tog-watermark');
     const notice = document.getElementById('studio-watermark-notice');
+    // The settings hub controls whether the watermark *section* is on screen;
+    // here we only decide if its menu card is offered (paid users only).
+    const menuCard = document.getElementById('smc-watermark');
     if (d.is_free) {
       if (notice) notice.style.display = '';
-      if (card)   card.style.display   = 'none';
+      if (menuCard) menuCard.style.display = 'none';
     } else {
       if (notice) notice.style.display = 'none';
-      if (card)   card.style.display   = '';
-      if (tog)    tog.classList.toggle('on', !!d.watermark_enabled);
+      if (menuCard) menuCard.style.display = '';
+      if (tog) tog.classList.toggle('on', !!d.watermark_enabled);
     }
   } catch(e) {}
 }
@@ -16329,6 +16666,37 @@ function agSpeak(src) {
     // The onclick attribute handles the toggle, so don't double-fire here.
   });
 })();
+
+// ── Agent button position controls (Settings) ───────────────────────────────
+var _FAB_DEFAULT = { bottom: 28, right: 28 };
+function _applyFabPos(bottom, right, persist) {
+  var fab = document.getElementById('agent-fab');
+  if (!fab) return;
+  bottom = Math.max(8, Math.min(window.innerHeight - 38, bottom));
+  right  = Math.max(8, Math.min(window.innerWidth  - 38, right));
+  fab.style.bottom = bottom + 'px';
+  fab.style.right  = right + 'px';
+  if (persist) {
+    try { localStorage.setItem('ag_fab_pos', JSON.stringify({ bottom: bottom, right: right })); } catch (e) {}
+  }
+  if (window._ag && _ag.open && typeof agPositionPanel === 'function') agPositionPanel(bottom, right);
+}
+function setAgentFabPos(corner) {
+  var pad = 28, fabW = 38;
+  var pos = {
+    br: { bottom: pad, right: pad },
+    bl: { bottom: pad, right: window.innerWidth - fabW - pad },
+    tr: { bottom: window.innerHeight - fabW - pad, right: pad },
+    tl: { bottom: window.innerHeight - fabW - pad, right: window.innerWidth - fabW - pad },
+  }[corner] || _FAB_DEFAULT;
+  _applyFabPos(pos.bottom, pos.right, true);
+  if (typeof toast === 'function') toast('✅ ' + t('agp.saved'), 'success');
+}
+function resetAgentFabPos() {
+  try { localStorage.removeItem('ag_fab_pos'); } catch (e) {}
+  _applyFabPos(_FAB_DEFAULT.bottom, _FAB_DEFAULT.right, false);
+  if (typeof toast === 'function') toast('✅ ' + t('agp.saved'), 'success');
+}
 
 function agPositionPanel(fabBottom, fabRight) {
   var fab = document.getElementById('agent-fab');
@@ -17442,8 +17810,17 @@ function renderApLog(log){
 // ===== NICHE DETECTION =====
 function checkNicheModal(user){
   if(!user) return;
-  if(!user.niche && !localStorage.getItem('ugv_niche_skipped')){
+  // Never show the niche prompt while the full onboarding flow is still pending
+  // — otherwise a brand-new user would see BOTH the onboarding overlay and this
+  // modal (double popup). The onboarding overlay handles first-run; this modal
+  // is only a fallback for existing users who finished onboarding without a niche.
+  var onboardingDone = false;
+  try { onboardingDone = !!localStorage.getItem(_obfKey()); } catch(e) {}
+  if(!user.niche && !localStorage.getItem('ugv_niche_skipped') && onboardingDone){
     setTimeout(function(){
+      // Re-check at fire time: don't pop if the onboarding overlay is visible.
+      var ob = document.getElementById('obf-overlay');
+      if (ob && ob.classList.contains('obf-show')) return;
       var modal=document.getElementById('niche-modal'); if(modal) modal.style.display='flex';
     },1500);
   } else if(user.niche){
@@ -19513,6 +19890,18 @@ async function importCalendarCSV(input) {
       <button onclick="closeExample()" style="background:none;border:none;color:var(--tx3);font-size:24px;cursor:pointer;line-height:1">×</button>
     </div>
     <div id="example-modal-body"></div>
+  </div>
+</div>
+
+<!-- CANCEL SUBSCRIPTION MODAL -->
+<div id="cancel-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:10000;align-items:center;justify-content:center" onclick="if(event.target===this)closeCancelModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border-b);border-radius:20px;padding:28px;max-width:440px;width:90%;box-shadow:var(--shadow-lg)">
+    <div class="modal-title" style="margin:0 0 12px" data-i18n="cancel.title">Cancel your subscription?</div>
+    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:20px" data-i18n="cancel.body">Your plan stays active until the end of your current billing period — then your account moves to the Free plan. You can resubscribe any time.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn bg bsm" onclick="closeCancelModal()" data-i18n="cancel.keep">Keep my plan</button>
+      <button class="btn bsm" id="cancel-sub-confirm-btn" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#ef4444;font-weight:700" onclick="confirmCancelSubscription()" data-i18n="cancel.confirm">Yes, cancel</button>
+    </div>
   </div>
 </div>
 
