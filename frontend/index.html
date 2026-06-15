@@ -108,6 +108,22 @@ body.light {
 .set-menu-card .smc-ic{font-size:24px;flex-shrink:0}
 .set-menu-card .smc-t{font-size:14px;font-weight:700;color:var(--tx)}
 .set-menu-card .smc-d{font-size:11px;color:var(--tx3);margin-top:2px;line-height:1.4}
+/* ── AI Content Team ─────────────────────── */
+.ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.ct-agent{display:flex;gap:12px;align-items:flex-start;background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:14px}
+.ct-agent .ct-ic{font-size:24px;flex-shrink:0;line-height:1}
+.ct-agent .ct-name{font-size:14px;font-weight:700;color:var(--tx)}
+.ct-agent .ct-role{font-size:11px;color:var(--tx3);margin-top:2px;line-height:1.45}
+.ct-state{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-top:9px;display:inline-block;padding:3px 9px;border-radius:20px;background:rgba(148,163,184,.14);color:var(--tx3)}
+.ct-state.ct-working{background:rgba(0,229,255,.14);color:var(--ac)}
+.ct-state.ct-done{background:rgba(34,197,94,.16);color:#22c55e}
+.ct-feed-row{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-top:1px solid var(--border)}
+.ct-feed-row:first-child{border-top:none}
+.ct-feed-row .ct-ic{font-size:20px;flex-shrink:0;line-height:1.2}
+.ct-feed-row .ct-fr-name{font-size:13px;font-weight:700;color:var(--tx)}
+.ct-feed-row .ct-fr-sum{font-size:12px;color:var(--tx2);margin-top:1px}
+.ct-feed-row .ct-fr-out{font-size:12px;color:var(--tx3);margin-top:4px;line-height:1.55}
+.ct-feed-row .ct-fr-ts{font-size:10px;color:var(--tx3);margin-top:5px;opacity:.8}
 /* ── Interactive Tour ────────────────────── */
 #tour-overlay{position:fixed;inset:0;z-index:8000;pointer-events:none;display:none}
 #tour-overlay.tour-active{display:block}
@@ -1734,6 +1750,12 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div class="sub-item" id="ni-content-plan" onclick="nav('content-plan')">🗓️ <span>Content Plan</span> <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:4px">AI</span></div>
       <div class="sub-item" id="ni-video-group" onclick="nav('studio')">🎬 <span>Video</span></div>
       <div class="sub-item" id="ni-archive-group" onclick="nav('content-library')">🗂️ <span>Archive</span></div>
+    </div>
+
+    <!-- ── AI CONTENT TEAM ── -->
+    <div class="ni" id="ni-content-team" onclick="nav('content-team')">
+      <span class="ico">🤝</span><span data-i18n="nav.contentTeam">Content Team</span>
+      <span style="font-size:9px;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border-radius:4px;padding:1px 5px;font-weight:800;margin-left:6px">NEW</span>
     </div>
 
     <!-- ── INFLUENCER ── -->
@@ -3689,6 +3711,40 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         <div style="margin-top:12px;padding:10px 12px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.1);border-radius:8px;font-size:12px;color:var(--tx2)">
           💬 <strong>Natural language:</strong> <em>"post my latest product tomorrow at 9am"</em> — the bot understands plain English commands too.
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ AI CONTENT TEAM (Part 1 — foundation) ═══════════════════ -->
+  <div id="page-content-team" class="page">
+    <div style="max-width:980px">
+      <!-- Intro -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="ctitle">🤝 <span data-i18n="ct.title">AI Content Team</span></div>
+        <div style="font-size:13px;color:var(--tx3);line-height:1.6" data-i18n="ct.intro">A team of specialised AI agents that work together like a marketing agency to run your content.</div>
+      </div>
+
+      <!-- Goal -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="ctitle">🎯 <span data-i18n="ct.goalTitle">Your goal</span></div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:10px" data-i18n="ct.goalDesc">Set one clear, high-level goal. Your team plans and works toward it.</div>
+        <textarea id="ct-goal" rows="2" data-i18n-placeholder="ct.goalPlaceholder" placeholder="e.g. grow my coffee webshop on TikTok" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--tx);padding:11px 13px;font-size:14px;font-family:inherit;resize:vertical"></textarea>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn bg bsm" onclick="saveTeamGoal()">💾 <span data-i18n="ct.saveGoal">Save goal</span></button>
+          <button class="btn bp bsm" id="ct-run-btn" onclick="runContentTeam()">▶️ <span data-i18n="ct.run">Run team</span></button>
+        </div>
+      </div>
+
+      <!-- Team roster -->
+      <div class="card" style="margin-bottom:18px">
+        <div class="ctitle">👥 <span data-i18n="ct.rosterTitle">Your team</span></div>
+        <div id="ct-roster" class="ct-grid" style="margin-top:6px"></div>
+      </div>
+
+      <!-- Activity feed -->
+      <div class="card">
+        <div class="ctitle">📡 <span data-i18n="ct.feedTitle">Activity feed</span></div>
+        <div id="ct-feed" style="margin-top:4px"><div style="font-size:12px;color:var(--tx3)" data-i18n="ct.feedEmpty">No activity yet. Set a goal and run your team.</div></div>
       </div>
     </div>
   </div>
@@ -8525,6 +8581,141 @@ Object.assign(I18N.da, {
   'cancel.cancelling':'Dit abonnement er ved at blive opsagt. Adgang fortsætter indtil',
   'cancel.done':'Abonnement opsagt. Din adgang fortsætter indtil den viste dato.',
 });
+// ── AI Content Team (Part 1) ──────────────────────────────────────────────
+Object.assign(I18N.en, {
+  'nav.contentTeam':'Content Team', 'page.content-team':'🤝 AI Content Team',
+  'ct.title':'AI Content Team',
+  'ct.intro':'A team of specialised AI agents that work together like a marketing agency to run your content.',
+  'ct.goalTitle':'Your goal',
+  'ct.goalDesc':'Set one clear, high-level goal. Your team plans and works toward it.',
+  'ct.goalPlaceholder':'e.g. grow my coffee webshop on TikTok',
+  'ct.saveGoal':'Save goal', 'ct.run':'Run team',
+  'ct.rosterTitle':'Your team', 'ct.feedTitle':'Activity feed',
+  'ct.feedEmpty':'No activity yet. Set a goal and run your team.',
+  'ct.idle':'Idle', 'ct.working':'Working…', 'ct.done':'Done',
+  'ct.goalNeeded':'Please enter a goal first.', 'ct.goalSaved':'Goal saved',
+  'ct.ranOk':'Your team finished a run', 'ct.error':'Something went wrong — please try again.',
+  'ct.role.analyst':'Data Analyst', 'ct.role.strategist':'Content Strategist',
+  'ct.role.ideator':'Ideator', 'ct.role.scripter':'Scripter',
+  'ct.role.publisher':'Publishing Manager', 'ct.role.head':'Head of Content',
+  'ct.roleDesc.analyst':'Reads your metrics and audience signals.',
+  'ct.roleDesc.strategist':'Turns data into a content strategy.',
+  'ct.roleDesc.ideator':'Generates concrete content ideas.',
+  'ct.roleDesc.scripter':'Writes hooks, scripts and captions.',
+  'ct.roleDesc.publisher':'Plans and schedules publishing.',
+  'ct.roleDesc.head':'Coordinates the team and assembles the plan.',
+});
+Object.assign(I18N.da, {
+  'nav.contentTeam':'Indholdsteam', 'page.content-team':'🤝 AI Indholdsteam',
+  'ct.title':'AI Indholdsteam',
+  'ct.intro':'Et team af specialiserede AI-agenter der arbejder sammen som et marketingbureau om at drive dit indhold.',
+  'ct.goalTitle':'Dit mål',
+  'ct.goalDesc':'Sæt ét klart, overordnet mål. Dit team planlægger og arbejder hen imod det.',
+  'ct.goalPlaceholder':'f.eks. få min kaffe-webshop til at vokse på TikTok',
+  'ct.saveGoal':'Gem mål', 'ct.run':'Kør team',
+  'ct.rosterTitle':'Dit team', 'ct.feedTitle':'Aktivitetsfeed',
+  'ct.feedEmpty':'Ingen aktivitet endnu. Sæt et mål og kør dit team.',
+  'ct.idle':'Inaktiv', 'ct.working':'Arbejder…', 'ct.done':'Færdig',
+  'ct.goalNeeded':'Indtast venligst et mål først.', 'ct.goalSaved':'Mål gemt',
+  'ct.ranOk':'Dit team gennemførte en kørsel', 'ct.error':'Noget gik galt — prøv igen.',
+  'ct.role.analyst':'Dataanalytiker', 'ct.role.strategist':'Indholdsstrateg',
+  'ct.role.ideator':'Idéudvikler', 'ct.role.scripter':'Manuskriptforfatter',
+  'ct.role.publisher':'Udgivelsesansvarlig', 'ct.role.head':'Indholdschef',
+  'ct.roleDesc.analyst':'Læser dine tal og publikumssignaler.',
+  'ct.roleDesc.strategist':'Omsætter data til en indholdsstrategi.',
+  'ct.roleDesc.ideator':'Genererer konkrete indholdsidéer.',
+  'ct.roleDesc.scripter':'Skriver hooks, manuskripter og captions.',
+  'ct.roleDesc.publisher':'Planlægger og tidsplanlægger udgivelse.',
+  'ct.roleDesc.head':'Koordinerer teamet og samler planen.',
+});
+
+// ── AI Content Team (Part 1 — foundation) ──────────────────────────────────
+var CT_AGENTS = [
+  {role:'analyst',    ic:'📊'},
+  {role:'strategist', ic:'🧭'},
+  {role:'ideator',    ic:'💡'},
+  {role:'scripter',   ic:'✍️'},
+  {role:'publisher',  ic:'📤'},
+  {role:'head',       ic:'👑'},
+];
+function _ctEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+// states: optional {role: {label, cls}} to show per-agent status chips.
+function renderTeamRoster(states){
+  states = states || {};
+  var el = document.getElementById('ct-roster'); if(!el) return;
+  el.innerHTML = CT_AGENTS.map(function(a){
+    var st = states[a.role] || {label:t('ct.idle'), cls:''};
+    return '<div class="ct-agent"><div class="ct-ic">'+a.ic+'</div><div>'
+      + '<div class="ct-name">'+_ctEsc(t('ct.role.'+a.role))+'</div>'
+      + '<div class="ct-role">'+_ctEsc(t('ct.roleDesc.'+a.role))+'</div>'
+      + '<span class="ct-state '+(st.cls||'')+'">'+_ctEsc(st.label)+'</span>'
+      + '</div></div>';
+  }).join('');
+}
+
+function renderTeamFeed(steps){
+  var el = document.getElementById('ct-feed'); if(!el) return;
+  if(!steps || !steps.length){
+    el.innerHTML = '<div style="font-size:12px;color:var(--tx3)">'+_ctEsc(t('ct.feedEmpty'))+'</div>';
+    return;
+  }
+  el.innerHTML = steps.map(function(s){
+    var nm = t('ct.role.'+s.role) || s.name || s.role;
+    return '<div class="ct-feed-row"><div class="ct-ic">'+_ctEsc(s.emoji||'•')+'</div>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div class="ct-fr-name">'+_ctEsc(nm)+'</div>'
+      + '<div class="ct-fr-sum">'+_ctEsc(s.summary||'')+'</div>'
+      + '<div class="ct-fr-out">'+_ctEsc(s.output||'')+'</div>'
+      + '<div class="ct-fr-ts">'+_ctEsc(s.ts||'')+'</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function loadContentTeam(){
+  renderTeamRoster();
+  try{
+    var d = await apiFetch('/api/content_team/goal');
+    var g = document.getElementById('ct-goal');
+    if(g && d && d.goal) g.value = d.goal;
+  }catch(e){}
+  try{
+    var s = await apiFetch('/api/content_team/status');
+    renderTeamFeed((s && s.activity) || []);
+  }catch(e){}
+}
+
+async function saveTeamGoal(){
+  var g = document.getElementById('ct-goal');
+  var goal = ((g && g.value) || '').trim();
+  if(!goal){ toast(t('ct.goalNeeded'), 'error'); return; }
+  try{
+    await apiFetch('/api/content_team/goal','POST',{goal:goal});
+    toast('✅ '+t('ct.goalSaved'),'success');
+  }catch(e){ toast(t('ct.error'),'error'); }
+}
+
+async function runContentTeam(){
+  var g = document.getElementById('ct-goal');
+  var goal = ((g && g.value) || '').trim();
+  if(!goal){ toast(t('ct.goalNeeded'),'error'); return; }
+  var btn = document.getElementById('ct-run-btn');
+  if(btn){ btn.disabled = true; btn.style.opacity = '.6'; }
+  var working = {}; CT_AGENTS.forEach(function(a){ working[a.role] = {label:t('ct.working'), cls:'ct-working'}; });
+  renderTeamRoster(working);
+  try{
+    var d = await apiFetch('/api/content_team/run','POST',{goal:goal, lang:currentLang});
+    var done = {}; CT_AGENTS.forEach(function(a){ done[a.role] = {label:t('ct.done'), cls:'ct-done'}; });
+    renderTeamRoster(done);
+    renderTeamFeed((d && d.steps) || []);
+    toast('✅ '+t('ct.ranOk'),'success');
+  }catch(e){
+    renderTeamRoster();
+    toast(t('ct.error'),'error');
+  }finally{
+    if(btn){ btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
 
 function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -9192,6 +9383,7 @@ function nav(p) {
   if (p === 'studio') studioInit();
   if (p === 'help-support') initHelpSupport();
   if (p === 'content-engine') { loadContentCalendar(); }
+  if (p === 'content-team') { loadContentTeam(); }
   if (p === 'autopilot') { loadAutoPilot(); loadFullAutoStatus(); }
   if (p === 'growth-dashboard') { loadGrowthDashboard(); }
   if (p === 'agency-dashboard') { loadAgencyDashboard(); }

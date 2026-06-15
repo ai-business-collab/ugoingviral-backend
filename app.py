@@ -23,7 +23,7 @@ from services.security import (
 )
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads, content_engine, autopilot, telegram, growth, nexora_core, nexora_events, qa_agent, affiliate, template_library, analytics, notifications, brand_kit, competitor, viral_score, caption_improver, hashtags, csv_import, video_script, reel_templates, audit, workspaces, ig_growth, webhooks, content_library
+from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads, content_engine, autopilot, telegram, growth, nexora_core, nexora_events, qa_agent, affiliate, template_library, analytics, notifications, brand_kit, competitor, viral_score, caption_improver, hashtags, csv_import, video_script, reel_templates, audit, workspaces, ig_growth, webhooks, content_library, content_team
 
 app = FastAPI(title="UgoingViral API v4")
 
@@ -337,6 +337,7 @@ app.include_router(subaccounts.router)
 app.include_router(studio.router)
 app.include_router(uploads.router)
 app.include_router(content_library.router)
+app.include_router(content_team.router)
 # Leads CRM disabled — UgoingViral does not use CRM. Kept for the Reachr product.
 # To re-enable: add `leads` back to the `from routes import ...` line above and
 # uncomment the line below.
