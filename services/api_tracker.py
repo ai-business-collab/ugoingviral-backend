@@ -12,7 +12,8 @@ COST_RATES = {
     "runway_seconds":         0.05,          # $0.05 / second
     "luma_seconds":           0.05,          # $0.05 / second (Luma Ray)
     "elevenlabs_chars":       0.0003,        # $0.30 / 1000 chars
-    "replicate_predictions":  0.004,         # $0.004 / prediction
+    "replicate_predictions":  0.004,         # $0.004 / prediction (generic)
+    "replicate_video":        0.10,          # Kling/Replicate video — flat $ per generation; UPDATE as pricing changes
     "sendgrid_emails":        0.0,           # free tier
 }
 

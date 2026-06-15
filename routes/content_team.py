@@ -450,7 +450,7 @@ class Ideator(TeamAgent):
                 "data": {"ideas": ideas, "locked": locked, "ai": used_ai, "count": len(ideas)}}
 
     async def _ai_ideas(self, niche, platforms, formats, pillars, products, lang):
-        from routes.agent import _call_claude_heavy
+        from routes.agent import _call_openai_heavy
         plabel = ", ".join(_PLATFORM_LABEL.get(p, p) for p in platforms)
         prod_line = ""
         if products:
@@ -471,8 +471,8 @@ class Ideator(TeamAgent):
             f"Mål: {self.goal}\nNiche: {niche}\nPlatforme: {plabel}\n"
             f"Formater: {', '.join(formats)}\nIndholdssøjler: {', '.join(pillars)}.{prod_line}\n"
             f"Giv {IDEA_TARGET} forskellige idéer.")
-        text = await _call_claude_heavy(system, [{"role": "user", "content": user}],
-                                        action="content_team_ideate")
+        text = await _call_openai_heavy(system, [{"role": "user", "content": user}],
+                                        action="content_team_ideate", max_tokens=1200)
         return self._parse_ideas(text)
 
     @staticmethod
@@ -573,7 +573,7 @@ class Scripter(TeamAgent):
         return {"summary": summary, "output": output, "data": {"scripts": scripts, "ai": used_ai}}
 
     async def _ai_scripts(self, locked, niche, ctas, lang):
-        from routes.agent import _call_claude_heavy
+        from routes.agent import _call_openai_heavy
         ideas_block = "\n".join(f"{i + 1}. {idea}" for i, idea in enumerate(locked))
         system = _pick(lang,
             "You are an expert short-form video scriptwriter. For EACH idea write a tight, "
@@ -587,8 +587,8 @@ class Scripter(TeamAgent):
         user = _pick(lang,
             f"Goal: {self.goal}\nNiche: {niche}\nPreferred CTAs: {', '.join(ctas[:3])}\n\nIdeas:\n{ideas_block}",
             f"Mål: {self.goal}\nNiche: {niche}\nForetrukne CTA'er: {', '.join(ctas[:3])}\n\nIdéer:\n{ideas_block}")
-        text = await _call_claude_heavy(system, [{"role": "user", "content": user}],
-                                        action="content_team_script")
+        text = await _call_openai_heavy(system, [{"role": "user", "content": user}],
+                                        action="content_team_script", max_tokens=2000)
         return self._parse_scripts(text, locked)
 
     @staticmethod

@@ -53,7 +53,10 @@ def _is_pro_plus(user_id: str) -> bool:
 # New (Free-plan) users get 3 free AI videos (10s each, generated via Runway)
 # before they need a paid plan. Usage is tracked per-user as `free_videos_used`.
 _FREE_VIDEO_LIMIT = 3
-_FREE_VIDEO_DURATION = 15           # seconds — locked length of each free PREMIUM video
+# Luma Ray 3.2 on the agents.lumalabs.ai endpoint clamps every request to ~5s
+# (verified: 9s and 99s both render ~5.0s), so 5 is the longest value it actually
+# delivers — using it keeps the advertised length truthful and renders reliable.
+_FREE_VIDEO_DURATION = 5            # seconds — locked length of each free PREMIUM video
 _FREE_VIDEO_PROVIDER = "luma_ray"   # Luma Ray 3.2 (premium) — locked; no other provider/duration allowed
 _FREE_VIDEO_PROVIDER_LABEL = "Luma Ray 3.2"
 
@@ -105,6 +108,17 @@ def _refund_free_video(user_id: str) -> int:
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ELEVENLABS_KEY    = os.getenv("ELEVENLABS_API_KEY", "")
+
+
+def _track_replicate_video(user_id: str = "") -> None:
+    """Record one Kling/Replicate video generation for per-user cost tracking,
+    like runway/luma do. Cost rate lives in api_tracker.COST_RATES['replicate_video'].
+    user_id='' lets the tracker auto-resolve it from the request ContextVar."""
+    try:
+        from services import api_tracker
+        api_tracker.track("replicate", "video", 1, user_id=user_id, feature="video_generation")
+    except Exception:
+        pass
 
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads", "studio")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -577,7 +591,8 @@ async def _luma_ray_generate(prompt: str, duration: int = 5, aspect_ratio: str =
 
 # ── Replicate (Kling / CogVideoX) ─────────────────────────────────────────────
 
-async def _replicate_generate(prompt: str, duration: int = 5, aspect_ratio: str = "16:9") -> Optional[str]:
+async def _replicate_generate(prompt: str, duration: int = 5, aspect_ratio: str = "16:9",
+                              user_id: str = "") -> Optional[str]:
     if not REPLICATE_API_KEY:
         return None
     # Use CogVideoX-5b (open source, high quality)
@@ -607,6 +622,7 @@ async def _replicate_generate(prompt: str, duration: int = 5, aspect_ratio: str 
             status = data.get("status")
             if status == "succeeded":
                 output = data.get("output")
+                _track_replicate_video(user_id)
                 if isinstance(output, list):
                     return output[0]
                 return output
@@ -617,7 +633,7 @@ async def _replicate_generate(prompt: str, duration: int = 5, aspect_ratio: str 
 
 async def _replicate_kling_generate(prompt: str, duration: int = 5,
                                     aspect_ratio: str = "16:9",
-                                    image_url: str = "") -> Optional[str]:
+                                    image_url: str = "", user_id: str = "") -> Optional[str]:
     """Hyper Realistic video via Kling 1.6 Pro on Replicate (klingai/kling-1.6-pro).
     Submits an async prediction and polls until it completes, returning the
     playable video URL."""
@@ -649,6 +665,7 @@ async def _replicate_kling_generate(prompt: str, duration: int = 5,
         # With "Prefer: wait" Replicate may already return a finished prediction.
         if data.get("status") == "succeeded":
             out = data.get("output")
+            _track_replicate_video(user_id)
             return out[0] if isinstance(out, list) and out else out
         pred_id = data.get("id")
         if not pred_id:
@@ -663,6 +680,7 @@ async def _replicate_kling_generate(prompt: str, duration: int = 5,
             st = pdata.get("status")
             if st == "succeeded":
                 out = pdata.get("output")
+                _track_replicate_video(user_id)
                 return out[0] if isinstance(out, list) and out else out
             if st in ("failed", "canceled"):
                 raise HTTPException(status_code=502, detail=f"Kling AI generation {st}: {str(pdata.get('error',''))[:160]}")
@@ -1797,7 +1815,7 @@ async def _vq_run_provider(job: dict):
         return _extract_video_url(result), result
 
     # default: Kling (Hyper Realistic via Replicate)
-    url = await _replicate_kling_generate(prompt, duration, aspect, image_url)
+    url = await _replicate_kling_generate(prompt, duration, aspect, image_url, user_id=job.get("uid", ""))
     return url, {"provider": "kling", "video_url": url}
 
 

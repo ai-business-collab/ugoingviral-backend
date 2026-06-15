@@ -457,6 +457,31 @@ async def _call_openai(system: str, messages: list) -> str:
     return data["choices"][0]["message"]["content"]
 
 
+# ── OpenAI call — heavy (content generation: ideas, scripts) ──────────────────
+# Mirrors _call_claude_heavy but on the OpenAI key. RAISES on any failure so the
+# caller can cleanly fall back (e.g. Content Team -> template ideas/scripts).
+async def _call_openai_heavy(system: str, messages: list,
+                             action: str = "content_generate",
+                             max_tokens: int = 1500) -> str:
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=503, detail="OPENAI_API_KEY ikke konfigureret")
+    oai_msgs = [{"role": "system", "content": system}] + messages
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}",
+                     "Content-Type": "application/json"},
+            json={"model": OPENAI_AGENT_MODEL, "max_tokens": max_tokens, "messages": oai_msgs},
+        )
+    if r.status_code != 200:
+        raise HTTPException(status_code=500, detail=f"OpenAI error {r.status_code}")
+    data = r.json()
+    usage = data.get("usage", {})
+    _log_api_call("openai", OPENAI_AGENT_MODEL, action,
+                  usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0))
+    return data["choices"][0]["message"]["content"]
+
+
 # ── Claude call — light (fallback) ────────────────────────────────────────────
 
 async def _call_claude_light(system: str, messages: list) -> str:

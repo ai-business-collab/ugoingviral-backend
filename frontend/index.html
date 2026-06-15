@@ -4754,7 +4754,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <div id="studio-free-cta" style="display:none;margin-bottom:16px;background:linear-gradient(135deg,rgba(0,229,255,.14),rgba(124,58,237,.12));border:1px solid rgba(0,229,255,.4);border-radius:14px;padding:14px 18px;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between">
       <div style="min-width:200px">
         <div style="font-size:15px;font-weight:800;color:var(--tx)">🎬 <span id="studio-free-cta-count" style="color:var(--ac)">3</span> <span data-i18n="fv.ofLeft">of 3 left</span></div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:2px" data-i18n="fv.sub">Premium Luma Ray 3.2 · 15s each · no credits, no card</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:2px" data-i18n="fv.sub">Premium Luma Ray 3.2 · 5s each · no credits, no card</div>
       </div>
       <button class="btn bp" onclick="startFreeVideoFlow()" style="white-space:nowrap;font-weight:800">🎬 <span data-i18n="fv.button">3 free premium videos</span></button>
     </div>
@@ -6275,7 +6275,7 @@ function startFreeVideoFlow() {
   // sees matches what renders).
   try {
     if (_studio) {
-      _studio.scenes = [{prompt:'', duration:15, style_hint:'', transition:'cut'}];
+      _studio.scenes = [{prompt:'', duration:5, style_hint:'', transition:'cut'}];
       _studio.mode = 'single';
       if (typeof studioRender === 'function') studioRender();
     }
@@ -8248,16 +8248,16 @@ const I18N = {
     'legal.operator':'UgoingViral is operated by NexCore Labs Ltd · Company No. 17204527',
     'fv.button':'3 free premium videos',
     'fv.ofLeft':'of 3 left',
-    'fv.sub':'Premium Luma Ray 3.2 · 15s each · no credits, no card',
+    'fv.sub':'Premium Luma Ray 3.2 · 5s each · no credits, no card',
     'fv.welcomeTitle':'Welcome! Your 3 free premium videos 🎬',
-    'fv.welcomeBody':'Create 3 premium AI videos with Luma Ray 3.2 — 15 seconds each, no credits and no card required. Let\'s make your first one now.',
+    'fv.welcomeBody':'Create 3 premium AI videos with Luma Ray 3.2 — 5 seconds each, no credits and no card required. Let\'s make your first one now.',
     'fv.welcomeGo':'🎬 Create my first free premium video',
     'fv.welcomeLater':'Maybe later — continue setup →',
     'fv.used':'You\'ve used all 3 free premium videos.',
     'fv.upgrade':'Upgrade to a paid plan →',
     'fv.upgradeTail':'to keep creating AI videos.',
     'fv.leftHead':'free premium video(s) left',
-    'fv.toast':'🎬 Your free premium video is ready — type your idea and hit Generate. Luma Ray 3.2, 15s, no credits!',
+    'fv.toast':'🎬 Your free premium video is ready — type your idea and hit Generate. Luma Ray 3.2, 5s, no credits!',
     'fv.generated':'Free premium video created!',
     'topbar.theme':'Light', 'topbar.overview':'Overview',
     'page.dashboard':'🏠 Dashboard', 'page.generator':'✨ Content Generator',
@@ -8348,16 +8348,16 @@ const I18N = {
     'legal.operator':'UgoingViral drives af NexCore Labs Ltd · Selskabsnr. 17204527',
     'fv.button':'3 gratis premium-videoer',
     'fv.ofLeft':'af 3 tilbage',
-    'fv.sub':'Premium Luma Ray 3.2 · 15 sek. hver · ingen credits, intet kort',
+    'fv.sub':'Premium Luma Ray 3.2 · 5 sek. hver · ingen credits, intet kort',
     'fv.welcomeTitle':'Velkommen! Dine 3 gratis premium-videoer 🎬',
-    'fv.welcomeBody':'Lav 3 premium AI-videoer med Luma Ray 3.2 — 15 sekunder hver, ingen credits og intet kort kræves. Lad os lave din første nu.',
+    'fv.welcomeBody':'Lav 3 premium AI-videoer med Luma Ray 3.2 — 5 sekunder hver, ingen credits og intet kort kræves. Lad os lave din første nu.',
     'fv.welcomeGo':'🎬 Lav min første gratis premium-video',
     'fv.welcomeLater':'Måske senere — fortsæt opsætning →',
     'fv.used':'Du har brugt alle 3 gratis premium-videoer.',
     'fv.upgrade':'Opgradér til en betalt plan →',
     'fv.upgradeTail':'for at fortsætte med at lave AI-videoer.',
     'fv.leftHead':'gratis premium-video(er) tilbage',
-    'fv.toast':'🎬 Din gratis premium-video er klar — skriv din idé og tryk Generér. Luma Ray 3.2, 15 sek., ingen credits!',
+    'fv.toast':'🎬 Din gratis premium-video er klar — skriv din idé og tryk Generér. Luma Ray 3.2, 5 sek., ingen credits!',
     'fv.generated':'Gratis premium-video lavet!',
     'topbar.theme':'Lyst', 'topbar.overview':'Oversigt',
     'page.dashboard':'🏠 Dashboard', 'page.generator':'✨ Content Generator',
@@ -14168,7 +14168,7 @@ function sendQueueToPost(id) {
   <div class="modal-box" style="width:440px;max-width:94vw;text-align:center">
     <div style="font-size:46px;margin-bottom:8px">🎬</div>
     <div style="font-size:21px;font-weight:800;color:var(--tx);margin-bottom:6px" data-i18n="fv.welcomeTitle">Welcome! Your 3 free premium videos 🎬</div>
-    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:22px"><span id="ob-free-count" style="display:none"></span><span data-i18n="fv.welcomeBody">Create 3 premium AI videos with Luma Ray 3.2 — 15 seconds each, no credits and no card required. Let's make your first one now.</span></div>
+    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:22px"><span id="ob-free-count" style="display:none"></span><span data-i18n="fv.welcomeBody">Create 3 premium AI videos with Luma Ray 3.2 — 5 seconds each, no credits and no card required. Let's make your first one now.</span></div>
     <button class="btn bp" style="width:100%;font-size:14px;font-weight:700;margin-bottom:10px" onclick="obfFreeAccept()"><span data-i18n="fv.welcomeGo">🎬 Create my first free premium video</span></button>
     <button class="btn bg" style="width:100%" onclick="obfFreeContinue()"><span data-i18n="fv.welcomeLater">Maybe later — continue setup →</span></button>
   </div>
