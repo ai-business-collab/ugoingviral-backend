@@ -53,7 +53,9 @@ def _is_pro_plus(user_id: str) -> bool:
 # New (Free-plan) users get 3 free AI videos (10s each, generated via Runway)
 # before they need a paid plan. Usage is tracked per-user as `free_videos_used`.
 _FREE_VIDEO_LIMIT = 3
-_FREE_VIDEO_DURATION = 10  # seconds — each free trial video
+_FREE_VIDEO_DURATION = 15           # seconds — locked length of each free PREMIUM video
+_FREE_VIDEO_PROVIDER = "luma_ray"   # Luma Ray 3.2 (premium) — locked; no other provider/duration allowed
+_FREE_VIDEO_PROVIDER_LABEL = "Luma Ray 3.2"
 
 
 def _free_videos_status(user_id: str) -> dict:
@@ -72,13 +74,30 @@ def _free_videos_status(user_id: str) -> dict:
         "used": used,
         "remaining": max(0, limit - used),
         "eligible": used < limit,  # only gate on usage, never on plan
+        # The free allowance is LOCKED to premium Luma Ray 3.2, 15s, single scene.
+        "premium": True,
+        "provider": _FREE_VIDEO_PROVIDER,
+        "provider_label": _FREE_VIDEO_PROVIDER_LABEL,
+        "duration": _FREE_VIDEO_DURATION,
     }
 
 
 def _consume_free_video(user_id: str) -> int:
-    """Increment and persist the user's free-video counter; returns new count."""
+    """Increment and persist the user's free-video counter; returns new count.
+    Hard-capped at the limit so it can never exceed _FREE_VIDEO_LIMIT even under
+    concurrent requests."""
     ustore = _load_user_store(user_id)
-    used = int(ustore.get("free_videos_used", 0) or 0) + 1
+    used = min(_FREE_VIDEO_LIMIT, int(ustore.get("free_videos_used", 0) or 0) + 1)
+    ustore["free_videos_used"] = used
+    _save_user_store(user_id, ustore)
+    return used
+
+
+def _refund_free_video(user_id: str) -> int:
+    """Give back a reserved free-video slot (used when a premium render fails, so
+    a failure never costs the user one of their 3 free videos)."""
+    ustore = _load_user_store(user_id)
+    used = max(0, int(ustore.get("free_videos_used", 0) or 0) - 1)
     ustore["free_videos_used"] = used
     _save_user_store(user_id, ustore)
     return used
@@ -656,6 +675,9 @@ async def _generate_video(prompt: str, provider: str, duration: int,
         return await _runway_generate(prompt, image_url, duration, aspect_ratio)
     elif provider == "luma":
         return await _luma_generate(prompt, duration, aspect_ratio)
+    elif provider == "luma_ray":
+        # Premium Luma Ray 3.2 (used by the 3 free premium videos).
+        return await _luma_ray_generate(prompt, duration, aspect_ratio, image_url)
     elif provider == "replicate":
         return await _replicate_generate(prompt, duration, aspect_ratio)
     raise HTTPException(status_code=400, detail=f"Ukendt provider: {provider}")
@@ -882,9 +904,11 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
     uid = current_user["id"]
 
     # ── Free trial videos ──────────────────────────────────────────────────
-    # Free-plan users get 3 free AI videos (generated via Runway) before any
-    # credit charge. Once the allowance is used up, video generation is gated
-    # behind a paid plan.
+    # Every user gets exactly 3 FREE PREMIUM videos: Luma Ray 3.2, locked to 15s,
+    # single scene. The allowance CANNOT be spent on another provider, a different
+    # duration, or multiple scenes — all of that is forced server-side here so it
+    # cannot be bypassed from the client. Once the 3 are used, video generation is
+    # gated behind a paid plan.
     fv = _free_videos_status(uid)
     used_free_video = False
     if fv["eligible"]:
@@ -893,13 +917,22 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
                 status_code=403,
                 detail="You've used all 3 free videos. Upgrade to a paid plan to keep generating videos.",
             )
-        # Free trial videos render via Runway when it's configured.
-        if PROVIDERS.get("runway", {}).get("available"):
-            provider = "runway"
+        if not LUMA_API_KEY:
+            raise HTTPException(
+                status_code=503,
+                detail="Premium free videos are temporarily unavailable — please try again shortly.",
+            )
+        # Lock provider + duration + single scene (preserve only the user's prompt).
+        provider = _FREE_VIDEO_PROVIDER                 # Luma Ray 3.2 (premium)
+        first = req.scenes[0]
+        first.duration = _FREE_VIDEO_DURATION           # exactly 15 seconds
+        req.scenes = [first]                            # single scene only
+        req.mode = "single"
+        req.voice_enabled = False
         cost = 0
         used_free_video = True
-        _consume_free_video(uid)
-        credits_left = _load_user_store(uid).get("billing", {}).get("credits", 0)
+        _consume_free_video(uid)                        # reserve the slot up front (hard-capped at 3)
+        credits_left = (_load_user_store(uid).get("billing") or {}).get("credits", 0)
     else:
         # Check if this is pack-covered (single scene from studio pack)
         pack_scene = len(req.scenes) == 1
@@ -945,6 +978,15 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
                 "status": "failed",
                 "error": str(e)[:100],
             })
+
+    # Free premium video: if the render failed, refund the reserved slot so the
+    # user keeps their full allowance — a failure must never cost a free video.
+    if used_free_video and not any(v.get("url") for v in result_videos):
+        _refund_free_video(uid)
+        raise HTTPException(
+            status_code=502,
+            detail="Your free premium video couldn't be generated just now — no free video was used. Please try again.",
+        )
 
     # Assemble multi-scene into one video if all succeeded and FFmpeg is available
     assembled_url = None

@@ -4753,10 +4753,10 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
     <!-- Persistent free-videos CTA — only shown while the user has free videos left (free_videos_used < 3) -->
     <div id="studio-free-cta" style="display:none;margin-bottom:16px;background:linear-gradient(135deg,rgba(0,229,255,.14),rgba(124,58,237,.12));border:1px solid rgba(0,229,255,.4);border-radius:14px;padding:14px 18px;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between">
       <div style="min-width:200px">
-        <div style="font-size:15px;font-weight:800;color:var(--tx)">🎬 You have <span id="studio-free-cta-count" style="color:var(--ac)">3</span> free videos</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:2px">No credits used — generate your free AI videos now.</div>
+        <div style="font-size:15px;font-weight:800;color:var(--tx)">🎬 <span id="studio-free-cta-count" style="color:var(--ac)">3</span> <span data-i18n="fv.ofLeft">of 3 left</span></div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:2px" data-i18n="fv.sub">Premium Luma Ray 3.2 · 15s each · no credits, no card</div>
       </div>
-      <button class="btn bp" onclick="startFreeVideoFlow()" style="white-space:nowrap;font-weight:800">🎬 Get 3 Free Videos</button>
+      <button class="btn bp" onclick="startFreeVideoFlow()" style="white-space:nowrap;font-weight:800">🎬 <span data-i18n="fv.button">3 free premium videos</span></button>
     </div>
     <div id="studio-root"></div>
     <div id="studio-portrait-root" style="display:none"></div>
@@ -6242,8 +6242,8 @@ async function loadFreeVideoStatus() {
     box.style.background = 'rgba(245,158,11,.08)';
     box.style.border = '1px solid rgba(245,158,11,.35)';
     box.style.color = 'var(--tx)';
-    box.innerHTML = '🔒 <strong>You\'ve used all 3 free videos.</strong> '
-      + '<span style="cursor:pointer;color:var(--ac);text-decoration:underline;font-weight:700" onclick="nav(\'billing\')">Upgrade to a paid plan →</span> to keep creating AI videos.';
+    box.innerHTML = '🔒 <strong>' + _ctEsc(t('fv.used')) + '</strong> '
+      + '<span style="cursor:pointer;color:var(--ac);text-decoration:underline;font-weight:700" onclick="nav(\'billing\')">' + _ctEsc(t('fv.upgrade')) + '</span> ' + _ctEsc(t('fv.upgradeTail'));
   } else {
     box.style.background = 'linear-gradient(135deg,rgba(0,229,255,.10),rgba(124,58,237,.08))';
     box.style.border = '1px solid rgba(0,229,255,.35)';
@@ -6251,10 +6251,10 @@ async function loadFreeVideoStatus() {
     box.innerHTML =
       '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
       + '<div style="flex:1;min-width:180px">'
-      +   '<div style="font-weight:800;font-size:14px">🎬 You have ' + remaining + ' free video' + (remaining === 1 ? '' : 's') + ' left</div>'
-      +   '<div style="font-size:12px;color:var(--tx2);margin-top:2px">' + (d.duration || 10) + ' seconds each, powered by Runway — no credits used. (' + used + ' of ' + limit + ' used)</div>'
+      +   '<div style="font-weight:800;font-size:14px">🎬 ' + remaining + ' ' + _ctEsc(t('fv.leftHead')) + '</div>'
+      +   '<div style="font-size:12px;color:var(--tx2);margin-top:2px">' + _ctEsc(t('fv.sub')) + ' · (' + used + '/' + limit + ')</div>'
       + '</div>'
-      + '<button class="btn bp bsm" onclick="claimFreeVideo()" style="white-space:nowrap;font-weight:800">🎬 Claim 3 Free Videos</button>'
+      + '<button class="btn bp bsm" onclick="claimFreeVideo()" style="white-space:nowrap;font-weight:800">🎬 ' + _ctEsc(t('fv.button')) + '</button>'
       + '</div>';
   }
 }
@@ -6270,10 +6270,13 @@ function startFreeVideoFlow() {
     nav('studio');
   }
   if (typeof studioSwitchTab === 'function') studioSwitchTab('video');
-  // A single short scene is the simplest free video; make sure one exists.
+  // Free premium videos are LOCKED to a single 15s Luma Ray 3.2 scene (the
+  // server enforces this regardless; we mirror it in the UI so what the user
+  // sees matches what renders).
   try {
-    if (_studio && (!_studio.scenes || !_studio.scenes.length)) {
-      _studio.scenes = [{prompt:'', duration:10, style_hint:'', transition:'cut'}];
+    if (_studio) {
+      _studio.scenes = [{prompt:'', duration:15, style_hint:'', transition:'cut'}];
+      _studio.mode = 'single';
       if (typeof studioRender === 'function') studioRender();
     }
   } catch (e) {}
@@ -6283,7 +6286,7 @@ function startFreeVideoFlow() {
     const promptEl = document.getElementById('scene-prompt-0');
     if (promptEl && promptEl.focus) promptEl.focus();
   }, 300);
-  if (typeof toast === 'function') toast('🎬 Free video ready — type your prompt and hit Generate. No credits used!', 'success');
+  if (typeof toast === 'function') toast(t('fv.toast'), 'success');
 }
 
 // Back-compat alias for the older "Claim 3 Free Videos" notice button.
@@ -7751,7 +7754,7 @@ async function studioGenerate() {
     _studio.generating = false;
     if (result.free_video_used) {
       const left = result.free_videos_remaining;
-      toast(`✅ Free video generated! ${left} free video${left===1?'':'s'} left`, 'success');
+      toast(`✅ ${t('fv.generated')} ${left} ${t('fv.ofLeft')}`, 'success');
     } else {
       toast(`✅ Video${totalScenes>1?' serie':''} genereret! ${result.credits_used} cr brugt`, 'success');
     }
@@ -8243,6 +8246,19 @@ const I18N = {
     'nav.system':'System', 'nav.connect':'Connect', 'nav.settings':'Settings',
     'nav.billing':'Plan & Credits', 'nav.logout':'Log out',
     'legal.operator':'UgoingViral is operated by NexCore Labs Ltd · Company No. 17204527',
+    'fv.button':'3 free premium videos',
+    'fv.ofLeft':'of 3 left',
+    'fv.sub':'Premium Luma Ray 3.2 · 15s each · no credits, no card',
+    'fv.welcomeTitle':'Welcome! Your 3 free premium videos 🎬',
+    'fv.welcomeBody':'Create 3 premium AI videos with Luma Ray 3.2 — 15 seconds each, no credits and no card required. Let\'s make your first one now.',
+    'fv.welcomeGo':'🎬 Create my first free premium video',
+    'fv.welcomeLater':'Maybe later — continue setup →',
+    'fv.used':'You\'ve used all 3 free premium videos.',
+    'fv.upgrade':'Upgrade to a paid plan →',
+    'fv.upgradeTail':'to keep creating AI videos.',
+    'fv.leftHead':'free premium video(s) left',
+    'fv.toast':'🎬 Your free premium video is ready — type your idea and hit Generate. Luma Ray 3.2, 15s, no credits!',
+    'fv.generated':'Free premium video created!',
     'topbar.theme':'Light', 'topbar.overview':'Overview',
     'page.dashboard':'🏠 Dashboard', 'page.generator':'✨ Content Generator',
     'page.pipeline':'🎬 Content Pipeline', 'page.history':'📚 Content History',
@@ -8330,6 +8346,19 @@ const I18N = {
     'nav.system':'System', 'nav.connect':'Connect', 'nav.settings':'Indstillinger',
     'nav.billing':'Plan & Credits', 'nav.logout':'Log ud',
     'legal.operator':'UgoingViral drives af NexCore Labs Ltd · Selskabsnr. 17204527',
+    'fv.button':'3 gratis premium-videoer',
+    'fv.ofLeft':'af 3 tilbage',
+    'fv.sub':'Premium Luma Ray 3.2 · 15 sek. hver · ingen credits, intet kort',
+    'fv.welcomeTitle':'Velkommen! Dine 3 gratis premium-videoer 🎬',
+    'fv.welcomeBody':'Lav 3 premium AI-videoer med Luma Ray 3.2 — 15 sekunder hver, ingen credits og intet kort kræves. Lad os lave din første nu.',
+    'fv.welcomeGo':'🎬 Lav min første gratis premium-video',
+    'fv.welcomeLater':'Måske senere — fortsæt opsætning →',
+    'fv.used':'Du har brugt alle 3 gratis premium-videoer.',
+    'fv.upgrade':'Opgradér til en betalt plan →',
+    'fv.upgradeTail':'for at fortsætte med at lave AI-videoer.',
+    'fv.leftHead':'gratis premium-video(er) tilbage',
+    'fv.toast':'🎬 Din gratis premium-video er klar — skriv din idé og tryk Generér. Luma Ray 3.2, 15 sek., ingen credits!',
+    'fv.generated':'Gratis premium-video lavet!',
     'topbar.theme':'Lyst', 'topbar.overview':'Oversigt',
     'page.dashboard':'🏠 Dashboard', 'page.generator':'✨ Content Generator',
     'page.pipeline':'🎬 Content Pipeline', 'page.history':'📚 Content Historik',
@@ -14138,10 +14167,10 @@ function sendQueueToPost(id) {
 <div id="ob-free-modal" class="modal-overlay" style="display:none;z-index:8600">
   <div class="modal-box" style="width:440px;max-width:94vw;text-align:center">
     <div style="font-size:46px;margin-bottom:8px">🎬</div>
-    <div style="font-size:21px;font-weight:800;color:var(--tx);margin-bottom:6px">You have <span style="color:var(--ac)" id="ob-free-count">3</span> free videos</div>
-    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:22px">Generate up to 3 AI videos (10 seconds each), powered by Runway — no credits used and no card required.</div>
-    <button class="btn bp" style="width:100%;font-size:14px;font-weight:700;margin-bottom:10px" onclick="obfFreeAccept()">🎬 Get 3 Free Videos</button>
-    <button class="btn bg" style="width:100%" onclick="obfFreeContinue()">Maybe later — continue setup →</button>
+    <div style="font-size:21px;font-weight:800;color:var(--tx);margin-bottom:6px" data-i18n="fv.welcomeTitle">Welcome! Your 3 free premium videos 🎬</div>
+    <div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:22px"><span id="ob-free-count" style="display:none"></span><span data-i18n="fv.welcomeBody">Create 3 premium AI videos with Luma Ray 3.2 — 15 seconds each, no credits and no card required. Let's make your first one now.</span></div>
+    <button class="btn bp" style="width:100%;font-size:14px;font-weight:700;margin-bottom:10px" onclick="obfFreeAccept()"><span data-i18n="fv.welcomeGo">🎬 Create my first free premium video</span></button>
+    <button class="btn bg" style="width:100%" onclick="obfFreeContinue()"><span data-i18n="fv.welcomeLater">Maybe later — continue setup →</span></button>
   </div>
 </div>
 
