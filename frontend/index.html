@@ -4813,7 +4813,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-size:14px;font-weight:700;color:var(--tx)"><span data-help="help.premiumProviders">✨ Premium video providers</span></div>
-          <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation + Ultra Cinematic — included on any paid plan · 50 / 85 / 100 / 120 credits per 5s / 10s / 15s / 30s · 30s long-form via Runway gen4.5</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:2px" data-i18n="sp.cardSub">Hyper Realistic + Premium Animation + Ultra Cinematic — inkluderet på alle betalte planer. Hver motor tilbyder kun de længder, den leverer bedst — længere videoer bygges som en sekvens af flere scener.</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('higgsfield')" data-help="help.provHiggs" style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
@@ -4837,11 +4837,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Duration</label>
+            <!-- Options are rebuilt per provider by spRenderDurationOptions() so
+                 only lengths the engine can truly deliver as a single clip show. -->
             <select id="sp-duration" class="fs" style="margin-top:4px;width:100%" onchange="spUpdateCost()">
               <option value="5" selected>5 s — 50 credits</option>
               <option value="10">10 s — 85 credits</option>
-              <option value="15">15 s — 100 credits</option>
-              <option value="30">30 s — 120 credits (Runway gen4.5)</option>
             </select>
           </div>
           <div>
@@ -4853,6 +4853,11 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <option value="4:5">4:5 portrait</option>
             </select>
           </div>
+        </div>
+        <!-- Friendly, non-technical note: how to get videos longer than one clip -->
+        <div id="sp-length-note" style="display:none;font-size:11px;color:var(--tx3);margin:-2px 0 12px;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px">
+          <span style="margin-right:4px">🎬</span><span data-i18n="sp.lengthNote">Længere videoer skabes som en sammenhængende sekvens af flere scener.</span>
+          <a onclick="spStartLongerVideo()" style="cursor:pointer;color:var(--ac);text-decoration:underline;white-space:nowrap" data-i18n="sp.lengthCta">Lav en længere video →</a>
         </div>
         <!-- Saved character picker — reuses a previously saved reference image -->
         <div style="margin-bottom:10px">
@@ -7485,7 +7490,13 @@ function studioSceneCard(scene, idx) {
     </div>
     <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">⏱️ Varighed</div>
     <div class="scene-dur-btns">
-      ${[5,10,15,30].map(d => `<div class="scene-dur-btn ${scene.duration===d?'active':''}" onclick="studioSetDur(${idx},${d})">${d}s ${d===5?'(40cr)':d===10?'(60cr)':d===15?'(80cr)':'(120cr)'}</div>`).join('')}
+      ${(() => {
+        // Only the durations the selected provider truly delivers as a single
+        // clip (e.g. Runway 5/10/30, Luma 5). Longer = more scenes, stitched.
+        const durs = (_studio.providers?.providers?.[_studio.provider]?.clip_durations) || [5,10,30];
+        const cr = {5:40, 10:60, 15:80, 30:120};
+        return durs.map(d => `<div class="scene-dur-btn ${scene.duration===d?'active':''}" onclick="studioSetDur(${idx},${d})">${d}s (${cr[d]||40}cr)</div>`).join('');
+      })()}
     </div>
     <div class="fg" style="margin-top:10px">
       <label class="fl" style="font-size:10px">Stil hint (valgfri)</label>
@@ -7601,7 +7612,19 @@ function studioSetMode(mode) {
   if (mode === 'single' && _studio.scenes.length > 1) _studio.scenes = [_studio.scenes[0]];
   studioRender();
 }
-function studioSetProvider(p) { _studio.provider = p; studioRender(); }
+function studioSetProvider(p) {
+  _studio.provider = p;
+  // Clamp every scene to a length the new provider can deliver as a single clip
+  // (largest option <= current, else its minimum), so no false length lingers.
+  var durs = (_studio.providers?.providers?.[p]?.clip_durations) || [5,10,30];
+  (_studio.scenes || []).forEach(function(s) {
+    if (durs.indexOf(s.duration) < 0) {
+      var ok = durs.filter(function(x){ return x <= s.duration; });
+      s.duration = ok.length ? Math.max.apply(null, ok) : durs[0];
+    }
+  });
+  studioRender();
+}
 function studioSetAR(ar) { _studio.aspect = ar; studioCalcCost(); document.querySelectorAll('.ar-btn').forEach(b => b.classList.toggle('active', b.textContent.includes(ar))); }
 function studioSetDur(idx, d) { _studio.scenes[idx].duration = d; studioRender(); }
 function studioAddScene() { if (_studio.scenes.length >= (_studio.maxScenes||6)) return; _studio.scenes.push({prompt:'',duration:5,style_hint:'',transition:'cut'}); studioRender(); }
@@ -8481,6 +8504,9 @@ Object.assign(I18N.en, {
   'help.studioAnimation':'Generate an animated video with a recurring character/style — great for brand mascots and explainers.',
   'help.premiumProviders':'Premium AI video engines: Hyper Realistic (photorealism), Premium Animation (stylized) and Ultra Cinematic (film look). Included on all paid plans.',
   'help.provHiggs':'Our most photorealistic engine — true-to-life physics, motion and lighting. Best for premium product and brand videos. Renders a ~5s cinematic clip.',
+  'sp.lengthNote':'Longer videos are created as one continuous sequence of multiple scenes.',
+  'sp.lengthCta':'Make a longer video →',
+  'sp.cardSub':'Hyper Realistic + Premium Animation + Ultra Cinematic — included on any paid plan. Each engine offers only the lengths it delivers best — longer videos are built as a sequence of multiple scenes.',
   'help.provKling':'Most photorealistic result with real physics and light (Kling AI). Best for premium product and brand videos.',
   'help.provPika':'Creative, stylized animation with beautiful transitions and effects (Pika) — grabs attention in the feed.',
   'help.provLuma':'Cinematic aesthetics with advanced camera moves (Luma Ray 3.2) — for your most impressive hero videos.',
@@ -8538,6 +8564,9 @@ Object.assign(I18N.da, {
   'help.studioAnimation':'Generér en animeret video med en gennemgående karakter/stil — godt til brand-mascot og forklaringsvideoer.',
   'help.premiumProviders':'Premium AI-video-motorer: Hyper Realistic (fotorealisme), Premium Animation (stiliseret) og Ultra Cinematic (biograf-look). Inkluderet på alle betalte planer.',
   'help.provHiggs':'Vores mest fotorealistiske motor — naturtro fysik, bevægelse og lys. Bedst til premium produkt- og brandvideoer. Genererer et ~5s biograf-klip.',
+  'sp.lengthNote':'Længere videoer skabes som en sammenhængende sekvens af flere scener.',
+  'sp.lengthCta':'Lav en længere video →',
+  'sp.cardSub':'Hyper Realistic + Premium Animation + Ultra Cinematic — inkluderet på alle betalte planer. Hver motor tilbyder kun de længder, den leverer bedst — længere videoer bygges som en sekvens af flere scener.',
   'help.provKling':'Mest fotorealistiske resultat med ægte fysik og lys (Kling AI). Bedst til premium produkt- og brandvideoer.',
   'help.provPika':'Kreativ, stiliseret animation med flotte overgange og effekter (Pika) — fanger opmærksomhed i feedet.',
   'help.provLuma':'Storfilm-æstetik med avancerede kamerabevægelser (Luma Ray 3.2) — til de mest imponerende hero-videoer.',
@@ -19242,6 +19271,15 @@ function spFriendlyError(msg) {
   return msg || 'Something went wrong — please try again in a moment';
 }
 
+// Real single-clip durations each premium engine can deliver (production-tested).
+// Anything longer is built in the multi-scene studio, never as one clip — so the
+// dropdown only ever offers lengths the user will actually receive.
+var SP_PROVIDER_DURATIONS = {
+  higgsfield: [5, 10],   // 5s native · 10s delivered by the built-in fallback
+  pika:       [5],
+  luma_ray:   [5],
+};
+
 function spUpdateCost() {
   var sel = document.getElementById('sp-duration');
   var num = document.getElementById('sp-cost-num');
@@ -19250,6 +19288,35 @@ function spUpdateCost() {
   var cost = SP_DURATION_COST[d] || SP_DURATION_COST[5];
   num.textContent = cost;
   return cost;
+}
+
+// Rebuild the duration dropdown for the selected engine so it only lists lengths
+// that engine truly delivers as a single clip, and show the "longer = sequence
+// of scenes" note (the premium engines all cap below 30s).
+function spRenderDurationOptions(provider) {
+  var sel = document.getElementById('sp-duration');
+  if (!sel) return;
+  var durs = SP_PROVIDER_DURATIONS[provider] || [5];
+  var prev = parseInt(sel.value, 10) || durs[0];
+  var keep = durs.indexOf(prev) >= 0 ? prev : durs[0];
+  sel.innerHTML = durs.map(function(d) {
+    var cost = SP_DURATION_COST[d] || SP_DURATION_COST[5];
+    return '<option value="' + d + '"' + (d === keep ? ' selected' : '') + '>' + d + ' s — ' + cost + ' credits</option>';
+  }).join('');
+  sel.value = keep;
+  var note = document.getElementById('sp-length-note');
+  if (note) note.style.display = (durs[durs.length - 1] < 30) ? 'block' : 'none';
+  spUpdateCost();
+}
+
+// "Longer video" CTA — opens the multi-scene studio (a continuous sequence of
+// scenes), which is how videos longer than a single clip are produced.
+function spStartLongerVideo() {
+  if (typeof studioStartPackage === 'function') {
+    studioStartPackage(2);
+    var anchor = document.getElementById('studio-scene-list') || document.getElementById('studio-premium-card');
+    if (anchor && anchor.scrollIntoView) anchor.scrollIntoView({behavior: 'smooth', block: 'start'});
+  }
 }
 
 function refreshStudioPremiumGate() {
@@ -19290,6 +19357,8 @@ function spSwitchProvider(provider) {
     lbl.textContent = SP_PROVIDERS[provider].label;
     lbl.style.color = SP_PROVIDERS[provider].color;
   }
+  // Lock the duration options to what this engine actually delivers.
+  spRenderDurationOptions(provider);
 }
 
 async function spGenerate() {

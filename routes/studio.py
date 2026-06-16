@@ -222,6 +222,35 @@ PROVIDERS = {
     },
 }
 
+# ── Real single-clip duration caps (from production testing) ─────────────────
+# Each engine delivers only specific single-clip lengths — e.g. Runway does
+# 5/10/30s (never 15s as one clip), Luma/Pika do 5s, Kling v2.5 does 5/10s, and
+# the "Hyper Realistic" engine does 5s natively + 10s via its Kling fallback.
+# Anything longer than a single clip is built by the multi-scene stitcher, so
+# these lists keep the UI honest and let us charge for the DELIVERED length.
+_CLIP_DURATIONS = {
+    "runway":     [5, 10, 30],
+    "luma":       [5],
+    "luma_ray":   [5],
+    "replicate":  [5, 10],   # Kling v2.5 Turbo Pro
+    "kling":      [5, 10],
+    "higgsfield": [5, 10],   # 5s Higgsfield (DoP) · 10s via Kling fallback
+    "pika":       [5],
+}
+
+
+def _clip_durations(provider: str) -> list:
+    return _CLIP_DURATIONS.get(provider, [5])
+
+
+def _delivered_clip_seconds(provider: str, requested: int) -> int:
+    """The single-clip length a provider will actually deliver for a requested
+    duration: the largest supported option <= requested (never below its min)."""
+    caps = _clip_durations(provider)
+    eligible = [c for c in caps if c <= requested]
+    return max(eligible) if eligible else min(caps)
+
+
 ASPECT_RATIOS = {
     "16:9":  {"w": 1920, "h": 1080, "label": "Widescreen",   "icon": "🖥️"},
     "9:16":  {"w": 1080, "h": 1920, "label": "Vertical/Reel","icon": "📱"},
@@ -998,8 +1027,11 @@ def _merge_voiceover(video_path: str, audio_path: str, output_path: str) -> bool
 
 @router.get("/api/studio/providers")
 def get_providers(current_user: dict = Depends(get_current_user)):
+    # Attach each provider's real single-clip duration options so the UI only
+    # offers lengths the provider can truly deliver (no false choices).
+    providers = {k: {**v, "clip_durations": _clip_durations(k)} for k, v in PROVIDERS.items()}
     return {
-        "providers": PROVIDERS,
+        "providers": providers,
         "costs": STUDIO_COSTS,
         "aspect_ratios": ASPECT_RATIOS,
     }
@@ -1061,6 +1093,12 @@ async def studio_generate(req: StudioRequest, current_user: dict = Depends(get_c
                 break
         else:
             raise HTTPException(status_code=503, detail="Ingen AI video provider er konfigureret. Tilføj RUNWAY_API_KEY, LUMA_API_KEY eller REPLICATE_API_KEY i .env")
+
+    # Lock each scene to the length the chosen provider actually delivers as a
+    # single clip, so the user is charged for what they get — never a longer
+    # selected length. Longer stories are assembled from multiple scenes below.
+    for s in req.scenes:
+        s.duration = _delivered_clip_seconds(provider, s.duration)
 
     cost = _calc_cost(req)
     uid = current_user["id"]
@@ -1956,6 +1994,13 @@ async def _vq_run_provider(job: dict):
         # Realistic" — the provider name is never surfaced. If Kling ALSO fails,
         # the exception propagates and the queue refunds the credits.
         uid = job.get("uid", "")
+        # Higgsfield DoP renders ~5s. A longer Hyper Realistic clip (10s) is
+        # delivered by the Kling v2.5 fallback — the only single-clip path to
+        # 10s — so skip Higgsfield for >5s and go straight to Kling.
+        if duration > HIGGSFIELD_MAX_CLIP_SECONDS:
+            url = await _replicate_kling_generate(prompt, duration, aspect, image_url, user_id=uid)
+            return url, {"provider": "higgsfield", "engine": "kling",
+                         "delivered_seconds": _kling_clip_seconds(duration), "video_url": url}
         try:
             url = await _higgsfield_generate(prompt, aspect, image_url, user_id=uid)
             return url, {"provider": "higgsfield", "model": HIGGSFIELD_DOP_MODEL,
@@ -2172,14 +2217,18 @@ async def _queue_premium_render(body: dict, uid: str, provider: str) -> dict:
     if not check_video_rate_limit(uid):
         raise HTTPException(status_code=429, detail=video_rate_limit_message())
     prompt, duration, aspect, image_url = _validate_video_payload(body)
-    if not _provider_configured(provider, duration):
+    # Charge for and render the length the provider ACTUALLY delivers as a single
+    # clip — never the (possibly longer) requested length. Longer videos are
+    # built in the multi-scene studio, not here.
+    delivered = _delivered_clip_seconds(provider, duration)
+    if not _provider_configured(provider, delivered):
         raise HTTPException(
             status_code=503,
             detail="Our video servers are temporarily unavailable — please try again shortly",
         )
-    cost = _video_credit_cost(duration)
+    cost = _video_credit_cost(delivered)
     credits_left = _charge_or_402(uid, cost)
-    job = _enqueue_video(uid, provider, prompt, duration, aspect, image_url, cost)
+    job = _enqueue_video(uid, provider, prompt, delivered, aspect, image_url, cost)
     if job["status"] == "processing":
         message = "Your video is generating now — it'll appear in My Videos when it's ready"
     else:
@@ -2194,7 +2243,8 @@ async def _queue_premium_render(body: dict, uid: str, provider: str) -> dict:
         "provider":     provider,
         "credits_left": credits_left,
         "credits_used": cost,
-        "request":      {"prompt": prompt, "duration": duration, "aspect_ratio": aspect, "image_url": image_url},
+        "duration":     delivered,
+        "request":      {"prompt": prompt, "duration": delivered, "aspect_ratio": aspect, "image_url": image_url},
     }
 
 
