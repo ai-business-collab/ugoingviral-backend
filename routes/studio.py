@@ -39,18 +39,20 @@ REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
 # Higgsfield powers the "Hyper Realistic" engine via its cloud API
 # (platform.higgsfield.ai). Auth is a single header carrying the key id + secret
 # pair:  Authorization: Key <KEY_ID>:<KEY_SECRET>  (verified against the live API).
-# Higgsfield's flagship video model is "DoP" (Director of Photography) — an
-# IMAGE-to-video model that renders a fixed ~5s cinematic clip. There is no
-# text-to-video endpoint, so a text prompt is first turned into a still via the
-# "Soul" text-to-image model and then animated with DoP.
+#
+# Hyper Realistic uses Seedance (image2video/seedance) — the longest + highest-
+# resolution realistic model on our key: user-selectable 3–12s at up to 1080p
+# (verified against the live API; Kling there is capped at 5/10s and there is no
+# Kling 3.0 / 15s model). Seedance is image-to-video, so a text prompt is first
+# turned into a still via the "Soul" text-to-image model, then animated.
 HIGGSFIELD_API_BASE       = os.getenv("HIGGSFIELD_API_BASE", "https://platform.higgsfield.ai")
 HIGGSFIELD_API_KEY_ID     = os.getenv("HIGGSFIELD_API_KEY_ID", "")
 HIGGSFIELD_API_KEY_SECRET = os.getenv("HIGGSFIELD_API_KEY_SECRET", "")
-HIGGSFIELD_DOP_MODEL      = os.getenv("HIGGSFIELD_DOP_MODEL", "dop-turbo")  # dop-lite | dop-turbo | dop-standard
-HIGGSFIELD_SOUL_MODEL     = os.getenv("HIGGSFIELD_SOUL_MODEL", "soul")      # text-to-image still for the DoP start frame
-# DoP renders a single fixed ~5s clip — there is no duration parameter, so this
-# is Higgsfield's real max single-clip length.
-HIGGSFIELD_MAX_CLIP_SECONDS = 5
+HIGGSFIELD_SEEDANCE_MODEL = os.getenv("HIGGSFIELD_SEEDANCE_MODEL", "seedance")
+HIGGSFIELD_SEEDANCE_RES   = os.getenv("HIGGSFIELD_SEEDANCE_RES", "1080")     # 480 | 720 | 1080
+HIGGSFIELD_SOUL_MODEL     = os.getenv("HIGGSFIELD_SOUL_MODEL", "soul")       # text-to-image still for the start frame
+# Seedance accepts 3–12s; this is the Hyper Realistic engine's real max single clip.
+HIGGSFIELD_MAX_CLIP_SECONDS = 12
 # Kling v2.5 Turbo Pro on Replicate — the latest working Kling. Single clips top
 # out at 10s (the model's duration enum is {5, 10}); a 15s request renders 10s.
 KLING_MODEL             = os.getenv("KLING_MODEL", "kwaivgi/kling-v2.5-turbo-pro")
@@ -234,7 +236,7 @@ _CLIP_DURATIONS = {
     "luma_ray":   [5],
     "replicate":  [5, 10],   # Kling v2.5 Turbo Pro
     "kling":      [5, 10],
-    "higgsfield": [5, 10],   # 5s Higgsfield (DoP) · 10s via Kling fallback
+    "higgsfield": [5, 10, 12],   # Seedance (up to 12s @1080p) · Kling fallback for failures
     "pika":       [5],
 }
 
@@ -821,7 +823,7 @@ async def _higgsfield_run(client: httpx.AsyncClient, endpoint: str, params: dict
 
 async def _higgsfield_soul_still(client: httpx.AsyncClient, prompt: str,
                                  aspect_ratio: str) -> str:
-    """Render a single still from the prompt via Soul, to seed DoP's start frame."""
+    """Render a single still from the prompt via Soul, to seed the start frame."""
     size = _HIGGSFIELD_SOUL_SIZE.get(aspect_ratio, _HIGGSFIELD_SOUL_SIZE["9:16"])
     data = await _higgsfield_run(client, "/v1/text2image/soul", {
         "prompt": prompt,
@@ -837,21 +839,29 @@ async def _higgsfield_soul_still(client: httpx.AsyncClient, prompt: str,
     return url
 
 
+def _seedance_clip_seconds(duration: int) -> int:
+    """Seedance accepts 3–12s. Clamp the requested length to that range so the
+    user gets the closest deliverable single clip (15s requests render 12s)."""
+    return max(3, min(int(duration or 5), HIGGSFIELD_MAX_CLIP_SECONDS))
+
+
 async def _higgsfield_generate(prompt: str, aspect_ratio: str = "9:16",
-                               image_url: str = "", user_id: str = "") -> Optional[str]:
-    """Hyper Realistic video via Higgsfield DoP (image-to-video, ~5s clip).
-    When no reference image is supplied, a still is synthesised from the prompt
-    via Soul first so a text prompt still produces a video."""
+                               image_url: str = "", user_id: str = "",
+                               duration: int = 5) -> Optional[str]:
+    """Hyper Realistic video via Higgsfield Seedance (image-to-video, up to 12s
+    @1080p, user-selectable length). When no reference image is supplied, a still
+    is synthesised from the prompt via Soul first so a text prompt still works."""
     if not (HIGGSFIELD_API_KEY_ID and HIGGSFIELD_API_KEY_SECRET):
         raise HTTPException(status_code=503, detail="Higgsfield not configured (HIGGSFIELD_API_KEY_ID/SECRET missing)")
-    async with httpx.AsyncClient(timeout=60) as client:
+    seconds = _seedance_clip_seconds(duration)
+    async with httpx.AsyncClient(timeout=90) as client:
         start_image = image_url or await _higgsfield_soul_still(client, prompt, aspect_ratio)
-        data = await _higgsfield_run(client, "/v1/image2video/dop", {
-            "model": HIGGSFIELD_DOP_MODEL,
+        data = await _higgsfield_run(client, "/v1/image2video/seedance", {
+            "input_image": {"type": "image_url", "image_url": start_image},
             "prompt": prompt,
-            "input_images": [{"type": "image_url", "image_url": start_image}],
-            "enhance_prompt": True,
-        })
+            "duration": seconds,
+            "resolution": HIGGSFIELD_SEEDANCE_RES,
+        }, poll_steps=90)
     video = data.get("video") or {}
     url = video.get("url") if isinstance(video, dict) else None
     if not url:
@@ -1791,7 +1801,7 @@ def face_scene_presets(current_user: dict = Depends(get_current_user)):
 # Per-duration pricing for premium video providers (Hyper Realistic + Premium
 # Animation). 30s long-form clips are rendered by Runway gen4.5. Durations
 # outside the table are rejected by _validate_video_payload below.
-_VIDEO_CREDIT_PRICES = {5: 50, 10: 85, 15: 100, 30: 120}
+_VIDEO_CREDIT_PRICES = {5: 50, 10: 85, 12: 95, 15: 100, 30: 120}
 _ASPECT_OK           = {"16:9", "9:16", "1:1", "4:5"}
 _ALLOWED_DURATIONS   = sorted(_VIDEO_CREDIT_PRICES.keys())
 
@@ -1989,25 +1999,20 @@ async def _vq_run_provider(job: dict):
         return _extract_video_url(result), result
 
     if provider == "higgsfield":
-        # "Hyper Realistic": Higgsfield DoP primary; on ANY failure, transparently
-        # fall back to the upgraded Kling v2.5. The user only ever sees "Hyper
-        # Realistic" — the provider name is never surfaced. If Kling ALSO fails,
-        # the exception propagates and the queue refunds the credits.
+        # "Hyper Realistic": Higgsfield Seedance primary (up to 12s @1080p,
+        # user-selectable length). On ANY failure, transparently fall back to
+        # Kling v2.5 — the user only ever sees "Hyper Realistic", never a
+        # provider name. If Kling ALSO fails, the exception propagates and the
+        # queue refunds the credits.
         uid = job.get("uid", "")
-        # Higgsfield DoP renders ~5s. A longer Hyper Realistic clip (10s) is
-        # delivered by the Kling v2.5 fallback — the only single-clip path to
-        # 10s — so skip Higgsfield for >5s and go straight to Kling.
-        if duration > HIGGSFIELD_MAX_CLIP_SECONDS:
-            url = await _replicate_kling_generate(prompt, duration, aspect, image_url, user_id=uid)
-            return url, {"provider": "higgsfield", "engine": "kling",
-                         "delivered_seconds": _kling_clip_seconds(duration), "video_url": url}
         try:
-            url = await _higgsfield_generate(prompt, aspect, image_url, user_id=uid)
-            return url, {"provider": "higgsfield", "model": HIGGSFIELD_DOP_MODEL,
-                         "delivered_seconds": HIGGSFIELD_MAX_CLIP_SECONDS, "video_url": url}
+            url = await _higgsfield_generate(prompt, aspect, image_url, user_id=uid, duration=duration)
+            return url, {"provider": "higgsfield", "model": HIGGSFIELD_SEEDANCE_MODEL,
+                         "delivered_seconds": _seedance_clip_seconds(duration), "video_url": url}
         except Exception as exc:
-            logging.warning("Higgsfield failed, falling back to Kling v2.5: %s",
+            logging.warning("Higgsfield (Seedance) failed, falling back to Kling v2.5: %s",
                             str(getattr(exc, "detail", exc))[:200])
+            # Kling tops out at 10s, so a 12s request falls back to a 10s clip.
             url = await _replicate_kling_generate(prompt, duration, aspect, image_url, user_id=uid)
             return url, {"provider": "higgsfield", "engine": "kling_fallback",
                          "delivered_seconds": _kling_clip_seconds(duration), "video_url": url}
