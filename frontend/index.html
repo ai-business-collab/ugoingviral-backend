@@ -102,6 +102,8 @@ body.light {
 /* ── "Se eksempel" button — consistent across all video/content functions ── */
 .ex-btn{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,255,.1);color:var(--ac);border:1px solid rgba(0,229,255,.32);border-radius:8px;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .ex-btn:hover{background:rgba(0,229,255,.2);border-color:var(--ac)}
+.sp-cam{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--glass-b);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;transition:all .15s;padding:0;line-height:1}
+.sp-cam:hover{background:rgba(0,229,255,.18);border-color:var(--ac);transform:translateY(-1px)}
 /* ── Settings hub menu cards ─────────────────────────────── */
 .set-menu-card{display:flex;align-items:center;gap:14px;background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:pointer;transition:border-color .15s,transform .15s,background .15s}
 .set-menu-card:hover{border-color:var(--ac);transform:translateY(-2px);background:var(--glass-b)}
@@ -4816,9 +4818,18 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="font-size:11px;color:var(--tx3);margin-top:2px" data-i18n="sp.cardSub">Hyper Realistic + Premium Animation + Ultra Cinematic — inkluderet på alle betalte planer. Hver motor tilbyder kun de længder, den leverer bedst — længere videoer bygges som en sekvens af flere scener.</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('higgsfield')" data-help="help.provHiggs" style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
-          <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" data-help="help.provPika" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
-          <button class="btn bsm" id="sp-tab-luma" onclick="spSwitchProvider('luma_ray')" data-help="help.provLuma" style="background:rgba(16,185,129,.16);color:#34d399;border:1px solid rgba(16,185,129,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">🎬 Ultra Cinematic</button>
+          <span style="display:inline-flex;gap:4px;align-items:center">
+            <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('higgsfield')" data-help="help.provHiggs" style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
+            <button class="sp-cam" onclick="spPreviewVideo('higgsfield')" data-i18n-title="sp.examplePreview" title="Se eksempelvideo" aria-label="Se eksempelvideo">🎬</button>
+          </span>
+          <span style="display:inline-flex;gap:4px;align-items:center">
+            <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" data-help="help.provPika" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
+            <button class="sp-cam" onclick="spPreviewVideo('pika')" data-i18n-title="sp.examplePreview" title="Se eksempelvideo" aria-label="Se eksempelvideo">🎬</button>
+          </span>
+          <span style="display:inline-flex;gap:4px;align-items:center">
+            <button class="btn bsm" id="sp-tab-luma" onclick="spSwitchProvider('luma_ray')" data-help="help.provLuma" style="background:rgba(16,185,129,.16);color:#34d399;border:1px solid rgba(16,185,129,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">🎬 Ultra Cinematic</button>
+            <button class="sp-cam" onclick="spPreviewVideo('luma_ray')" data-i18n-title="sp.examplePreview" title="Se eksempelvideo" aria-label="Se eksempelvideo">🎬</button>
+          </span>
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
@@ -7178,6 +7189,57 @@ function closeExample() {
 window.showExample = showExample;
 window.closeExample = closeExample;
 
+// ── Provider example-video previews (camera 🎬 icon) ─────────────────────────
+// One entry per video provider. To GO LIVE with a real preview, set `url` to the
+// example clip — that single line per provider is the only change needed; until
+// then a clean placeholder shows. No company names — each keeps its descriptive
+// name so beginners can SEE the style/quality before spending credits.
+var SP_EXAMPLE_VIDEOS = {
+  higgsfield: {label: 'Hyper Realistic',   grad: 'linear-gradient(135deg,#00e5ff,#22d3ee)', url: ''},
+  pika:       {label: 'Premium Animation', grad: 'linear-gradient(135deg,#7c3aed,#a78bfa)', url: ''},
+  luma_ray:   {label: 'Ultra Cinematic',   grad: 'linear-gradient(135deg,#10b981,#34d399)', url: ''},
+};
+window._spExampleKey = null;
+
+function spPreviewVideo(provider) {
+  var ex = SP_EXAMPLE_VIDEOS[provider];
+  var modal = document.getElementById('sp-example-modal');
+  var body = document.getElementById('sp-example-body');
+  var titleEl = document.getElementById('sp-example-title');
+  if (!ex || !modal || !body) return;
+  window._spExampleKey = provider;
+  if (titleEl) titleEl.textContent = '🎬 ' + ex.label;
+  var html = '';
+  if (ex.url) {
+    // Real example video for this provider.
+    html += '<div style="border-radius:14px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;background:#000">'
+      + '<video src="' + ex.url + '" controls playsinline preload="metadata" style="width:100%;max-height:420px;display:block;background:#000"></video>'
+      + '</div>';
+  } else {
+    // Placeholder — structure is ready; just drop a URL into SP_EXAMPLE_VIDEOS.
+    html += '<div style="border-radius:14px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px">'
+      + '<div style="aspect-ratio:9/16;max-height:360px;background:' + ex.grad + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;text-align:center;padding:24px">'
+      + '<div style="font-size:46px">🎬</div>'
+      + '<div style="font-size:15px;font-weight:800;letter-spacing:.3px;text-shadow:0 2px 8px rgba(0,0,0,.4)">' + t('sp.exampleSoon') + '</div>'
+      + '</div></div>';
+  }
+  html += '<div style="font-size:13px;color:var(--tx2);line-height:1.6;text-align:center">' + t('sp.exampleSub') + '</div>';
+  body.innerHTML = html;
+  modal.style.display = 'flex';
+}
+function closeSpExample() {
+  var m = document.getElementById('sp-example-modal');
+  if (m) m.style.display = 'none';
+  window._spExampleKey = null;
+}
+window.spPreviewVideo = spPreviewVideo;
+window.closeSpExample = closeSpExample;
+// Re-render in the new language if it flips while the preview is open.
+window.addEventListener('langchange', function() {
+  var m = document.getElementById('sp-example-modal');
+  if (m && m.style.display !== 'none' && window._spExampleKey) spPreviewVideo(window._spExampleKey);
+});
+
 async function studioInit() {
   if (!_studio.providers) {
     try {
@@ -8505,6 +8567,9 @@ Object.assign(I18N.en, {
   'help.studioAnimation':'Generate an animated video with a recurring character/style — great for brand mascots and explainers.',
   'help.premiumProviders':'Premium AI video engines: Hyper Realistic (photorealism), Premium Animation (stylized) and Ultra Cinematic (film look). Included on all paid plans.',
   'help.provHiggs':'Our most photorealistic engine — true-to-life physics, motion and lighting in crisp 1080p. Best for premium product and brand videos. Choose 5, 10 or 12 seconds.',
+  'sp.examplePreview':'Watch example video',
+  'sp.exampleSoon':'Example video coming soon',
+  'sp.exampleSub':'See the style and quality before you spend any credits.',
   'sp.lengthNote':'Longer videos are created as one continuous sequence of multiple scenes.',
   'sp.lengthCta':'Make a longer video →',
   'sp.cardSub':'Hyper Realistic + Premium Animation + Ultra Cinematic — included on any paid plan. Each engine offers only the lengths it delivers best — longer videos are built as a sequence of multiple scenes.',
@@ -8565,6 +8630,9 @@ Object.assign(I18N.da, {
   'help.studioAnimation':'Generér en animeret video med en gennemgående karakter/stil — godt til brand-mascot og forklaringsvideoer.',
   'help.premiumProviders':'Premium AI-video-motorer: Hyper Realistic (fotorealisme), Premium Animation (stiliseret) og Ultra Cinematic (biograf-look). Inkluderet på alle betalte planer.',
   'help.provHiggs':'Vores mest fotorealistiske motor — naturtro fysik, bevægelse og lys i skarpt 1080p. Bedst til premium produkt- og brandvideoer. Vælg 5, 10 eller 12 sekunder.',
+  'sp.examplePreview':'Se eksempelvideo',
+  'sp.exampleSoon':'Eksempelvideo kommer snart',
+  'sp.exampleSub':'Se stilen og kvaliteten, før du bruger credits.',
   'sp.lengthNote':'Længere videoer skabes som en sammenhængende sekvens af flere scener.',
   'sp.lengthCta':'Lav en længere video →',
   'sp.cardSub':'Hyper Realistic + Premium Animation + Ultra Cinematic — inkluderet på alle betalte planer. Hver motor tilbyder kun de længder, den leverer bedst — længere videoer bygges som en sekvens af flere scener.',
@@ -20320,6 +20388,17 @@ async function importCalendarCSV(input) {
       <button onclick="closeExample()" style="background:none;border:none;color:var(--tx3);font-size:24px;cursor:pointer;line-height:1">×</button>
     </div>
     <div id="example-modal-body"></div>
+  </div>
+</div>
+
+<!-- PROVIDER EXAMPLE-VIDEO PREVIEW MODAL (camera 🎬 icon) -->
+<div id="sp-example-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:10000;align-items:center;justify-content:center" onclick="if(event.target===this)closeSpExample()">
+  <div style="background:var(--bg2);border:1px solid var(--border-b);border-radius:20px;padding:28px;max-width:440px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="modal-title" id="sp-example-title" style="margin:0">🎬 Eksempelvideo</div>
+      <button onclick="closeSpExample()" style="background:none;border:none;color:var(--tx3);font-size:24px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="sp-example-body"></div>
   </div>
 </div>
 
