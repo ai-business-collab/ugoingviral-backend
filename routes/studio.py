@@ -34,9 +34,27 @@ LUMA_RAY_MODEL    = os.getenv("LUMA_RAY_MODEL", "ray-3.2")
 REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
 # Hyper Realistic + Premium Animation (Pro+ video providers). Base URLs are env-configurable
 # because both providers gate their public APIs and the canonical endpoint may
-# move; defaults below are the documented v1 paths as of May 2026.
-HIGGSFIELD_API_KEY = os.getenv("HIGGSFIELD_API_KEY", "")
-HIGGSFIELD_API_URL = os.getenv("HIGGSFIELD_API_URL", "https://api.higgsfield.ai/v1/generations")
+# move; defaults below are the documented v1 paths as of June 2026.
+#
+# Higgsfield powers the "Hyper Realistic" engine via its cloud API
+# (platform.higgsfield.ai). Auth is a single header carrying the key id + secret
+# pair:  Authorization: Key <KEY_ID>:<KEY_SECRET>  (verified against the live API).
+# Higgsfield's flagship video model is "DoP" (Director of Photography) — an
+# IMAGE-to-video model that renders a fixed ~5s cinematic clip. There is no
+# text-to-video endpoint, so a text prompt is first turned into a still via the
+# "Soul" text-to-image model and then animated with DoP.
+HIGGSFIELD_API_BASE       = os.getenv("HIGGSFIELD_API_BASE", "https://platform.higgsfield.ai")
+HIGGSFIELD_API_KEY_ID     = os.getenv("HIGGSFIELD_API_KEY_ID", "")
+HIGGSFIELD_API_KEY_SECRET = os.getenv("HIGGSFIELD_API_KEY_SECRET", "")
+HIGGSFIELD_DOP_MODEL      = os.getenv("HIGGSFIELD_DOP_MODEL", "dop-turbo")  # dop-lite | dop-turbo | dop-standard
+HIGGSFIELD_SOUL_MODEL     = os.getenv("HIGGSFIELD_SOUL_MODEL", "soul")      # text-to-image still for the DoP start frame
+# DoP renders a single fixed ~5s clip — there is no duration parameter, so this
+# is Higgsfield's real max single-clip length.
+HIGGSFIELD_MAX_CLIP_SECONDS = 5
+# Kling v2.5 Turbo Pro on Replicate — the latest working Kling. Single clips top
+# out at 10s (the model's duration enum is {5, 10}); a 15s request renders 10s.
+KLING_MODEL             = os.getenv("KLING_MODEL", "kwaivgi/kling-v2.5-turbo-pro")
+KLING_MAX_CLIP_SECONDS  = 10
 PIKA_API_KEY       = os.getenv("PIKA_API_KEY", "")
 PIKA_API_URL       = os.getenv("PIKA_API_URL", "https://api.pika.art/v1/generate")
 
@@ -110,13 +128,25 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ELEVENLABS_KEY    = os.getenv("ELEVENLABS_API_KEY", "")
 
 
-def _track_replicate_video(user_id: str = "") -> None:
-    """Record one Kling/Replicate video generation for per-user cost tracking,
-    like runway/luma do. Cost rate lives in api_tracker.COST_RATES['replicate_video'].
-    user_id='' lets the tracker auto-resolve it from the request ContextVar."""
+def _track_replicate_video(user_id: str = "", seconds: int = 5) -> None:
+    """Record a Kling/Replicate video generation for per-user cost tracking,
+    like runway/luma do. Quantity is the clip length in SECONDS so the cost
+    scales with Kling v2.5's per-second rate (api_tracker.COST_RATES['replicate_video']
+    is $/second). user_id='' lets the tracker auto-resolve it from the request
+    ContextVar."""
     try:
         from services import api_tracker
-        api_tracker.track("replicate", "video", 1, user_id=user_id, feature="video_generation")
+        api_tracker.track("replicate", "video", seconds, user_id=user_id, feature="video_generation")
+    except Exception:
+        pass
+
+
+def _track_higgsfield_video(user_id: str = "") -> None:
+    """Record one Higgsfield (Hyper Realistic / DoP) clip for per-user cost
+    tracking. Flat per-clip rate lives in api_tracker.COST_RATES['higgsfield_video']."""
+    try:
+        from services import api_tracker
+        api_tracker.track("higgsfield", "video", 1, user_id=user_id, feature="video_generation")
     except Exception:
         pass
 
@@ -622,7 +652,7 @@ async def _replicate_generate(prompt: str, duration: int = 5, aspect_ratio: str 
             status = data.get("status")
             if status == "succeeded":
                 output = data.get("output")
-                _track_replicate_video(user_id)
+                _track_replicate_video(user_id, seconds=duration)
                 if isinstance(output, list):
                     return output[0]
                 return output
@@ -631,29 +661,39 @@ async def _replicate_generate(prompt: str, duration: int = 5, aspect_ratio: str 
     return None
 
 
+def _kling_clip_seconds(duration: int) -> int:
+    """Kling v2.5 Turbo Pro renders single clips of exactly 5s or 10s. Anything
+    >= 10s (e.g. a 15s request) renders at the 10s cap; everything else is 5s."""
+    return KLING_MAX_CLIP_SECONDS if duration >= KLING_MAX_CLIP_SECONDS else 5
+
+
 async def _replicate_kling_generate(prompt: str, duration: int = 5,
                                     aspect_ratio: str = "16:9",
                                     image_url: str = "", user_id: str = "") -> Optional[str]:
-    """Hyper Realistic video via Kling 1.6 Pro on Replicate (klingai/kling-1.6-pro).
-    Submits an async prediction and polls until it completes, returning the
-    playable video URL."""
+    """Hyper Realistic video via Kling v2.5 Turbo Pro on Replicate
+    (kwaivgi/kling-v2.5-turbo-pro — the latest working Kling). Submits an async
+    prediction and polls until it completes, returning the playable video URL.
+
+    Single clips cap at 10s: the model's duration is an integer enum {5, 10}, so
+    a 15s request renders 10s. Image-to-video is supported via `start_image`."""
     if not REPLICATE_API_KEY:
         raise HTTPException(status_code=503, detail="Replicate API not configured (REPLICATE_API_KEY missing)")
-    # Kling accepts a limited set of aspect ratios — map anything else (e.g. 4:5)
-    # to the closest supported value so the request never bounces.
+    # Kling v2.5 accepts a limited set of aspect ratios — map anything else
+    # (e.g. 4:5) to the closest supported value so the request never bounces.
     kling_aspect = aspect_ratio if aspect_ratio in ("16:9", "9:16", "1:1") else "9:16"
+    clip_seconds = _kling_clip_seconds(duration)
     pred_input = {
         "prompt":       prompt,
-        "duration":     str(duration),       # Kling expects duration as a string
+        "duration":     clip_seconds,        # v2.5 expects an integer enum {5, 10}
         "aspect_ratio": kling_aspect,
-        "cfg_scale":    0.5,
     }
     if image_url:
         # Image-to-video reference for character consistency across a mini-series.
+        # (aspect_ratio is ignored by the model when a start_image is supplied.)
         pred_input["start_image"] = image_url
     async with httpx.AsyncClient(timeout=120) as client:
         r = await client.post(
-            "https://api.replicate.com/v1/models/klingai/kling-1.6-pro/predictions",
+            f"https://api.replicate.com/v1/models/{KLING_MODEL}/predictions",
             headers={"Authorization": f"Token {REPLICATE_API_KEY}",
                      "Content-Type": "application/json",
                      "Prefer": "wait"},
@@ -665,7 +705,7 @@ async def _replicate_kling_generate(prompt: str, duration: int = 5,
         # With "Prefer: wait" Replicate may already return a finished prediction.
         if data.get("status") == "succeeded":
             out = data.get("output")
-            _track_replicate_video(user_id)
+            _track_replicate_video(user_id, seconds=clip_seconds)
             return out[0] if isinstance(out, list) and out else out
         pred_id = data.get("id")
         if not pred_id:
@@ -680,11 +720,115 @@ async def _replicate_kling_generate(prompt: str, duration: int = 5,
             st = pdata.get("status")
             if st == "succeeded":
                 out = pdata.get("output")
-                _track_replicate_video(user_id)
+                _track_replicate_video(user_id, seconds=clip_seconds)
                 return out[0] if isinstance(out, list) and out else out
             if st in ("failed", "canceled"):
                 raise HTTPException(status_code=502, detail=f"Kling AI generation {st}: {str(pdata.get('error',''))[:160]}")
     raise HTTPException(status_code=504, detail="Kling AI timed out — please try again")
+
+
+# ── Higgsfield (Hyper Realistic) ──────────────────────────────────────────────
+# Higgsfield cloud API (platform.higgsfield.ai). Auth = a single header carrying
+# the key id + secret:  Authorization: Key <KEY_ID>:<KEY_SECRET>.
+# Flow: POST /v1/<task>/<model> with {"params": {...}} returns a job descriptor
+# {status, request_id, status_url, ...}; poll GET /requests/<request_id>/status
+# until status == "completed" (or failed/nsfw). The media URL is at
+# images[0].url (Soul stills) or video.url (DoP clips).
+# DoP is image-to-video only, so a text prompt is first rendered to a still via
+# Soul and then animated.
+
+def _higgsfield_headers() -> dict:
+    return {
+        "Authorization": f"Key {HIGGSFIELD_API_KEY_ID}:{HIGGSFIELD_API_KEY_SECRET}",
+        "Content-Type": "application/json",
+    }
+
+
+# Soul still size per aspect ratio (closest supported resolution).
+_HIGGSFIELD_SOUL_SIZE = {
+    "9:16": "1152x2048",
+    "16:9": "2048x1152",
+    "1:1":  "1536x1536",
+    "4:5":  "1152x1536",
+}
+
+
+async def _higgsfield_run(client: httpx.AsyncClient, endpoint: str, params: dict,
+                          *, poll_steps: int = 60) -> dict:
+    """Submit a Higgsfield job and poll until it finishes. Returns the final
+    status payload (status == 'completed'). Raises HTTPException on failure."""
+    r = await client.post(
+        f"{HIGGSFIELD_API_BASE}{endpoint}",
+        headers=_higgsfield_headers(),
+        json={"params": params},
+    )
+    if r.status_code >= 400:
+        raise HTTPException(status_code=r.status_code, detail=f"Hyper Realistic: {r.text[:240]}")
+    data = r.json()
+    status = data.get("status")
+    request_id = data.get("request_id")
+    if status == "completed":
+        return data
+    if status in ("failed", "nsfw"):
+        raise HTTPException(status_code=502, detail=f"Hyper Realistic generation {status}")
+    if not request_id:
+        raise HTTPException(status_code=502, detail="Hyper Realistic returned no request id")
+    status_path = f"/requests/{request_id}/status"
+    for _ in range(poll_steps):
+        await asyncio.sleep(5)
+        poll = await client.get(f"{HIGGSFIELD_API_BASE}{status_path}", headers=_higgsfield_headers())
+        if poll.status_code >= 500:
+            continue  # transient — keep polling
+        if poll.status_code >= 400:
+            raise HTTPException(status_code=poll.status_code, detail=f"Hyper Realistic: {poll.text[:200]}")
+        pdata = poll.json()
+        st = pdata.get("status")
+        if st == "completed":
+            return pdata
+        if st in ("failed", "nsfw"):
+            raise HTTPException(status_code=502, detail=f"Hyper Realistic generation {st}")
+    raise HTTPException(status_code=504, detail="Hyper Realistic timed out — please try again")
+
+
+async def _higgsfield_soul_still(client: httpx.AsyncClient, prompt: str,
+                                 aspect_ratio: str) -> str:
+    """Render a single still from the prompt via Soul, to seed DoP's start frame."""
+    size = _HIGGSFIELD_SOUL_SIZE.get(aspect_ratio, _HIGGSFIELD_SOUL_SIZE["9:16"])
+    data = await _higgsfield_run(client, "/v1/text2image/soul", {
+        "prompt": prompt,
+        "width_and_height": size,
+        "quality": "1080p",
+        "batch_size": 1,
+        "enhance_prompt": True,
+    })
+    images = data.get("images") or []
+    url = images[0].get("url") if images and isinstance(images[0], dict) else None
+    if not url:
+        raise HTTPException(status_code=502, detail="Hyper Realistic: no still produced")
+    return url
+
+
+async def _higgsfield_generate(prompt: str, aspect_ratio: str = "9:16",
+                               image_url: str = "", user_id: str = "") -> Optional[str]:
+    """Hyper Realistic video via Higgsfield DoP (image-to-video, ~5s clip).
+    When no reference image is supplied, a still is synthesised from the prompt
+    via Soul first so a text prompt still produces a video."""
+    if not (HIGGSFIELD_API_KEY_ID and HIGGSFIELD_API_KEY_SECRET):
+        raise HTTPException(status_code=503, detail="Higgsfield not configured (HIGGSFIELD_API_KEY_ID/SECRET missing)")
+    async with httpx.AsyncClient(timeout=60) as client:
+        start_image = image_url or await _higgsfield_soul_still(client, prompt, aspect_ratio)
+        data = await _higgsfield_run(client, "/v1/image2video/dop", {
+            "model": HIGGSFIELD_DOP_MODEL,
+            "prompt": prompt,
+            "input_images": [{"type": "image_url", "image_url": start_image}],
+            "enhance_prompt": True,
+        })
+    video = data.get("video") or {}
+    url = video.get("url") if isinstance(video, dict) else None
+    if not url:
+        raise HTTPException(status_code=502, detail="Hyper Realistic returned no video")
+    _track_higgsfield_video(user_id)
+    return url
 
 
 async def _generate_video(prompt: str, provider: str, duration: int,
@@ -1807,16 +1951,26 @@ async def _vq_run_provider(job: dict):
         return _extract_video_url(result), result
 
     if provider == "higgsfield":
-        payload = {"prompt": prompt, "duration": duration, "aspect_ratio": aspect,
-                   "metadata": {"user_id": job["uid"], "source": "ugoingviral"}}
-        if image_url:
-            payload["image_url"] = image_url
-        result = await _call_video_provider(HIGGSFIELD_API_URL, HIGGSFIELD_API_KEY, payload, label="Hyper Realistic")
-        return _extract_video_url(result), result
+        # "Hyper Realistic": Higgsfield DoP primary; on ANY failure, transparently
+        # fall back to the upgraded Kling v2.5. The user only ever sees "Hyper
+        # Realistic" — the provider name is never surfaced. If Kling ALSO fails,
+        # the exception propagates and the queue refunds the credits.
+        uid = job.get("uid", "")
+        try:
+            url = await _higgsfield_generate(prompt, aspect, image_url, user_id=uid)
+            return url, {"provider": "higgsfield", "model": HIGGSFIELD_DOP_MODEL,
+                         "delivered_seconds": HIGGSFIELD_MAX_CLIP_SECONDS, "video_url": url}
+        except Exception as exc:
+            logging.warning("Higgsfield failed, falling back to Kling v2.5: %s",
+                            str(getattr(exc, "detail", exc))[:200])
+            url = await _replicate_kling_generate(prompt, duration, aspect, image_url, user_id=uid)
+            return url, {"provider": "higgsfield", "engine": "kling_fallback",
+                         "delivered_seconds": _kling_clip_seconds(duration), "video_url": url}
 
     # default: Kling (Hyper Realistic via Replicate)
     url = await _replicate_kling_generate(prompt, duration, aspect, image_url, user_id=job.get("uid", ""))
-    return url, {"provider": "kling", "video_url": url}
+    return url, {"provider": "kling", "model": KLING_MODEL,
+                 "delivered_seconds": _kling_clip_seconds(duration), "video_url": url}
 
 
 def _vq_pump() -> None:
@@ -2001,7 +2155,9 @@ def _provider_configured(provider: str, duration: int) -> bool:
     if provider == "pika":
         return bool(PIKA_API_KEY)
     if provider == "higgsfield":
-        return bool(HIGGSFIELD_API_KEY)
+        # Hyper Realistic: Higgsfield primary OR Kling fallback — configured if
+        # either is available, so the user always gets a video.
+        return bool((HIGGSFIELD_API_KEY_ID and HIGGSFIELD_API_KEY_SECRET) or REPLICATE_API_KEY)
     return bool(REPLICATE_API_KEY)
 
 

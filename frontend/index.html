@@ -4816,7 +4816,7 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           <div style="font-size:11px;color:var(--tx3);margin-top:2px">Hyper Realistic + Premium Animation + Ultra Cinematic — included on any paid plan · 50 / 85 / 100 / 120 credits per 5s / 10s / 15s / 30s · 30s long-form via Runway gen4.5</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('kling')" data-help="help.provKling" style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
+          <button class="btn bsm" id="sp-tab-higgs" onclick="spSwitchProvider('higgsfield')" data-help="help.provHiggs" style="background:rgba(0,229,255,.18);color:var(--ac);border:1px solid rgba(0,229,255,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">⚡ Hyper Realistic</button>
           <button class="btn bsm" id="sp-tab-pika" onclick="spSwitchProvider('pika')" data-help="help.provPika" style="background:rgba(124,58,237,.18);color:#a78bfa;border:1px solid rgba(124,58,237,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Premium Animation</button>
           <button class="btn bsm" id="sp-tab-luma" onclick="spSwitchProvider('luma_ray')" data-help="help.provLuma" style="background:rgba(16,185,129,.16);color:#34d399;border:1px solid rgba(16,185,129,.4);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">🎬 Ultra Cinematic</button>
         </div>
@@ -7094,10 +7094,10 @@ var EXAMPLES = {
       prompt:'Animeret maskot der præsenterer et tilbud, farverig flad illustrationsstil, energisk',
       desc:'Animeret video med en gennemgående karakter/stil — ideel til brand-mascot, forklaringsvideoer og leg.' } },
   kling: { kind:'video', icon:'⚡', grad:'linear-gradient(135deg,#00e5ff,#22d3ee)',
-    en:{ title:'Hyper Realistic (Kling)', scene:'Photorealistic motion, natural light',
+    en:{ title:'Hyper Realistic', scene:'Photorealistic motion, natural light',
       prompt:'Photorealistic video: a runner on a beach at sunrise, slow-motion, cinematic depth',
       desc:'Most photorealistic result — real physics and light. Best for premium product and brand videos.' },
-    da:{ title:'Hyper Realistic (Kling)', scene:'Fotorealistisk bevægelse, naturligt lys',
+    da:{ title:'Hyper Realistic', scene:'Fotorealistisk bevægelse, naturligt lys',
       prompt:'Fotorealistisk video: løber på en strand ved solopgang, slow-motion, filmisk dybde',
       desc:'Mest fotorealistiske resultat — ægte fysik og lys. Bedst til premium produkt- og brandvideoer.' } },
   pika: { kind:'video', icon:'🎨', grad:'linear-gradient(135deg,#7c3aed,#a78bfa)',
@@ -8480,6 +8480,7 @@ Object.assign(I18N.en, {
   'help.studioSeries':'Combine 2–6 scenes into one continuous video with consistent style and character — ideal for storytelling.',
   'help.studioAnimation':'Generate an animated video with a recurring character/style — great for brand mascots and explainers.',
   'help.premiumProviders':'Premium AI video engines: Hyper Realistic (photorealism), Premium Animation (stylized) and Ultra Cinematic (film look). Included on all paid plans.',
+  'help.provHiggs':'Our most photorealistic engine — true-to-life physics, motion and lighting. Best for premium product and brand videos. Renders a ~5s cinematic clip.',
   'help.provKling':'Most photorealistic result with real physics and light (Kling AI). Best for premium product and brand videos.',
   'help.provPika':'Creative, stylized animation with beautiful transitions and effects (Pika) — grabs attention in the feed.',
   'help.provLuma':'Cinematic aesthetics with advanced camera moves (Luma Ray 3.2) — for your most impressive hero videos.',
@@ -8536,6 +8537,7 @@ Object.assign(I18N.da, {
   'help.studioSeries':'Saml 2–6 scener til én sammenhængende video med konsistent stil og karakter — ideelt til storytelling.',
   'help.studioAnimation':'Generér en animeret video med en gennemgående karakter/stil — godt til brand-mascot og forklaringsvideoer.',
   'help.premiumProviders':'Premium AI-video-motorer: Hyper Realistic (fotorealisme), Premium Animation (stiliseret) og Ultra Cinematic (biograf-look). Inkluderet på alle betalte planer.',
+  'help.provHiggs':'Vores mest fotorealistiske motor — naturtro fysik, bevægelse og lys. Bedst til premium produkt- og brandvideoer. Genererer et ~5s biograf-klip.',
   'help.provKling':'Mest fotorealistiske resultat med ægte fysik og lys (Kling AI). Bedst til premium produkt- og brandvideoer.',
   'help.provPika':'Kreativ, stiliseret animation med flotte overgange og effekter (Pika) — fanger opmærksomhed i feedet.',
   'help.provLuma':'Storfilm-æstetik med avancerede kamerabevægelser (Luma Ray 3.2) — til de mest imponerende hero-videoer.',
@@ -14554,7 +14556,7 @@ function libItemHtml(it) {
   var ts    = (it.created_at || '').slice(0, 16).replace('T', ' ');
   var name  = _libName(it);
   var size  = _libSize(it);
-  var providerLabel = (it.provider || '').replace('higgsfield','Hyper Realistic').replace('kling','Hyper Realistic (Kling AI)').replace('pika','Premium Animation');
+  var providerLabel = (it.provider || '').replace('higgsfield','Hyper Realistic').replace('kling','Hyper Realistic').replace('pika','Premium Animation');
   var thumb;
   if (kind === 'videos' && url) {
     thumb = '<video src="' + url + '" controls preload="metadata" draggable="false" style="width:100%;aspect-ratio:9/16;object-fit:cover;background:#000;border-radius:8px 8px 0 0"></video>';
@@ -19218,9 +19220,10 @@ function _renderAnBestPost(bp) {
 
 
 // ── Studio premium providers (Hyper Realistic + Premium Animation) ───────────
-// Hyper Realistic is powered by Kling AI (Kling 1.6 Pro via Replicate); Premium
-// Animation is powered by Pika. Both are live on any paid plan.
-window._spProvider = 'kling';
+// Hyper Realistic is powered by Higgsfield (with an automatic Kling v2.5
+// fallback, invisible to the user); Premium Animation is powered by Pika. All
+// are live on any paid plan.
+window._spProvider = 'higgsfield';
 
 // Per-duration credit cost — must match _VIDEO_CREDIT_PRICES in routes/studio.py.
 var SP_DURATION_COST = {5: 50, 10: 85, 15: 100, 30: 120};
@@ -19262,15 +19265,16 @@ function refreshStudioPremiumGate() {
 // Premium provider tabs: Hyper Realistic (Kling), Premium Animation (Pika),
 // Luma Ray 3.2. Keyed by provider id → {tab element id, label, accent colour}.
 var SP_PROVIDERS = {
-  kling:    {tab: 'sp-tab-higgs', label: 'Hyper Realistic (Kling AI)', color: 'var(--ac)'},
-  pika:     {tab: 'sp-tab-pika',  label: 'Premium Animation',          color: '#a78bfa'},
-  luma_ray: {tab: 'sp-tab-luma',  label: 'Ultra Cinematic',            color: '#34d399'},
+  higgsfield: {tab: 'sp-tab-higgs', label: 'Hyper Realistic', color: 'var(--ac)'},
+  pika:       {tab: 'sp-tab-pika',  label: 'Premium Animation', color: '#a78bfa'},
+  luma_ray:   {tab: 'sp-tab-luma',  label: 'Ultra Cinematic',   color: '#34d399'},
 };
 
 function spSwitchProvider(provider) {
-  // 'higgsfield' kept as a legacy alias for Hyper Realistic (Kling).
-  if (provider === 'higgsfield') provider = 'kling';
-  if (!SP_PROVIDERS[provider]) provider = 'kling';
+  // 'kling' is a legacy alias for the Hyper Realistic engine (now Higgsfield,
+  // with an invisible Kling v2.5 fallback handled server-side).
+  if (provider === 'kling') provider = 'higgsfield';
+  if (!SP_PROVIDERS[provider]) provider = 'higgsfield';
   window._spProvider = provider;
   Object.keys(SP_PROVIDERS).forEach(function(key) {
     var el = document.getElementById(SP_PROVIDERS[key].tab);
@@ -19306,11 +19310,11 @@ async function spGenerate() {
   if (chosenChar && chosenChar.image_url) payload.image_url = chosenChar.image_url;
   btn.disabled = true; btn.textContent = '⏳ Generating…';
   out.style.display = 'block';
-  var provLabel = (SP_PROVIDERS[window._spProvider] || SP_PROVIDERS.kling).label;
+  var provLabel = (SP_PROVIDERS[window._spProvider] || SP_PROVIDERS.higgsfield).label;
   out.textContent   = 'Sending request to ' + provLabel + '…';
   try {
-    var SP_ENDPOINTS = {kling: '/api/studio/kling', pika: '/api/studio/pika', luma_ray: '/api/studio/luma'};
-    var endpoint = SP_ENDPOINTS[window._spProvider] || SP_ENDPOINTS.kling;
+    var SP_ENDPOINTS = {higgsfield: '/api/studio/higgsfield', pika: '/api/studio/pika', luma_ray: '/api/studio/luma'};
+    var endpoint = SP_ENDPOINTS[window._spProvider] || SP_ENDPOINTS.higgsfield;
     var r = await apiFetch(endpoint, 'POST', payload);
     // Trust the server-reported cost so the toast can't disagree with the deduction.
     var charged = (r && typeof r.credits_used === 'number') ? r.credits_used : cost;
@@ -19516,7 +19520,7 @@ async function spSaveCharacter() {
   window.refreshStudioPremiumGate = function() {
     if (typeof origGate === 'function') origGate.apply(this, arguments);
     // Reflect the current provider selection on the tab buttons.
-    if (typeof spSwitchProvider === 'function') spSwitchProvider(window._spProvider || 'kling');
+    if (typeof spSwitchProvider === 'function') spSwitchProvider(window._spProvider || 'higgsfield');
     if (done) return;
     var form = document.getElementById('sp-form');
     if (form && form.style.display !== 'none') {

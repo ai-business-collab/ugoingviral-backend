@@ -13,7 +13,8 @@ COST_RATES = {
     "luma_seconds":           0.05,          # $0.05 / second (Luma Ray)
     "elevenlabs_chars":       0.0003,        # $0.30 / 1000 chars
     "replicate_predictions":  0.004,         # $0.004 / prediction (generic)
-    "replicate_video":        0.10,          # Kling/Replicate video — flat $ per generation; UPDATE as pricing changes
+    "replicate_video":        0.10,          # Kling v2.5 Turbo Pro on Replicate — $0.10 / SECOND (quantity tracked = clip seconds); UPDATE as pricing changes
+    "higgsfield_video":       0.25,          # Higgsfield "Hyper Realistic" (DoP ~5s clip) — flat $ per clip; UPDATE as pricing changes
     "sendgrid_emails":        0.0,           # free tier
 }
 
@@ -36,8 +37,8 @@ def _save(data: dict):
 
 
 def track(service: str, metric: str, quantity: float, user_id: str = "", feature: str = ""):
-    """Record an API call. service=openai|anthropic|runway|luma|elevenlabs|replicate|sendgrid
-       metric=tokens|seconds|chars|predictions|emails  quantity=amount used
+    """Record an API call. service=openai|anthropic|runway|luma|elevenlabs|replicate|higgsfield|sendgrid
+       metric=tokens|seconds|chars|predictions|video|emails  quantity=amount used
 
     If user_id is not supplied, it is auto-resolved from the request-scoped
     ContextVar so every call is attributed to the user who triggered it (this is
@@ -167,7 +168,16 @@ def get_stats(month: str = None) -> dict:
                 "today_predictions": today_stats["totals"].get("replicate_predictions", 0),
                 "month_cost": round(month_stats["costs_by_service"].get("replicate", 0), 4),
                 "today_cost": round(today_stats["costs_by_service"].get("replicate", 0), 4),
-                "rate": "$0.004/prediction",
+                "rate": "$0.10/second (Kling v2.5 video)",
+            },
+            "higgsfield": {
+                "name": "Higgsfield",
+                "icon": "⚡",
+                "month_video": month_stats["totals"].get("higgsfield_video", 0),
+                "today_video": today_stats["totals"].get("higgsfield_video", 0),
+                "month_cost": round(month_stats["costs_by_service"].get("higgsfield", 0), 4),
+                "today_cost": round(today_stats["costs_by_service"].get("higgsfield", 0), 4),
+                "rate": "$0.25/clip (Hyper Realistic)",
             },
             "sendgrid": {
                 "name": "SendGrid",
