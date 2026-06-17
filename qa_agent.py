@@ -28,7 +28,10 @@ USER_DATA_DIR = os.path.join(BASE_DIR, "user_data")
 USERS_FILE    = os.path.join(BASE_DIR, "users.json")   # legacy (pre-SQLite migration)
 USERS_DB      = os.path.join(BASE_DIR, "users.db")     # SQLite store (current source of truth)
 NEXORA_KEY    = os.getenv("NEXORA_API_KEY", "nexora-core-2026")
-NEXORA_URL    = "https://nex-core.tech/api/qa/report"
+# Post to the Nexora Core engine directly on localhost — the public nex-core.tech
+# nginx vhost does not proxy POST /api/qa/report (returns 405). The agent runs on
+# the same VPS as the engine, so the internal port is the correct, reliable target.
+NEXORA_URL    = os.getenv("NEXORA_REPORT_URL", "http://localhost:4000/api/qa/report")
 TG_BOT_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TG_ALERT_CHAT = os.getenv("TELEGRAM_ALERT_CHAT_ID", "")
 

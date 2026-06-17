@@ -17,6 +17,7 @@ import os, json, time
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Request
 import httpx
+from services.users import aget_user_by_email, aupdate_user
 
 router = APIRouter()
 
@@ -75,6 +76,23 @@ async def _run_tests() -> dict:
             t["passed"] = True
             t["note"] = "user already exists"
         tests.append(t)
+
+        # QA fixture (not a test): force-verify the disposable qa- test account so
+        # the real email-verification gate doesn't block login. Without this, login
+        # returns {requires_verification} with no token and every authenticated test
+        # below cascades to 401. Mirrors the standalone qa_agent.py bypass; scoped to
+        # qa- emails only so production accounts are never touched.
+        if QA_EMAIL.startswith("qa-"):
+            try:
+                qa_user = await aget_user_by_email(QA_EMAIL)
+                if qa_user:
+                    await aupdate_user(qa_user["id"], {
+                        "email_verified": True,
+                        "verification_code": "",
+                        "verification_expires": "",
+                    })
+            except Exception:
+                pass
 
         # ── 3. User login ────────────────────────────────────────────
         t = await _test(
