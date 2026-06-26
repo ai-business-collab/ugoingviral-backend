@@ -745,6 +745,97 @@ async def _execute_post_now(uid: str, ustore: dict, current_user: dict, pending:
                         actions=[{"type": "navigate", "page": "connect"}] if status not in ("published", "processing") else [])
 
 
+def _niche_topic(ustore: dict) -> str:
+    return (ustore.get("settings", {}).get("niche")
+            or (ustore.get("automation") or {}).get("niche")
+            or "your niche")
+
+
+async def _youtube_video_worker(uid: str, current_user: dict, topic: str, da: bool):
+    """Background: text → AI image → video → upload to YouTube. Runs detached so
+    the chat reply returns immediately (generation takes a couple of minutes).
+    Charges credits only on a successful video; notifies the user when done."""
+    import asyncio as _a
+    try:
+        from services.ai_media import generate_text_to_video
+        from routes.posts import publish_via_api
+        prompt = f"Short engaging vertical video about {topic}"
+        res = await generate_text_to_video(prompt, uid, duration=5, aspect_ratio="9:16")
+        ustore = _load_user_store(uid)
+        if not res.get("ok") or not res.get("video_url"):
+            _log_agent_activity(uid, ustore, "YouTube video generation failed", "post_content",
+                                {"platform": "youtube", "error": res.get("message", "")})
+            _save_user_store(uid, ustore)
+            _notify(uid, "youtube_failed", "YouTube video failed",
+                    res.get("message", "Video generation failed — no credits charged."))
+            return
+        # Charge for the generated media (image 8 + clip 40), then upload.
+        try:
+            from routes.content_team import IMAGE_COST, VIDEO_COST
+            b = ustore.setdefault("billing", {})
+            b["credits"] = max(0, (b.get("credits", 0) or 0) - (IMAGE_COST + VIDEO_COST))
+            _save_user_store(uid, ustore)
+        except Exception:
+            pass
+        caption = await _gen_caption(topic, "youtube", "da" if da else "en")
+        result = await publish_via_api(
+            _FakeReq({"platform": "youtube", "content": caption,
+                      "title": (topic or "New video")[:90], "video_url": res["video_url"]}),
+            current_user,
+        )
+        ustore = _load_user_store(uid)
+        ok = result.get("status") in ("published", "processing")
+        url = result.get("post_url") or result.get("url") or ""
+        _log_agent_activity(uid, ustore, "Uploaded YouTube video" if ok else "YouTube upload failed",
+                            "post_content", {"platform": "youtube", "url": url, "msg": result.get("message", "")})
+        _save_user_store(uid, ustore)
+        _notify(uid, "youtube_done" if ok else "youtube_failed",
+                "YouTube video uploaded" if ok else "YouTube upload failed",
+                (f"Your video about “{topic}” is live. {url}" if ok
+                 else f"Upload failed: {result.get('message','')}. The video was generated — try Connect/retry."))
+    except Exception as e:
+        try:
+            _notify(uid, "youtube_failed", "YouTube video error", str(e)[:160])
+        except Exception:
+            pass
+
+
+def _notify(uid: str, kind: str, title: str, body: str):
+    try:
+        from routes.notifications import push_notification
+        push_notification(uid, kind, title, body)
+    except Exception:
+        pass
+
+
+async def _execute_youtube_video(uid: str, ustore: dict, current_user: dict, pending: dict) -> dict:
+    """Kick off YouTube video generation+upload in the background and reply now."""
+    import asyncio as _a
+    da = pending.get("da", True)
+    topic = pending.get("topic", "") or _niche_topic(ustore)
+    ustore.pop("agent_pending_action", None)
+    # Credit pre-check (image + clip).
+    try:
+        from routes.content_team import IMAGE_COST, VIDEO_COST
+        need = IMAGE_COST + VIDEO_COST
+        have = (ustore.get("billing", {}) or {}).get("credits", 0) or 0
+        if have < need:
+            txt = (f"Du har ikke nok credits ({have}/{need}) til en YouTube-video." if da
+                   else f"Not enough credits ({have}/{need}) for a YouTube video.")
+            return _agent_reply(uid, ustore, pending.get("origin_msg", ""), txt,
+                                actions=[{"type": "navigate", "page": "billing"}])
+    except Exception:
+        pass
+    _log_agent_activity(uid, ustore, f"Generating YouTube video about {topic}", "post_content",
+                        {"platform": "youtube", "status": "processing"})
+    _a.create_task(_youtube_video_worker(uid, current_user, topic, da))
+    txt = (f"🎬 Jeg laver din YouTube-video om “{topic}” nu — den uploades om et par minutter. "
+           f"Jeg giver besked når den er klar." if da
+           else f"🎬 Generating your YouTube video about “{topic}” now — it'll upload in a couple of minutes. "
+                f"I'll notify you when it's live.")
+    return _agent_reply(uid, ustore, pending.get("origin_msg", ""), txt)
+
+
 async def _route_ugv_action(uid: str, message: str, ustore: dict, current_user: dict):
     """Return a chat payload if this message is a UgoingViral action, else None."""
     msg = (message or "").strip()
@@ -753,8 +844,10 @@ async def _route_ugv_action(uid: str, message: str, ustore: dict, current_user: 
 
     # 0) Resolve a pending post confirmation first.
     pending = ustore.get("agent_pending_action")
-    if pending and pending.get("type") == "post_now":
+    if pending and pending.get("type") in ("post_now", "youtube_video"):
         if low in _AFFIRM or any(low.startswith(a) for a in _AFFIRM):
+            if pending.get("type") == "youtube_video":
+                return await _execute_youtube_video(uid, ustore, current_user, pending)
             return await _execute_post_now(uid, ustore, current_user, pending)
         if low in _NEGATE or any(low.startswith(n) for n in _NEGATE):
             ustore.pop("agent_pending_action", None)
@@ -823,6 +916,26 @@ async def _route_ugv_action(uid: str, message: str, ustore: dict, current_user: 
 
     # 3) Post NOW to a platform → generate, then ask for confirmation.
     platform = _detect_platform(low)
+    # YouTube is video-only — the agent generates a real video (text→AI image→
+    # video) and uploads it. Gate behind a confirm because it costs credits +
+    # takes a couple of minutes.
+    if platform == "youtube" and (_POST_VERB_RE.search(low) or _CREATE_VERB_RE.search(low)):
+        topic = _extract_topic(msg) or _niche_topic(ustore)
+        ustore["agent_pending_action"] = {
+            "type": "youtube_video", "platform": "youtube", "topic": topic,
+            "da": da, "origin_msg": msg, "ts": datetime.now().isoformat(),
+        }
+        _save_user_store(uid, ustore)
+        if da:
+            txt = (f"Jeg kan lave en YouTube-video om “{topic}” (AI-billede → video) "
+                   f"og uploade den. Det koster ca. 48 credits og tager et par minutter. "
+                   f"Skal jeg gå i gang? Svar **Ja** eller **Nej**.")
+        else:
+            txt = (f"I can create a YouTube video about “{topic}” (AI image → video) "
+                   f"and upload it. It costs ~48 credits and takes a couple of minutes. "
+                   f"Shall I start? Reply **Yes** or **No**.")
+        return _agent_reply(uid, ustore, msg, txt)
+
     if platform and _POST_VERB_RE.search(low):
         topic = _extract_topic(msg)
         caption = await _gen_caption(topic, platform, "da" if da else "en")

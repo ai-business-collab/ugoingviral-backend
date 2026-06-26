@@ -36,17 +36,54 @@ def autopilot_status(current_user: dict = Depends(get_current_user)):
     log = store.get("automation_log", [])
     recent_log = list(reversed(log[-20:])) if log else []
 
-    # Platform toggles
+    # Platform toggles — show EVERY connected platform (not only ones already in
+    # automation.platforms), so the user can enable YouTube/X/Facebook too.
+    settings = store.get("settings", {}) or {}
+    conns = store.get("connections", {}) or {}
+    connected = set()
+    for p in ("instagram", "tiktok", "youtube", "twitter", "facebook"):
+        if settings.get(f"{p}_api_connected") or settings.get(f"{p}_access_token") or settings.get(f"{p}_api_token"):
+            connected.add(p)
+        v = conns.get(p)
+        if isinstance(v, dict) and (v.get("connected") or v.get("username") or v.get("access_token")):
+            connected.add(p)
+    plat_cfg = auto.get("platforms", {}) or {}
     platform_status = {}
-    for p, cfg in auto.get("platforms", {}).items():
+    for p in sorted(connected | set(plat_cfg.keys())):
+        cfg = plat_cfg.get(p, {}) if isinstance(plat_cfg, dict) else {}
         platform_status[p] = {
             "active":     cfg.get("active", False),
             "auto_post":  cfg.get("auto_post", False),
+            "connected":  p in connected,
         }
+
+    # Plain-language reasons autopilot may not be posting right now.
+    why = []
+    ct_ap = (store.get("content_team", {}) or {}).get("autopilot", {}) or {}
+    enabled_plats = [p for p, s in platform_status.items() if s["auto_post"]]
+    enabled_connected = [p for p in enabled_plats if p in connected]
+    if ct_ap.get("enabled"):
+        why.append("True Auto Pilot (Content Team) is active and drives posting — the legacy real-time poster is paused to avoid double-posting.")
+    if not active:
+        why.append("Auto Pilot is OFF — turn it on.")
+    if not connected:
+        why.append("No social platform connected — connect one under Connect.")
+    if not enabled_plats:
+        why.append("No platform enabled for auto-post — enable at least one platform above.")
+    elif not enabled_connected:
+        why.append("Enabled platform(s) aren't connected — connect them or enable a connected one.")
+    if not times:
+        why.append("No posting times set.")
+    if not (store.get("manual_products") or store.get("shopify_products_cache") or auto.get("niche")):
+        why.append("No products and no niche set — add products or set a niche so content can be generated.")
+    if active and enabled_connected and times and not why:
+        why.append(f"All set — posts fire at your scheduled times ({', '.join(times)}). Use 'Post one now' to publish immediately.")
 
     return {
         "active":          active,
         "platforms":       platform_status,
+        "connected_platforms": sorted(connected),
+        "why_not_posting": why,
         "post_times":      times,
         "schedule_days":   days,
         "upcoming_posts":  upcoming,
@@ -84,14 +121,36 @@ async def toggle_autopilot(req: Request, current_user: dict = Depends(get_curren
     return {"ok": True, "active": active}
 
 
+def _spread_times(n: int) -> list:
+    """Evenly spread N posting times across the active window (08:00–21:00).
+    This is the bridge that makes 'posts per day' a REAL, honored setting —
+    the scheduler reads post_times, so we regenerate them from N."""
+    n = max(1, min(10, int(n)))
+    start, end = 8 * 60, 21 * 60   # minutes
+    if n == 1:
+        slots = [12 * 60]
+    else:
+        step = (end - start) / (n - 1)
+        slots = [int(round(start + step * i)) for i in range(n)]
+    return [f"{m // 60:02d}:{m % 60:02d}" for m in slots]
+
+
 @router.post("/api/autopilot/settings")
 async def update_autopilot_settings(req: Request, current_user: dict = Depends(get_current_user)):
     d = await req.json()
     auto = store.setdefault("automation", {})
+    # ONE source of truth for cadence: post_times is what the scheduler honors.
+    # posts_per_day and post_times are kept in sync so neither is silently ignored.
     if "post_times" in d:
         auto["post_times"] = d["post_times"]
+        auto["posts_per_day"] = max(1, min(10, len(d["post_times"]) or 1))
     if "posts_per_day" in d:
-        auto["posts_per_day"] = max(1, min(10, int(d["posts_per_day"])))
+        ppd = max(1, min(10, int(d["posts_per_day"])))
+        auto["posts_per_day"] = ppd
+        # Regenerate the time slots the scheduler actually uses, unless the same
+        # call already supplied explicit post_times.
+        if "post_times" not in d:
+            auto["post_times"] = _spread_times(ppd)
     if "schedule_days" in d:
         auto["schedule_days"] = d["schedule_days"]
     if "platforms" in d:

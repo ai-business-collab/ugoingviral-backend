@@ -5333,6 +5333,8 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <option value="2">2 posts/day</option>
               <option value="3" selected>3 posts/day</option>
               <option value="5">5 posts/day</option>
+              <option value="7">7 posts/day</option>
+              <option value="10">10 posts/day</option>
             </select>
           </div>
           <div>
@@ -18397,7 +18399,28 @@ async function loadAutoPilot() {
     renderApUpcoming(d.upcoming_posts||[]);
     renderApLog(d.recent_log||[]);
     var el=document.getElementById('ap-ppd'); if(el && d.posts_per_day) el.value=String(d.posts_per_day);
+    renderApDiagnostic(d.why_not_posting||[]);
   } catch(e) { console.error('autopilot load error',e); }
+}
+
+function renderApDiagnostic(reasons){
+  var box=document.getElementById('ap-diagnostic');
+  if(!box){
+    var anchor=document.getElementById('ap-platforms');
+    if(anchor && anchor.parentElement){
+      box=document.createElement('div'); box.id='ap-diagnostic';
+      box.style.cssText='margin:0 0 16px;border-radius:10px;padding:11px 13px;font-size:12px;line-height:1.6';
+      anchor.parentElement.parentElement.insertBefore(box, anchor.parentElement);
+    } else return;
+  }
+  if(!reasons.length){ box.style.display='none'; return; }
+  var allGood = reasons.length===1 && reasons[0].indexOf('All set')===0;
+  box.style.display='block';
+  box.style.background = allGood ? 'rgba(16,185,129,.08)' : 'rgba(245,158,11,.08)';
+  box.style.border = '1px solid '+(allGood?'rgba(16,185,129,.3)':'rgba(245,158,11,.3)');
+  box.style.color = allGood ? '#6ee7b7' : '#f59e0b';
+  box.innerHTML = (allGood?'✅ ':'⚠️ <b>Why it isn\'t posting yet:</b><br>') +
+    reasons.map(function(r){ return allGood ? _ctEsc(r) : '• '+_ctEsc(r); }).join('<br>');
 }
 
 function renderApToggle(active) {

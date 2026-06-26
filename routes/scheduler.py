@@ -452,6 +452,13 @@ async def _run_for_user(force: bool = False):
         if not auto.get("active", False):
             return
 
+        # DOUBLE-POST GUARD: True Auto Pilot (Content Team) is the newer system
+        # and schedules its own posts. If it's enabled, the legacy real-time
+        # generator stands down so the two never post the same week twice.
+        _ctap = (store.get("content_team", {}) or {}).get("autopilot", {}) or {}
+        if _ctap.get("enabled"):
+            return
+
         now = datetime.now()
 
         # Quiet hours — no posting between 23:00–07:00 unless disabled

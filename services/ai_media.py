@@ -149,8 +149,21 @@ async def generate_text_to_video(prompt: str, uid: str = "", duration: int = 5,
         # No video provider — at least return the image so the caller can still use it.
         return {"ok": False, "image_url": img,
                 "message": "AI image created, but no video provider is configured (RUNWAY/LUMA/REPLICATE)."}
-    try:
-        video_url = await studio._generate_video(prompt, prov, duration, aspect_ratio, image_url=img)
-        return {"ok": True, "video_url": video_url, "image_url": img, "provider": prov}
-    except Exception as e:
-        return {"ok": False, "image_url": img, "provider": prov, "message": f"Video step failed: {str(e)[:160]}"}
+    # Retry transient video-gen failures (Runway/Luma queue hiccups) before
+    # giving up — YouTube is a core platform, so don't drop a post on one blip.
+    last_err = ""
+    providers_try = [prov] + [p for p in ("luma_ray", "luma", "replicate", "runway")
+                              if p != prov and studio.PROVIDERS.get(p, {}).get("available")]
+    for attempt in range(3):
+        use_prov = providers_try[min(attempt, len(providers_try) - 1)]
+        try:
+            video_url = await studio._generate_video(prompt, use_prov, duration, aspect_ratio, image_url=img)
+            if video_url:
+                return {"ok": True, "video_url": video_url, "image_url": img,
+                        "provider": use_prov, "attempts": attempt + 1}
+            last_err = "empty result"
+        except Exception as e:
+            last_err = str(e)[:160]
+        _LOGGER.warning("video gen attempt %d via %s failed: %s", attempt + 1, use_prov, last_err)
+    return {"ok": False, "image_url": img, "provider": prov,
+            "message": f"Video step failed after retries: {last_err}"}

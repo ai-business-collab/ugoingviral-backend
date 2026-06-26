@@ -1080,7 +1080,10 @@ async def _fill_media(uid: str, schedule: list, sources: dict, ap: dict, signals
     made = {"ai_images": 0, "ai_videos": 0, "reposts": 0, "skipped_no_budget": 0}
     generated_videos = []
 
-    for it in schedule:
+    # Process YouTube slots FIRST — it's a core revenue platform, so it gets the
+    # video budget before cheaper image platforms consume credits.
+    ordered = sorted(schedule, key=lambda s: 0 if s.get("platform") == "youtube" else 1)
+    for it in ordered:
         if it.get("image_url") or it.get("video_url"):
             continue  # pool already supplied media
         plat = it.get("platform", "")
