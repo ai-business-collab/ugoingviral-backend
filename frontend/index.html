@@ -11425,21 +11425,16 @@ async function checkInstagramAPIStatus() {
   } catch(e) {}
 }
 
-async function connectTikTokAPI() {
-  toast('⏳ Opening TikTok login...', 'info');
-  openOAuthPopup('/api/tiktok/connect', 'tiktok_oauth', 'tiktok', checkTikTokAPIStatus);
-}
-
-function openOAuthPopup(url, name, platform, onDone) {
+function _openCenteredPopup(url, name) {
   const w = 600, h = 720;
   const left = (window.screenX || 0) + Math.max(0, (window.outerWidth  - w) / 2);
   const top  = (window.screenY || 0) + Math.max(0, (window.outerHeight - h) / 2);
-  const popup = window.open(url, name, `width=${w},height=${h},left=${left},top=${top}`);
-  if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-    toast('⚠️ Popup blocked — please allow popups and try again', 'error');
-    return;
-  }
-  // Listen for the callback page postMessage and refresh status when done.
+  return window.open(url, name, `width=${w},height=${h},left=${left},top=${top}`);
+}
+
+// Wire an already-opened OAuth popup: refresh status on the callback's
+// postMessage, and also if the user closes the popup manually.
+function _wireOAuthPopup(popup, platform, onDone) {
   function onMsg(ev) {
     const d = ev.data || {};
     if (d.type !== 'oauth_result' || d.platform !== platform) return;
@@ -11453,7 +11448,6 @@ function openOAuthPopup(url, name, platform, onDone) {
     if (typeof onDone === 'function') setTimeout(onDone, 400);
   }
   window.addEventListener('message', onMsg);
-  // Fallback: if the user closes the popup manually, still refresh status.
   const closedPoll = setInterval(() => {
     if (popup.closed) {
       clearInterval(closedPoll);
@@ -11461,6 +11455,37 @@ function openOAuthPopup(url, name, platform, onDone) {
       if (typeof onDone === 'function') setTimeout(onDone, 400);
     }
   }, 800);
+}
+
+async function connectTikTokAPI() {
+  toast('⏳ Opening TikTok login...', 'info');
+  // Open the popup synchronously (inside the click gesture, so it isn't blocked),
+  // then point it at the user-bound OAuth URL we fetch authenticated. The auth'd
+  // request lets the backend bind this connection to THIS user — so the token is
+  // stored in our store, exactly where manual posting and autopilot read it.
+  const popup = _openCenteredPopup('about:blank', 'tiktok_oauth');
+  if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+    toast('⚠️ Popup blocked — please allow popups and try again', 'error');
+    return;
+  }
+  try {
+    const r = await apiFetch('/api/tiktok/connect');
+    if (!r || !r.url) { popup.close(); toast('❌ Could not start TikTok login', 'error'); return; }
+    popup.location = r.url;
+    _wireOAuthPopup(popup, 'tiktok', checkTikTokAPIStatus);
+  } catch (e) {
+    try { popup.close(); } catch (_) {}
+    toast('❌ ' + (e.message || 'TikTok login failed'), 'error');
+  }
+}
+
+function openOAuthPopup(url, name, platform, onDone) {
+  const popup = _openCenteredPopup(url, name);
+  if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+    toast('⚠️ Popup blocked — please allow popups and try again', 'error');
+    return;
+  }
+  _wireOAuthPopup(popup, platform, onDone);
 }
 
 async function checkTikTokAPIStatus() {

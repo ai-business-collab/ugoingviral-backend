@@ -45,14 +45,29 @@ def _popup_close_html(platform: str, status: str, message: str = "") -> str:
 
 @router.get("/api/tiktok/connect")
 async def tiktok_oauth_start():
-    """Start TikTok OAuth flow"""
+    """Start TikTok OAuth flow.
+
+    Binds the flow to the CURRENT authenticated user by encoding their user_id
+    into the OAuth `state`. The callback decodes it and stores the token in that
+    exact user's store — so the connection always lands where manual posting and
+    the autopilot/scheduler read it (one source of truth). When called with auth
+    (apiFetch sets the JWT → middleware sets user context) we return the URL as
+    JSON so the frontend can open a user-bound popup; an unauthenticated direct
+    navigation still gets a redirect (state without user_id → legacy fallback)."""
     try:
         from tiktok_api import build_authorization_url, TIKTOK_CLIENT_KEY
         if not TIKTOK_CLIENT_KEY:
             return {"status": "error", "message": "TIKTOK_CLIENT_KEY ikke konfigureret"}
         import base64, json as _json
-        state = base64.urlsafe_b64encode(_json.dumps({"platform": "tiktok"}).encode()).decode()
+        from services.store import _uid_ctx
+        uid = _uid_ctx.get(None)
+        payload = {"platform": "tiktok"}
+        if uid:
+            payload["user_id"] = uid
+        state = base64.urlsafe_b64encode(_json.dumps(payload).encode()).decode()
         url = build_authorization_url(state)
+        if uid:
+            return {"url": url}
         return RedirectResponse(url=url)
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -68,11 +83,25 @@ async def tiktok_oauth_callback(code: str = "", error: str = "", state: str = ""
         from tiktok_api import exchange_code_for_token, get_user_info
         from services.users import load_users
         from services.store import set_user_context
-        users_data = load_users()
-        users = users_data.get("users", [])
-        active_user = next((u for u in users if u.get("is_active")), None)
-        if active_user:
-            set_user_context(active_user["id"])
+        # Bind to the user who STARTED the connect (user_id encoded in state).
+        # This guarantees the token is stored in the connecting user's store —
+        # the same store manual posting and the autopilot/scheduler read from.
+        # Fall back to the active user only when state carries no user_id
+        # (legacy/direct-navigation flows).
+        target_uid = ""
+        try:
+            import base64, json as _j
+            decoded = _j.loads(base64.urlsafe_b64decode(state.encode()).decode())
+            if isinstance(decoded, dict):
+                target_uid = decoded.get("user_id", "") or ""
+        except Exception:
+            target_uid = ""
+        if not target_uid:
+            users = load_users().get("users", [])
+            active_user = next((u for u in users if u.get("is_active")), None)
+            target_uid = active_user["id"] if active_user else ""
+        if target_uid:
+            set_user_context(target_uid)
         token_data = await exchange_code_for_token(code)
         access_token  = token_data.get("access_token", "")
         refresh_token = token_data.get("refresh_token", "")
