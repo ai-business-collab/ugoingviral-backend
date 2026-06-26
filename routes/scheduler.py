@@ -348,6 +348,56 @@ async def _run_for_user(force: bool = False):
                 asyncio.create_task(_post_via_api())
                 continue
 
+            # TikTok scheduled posts go through the OFFICIAL Content Posting API
+            # ONLY (mirrors the Auto Pilot _auto_tt block). The Playwright
+            # scraping fallback is disabled for TikTok — it violates TikTok's
+            # terms of service and risks the app. TikTok always `continue`s here
+            # so it can never fall through to _pw_post_sync below.
+            if platform == "tiktok":
+                if not settings_data.get("tiktok_api_connected"):
+                    add_log("⚠️ Scheduled TikTok post skipped — TikTok API not connected "
+                            "(Playwright scraping disabled). Reconnect under Connect.", "warning")
+                    continue
+                add_log(f"📅 Executing scheduled post via TikTok API: {prod_title[:25]}...", "info")
+                async def _sched_tt(pc=post_content, iu=image_url, pt=prod_title, sd=settings_data):
+                    try:
+                        from tiktok_api import refresh_token_if_needed as tt_refresh, publish_to_tiktok
+                        token   = sd.get("tiktok_access_token", "")
+                        refresh = sd.get("tiktok_refresh_token", "")
+                        exp     = sd.get("tiktok_expires_at")
+                        new_token, new_ref, new_exp = await tt_refresh(token, refresh, exp)
+                        if new_exp:
+                            _s = store.get("settings", {})
+                            _s["tiktok_access_token"]  = new_token
+                            _s["tiktok_refresh_token"] = new_ref or refresh
+                            _s["tiktok_expires_at"]    = new_exp
+                            save_store()
+                            token = new_token
+                        vid_url = iu if isinstance(iu, str) and iu.endswith(('.mp4', '.mov', '.webm')) else None
+                        img_url = iu if isinstance(iu, str) and not vid_url else None
+                        # Scheduled posts are intended for the audience — post
+                        # publicly (matches the public behaviour of the Playwright
+                        # path this replaces; sandbox is off in production).
+                        result = await publish_to_tiktok(
+                            token, pc, video_url=vid_url, image_url=img_url,
+                            privacy_level="PUBLIC_TO_EVERYONE",
+                        )
+                        if result.get("status") in ("published", "processing"):
+                            add_log(f"✅ Scheduled post published via TikTok API: {pt[:25]}", "success")
+                            now_s = datetime.now()
+                            key = f"{now_s.strftime('%Y-%m-%d')}_{now_s.strftime('%H:%M')}_manual"
+                            store.setdefault("scheduler_log", {})[key] = {
+                                "product": pt, "platform": "tiktok",
+                                "time": now_s.strftime("%H:%M"), "date": now_s.strftime("%Y-%m-%d")
+                            }
+                            save_store()
+                        else:
+                            add_log(f"❌ TikTok API post error: {result.get('message','')[:80]}", "error")
+                    except Exception as e:
+                        add_log(f"❌ TikTok API post exception: {str(e)[:80]}", "error")
+                asyncio.create_task(_sched_tt())
+                continue
+
             user = settings_data.get(f"{platform}_user", "")
             pwd = settings_data.get(f"{platform}_pass", "")
             session_path = os.path.join(os.path.dirname(__file__), "sessions", f"{platform}_session.json")
@@ -567,7 +617,14 @@ async def _run_for_user(force: bool = False):
                 posted_count += 1
                 continue
 
-            if platform == "tiktok" and settings.get("tiktok_api_connected"):
+            if platform == "tiktok":
+                # TikTok uses the OFFICIAL API only. Playwright scraping is
+                # disabled (TikTok ToS). Always `continue` so an unconnected
+                # TikTok can never fall through to the Playwright fallback below.
+                if not settings.get("tiktok_api_connected"):
+                    add_log("⏭️ Skipped TikTok: API not connected "
+                            "(Playwright scraping disabled). Reconnect under Connect.", "info")
+                    continue
                 add_log(f"⏰ Auto Pilot → TikTok: {prod_label[:30]}", "info")
                 async def _auto_tt(pc=caption_text, iu=image_url, sd=settings, lbl=prod_label):
                     try:
@@ -924,6 +981,13 @@ async def run_scheduler():
 
 
 def _pw_post_sync(platform, content, image_url, username, password):
+    # Hard guard: TikTok must NEVER be posted via Playwright browser scraping —
+    # it violates TikTok's terms of service and risks the app. TikTok posting
+    # goes exclusively through the official Content Posting API (tiktok_api).
+    if (platform or "").lower() == "tiktok":
+        add_log("⛔ Refused Playwright TikTok post — scraping is disabled; "
+                "use the official TikTok API path.", "warning")
+        return
     import asyncio as _asyncio
     loop = _asyncio.new_event_loop()
     _asyncio.set_event_loop(loop)
