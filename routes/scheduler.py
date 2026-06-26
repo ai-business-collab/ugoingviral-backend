@@ -653,22 +653,18 @@ async def _run_for_user(force: bool = False):
 
             if platform == "twitter" and settings.get("twitter_api_connected"):
                 add_log(f"⏰ Auto Pilot → Twitter/X: {prod_label[:30]}", "info")
-                async def _auto_tw(pc=caption_text, sd=settings):
+                async def _auto_tw(pc=caption_text):
                     try:
-                        from twitter_api import post_tweet
-                        result = await post_tweet(
-                            text=pc,
-                            access_token=sd.get("twitter_access_token", ""),
-                            access_secret=sd.get("twitter_access_secret", ""),
-                            consumer_key=sd.get("twitter_api_key", ""),
-                            consumer_secret=sd.get("twitter_api_secret", ""),
-                        )
-                        if result.get("ok") or result.get("id"):
+                        # The real X v2 poster lives in routes.twitter and reads
+                        # the token from the user store itself (takes just text).
+                        # The old `from twitter_api import post_tweet(...)` call
+                        # imported a non-existent module and always no-op'd.
+                        from routes.twitter import post_tweet
+                        result = await post_tweet(pc)
+                        if result.get("status") in ("published", "processing") or result.get("tweet_id"):
                             add_log(f"✅ Posted to Twitter/X: {pc[:60]}…", "success")
                         else:
-                            add_log(f"❌ Twitter/X error: {str(result)[:60]}", "error")
-                    except ImportError:
-                        add_log("⏭️ Skipped Twitter/X: twitter_api module not configured", "info")
+                            add_log(f"❌ Twitter/X error: {result.get('message', str(result))[:60]}", "error")
                     except Exception as _e:
                         add_log(f"❌ Twitter/X exception: {str(_e)[:80]}", "error")
                 asyncio.create_task(_auto_tw())
@@ -714,6 +710,33 @@ async def _run_for_user(force: bool = False):
                     except Exception as _e:
                         add_log(f"❌ YouTube exception: {str(_e)[:80]}", "error")
                 asyncio.create_task(_auto_yt())
+                posted_count += 1
+                continue
+
+            if platform == "facebook":
+                # Facebook posts via the Graph API (single Page token in .env),
+                # mirroring the manual publish path — NOT Playwright scraping.
+                from facebook_api import get_access_token as _fb_token
+                fb_tok = _fb_token()
+                if not fb_tok:
+                    add_log("⏭️ Skipped Facebook: not connected (set FACEBOOK_ACCESS_TOKEN in .env)", "info")
+                    continue
+                add_log(f"⏰ Auto Pilot → Facebook: {prod_label[:30]}", "info")
+                async def _auto_fb(pc=caption_text, iu=image_url, tok=fb_tok, lbl=prod_label):
+                    try:
+                        from facebook_api import post_to_facebook
+                        vid = iu if isinstance(iu, str) and iu.endswith(('.mp4', '.mov', '.webm')) else None
+                        single_img = (iu if isinstance(iu, str) and not vid
+                                      else (iu[0] if isinstance(iu, list) and iu else None))
+                        result = await post_to_facebook(caption=pc, image_url=single_img,
+                                                        video_url=vid, access_token=tok)
+                        if result.get("status") in ("published", "processing"):
+                            add_log(f"✅ Posted to Facebook: {pc[:50]}…", "success")
+                        else:
+                            add_log(f"❌ Facebook error: {result.get('message','unknown')[:60]}", "error")
+                    except Exception as _e:
+                        add_log(f"❌ Facebook exception: {str(_e)[:80]}", "error")
+                asyncio.create_task(_auto_fb())
                 posted_count += 1
                 continue
 
