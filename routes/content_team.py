@@ -171,6 +171,56 @@ def _recommended_cadence(platforms: list) -> int:
     return max(3, min(14, rec))
 
 
+# ── Media sources (user-selectable, mixable — type NEVER forces) ─────────────
+# Three independent sources the user can toggle in any combination. Autopilot
+# mixes whichever are enabled. Defaults are permissive (use what's available);
+# Content Team's detected user_type only RECOMMENDS a mix, never forces it.
+MEDIA_SOURCE_DEFAULTS = {"uploads": True, "products": True, "ai": False}
+
+# Platforms that CANNOT post without media (never post empty there).
+_MEDIA_REQUIRED = {"tiktok", "youtube"}
+
+
+def _media_sources_cfg(ct: dict) -> dict:
+    ap = ct.get("autopilot") or {}
+    src = dict(MEDIA_SOURCE_DEFAULTS)
+    src.update({k: bool(v) for k, v in (ap.get("media_sources") or {}).items() if k in MEDIA_SOURCE_DEFAULTS})
+    return src
+
+
+def _recommended_sources(user_type: str) -> dict:
+    """Advisory default mix based on the detected user type. The user can accept
+    or override any of it — this never forces what autopilot actually uses."""
+    if user_type == "webshop":
+        rec = {"uploads": False, "products": True, "ai": True}
+        why = "You're a webshop — we suggest your products + some AI."
+    elif user_type == "local_business":
+        rec = {"uploads": True, "products": True, "ai": False}
+        why = "You're a local business — we suggest your own photos + products."
+    else:  # creator / influencer
+        rec = {"uploads": True, "products": False, "ai": True}
+        why = "You're a creator — we suggest your uploads + some AI."
+    return {"sources": rec, "why": why}
+
+
+def _media_pool(signals: dict, sources: dict) -> list:
+    """Build the mixed media pool from the ENABLED sources, as
+    [{"url","type","source"}]. 'ai' contributes no visual media yet — there is
+    no text-to-image generator (see honest plan); it is surfaced but inert for
+    visuals until an image API is added."""
+    pool = []
+    if sources.get("uploads"):
+        for m in (signals.get("uploads_media") or []):
+            if isinstance(m, dict) and m.get("url"):
+                pool.append({"url": m["url"], "type": m.get("type", "image"), "source": "uploads"})
+    if sources.get("products"):
+        for u in (signals.get("product_images") or []):
+            if isinstance(u, str) and u:
+                pool.append({"url": u, "type": "image", "source": "products"})
+    # sources["ai"] → no standalone visual media available yet (no image gen).
+    return pool
+
+
 def _build_slots(post_times: list, schedule_days: list, need: int) -> list:
     """Build up to `need` (date_iso, "HH:MM") slots from the user's own posting
     days (isoweekday 1=Mon…7=Sun) and time-of-day slots, starting tomorrow and
@@ -252,6 +302,18 @@ def _collect_signals(uid: str) -> dict:
                 if isinstance(im, str) and im:
                     product_images.append(im)
 
+    # The user's OWN uploaded/saved library media (images + videos), used as-is.
+    uploads_media = []
+    for it in (us.get("library_items") or []):
+        if not isinstance(it, dict):
+            continue
+        url = it.get("local_url") or it.get("source_url") or it.get("url") or ""
+        if not isinstance(url, str) or not url:
+            continue
+        kind = str(it.get("media_type") or it.get("kind") or "").lower()
+        mtype = "video" if ("video" in kind) else "image"
+        uploads_media.append({"url": url, "type": mtype})
+
     return {
         "platforms": platforms,
         "followers": followers,
@@ -265,6 +327,7 @@ def _collect_signals(uid: str) -> dict:
         "is_webshop": is_webshop,
         "products": products[:8],
         "product_images": product_images[:40],
+        "uploads_media": uploads_media[:60],
         "plan": (us.get("billing", {}) or {}).get("plan", "free"),
         "has_data": has_data,
         # User's chosen cadence (source of truth) + raw slots for scheduling.
@@ -737,9 +800,11 @@ class PublishingManager(TeamAgent):
         user_days = signals.get("schedule_days") or []   # 1=Mon … 7=Sun (isoweekday)
         slots = _build_slots(user_times, user_days, n) if (user_times and user_days) else None
 
-        # Product images are the only free media source (no AI image gen exists);
-        # round-robin them across posts. Video gen is opt-in (handled downstream).
-        prod_imgs = [u for u in (signals.get("product_images") or []) if isinstance(u, str) and u]
+        # MIX media from whichever sources the user enabled (uploads / products /
+        # ai). Round-robin the mixed pool across posts. 'ai' yields no visual
+        # media yet (no text-to-image generator) — captions are always AI.
+        sources = self.context.get("media_sources") or dict(MEDIA_SOURCE_DEFAULTS)
+        pool = _media_pool(signals, sources)
 
         start = datetime.utcnow().date() + timedelta(days=1)
         schedule = []
@@ -756,7 +821,12 @@ class PublishingManager(TeamAgent):
             hook = it.get("hook") or it.get("idea", "")
             # A ready-to-edit caption from the script (hook → value → CTA).
             caption = "\n\n".join(x for x in [hook, it.get("value", ""), it.get("cta", "")] if x).strip() or hook
-            img = prod_imgs[i % len(prod_imgs)] if prod_imgs else ""
+            media = pool[i % len(pool)] if pool else None
+            image_url = media["url"] if (media and media["type"] == "image") else ""
+            video_url = media["url"] if (media and media["type"] == "video") else ""
+            # Honest gate: YouTube needs video; TikTok needs image OR video.
+            needs_media = (plat == "youtube" and not video_url) or \
+                          (plat == "tiktok" and not image_url and not video_url)
             schedule.append({
                 "id": f"ct-{i}",
                 "date": d.isoformat(),
@@ -767,26 +837,35 @@ class PublishingManager(TeamAgent):
                 "idea": it.get("idea", ""),
                 "hook": hook,
                 "caption": caption,
-                "image_url": img,             # product image when available, else ""
-                "status": "draft",            # NOT posted — user must approve
+                "image_url": image_url,
+                "video_url": video_url,
+                "media_source": media["source"] if media else "",
+                "needs_media": needs_media,      # flagged: media-required platform, no media
+                "status": "draft",               # NOT posted — user must approve
             })
         self.context["schedule"] = schedule
         self.context["schedule_connected"] = bool(connected)
-        self.context["schedule_has_media"] = bool(prod_imgs)
+        self.context["schedule_has_media"] = bool(pool)
+        self.context["media_sources_used"] = sources
 
         plats = ", ".join(sorted({s["platform_label"] for s in schedule}))
+        n_flagged = sum(1 for s in schedule if s.get("needs_media"))
+        active_src = [k for k, v in sources.items() if v] or ["none"]
         not_connected = "" if connected else _pick(lang,
             " ⚠️ No platforms connected yet — connect accounts to publish.",
             " ⚠️ Ingen platforme forbundet endnu — forbind konti for at udgive.")
+        flag_note = "" if not n_flagged else _pick(lang,
+            f" ⚠️ {n_flagged} post(s) need media for TikTok/YouTube — they'll be skipped on those platforms until a media source supplies media.",
+            f" ⚠️ {n_flagged} opslag mangler medier til TikTok/YouTube — de springes over på de platforme indtil en mediekilde leverer medier.")
         summary = _pick(lang, "Drafted the posting schedule",
                               "Lavede udkast til udgivelsesplanen")
         output = _pick(lang,
             f"{len(schedule)} posts drafted across {plats} over the next 7 days "
-            f"(draft — not posted).{not_connected}",
+            f"(draft — not posted). Media sources: {', '.join(active_src)}.{not_connected}{flag_note}",
             f"{len(schedule)} opslag i udkast på {plats} over de næste 7 dage "
-            f"(kladde — ikke postet).{not_connected}")
+            f"(kladde — ikke postet). Mediekilder: {', '.join(active_src)}.{not_connected}{flag_note}")
         return {"summary": summary, "output": output,
-                "data": {"schedule": schedule, "connected": bool(connected)}}
+                "data": {"schedule": schedule, "connected": bool(connected), "needs_media": n_flagged}}
 
 
 class HeadOfContent(TeamAgent):
@@ -886,8 +965,12 @@ async def run_team_pipeline(uid: str, goal: str, lang: str) -> tuple:
     """Run all specialists + Head of Content in sequence over a shared context.
     Returns (steps, context). Must run inside the user's store context so the
     agents read real signals and credit-charge correctly."""
+    _ct = store.get("content_team", {}) or {}
     context = {"goal": goal, "uid": uid, "ran_roles": [], "outputs": {},
-               "signals": _collect_signals(uid)}
+               "signals": _collect_signals(uid),
+               # The user's chosen media-source mix governs both the manual run
+               # and the autopilot cycle (one source of truth).
+               "media_sources": _media_sources_cfg(_ct)}
     steps = []
     for role in AGENT_SEQUENCE:
         step = await _SPECIALISTS[role](goal, lang, context).run()
@@ -910,14 +993,16 @@ async def run_team_pipeline(uid: str, goal: str, lang: str) -> tuple:
     return steps, context
 
 
-def _schedule_items(items: list) -> list:
+def _schedule_items(items: list) -> tuple:
     """Turn approved/auto-approved draft items into real scheduled_posts in the
     existing scheduler (reused — the same executor posts them at their time).
-    Carries media (image_url/video_url) through so posts aren't text-only when a
-    product image is available. Returns the created scheduled-post ids."""
+    Carries media (image_url/video_url) through. HONEST GATE: a post targeting a
+    media-required platform with no media is SKIPPED (never posts empty) and
+    reported. Returns (created_ids, skipped[]) where each skip is
+    {platform, reason, caption}."""
     import random
     scheduled = store.setdefault("scheduled_posts", [])
-    created = []
+    created, skipped = [], []
     for it in items:
         if not isinstance(it, dict):
             continue
@@ -925,17 +1010,26 @@ def _schedule_items(items: list) -> list:
         date = (it.get("date") or "").strip()
         tm = (it.get("time") or "09:00").strip()
         caption = (it.get("caption") or it.get("hook") or "").strip()
+        image_url = it.get("image_url", "") or ""
+        video_url = it.get("video_url", "") or ""
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", date) or not caption:
             continue
         if not re.match(r"^\d{1,2}:\d{2}$", tm):
             tm = "09:00"
+        # Never post broken/empty: media-required platforms must have media.
+        if platform == "youtube" and not video_url:
+            skipped.append({"platform": platform, "reason": "needs_video", "caption": caption[:60]})
+            continue
+        if platform == "tiktok" and not image_url and not video_url:
+            skipped.append({"platform": platform, "reason": "needs_media", "caption": caption[:60]})
+            continue
         sid = f"ct_{date}_{tm.replace(':', '')}_{random.randint(1000, 9999)}"
         scheduled.append({
             "id": sid,
             "platform": platform,
             "content": caption,
-            "image_url": it.get("image_url", "") or "",
-            "video_url": it.get("video_url", "") or "",
+            "image_url": image_url,
+            "video_url": video_url,
             "title": (it.get("idea") or caption)[:80],
             "scheduled_time": f"{date}T{tm}",      # fromisoformat-compatible
             "status": "scheduled",                  # picked up by the existing scheduler
@@ -943,7 +1037,7 @@ def _schedule_items(items: list) -> list:
         })
         created.append(sid)
     store["scheduled_posts"] = scheduled
-    return created
+    return created, skipped
 
 
 async def autopilot_cycle(uid: str, lang: str = "en") -> dict:
@@ -968,30 +1062,33 @@ async def autopilot_cycle(uid: str, lang: str = "en") -> dict:
     ct["last_cycle_cost"] = cost
     ct["last_cycle_drafted"] = len(schedule)
 
-    scheduled_ids = []
+    scheduled_ids, skipped = [], []
     if ap["auto_approve"] and schedule:
-        scheduled_ids = _schedule_items(schedule)
+        scheduled_ids, skipped = _schedule_items(schedule)
         ct["schedule"] = []                  # consumed — they're real scheduled posts now
         ct["approved_total"] = (ct.get("approved_total", 0) or 0) + len(scheduled_ids)
         ct["last_approved_at"] = _now()
     else:
         ct["schedule"] = schedule            # pending review
     ct["last_cycle_scheduled"] = len(scheduled_ids)
+    ct["last_cycle_skipped"] = skipped
     store["content_team"] = ct
     save_store()
 
     try:
         from routes.notifications import push_notification
+        skip_note = f" {len(skipped)} skipped (no media for TikTok/YouTube)." if skipped else ""
         if ap["auto_approve"]:
             push_notification(uid, "autopilot_content", "Auto Pilot ran your Content Team",
-                              f"{len(scheduled_ids)} posts scheduled automatically (~{cost} credits).")
+                              f"{len(scheduled_ids)} posts scheduled automatically (~{cost} credits).{skip_note}")
         else:
             push_notification(uid, "autopilot_content", "Content Team plan ready to review",
                               f"{len(schedule)} posts drafted — review & approve in Content Team.")
     except Exception:
         pass
     return {"ok": True, "auto_approve": ap["auto_approve"],
-            "scheduled": len(scheduled_ids), "drafted": len(schedule), "cost": cost}
+            "scheduled": len(scheduled_ids), "drafted": len(schedule),
+            "skipped": len(skipped), "cost": cost}
 
 
 # ── Endpoints ───────────────────────────────────────────────────────────────
@@ -1040,10 +1137,24 @@ def get_status(current_user: dict = Depends(get_current_user)):
 @router.get("/api/content_team/autopilot")
 def get_autopilot(current_user: dict = Depends(get_current_user)):
     ct = store.get("content_team", {}) or {}
+    sig = _collect_signals(current_user["id"])
+    user_type = _detect_user_type(sig, ct.get("goal", ""))
+    rec = _recommended_sources(user_type)
     return {
         "autopilot": _autopilot_cfg(ct),
+        "media_sources": _media_sources_cfg(ct),
+        "recommended_sources": rec["sources"],
+        "recommendation": rec["why"],
+        "user_type": user_type,
+        # What each source can actually supply right now (honesty for the UI).
+        "available": {
+            "uploads": len(sig.get("uploads_media") or []),
+            "products": len(sig.get("product_images") or []),
+            "ai": 0,   # no text-to-image generator yet — see plan
+        },
         "goal": ct.get("goal", ""),
         "last_autorun_at": ct.get("last_autorun_at", ""),
+        "last_cycle_skipped": ct.get("last_cycle_skipped", []),
         "cycle_cost_estimate": IDEATE_COST + SCRIPT_COST,
     }
 
@@ -1070,10 +1181,15 @@ async def set_autopilot(request: Request, current_user: dict = Depends(get_curre
             pass
     if "generate_video" in body:
         ap["generate_video"] = bool(body["generate_video"])
+    if isinstance(body.get("media_sources"), dict):
+        cur = dict(MEDIA_SOURCE_DEFAULTS)
+        cur.update({k: bool(v) for k, v in (ap.get("media_sources") or {}).items() if k in MEDIA_SOURCE_DEFAULTS})
+        cur.update({k: bool(v) for k, v in body["media_sources"].items() if k in MEDIA_SOURCE_DEFAULTS})
+        ap["media_sources"] = cur
     ct["autopilot"] = ap
     store["content_team"] = ct
     save_store()
-    return {"ok": True, "autopilot": ap}
+    return {"ok": True, "autopilot": ap, "media_sources": ap.get("media_sources", dict(MEDIA_SOURCE_DEFAULTS))}
 
 
 @router.post("/api/content_team/approve")
@@ -1088,7 +1204,7 @@ async def approve_schedule(request: Request, current_user: dict = Depends(get_cu
     if not isinstance(items, list) or not items:
         raise HTTPException(status_code=400, detail="No items to approve")
 
-    created = _schedule_items(items)   # shared with the autopilot cycle
+    created, skipped = _schedule_items(items)   # shared with the autopilot cycle
 
     # Record approval and drop the approved drafts from the pending plan.
     ct = store.get("content_team", {}) or {}
@@ -1100,7 +1216,7 @@ async def approve_schedule(request: Request, current_user: dict = Depends(get_cu
     store["content_team"] = ct
     save_store()
     return {"ok": True, "scheduled": len(created), "ids": created,
-            "remaining": len(ct.get("schedule", []))}
+            "skipped": skipped, "remaining": len(ct.get("schedule", []))}
 
 
 @router.post("/api/content_team/run")

@@ -3763,12 +3763,22 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
             </div>
             <div class="tog" id="ct-ap-approve" onclick="ctToggleApprove(this)"></div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
             <label style="font-size:12px;color:var(--tx2)" data-i18n="ct.apEvery">Run every</label>
             <input type="number" id="ct-ap-interval" min="1" max="30" value="7" onchange="ctSaveAutopilot()" style="width:64px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--tx);padding:6px 8px">
             <span style="font-size:12px;color:var(--tx2)" data-i18n="ct.apDays">days</span>
           </div>
-          <div id="ct-ap-cost" style="font-size:12px;color:var(--tx3);background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;line-height:1.6"></div>
+
+          <!-- Media sources — any combination; autopilot mixes them -->
+          <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px" data-i18n="ct.srcTitle">Media sources</div>
+          <div style="font-size:11px;color:var(--tx3);margin-bottom:8px" data-i18n="ct.srcDesc">Pick any combination — autopilot mixes them. Captions are always AI-written.</div>
+          <div id="ct-ap-rec" style="font-size:11px;color:var(--ac);margin-bottom:10px"></div>
+          <div id="ct-src-uploads" class="ct-src-row" onclick="ctToggleSource('uploads')"></div>
+          <div id="ct-src-products" class="ct-src-row" onclick="ctToggleSource('products')"></div>
+          <div id="ct-src-ai" class="ct-src-row" onclick="ctToggleSource('ai')"></div>
+
+          <div id="ct-ap-cost" style="font-size:12px;color:var(--tx3);background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;line-height:1.6;margin-top:12px"></div>
+          <div id="ct-ap-skip" style="font-size:12px;margin-top:8px"></div>
         </div>
       </div>
 
@@ -8944,21 +8954,72 @@ async function _ctApprove(items){
 
 // ── True Auto Pilot controls ────────────────────────────────────────────────
 var CT_AP = {enabled:false, auto_approve:true, interval_days:7};
+var CT_SRC = {uploads:true, products:true, ai:false};
+var CT_SRC_META = {recommended:{}, available:{}, recommendation:''};
 function _ctSetTog(el, on){ if(el){ el.classList.toggle('on', !!on); } }
+
+var _CT_SRC_LABELS = {
+  uploads:  {ic:'📁', name:'My own uploads', desc:'Use your library images & videos as-is'},
+  products: {ic:'🛍️', name:'My products',    desc:'Use your connected webshop product images'},
+  ai:       {ic:'✨', name:'AI-generated',    desc:'Generate new visual content from your niche/style'},
+};
+function _ctRenderSrcRow(key){
+  var el = document.getElementById('ct-src-'+key); if(!el) return;
+  var m = _CT_SRC_LABELS[key];
+  var on = !!CT_SRC[key];
+  var avail = (CT_SRC_META.available||{})[key];
+  var rec = (CT_SRC_META.recommended||{})[key];
+  var hint = '';
+  if(key==='ai'){
+    hint = (avail>0) ? '' : ' · <span style="color:#f59e0b">visual not available yet — needs an image-generation API (captions still AI)</span>';
+  } else if(typeof avail === 'number'){
+    hint = ' · ' + (avail>0 ? avail+' available' : '<span style="color:#f59e0b">none available</span>');
+  }
+  var recBadge = rec ? ' <span style="font-size:10px;color:var(--ac);border:1px solid var(--ac);border-radius:6px;padding:1px 5px">recommended</span>' : '';
+  el.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;margin-bottom:7px;border:1px solid '+(on?'var(--ac)':'var(--border)')+';border-radius:9px;cursor:pointer;background:var(--s2)';
+  el.innerHTML = '<div style="min-width:0"><div style="font-size:13px;font-weight:700;color:var(--tx)">'+m.ic+' '+m.name+recBadge+'</div>'
+    + '<div style="font-size:11px;color:var(--tx3)">'+m.desc+hint+'</div></div>'
+    + '<div class="tog'+(on?' on':'')+'" style="pointer-events:none;flex-shrink:0"></div>';
+}
 function ctRenderAutopilot(ap, status){
   CT_AP = Object.assign(CT_AP, ap||{});
+  if(ap && ap.media_sources) CT_SRC = Object.assign({}, CT_SRC, ap.media_sources);
+  if(status){
+    if(status.media_sources) CT_SRC = Object.assign({}, CT_SRC, status.media_sources);
+    if(status.recommended_sources) CT_SRC_META.recommended = status.recommended_sources;
+    if(status.available) CT_SRC_META.available = status.available;
+    if(status.recommendation) CT_SRC_META.recommendation = status.recommendation;
+  }
   _ctSetTog(document.getElementById('ct-ap-toggle'), CT_AP.enabled);
   document.getElementById('ct-ap-cfg').style.display = CT_AP.enabled ? 'block' : 'none';
   _ctSetTog(document.getElementById('ct-ap-approve'), CT_AP.auto_approve);
   var iv = document.getElementById('ct-ap-interval'); if(iv) iv.value = CT_AP.interval_days||7;
+  var recEl = document.getElementById('ct-ap-rec');
+  if(recEl) recEl.textContent = CT_SRC_META.recommendation ? ('💡 ' + CT_SRC_META.recommendation) : '';
+  ['uploads','products','ai'].forEach(_ctRenderSrcRow);
   var cost = document.getElementById('ct-ap-cost');
   if(cost){
     var est = (status && status.cycle_cost_estimate) || 35;
     var last = (status && status.last_autorun_at) ? new Date(status.last_autorun_at).toLocaleString() : '—';
     var lastSched = (status && status.last_cycle_scheduled) || 0;
-    cost.innerHTML = '💳 <b>~'+est+' credits per cycle</b> (AI ideas + scripts). Media uses your product images (free); AI video is opt-in. '
-      + 'Posts use your Auto Pilot time slots &amp; cadence.<br>🕘 Last run: '+_ctEsc(last)+' · last cycle scheduled: '+lastSched+' post(s).';
+    cost.innerHTML = '💳 <b>~'+est+' credits per cycle</b> (AI ideas + scripts). Posts use your Auto Pilot time slots &amp; cadence.'
+      + '<br>🕘 Last run: '+_ctEsc(last)+' · last cycle scheduled: '+lastSched+' post(s).';
   }
+  var skipEl = document.getElementById('ct-ap-skip');
+  if(skipEl){
+    var sk = (status && status.last_cycle_skipped) || [];
+    skipEl.innerHTML = sk.length
+      ? '<span style="color:#f59e0b">⚠️ '+sk.length+' post(s) skipped last cycle — TikTok/YouTube need media and no source supplied it. Enable a media source or those platforms are skipped.</span>'
+      : '';
+  }
+}
+async function ctToggleSource(key){
+  CT_SRC[key] = !CT_SRC[key];
+  _ctRenderSrcRow(key);
+  try{
+    var d = await apiFetch('/api/content_team/autopilot','POST',{media_sources:CT_SRC});
+    if(d && d.media_sources){ CT_SRC = Object.assign({}, CT_SRC, d.media_sources); ['uploads','products','ai'].forEach(_ctRenderSrcRow); }
+  }catch(e){ CT_SRC[key] = !CT_SRC[key]; _ctRenderSrcRow(key); toast(t('ct.error'),'error'); }
 }
 async function ctToggleAutopilot(el){
   var on = !el.classList.contains('on');
