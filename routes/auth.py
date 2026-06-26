@@ -288,6 +288,104 @@ async def resend_verification(request: Request, req: ResendVerificationRequest):
     return {"ok": True}
 
 
+# ── Password reset ──────────────────────────────────────────────────────────
+PASSWORD_RESET_TTL_MIN = 60
+
+
+class RequestPasswordResetRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+
+def _find_user_by_reset_token(token: str) -> dict | None:
+    """Locate the (single) user holding this active, unexpired reset token.
+    Tokens are random + single-use + short-lived, so a linear scan is fine."""
+    if not token:
+        return None
+    from services.users import load_users
+    now = datetime.utcnow()
+    for u in load_users().get("users", []):
+        if u.get("reset_token") and secrets.compare_digest(str(u["reset_token"]), token):
+            exp = u.get("reset_token_expires", "")
+            try:
+                if exp and datetime.fromisoformat(exp) > now:
+                    return u
+            except Exception:
+                return None
+            return None
+    return None
+
+
+@router.post("/api/auth/request_password_reset")
+@limiter.limit("3/minute")
+async def request_password_reset(request: Request, req: RequestPasswordResetRequest):
+    """Email a secure, expiring reset link. Always returns ok — never reveals
+    whether the email exists (anti-enumeration)."""
+    email = sanitize_string(req.email or "").lower()
+    user = await aget_user_by_email(email) if email else None
+    if user:
+        token   = secrets.token_urlsafe(32)
+        expires = (datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_TTL_MIN)).isoformat()
+        await aupdate_user(user["id"], {
+            "reset_token": token,
+            "reset_token_expires": expires,
+        })
+        base = os.getenv("PUBLIC_BASE_URL", "https://ugoingviral.com").rstrip("/")
+        reset_url = f"{base}/reset-password?token={token}"
+        try:
+            import asyncio
+            from routes.email import send_password_reset_email
+            asyncio.get_event_loop().run_in_executor(
+                None, send_password_reset_email, user["email"], user.get("name", ""), reset_url
+            )
+        except Exception:
+            pass
+    return {"ok": True}
+
+
+@router.get("/api/auth/reset_password/validate")
+@limiter.limit("10/minute")
+async def validate_reset_token(request: Request, token: str = ""):
+    """Check a reset token before showing the new-password form."""
+    user = _find_user_by_reset_token(token)
+    if not user:
+        return {"valid": False}
+    # Lightly mask the email so the page can confirm the account without
+    # fully exposing it.
+    em = user.get("email", "")
+    masked = em
+    if "@" in em:
+        local, dom = em.split("@", 1)
+        masked = (local[0] + "***" if local else "***") + "@" + dom
+    return {"valid": True, "email": masked}
+
+
+@router.post("/api/auth/reset_password")
+@limiter.limit("5/minute")
+async def reset_password(request: Request, req: ResetPasswordRequest):
+    """Validate the token, set the new password, and consume the token."""
+    if len(req.password or "") < 6:
+        raise HTTPException(status_code=400, detail="Adgangskode skal være mindst 6 tegn")
+    user = _find_user_by_reset_token(req.token)
+    if not user:
+        raise HTTPException(status_code=400, detail="Reset-link er ugyldigt eller udløbet. Bed om et nyt.")
+    from services.users import hash_password_async
+    new_hash = await hash_password_async(req.password)
+    # users.db (sqlite) is the authoritative auth store that login reads via
+    # aget_user_by_email — updating it here makes the new password effective.
+    await aupdate_user(user["id"], {
+        "hashed_password": new_hash,
+        # Consume the token so the link can't be reused.
+        "reset_token": "",
+        "reset_token_expires": "",
+    })
+    return {"ok": True}
+
+
 @router.get("/api/auth/me")
 async def me(current_user: dict = Depends(get_current_user)):
     return _safe_user(current_user)

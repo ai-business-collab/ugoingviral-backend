@@ -11332,7 +11332,23 @@ async function saveTwitterAPI() {
 
 async function connectYouTubeAPI() {
   toast('⏳ Opening YouTube login...', 'info');
-  openOAuthPopup('/api/youtube/connect', 'youtube_oauth', 'youtube', checkYouTubeAPIStatus);
+  // Open the popup in-gesture (so it isn't blocked), then point it at the
+  // authenticated, user-bound OAuth URL — so the token is stored in THIS user's
+  // store, exactly where manual posting and autopilot read it.
+  const popup = _openCenteredPopup('about:blank', 'youtube_oauth');
+  if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+    toast('⚠️ Popup blocked — please allow popups and try again', 'error');
+    return;
+  }
+  try {
+    const r = await apiFetch('/api/youtube/connect');
+    if (!r || !r.url) { popup.close(); toast('❌ Could not start YouTube login', 'error'); return; }
+    popup.location = r.url;
+    _wireOAuthPopup(popup, 'youtube', checkYouTubeAPIStatus);
+  } catch (e) {
+    try { popup.close(); } catch (_) {}
+    toast('❌ ' + (e.message || 'YouTube login failed'), 'error');
+  }
 }
 
 async function checkYouTubeAPIStatus() {

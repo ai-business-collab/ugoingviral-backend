@@ -676,12 +676,45 @@ async def _run_for_user(force: bool = False):
                 continue
 
             if platform == "youtube":
-                vid = image_url if isinstance(image_url, str) else ""
-                if vid and vid.endswith(('.mp4', '.mov', '.avi')):
-                    add_log("⏰ Auto Pilot → YouTube: video queued", "info")
-                    posted_count += 1
-                else:
+                # YouTube requires a video. Only post when connected AND we have
+                # a real video URL — and ACTUALLY upload via the official API
+                # (previously this just logged "video queued" and never uploaded).
+                if not settings.get("youtube_api_connected"):
+                    add_log("⏭️ Skipped YouTube: API not connected", "info")
+                    continue
+                vid = image_url if isinstance(image_url, str) and image_url.endswith(('.mp4', '.mov', '.avi', '.webm')) else ""
+                if not vid:
                     add_log("⏭️ Skipped YouTube: video content required for YouTube posts", "info")
+                    continue
+                add_log(f"⏰ Auto Pilot → YouTube: {prod_label[:30]}", "info")
+                async def _auto_yt(pc=caption_text, vu=vid, sd=settings, lbl=prod_label):
+                    try:
+                        from youtube_api import refresh_token_if_needed as yt_refresh, publish_to_youtube
+                        token   = sd.get("youtube_access_token", "")
+                        refresh = sd.get("youtube_refresh_token", "")
+                        exp     = sd.get("youtube_expires_at")
+                        new_token, new_exp = await yt_refresh(token, refresh, exp)
+                        if new_exp:
+                            _s = store.get("settings", {})
+                            _s["youtube_access_token"] = new_token
+                            _s["youtube_expires_at"]   = new_exp
+                            save_store()
+                            token = new_token
+                        # Title from the product/niche label; caption as the
+                        # description (mirrors the manual /api/youtube/post path).
+                        title = (lbl or "New video").strip()[:95]
+                        result = await publish_to_youtube(
+                            access_token=token, title=title, description=pc,
+                            video_url=vu, privacy_status="public", is_short=True,
+                        )
+                        if result.get("status") == "published":
+                            add_log(f"✅ Posted to YouTube: {title[:50]} — {result.get('video_id','')}", "success")
+                        else:
+                            add_log(f"❌ YouTube error: {result.get('message','unknown')[:60]}", "error")
+                    except Exception as _e:
+                        add_log(f"❌ YouTube exception: {str(_e)[:80]}", "error")
+                asyncio.create_task(_auto_yt())
+                posted_count += 1
                 continue
 
             # Playwright fallback for other platforms

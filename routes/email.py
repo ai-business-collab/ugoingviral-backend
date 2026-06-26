@@ -470,6 +470,53 @@ def send_verification_email(to_addr: str, name: str, code: str) -> bool:
 
 
 
+def send_password_reset_email(to_addr: str, name: str, reset_url: str) -> bool:
+    first = (name or to_addr.split("@")[0]).split(" ")[0].capitalize()
+    subject = "Reset your UgoingViral password"
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body{{margin:0;padding:0;background:#080c18;font-family:'Helvetica Neue',Arial,sans-serif}}
+  .wrap{{max-width:560px;margin:40px auto;background:#0d1526;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.07)}}
+  .header{{background:linear-gradient(135deg,#00e5ff22,#7c3aed22);padding:36px 40px 28px;text-align:center;border-bottom:1px solid rgba(255,255,255,.07)}}
+  .logo{{font-size:22px;font-weight:800;color:#f0f4f8;letter-spacing:-0.5px}}
+  .logo span{{color:#00e5ff}}
+  .hero{{font-size:24px;font-weight:800;color:#f0f4f8;margin:14px 0 8px}}
+  .sub{{font-size:14px;color:#7d8fa3;line-height:1.5}}
+  .body{{padding:28px 40px 36px;text-align:center}}
+  .cta{{margin:20px 0 8px}}
+  .btn{{display:inline-block;background:linear-gradient(135deg,#00e5ff,#7c3aed);color:#fff;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;text-decoration:none;letter-spacing:.3px}}
+  .link{{font-size:12px;color:#7d8fa3;word-break:break-all;margin-top:16px}}
+  .link a{{color:#00e5ff}}
+  .meta{{font-size:13px;color:#7d8fa3;margin-top:18px;line-height:1.6}}
+  .footer{{padding:18px 40px;text-align:center;font-size:11px;color:#3d4f61;border-top:1px solid rgba(255,255,255,.05)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="logo">Ugoin<span>g</span>Viral</div>
+    <div class="hero">Reset your password</div>
+    <div class="sub">Hi {first} — we received a request to reset your UgoingViral password.</div>
+  </div>
+  <div class="body">
+    <div class="cta"><a class="btn" href="{reset_url}">Reset password</a></div>
+    <div class="link">Or paste this link into your browser:<br><a href="{reset_url}">{reset_url}</a></div>
+    <div class="meta">
+      This link expires in 60 minutes and can be used once.<br>
+      If you didn't request a password reset, you can safely ignore this email — your password won't change.
+    </div>
+  </div>
+  <div class="footer">
+    Please do not reply to this email. For support contact <a href="mailto:support@ugoingviral.com" style="color:#00e5ff">support@ugoingviral.com</a>.
+  </div>
+</div>
+</body>
+</html>"""
+    return send_system_email(to_addr, subject, html)
+
+
 def send_payment_confirmation_email(to_addr: str, name: str, plan_name: str, price_dkk: int) -> bool:
     first = (name or to_addr.split("@")[0]).split(" ")[0].capitalize()
     subject = f"Payment confirmed — {plan_name} plan active 🎉"

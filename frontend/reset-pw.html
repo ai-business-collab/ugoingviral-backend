@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Reset password · UgoingViral</title>
+<style>
+  :root{--ac:#00e5ff;--ac2:#7c3aed;--bg:#080c18;--card:#0d1526;--tx:#f0f4f8;--tx2:#7d8fa3;--bd:rgba(255,255,255,.08)}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);font-family:'Helvetica Neue',Arial,sans-serif;color:var(--tx);display:flex;align-items:center;justify-content:center;padding:20px}
+  .wrap{width:100%;max-width:420px;background:var(--card);border:1px solid var(--bd);border-radius:16px;overflow:hidden}
+  .header{background:linear-gradient(135deg,#00e5ff22,#7c3aed22);padding:32px 32px 24px;text-align:center;border-bottom:1px solid var(--bd)}
+  .logo{font-size:22px;font-weight:800;letter-spacing:-.5px}
+  .logo span{color:var(--ac)}
+  .hero{font-size:21px;font-weight:800;margin:12px 0 6px}
+  .sub{font-size:13px;color:var(--tx2);line-height:1.5}
+  .body{padding:28px 32px 32px}
+  label{display:block;font-size:12px;color:var(--tx2);margin:14px 0 6px;font-weight:600}
+  input{width:100%;padding:13px 14px;background:#0a1120;border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:14px;outline:none}
+  input:focus{border-color:var(--ac)}
+  .btn{width:100%;margin-top:20px;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.3px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .msg{margin-top:16px;font-size:13px;line-height:1.5;padding:12px 14px;border-radius:10px;display:none}
+  .msg.err{display:block;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
+  .msg.ok{display:block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#6ee7b7}
+  .foot{text-align:center;margin-top:18px;font-size:13px}
+  .foot a{color:var(--ac);text-decoration:none}
+  .hint{font-size:11px;color:var(--tx2);margin-top:6px}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="logo">Ugoin<span>g</span>Viral</div>
+    <div class="hero" id="title">Reset password</div>
+    <div class="sub" id="subtitle">Loading…</div>
+  </div>
+  <div class="body">
+    <!-- REQUEST form (no/invalid token) -->
+    <div id="request-view" style="display:none">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+      <button class="btn" id="request-btn" onclick="requestReset()">Send reset link</button>
+      <div class="hint">We'll email you a secure link if an account exists.</div>
+    </div>
+
+    <!-- RESET form (valid token) -->
+    <div id="reset-view" style="display:none">
+      <label for="pw">New password</label>
+      <input id="pw" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+      <label for="pw2">Confirm new password</label>
+      <input id="pw2" type="password" autocomplete="new-password" placeholder="Repeat password">
+      <button class="btn" id="reset-btn" onclick="doReset()">Update password</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+    <div class="foot"><a href="/?login=1">← Back to login</a></div>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const token = params.get('token') || '';
+const $ = id => document.getElementById(id);
+function showMsg(text, ok){ const m=$('msg'); m.textContent=text; m.className='msg '+(ok?'ok':'err'); }
+
+function showRequestView(sub){
+  $('title').textContent = 'Forgot password';
+  $('subtitle').textContent = sub || 'Enter your email and we’ll send you a reset link.';
+  $('request-view').style.display='block';
+  $('reset-view').style.display='none';
+}
+function showResetView(email){
+  $('title').textContent = 'Set a new password';
+  $('subtitle').textContent = email ? ('For ' + email) : 'Choose a new password for your account.';
+  $('request-view').style.display='none';
+  $('reset-view').style.display='block';
+}
+
+async function init(){
+  if(!token){ showRequestView(); return; }
+  $('subtitle').textContent = 'Checking your reset link…';
+  try{
+    const r = await fetch('/api/auth/reset_password/validate?token='+encodeURIComponent(token));
+    const d = await r.json();
+    if(d && d.valid){ showResetView(d.email); }
+    else { showRequestView('This reset link is invalid or has expired. Request a new one below.'); }
+  }catch(e){ showRequestView('Could not verify the link. Request a new one below.'); }
+}
+
+async function requestReset(){
+  const email = $('email').value.trim();
+  if(!email || email.indexOf('@')<0){ showMsg('Please enter a valid email.', false); return; }
+  const btn=$('request-btn'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Sending…';
+  try{
+    await fetch('/api/auth/request_password_reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    showMsg('If an account exists for that email, a reset link is on its way. Check your inbox (and spam).', true);
+  }catch(e){ showMsg('Something went wrong. Please try again.', false); }
+  finally{ btn.disabled=false; btn.textContent='Send reset link'; }
+}
+
+async function doReset(){
+  const pw=$('pw').value, pw2=$('pw2').value;
+  if(pw.length<6){ showMsg('Password must be at least 6 characters.', false); return; }
+  if(pw!==pw2){ showMsg('Passwords do not match.', false); return; }
+  const btn=$('reset-btn'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Updating…';
+  try{
+    const r = await fetch('/api/auth/reset_password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,password:pw})});
+    const d = await r.json().catch(()=>({}));
+    if(r.ok){
+      $('reset-view').style.display='none';
+      showMsg('✅ Password updated. You can now sign in with your new password.', true);
+      setTimeout(()=>{ location.href='/?login=1'; }, 2200);
+    } else {
+      showMsg(d.detail || 'Could not reset password. The link may have expired.', false);
+      btn.disabled=false; btn.textContent='Update password';
+    }
+  }catch(e){ showMsg('Something went wrong. Please try again.', false); btn.disabled=false; btn.textContent='Update password'; }
+}
+init();
+</script>
+</body>
+</html>

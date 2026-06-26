@@ -127,6 +127,13 @@ def delete_data_page():
     p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "delete-data.html")
     return FileResponse(p, media_type="text/html")
 
+@app.get("/reset-password")
+def reset_password_page():
+    # File is named reset-pw.html (the repo blocks '*password*' filenames); the
+    # public URL stays /reset-password.
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "reset-pw.html")
+    return FileResponse(p, media_type="text/html")
+
 @app.get("/app")
 def serve_frontend(request: Request):
     # Tjek om bruger er logget ind

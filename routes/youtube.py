@@ -9,14 +9,27 @@ router = APIRouter()
 
 @router.get("/api/youtube/connect")
 async def youtube_oauth_start():
-    """Start YouTube OAuth2 flow — redirect til Google login."""
+    """Start YouTube OAuth2 flow.
+
+    Binds the flow to the CURRENT authenticated user by encoding their user_id
+    into the OAuth `state`, so the callback stores tokens in THAT user's store —
+    not a guessed active user. Returns the URL as JSON when authenticated
+    (apiFetch sets the JWT → middleware sets context); unauthenticated direct
+    navigation still gets a redirect (state without user_id → legacy fallback)."""
     try:
         from youtube_api import build_authorization_url, YOUTUBE_CLIENT_ID
         if not YOUTUBE_CLIENT_ID:
             return {"status": "error", "message": "YOUTUBE_CLIENT_ID ikke konfigureret i .env"}
         import base64, json as _json
-        state = base64.urlsafe_b64encode(_json.dumps({"platform": "youtube"}).encode()).decode()
+        from services.store import _uid_ctx
+        uid = _uid_ctx.get(None)
+        payload = {"platform": "youtube"}
+        if uid:
+            payload["user_id"] = uid
+        state = base64.urlsafe_b64encode(_json.dumps(payload).encode()).decode()
         url = build_authorization_url(state)
+        if uid:
+            return {"url": url}
         return RedirectResponse(url=url)
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -34,11 +47,24 @@ async def youtube_oauth_callback(code: str = "", error: str = "", state: str = "
         from youtube_api import exchange_code_for_token, get_channel_info
         from services.users import load_users
         from services.store import set_user_context
-        users_data = load_users()
-        users = users_data.get("users", [])
-        active_user = next((u for u in users if u.get("is_active")), None)
-        if active_user:
-            set_user_context(active_user["id"])
+        # Bind to the user who STARTED the connect (user_id encoded in state) so
+        # the token lands in the connecting user's store — the same store manual
+        # posting and the autopilot/scheduler read from. Fall back to the active
+        # user only when state carries no user_id (legacy/direct-navigation).
+        target_uid = ""
+        try:
+            import base64, json as _j
+            decoded = _j.loads(base64.urlsafe_b64decode(state.encode()).decode())
+            if isinstance(decoded, dict):
+                target_uid = decoded.get("user_id", "") or ""
+        except Exception:
+            target_uid = ""
+        if not target_uid:
+            users = load_users().get("users", [])
+            active_user = next((u for u in users if u.get("is_active")), None)
+            target_uid = active_user["id"] if active_user else ""
+        if target_uid:
+            set_user_context(target_uid)
         token_data = await exchange_code_for_token(code)
         access_token  = token_data.get("access_token", "")
         refresh_token = token_data.get("refresh_token", "")
