@@ -4812,6 +4812,26 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div id="studio-upload-zone"></div>
     </div>
 
+    <!-- ══ Text → Video (no product/upload needed) ════════════════════════ -->
+    <div id="studio-t2v-card" style="margin-top:18px;background:var(--s);border:1px solid var(--border);border-radius:14px;padding:18px">
+      <div style="margin-bottom:8px">
+        <div style="font-size:15px;font-weight:800;color:var(--tx)">✨ Text → Video</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">Type a prompt → we generate an AI image, then turn it into a video. No product or upload needed.</div>
+      </div>
+      <textarea id="t2v-prompt" rows="2" placeholder="e.g. barista pouring latte art, slow motion, cozy cafe" style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--tx);padding:11px 13px;font-size:14px;font-family:inherit;resize:vertical" oninput="t2vEstimate()"></textarea>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap">
+        <select id="t2v-duration" onchange="t2vEstimate()" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--tx);padding:7px 9px">
+          <option value="5">5s</option><option value="10">10s</option><option value="15">15s</option>
+        </select>
+        <select id="t2v-aspect" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--tx);padding:7px 9px">
+          <option value="9:16">9:16 (vertical)</option><option value="16:9">16:9</option>
+        </select>
+        <span id="t2v-cost" style="font-size:12px;color:var(--tx2)"></span>
+        <button class="btn bp bsm" id="t2v-btn" onclick="t2vGenerate()" style="font-weight:700;margin-left:auto">✨ Generate video</button>
+      </div>
+      <div id="t2v-result" style="margin-top:12px"></div>
+    </div>
+
     <!-- ══ Smart Cutter (FFmpeg auto-trim) ════════════════════════════════ -->
     <div id="studio-smartcut-card" style="margin-top:18px;background:linear-gradient(135deg,rgba(0,229,255,.05),rgba(124,58,237,.05));border:1px solid rgba(0,229,255,.22);border-radius:14px;padding:18px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
@@ -6744,6 +6764,44 @@ function copyInviteLink() {
   const el = document.getElementById('invite-link');
   if (!el) return;
   navigator.clipboard.writeText(el.value).then(() => toast('📋 Invite link copied!', 'success'));
+}
+
+// ── Text → Video (AI image → video chain) ─────────────────────────────────────
+let _t2vEstTimer;
+async function t2vEstimate(){
+  clearTimeout(_t2vEstTimer);
+  _t2vEstTimer = setTimeout(async function(){
+    var p = (document.getElementById('t2v-prompt')||{}).value || '';
+    var dur = parseInt((document.getElementById('t2v-duration')||{}).value||'5',10);
+    var el = document.getElementById('t2v-cost'); if(!el) return;
+    if(!p.trim()){ el.textContent=''; return; }
+    try{
+      var d = await apiFetch('/api/studio/text_to_video/estimate','POST',{prompt:p,duration:dur});
+      el.innerHTML = '💳 <b>'+(d.total_cost||0)+' credits</b> (image '+(d.breakdown.ai_image)+' + video '+(d.breakdown.video_clip)+')'
+        + (d.can_afford ? '' : ' · <span style="color:#ef4444">not enough credits</span>');
+    }catch(e){ el.textContent=''; }
+  }, 350);
+}
+async function t2vGenerate(){
+  var p = (document.getElementById('t2v-prompt')||{}).value || '';
+  if(!p.trim()){ toast('Enter a prompt first','error'); return; }
+  var dur = parseInt((document.getElementById('t2v-duration')||{}).value||'5',10);
+  var aspect = (document.getElementById('t2v-aspect')||{}).value || '9:16';
+  var btn = document.getElementById('t2v-btn'); var res = document.getElementById('t2v-result');
+  if(btn){ btn.disabled=true; btn.style.opacity='.6'; btn.textContent='⏳ Generating… (1-3 min)'; }
+  if(res) res.innerHTML = '<div style="font-size:12px;color:var(--tx3)">Generating AI image → video… this can take 1–3 minutes.</div>';
+  try{
+    var d = await apiFetch('/api/studio/text_to_video','POST',{prompt:p,duration:dur,aspect_ratio:aspect});
+    if(d && d.ok){
+      toast('✅ Video ready ('+d.credits_used+' credits)','success');
+      res.innerHTML = '<video src="'+_ctEsc(d.video_url)+'" controls playsinline style="max-width:280px;border-radius:10px;border:1px solid var(--border)"></video>'
+        + '<div style="font-size:11px;color:var(--tx3);margin-top:6px">Saved to your library · '+d.credits_used+' credits used · '+(d.credits_left)+' left</div>';
+    } else {
+      res.innerHTML = '<div style="font-size:12px;color:#f59e0b">'+_ctEsc((d&&d.message)||'Generation failed')+'</div>'
+        + (d&&d.image_url ? '<div style="font-size:11px;color:var(--tx3);margin-top:4px">AI image was created (no charge for the failed video).</div>' : '');
+    }
+  }catch(e){ res.innerHTML = '<div style="font-size:12px;color:#ef4444">'+_ctEsc((e&&e.message)||'Error')+'</div>'; }
+  finally{ if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.textContent='✨ Generate video'; } }
 }
 
 // ── Studio packages ───────────────────────────────────────────────────────────

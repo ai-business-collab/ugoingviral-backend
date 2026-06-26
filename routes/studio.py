@@ -420,8 +420,11 @@ async def _runway_generate(prompt: str, image_url: str, duration: int,
                            aspect_ratio: str = "16:9") -> Optional[str]:
     if not RUNWAY_API_KEY:
         return None
-    ar_map = {"16:9": "1280:720", "9:16": "720:1280", "1:1": "1024:1024", "4:5": "864:1080"}
-    wh = ar_map.get(aspect_ratio, "1280:720")
+    # Runway gen3a_turbo/gen4.5 accept these exact ratio strings; older pixel
+    # forms (720:1280, 1280:720) are now REJECTED with invalid_value. Social is
+    # portrait, so non-landscape maps to 768:1280.
+    ar_map = {"16:9": "1280:768", "9:16": "768:1280", "1:1": "768:1280", "4:5": "768:1280"}
+    wh = ar_map.get(aspect_ratio, "768:1280")
 
     # Longer clips (30s) use the gen4.5 model; shorter clips use gen3a_turbo.
     is_long = duration > 15
@@ -1071,6 +1074,71 @@ def estimate_cost(req: StudioRequest, current_user: dict = Depends(get_current_u
             "enhance": STUDIO_COSTS["script_enhance"] * len(req.scenes) if req.enhance_prompts and len(req.scenes) > 1 else 0,
         }
     }
+
+
+class TextToVideoRequest(BaseModel):
+    prompt: str
+    duration: int = 5
+    aspect_ratio: str = "9:16"
+
+
+def _t2v_cost(duration: int) -> int:
+    """Manual text→video = AI image (8) + the Studio clip cost for the duration."""
+    from routes.content_team import IMAGE_COST
+    dur_key = f"video_{duration}s" if f"video_{duration}s" in STUDIO_COSTS else "video_5s"
+    return IMAGE_COST + STUDIO_COSTS[dur_key]
+
+
+@router.post("/api/studio/text_to_video/estimate")
+def text_to_video_estimate(req: TextToVideoRequest, current_user: dict = Depends(get_current_user)):
+    """Show the credit cost BEFORE generating a text→video."""
+    from routes.content_team import IMAGE_COST
+    cost = _t2v_cost(req.duration)
+    credits = (store.get("billing", {}) or {}).get("credits", 0)
+    return {"total_cost": cost, "credits_available": credits, "can_afford": credits >= cost,
+            "breakdown": {"ai_image": IMAGE_COST, "video_clip": cost - IMAGE_COST}}
+
+
+@router.post("/api/studio/text_to_video")
+async def text_to_video(req: TextToVideoRequest, current_user: dict = Depends(get_current_user)):
+    """Type a prompt → get a video via the AI-image→video chain. No product or
+    upload required. Cost = AI image + clip; charged only on success."""
+    prompt = (req.prompt or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Prompt er påkrævet")
+    uid = current_user["id"]
+    from services.security import check_video_rate_limit, video_rate_limit_message
+    if not check_video_rate_limit(uid):
+        raise HTTPException(status_code=429, detail=video_rate_limit_message())
+
+    cost = _t2v_cost(req.duration)
+    credits = (_load_user_store(uid).get("billing", {}) or {}).get("credits", 0)
+    if credits < cost:
+        raise HTTPException(status_code=402, detail=f"Insufficient credits — need {cost}, have {credits}. Top up to continue.")
+
+    from services.ai_media import generate_text_to_video
+    duration = _delivered_clip_seconds("runway", req.duration)
+    res = await generate_text_to_video(prompt, uid, duration=duration, aspect_ratio=req.aspect_ratio)
+    if not res.get("ok"):
+        # No charge on failure; surface the image if one was made.
+        return {"ok": False, "message": res.get("message", "Generation failed"),
+                "image_url": res.get("image_url", "")}
+
+    credits_left = _deduct(cost, uid=uid)   # charge only after a real video exists
+    entry = {
+        "id": uuid.uuid4().hex[:10],
+        "url": res["video_url"],
+        "thumbnail": res.get("image_url", ""),
+        "prompt": prompt,
+        "provider": res.get("provider", ""),
+        "kind": "text_to_video",
+        "duration": duration,
+        "credits_used": cost,
+        "created_at": datetime.now().isoformat(),
+    }
+    _save_generated_video(uid, entry)
+    return {"ok": True, "video_url": res["video_url"], "image_url": res.get("image_url", ""),
+            "provider": res.get("provider", ""), "credits_used": cost, "credits_left": credits_left}
 
 
 @router.post("/api/studio/enhance_prompts")

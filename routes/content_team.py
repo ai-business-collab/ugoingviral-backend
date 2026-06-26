@@ -50,6 +50,19 @@ SCRIPT_COST = 20          # credits for the Scripter's one AI call (all scripts 
 IDEA_TARGET = 20          # ideas requested from the model (token-efficient)
 LOCKED_COUNT = 7          # winning ideas locked for the week
 
+# Media generation costs (credits). Image is cheap; video is the big spend, so
+# it is capped per week per plan and the rest of the week is filled by reposting
+# the generated videos + cheaper image media.
+IMAGE_COST = 8            # AI image (gpt-image-1 / FLUX)
+# A 5s clip is what Video Studio actually charges (STUDIO_COSTS.video_5s=40 cr);
+# autopilot generates 5s clips and charges the SAME so cost is consistent.
+# (credit_costs.py lists 250 but that scale is not what Studio bills.)
+VIDEO_COST = 40           # AI video clip (5s, image→video) — matches Studio pricing
+VIDEO_WEEKLY_CAP = {      # max NEW AI videos autopilot generates per week, per plan
+    "free": 0, "starter": 2, "basic": 3, "growth": 3,
+    "pro": 6, "elite": 10, "personal": 14, "agency": 20,
+}
+
 # Sensible default posting times per platform (local 24h) — used by the
 # Publishing Manager to draft a schedule when the user has no analytics yet.
 _BEST_TIMES = {
@@ -1040,6 +1053,67 @@ def _schedule_items(items: list) -> tuple:
     return created, skipped
 
 
+def _current_credits() -> int:
+    try:
+        from routes.billing import PLANS
+        b = store.get("billing", {}) or {}
+        maxc = PLANS.get(b.get("plan", "free"), PLANS["free"])["credits"]
+        return b.get("credits", maxc) or 0
+    except Exception:
+        return 0
+
+
+async def _fill_media(uid: str, schedule: list, sources: dict, ap: dict, signals: dict) -> dict:
+    """Fill media for posts the source pool couldn't cover, honestly + within
+    budget. With the AI source on: generate AI IMAGES (covers IG/FB/X/TikTok),
+    and — only if generate_video is on — generate AI VIDEOS for YouTube slots up
+    to the per-plan weekly cap + credit budget. Extra video slots REUSE
+    (repost) an already-generated video this cycle at their own time/platform
+    rather than generating new. Returns counts + credits spent."""
+    from services.ai_media import generate_ai_image, generate_text_to_video, ai_image_available
+    ai_on = bool(sources.get("ai")) and ai_image_available()
+    gen_video = bool(ap.get("generate_video"))
+    plan = signals.get("plan", "free")
+    weekly_cap = VIDEO_WEEKLY_CAP.get(plan, 0)
+
+    cost = 0
+    made = {"ai_images": 0, "ai_videos": 0, "reposts": 0, "skipped_no_budget": 0}
+    generated_videos = []
+
+    for it in schedule:
+        if it.get("image_url") or it.get("video_url"):
+            continue  # pool already supplied media
+        plat = it.get("platform", "")
+        prompt = (it.get("hook") or it.get("idea") or it.get("caption", "") or "").strip()[:300]
+
+        if plat == "youtube":
+            # YouTube must have video. Generate within cap+budget, else repost a
+            # video we already made this cycle, else leave flagged (→ skipped).
+            if ai_on and gen_video and made["ai_videos"] < weekly_cap and _current_credits() >= VIDEO_COST:
+                res = await generate_text_to_video(prompt, uid, duration=5, aspect_ratio="9:16")
+                if res.get("ok") and res.get("video_url"):
+                    it["video_url"] = res["video_url"]; it["media_source"] = "ai"; it["needs_media"] = False
+                    _charge_credits(VIDEO_COST, "content_team_video"); cost += VIDEO_COST
+                    made["ai_videos"] += 1; generated_videos.append(res["video_url"]); continue
+            if generated_videos:
+                it["video_url"] = generated_videos[made["reposts"] % len(generated_videos)]
+                it["media_source"] = "repost"; it["mode"] = "repost"; it["needs_media"] = False
+                made["reposts"] += 1; continue
+            made["skipped_no_budget"] += 1  # stays needs_media → _schedule_items skips it
+            continue
+
+        # Image-capable platforms (instagram/facebook/twitter/tiktok).
+        if ai_on and _current_credits() >= IMAGE_COST:
+            img = await generate_ai_image(prompt, uid)
+            if img:
+                it["image_url"] = img; it["media_source"] = "ai"; it["needs_media"] = False
+                _charge_credits(IMAGE_COST, "content_team_image"); cost += IMAGE_COST
+                made["ai_images"] += 1; continue
+        # Otherwise leave as-is: IG/FB/X post text-only; TikTok stays flagged → skipped.
+
+    return {"cost": cost, "counts": made}
+
+
 async def autopilot_cycle(uid: str, lang: str = "en") -> dict:
     """One True Auto Pilot cycle: run the Content Team, then (if auto_approve)
     schedule the resulting posts automatically — otherwise leave them as a
@@ -1052,7 +1126,12 @@ async def autopilot_cycle(uid: str, lang: str = "en") -> dict:
 
     steps, context = await run_team_pipeline(uid, goal, lang)
     schedule = context.get("schedule", []) or []
-    cost = context.get("cycle_cost", 0)
+
+    # Fill any missing media within budget: AI images (cheap) + AI videos (capped
+    # per plan) + repost generated videos across remaining slots.
+    sources = context.get("media_sources") or dict(MEDIA_SOURCE_DEFAULTS)
+    fill = await _fill_media(uid, schedule, sources, ap, context.get("signals", {}))
+    cost = context.get("cycle_cost", 0) + fill.get("cost", 0)
 
     ct["last_run_at"] = _now()
     ct["activity"] = steps
@@ -1060,6 +1139,7 @@ async def autopilot_cycle(uid: str, lang: str = "en") -> dict:
     ct["weekly_brief"] = context.get("weekly_brief", "")
     ct["last_autorun_at"] = _now()
     ct["last_cycle_cost"] = cost
+    ct["last_cycle_media"] = fill.get("counts", {})
     ct["last_cycle_drafted"] = len(schedule)
 
     scheduled_ids, skipped = [], []
@@ -1088,7 +1168,7 @@ async def autopilot_cycle(uid: str, lang: str = "en") -> dict:
         pass
     return {"ok": True, "auto_approve": ap["auto_approve"],
             "scheduled": len(scheduled_ids), "drafted": len(schedule),
-            "skipped": len(skipped), "cost": cost}
+            "skipped": len(skipped), "cost": cost, "media": fill.get("counts", {})}
 
 
 # ── Endpoints ───────────────────────────────────────────────────────────────
@@ -1155,6 +1235,12 @@ def get_autopilot(current_user: dict = Depends(get_current_user)):
         "goal": ct.get("goal", ""),
         "last_autorun_at": ct.get("last_autorun_at", ""),
         "last_cycle_skipped": ct.get("last_cycle_skipped", []),
+        "last_cycle_media": ct.get("last_cycle_media", {}),
+        "last_cycle_cost": ct.get("last_cycle_cost", 0),
+        # Cost breakdown for the UI estimate.
+        "costs": {"ideate": IDEATE_COST, "script": SCRIPT_COST,
+                  "image": IMAGE_COST, "video": VIDEO_COST,
+                  "video_weekly_cap": VIDEO_WEEKLY_CAP.get(sig.get("plan", "free"), 0)},
         "cycle_cost_estimate": IDEATE_COST + SCRIPT_COST,
     }
 
