@@ -3,6 +3,7 @@ Nexora Core Engine — Metrics API
 GET /api/nexora/metrics  (protected by X-Nexora-Key header)
 """
 import os
+import time
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -10,10 +11,41 @@ router = APIRouter()
 
 NEXORA_KEY = os.getenv("NEXORA_API_KEY", "nexora-core-2026")
 
+# Plan list prices (DKK/mo). Used ONLY to show how many users sit on each tier —
+# NEVER as a revenue figure. Real revenue comes from Stripe (services.real_revenue).
 PLAN_PRICES = {
     "free": 0, "starter": 40, "growth": 57, "basic": 70,
     "pro": 140, "elite": 210, "personal": 350, "agency": 199,
 }
+
+# Process start — real uptime is measured from here (the moment this module is
+# first imported, i.e. app boot). No fabricated availability percentage.
+_PROCESS_START = time.time()
+
+
+def _is_test_user(email: str) -> bool:
+    """QA/automation accounts (qa-…@ugoingviral.com) are not real users and must
+    not inflate the user counts Nex reports to the owner."""
+    e = (email or "").lower()
+    local = e.split("@", 1)[0]
+    return local.startswith("qa-") or local in ("qa", "qa-agent", "qa-auto")
+
+
+def _real_users(users_data: list) -> list:
+    return [u for u in users_data if not _is_test_user(u.get("email", ""))]
+
+
+def _real_uptime() -> str:
+    """Return a real, human-readable process uptime (e.g. '3d 4h 12m')."""
+    secs = max(0, int(time.time() - _PROCESS_START))
+    d, rem = divmod(secs, 86400)
+    h, rem = divmod(rem, 3600)
+    m, _ = divmod(rem, 60)
+    if d:
+        return f"{d}d {h}h {m}m"
+    if h:
+        return f"{h}h {m}m"
+    return f"{m}m"
 
 
 def _require_key(request: Request):
@@ -30,7 +62,7 @@ def nexora_metrics(request: Request):
     from services.users import load_users
 
     today = datetime.now().strftime("%Y-%m-%d")
-    users_data = load_users().get("users", [])
+    users_data = _real_users(load_users().get("users", []))
     total_users = len(users_data)
 
     # Active users: logged in within last 30 days
@@ -46,7 +78,6 @@ def nexora_metrics(request: Request):
             except Exception:
                 pass
 
-    mrr = 0
     posts_today = 0
     autopilot_active = 0
     credits_used_today = 0
@@ -55,10 +86,6 @@ def nexora_metrics(request: Request):
     for uid in get_all_user_ids():
         try:
             ustore = _load_user_store(uid)
-
-            # MRR
-            plan = ustore.get("billing", {}).get("plan", "free")
-            mrr += PLAN_PRICES.get(plan, 0)
 
             # Autopilot
             if ustore.get("automation", {}).get("active"):
@@ -127,9 +154,17 @@ def nexora_metrics(request: Request):
         costs["total_month"] = round(api_costs_today * 30, 4)
         costs["estimated"] = True
 
+    # Real revenue — Stripe active subscriptions only (never plan assignments).
+    from services.real_revenue import real_mrr
+    rev = real_mrr()
+
     return {
         "platform": "ugoingviral",
-        "mrr": mrr,
+        "mrr": rev["mrr"],
+        "mrr_currency": rev.get("currency"),
+        "paying_subscriptions": rev.get("active_subscriptions", 0),
+        "revenue_source": rev.get("source", "stripe"),
+        "stripe_configured": rev.get("stripe_configured", False),
         "active_users": active_users,
         "total_users": total_users,
         "posts_today": posts_today,
@@ -137,7 +172,7 @@ def nexora_metrics(request: Request):
         "credits_used_today": credits_used_today,
         "api_costs_today": round(api_costs_today, 4),
         "costs": costs,
-        "uptime": "99.9%",
+        "uptime": _real_uptime(),
     }
 
 
@@ -166,7 +201,7 @@ def _quick_metrics() -> dict:
         from services.users import load_users
         from datetime import datetime as _dt
         today = _dt.now().strftime("%Y-%m-%d")
-        users_data = load_users().get("users", [])
+        users_data = _real_users(load_users().get("users", []))
         total_users = len(users_data)
         now_dt = _dt.utcnow()
         active_users = 0
@@ -178,13 +213,11 @@ def _quick_metrics() -> dict:
                         active_users += 1
                 except Exception:
                     pass
-        mrr = 0
         posts_today = 0
         autopilot_active = 0
         for uid in get_all_user_ids():
             try:
                 us = _load_user_store(uid)
-                mrr += PLAN_PRICES.get(us.get("billing", {}).get("plan", "free"), 0)
                 if us.get("automation", {}).get("active"):
                     autopilot_active += 1
                 for k, v in us.get("scheduler_log", {}).items():
@@ -193,13 +226,17 @@ def _quick_metrics() -> dict:
                             posts_today += 1
             except Exception:
                 pass
+        from services.real_revenue import real_mrr
+        rev = real_mrr()
         return {
             "total_users": total_users,
             "active_users": active_users,
-            "mrr": mrr,
+            "mrr": rev["mrr"],
+            "mrr_currency": rev.get("currency"),
+            "paying_subscriptions": rev.get("active_subscriptions", 0),
             "posts_today": posts_today,
             "autopilot_active": autopilot_active,
-            "uptime": "99.9%",
+            "uptime": _real_uptime(),
         }
     except Exception:
         return {}
@@ -213,14 +250,19 @@ async def nex_chat(req: Request, admin=Depends(_require_owner_for_nex)):
         return {"response": "Please ask a question."}
 
     m = _quick_metrics()
+    cur = m.get("mrr_currency") or "DKK"
     context = (
         "Platform: UgoingViral — social media automation SaaS (Danish market)\n"
-        f"Total users: {m.get('total_users', '?')}\n"
-        f"Active users (30d): {m.get('active_users', '?')}\n"
-        f"MRR: {m.get('mrr', '?')} DKK\n"
-        f"Posts today: {m.get('posts_today', '?')}\n"
-        f"Autopilot sessions: {m.get('autopilot_active', '?')}\n"
-        f"Uptime: {m.get('uptime', '99.9%')}"
+        f"Total users (real DB count): {m.get('total_users', 0)}\n"
+        f"Active users (30d): {m.get('active_users', 0)}\n"
+        f"MRR (real, from Stripe active subscriptions): {m.get('mrr', 0)} {cur}\n"
+        f"Paying subscriptions (Stripe active): {m.get('paying_subscriptions', 0)}\n"
+        f"Posts today: {m.get('posts_today', 0)}\n"
+        f"Autopilot sessions: {m.get('autopilot_active', 0)}\n"
+        f"Uptime (since last restart): {m.get('uptime', '?')}\n"
+        "IMPORTANT: These are the ONLY real numbers. Never invent or estimate "
+        "users, revenue, or growth figures beyond what is given here. If a number "
+        "is 0, report it as 0."
     )
 
     openai_key = os.getenv("OPENAI_API_KEY", "")

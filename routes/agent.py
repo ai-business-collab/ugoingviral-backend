@@ -1,4 +1,4 @@
-import os, httpx, json, io, tempfile, re as _re, uuid as _uuid, random as _random
+import os, httpx, json, io, tempfile, re as _re, uuid as _uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from pydantic import BaseModel
 from typing import List, Optional
@@ -102,26 +102,63 @@ def _create_agent_task(uid: str, task_type: str, params: dict) -> dict:
     return task
 
 
-def _simulate_task_run(task: dict) -> dict:
+def _real_follower_snapshot(uid: str) -> dict:
+    """Real follower counts from the user's already-synced platform analytics
+    (services run_analytics_sync refreshes these from the real platform APIs).
+    Returns only platforms that are genuinely connected and reported a count."""
+    ustore = _load_user_store(uid)
+    pa = ustore.get("platform_analytics", {})
+    out: dict = {}
+    for name, d in pa.items():
+        if isinstance(d, dict) and d.get("connected") and not d.get("error"):
+            c = d.get("followers", d.get("subscribers"))
+            if isinstance(c, (int, float)):
+                out[name] = c
+    return out
+
+
+def _run_agent_task_real(uid: str, task: dict) -> dict:
+    """Produce an HONEST result for a background task using real data only.
+
+    UgoingViral does NOT perform automated likes/follows/comments, so we never
+    claim fabricated engagement ("gained X followers", "liked Y posts"). Where
+    real data exists we report it; otherwise we say there's nothing to report.
+    """
     t = task.get("type", "")
-    if t == "monitor_hashtag":
-        n    = _random.randint(15, 40)
-        gain = _random.randint(3, 18)
-        htag = task.get("params", {}).get("hashtag", "content")
-        return {"description": f"Engaged with {n} #{htag} posts, gained {gain} followers",
-                "posts_engaged": n, "followers_gained": gain}
-    if t == "engage_followers":
-        likes = _random.randint(20, 60)
-        cmts  = _random.randint(5, 15)
-        return {"description": f"Liked {likes} posts, left {cmts} comments for followers",
-                "likes": likes, "comments": cmts}
+
+    if t in ("monitor_hashtag", "engage_followers"):
+        # No real engagement engine — report a real analytics snapshot instead.
+        counts = _real_follower_snapshot(uid)
+        if counts:
+            parts = ", ".join(f"{p}: {c:,} followers" for p, c in counts.items())
+            return {
+                "description": f"Analytics snapshot — {parts}",
+                "follower_counts": counts,
+                "note": "Automated engagement is not performed; this is a real analytics snapshot, not actions taken.",
+            }
+        return {
+            "description": "No connected platform analytics yet — nothing to report.",
+            "follower_counts": {},
+            "note": "Connect a platform under Connect to get real analytics.",
+        }
+
     if t == "post_content":
-        n = _random.randint(1, 3)
-        return {"description": f"Scheduled {n} post{'s' if n > 1 else ''} for today",
-                "posts_scheduled": n}
+        # Report the real number of posts the user has scheduled for today.
+        ustore = _load_user_store(uid)
+        today  = datetime.now().strftime("%Y-%m-%d")
+        n = sum(1 for p in ustore.get("scheduled_posts", [])
+                if str(p.get("scheduled_time", "")).startswith(today))
+        if n:
+            return {"description": f"{n} post{'s' if n != 1 else ''} scheduled for today",
+                    "posts_scheduled": n}
+        return {"description": "No posts scheduled for today yet", "posts_scheduled": 0}
+
     if t == "analyze_competitors":
-        return {"description": "Weekly competitor analysis complete — 3 accounts tracked",
-                "accounts_tracked": 3}
+        return {
+            "description": "Competitor analysis runs on-demand — open the Competitor tool for a real breakdown.",
+            "note": "No automated competitor tracking is performed.",
+        }
+
     return {"description": "Task completed"}
 
 
@@ -1194,7 +1231,11 @@ def get_agent_activity(current_user: dict = Depends(get_current_user)):
 # ── Background task runner ─────────────────────────────────────────────────────
 
 async def run_agent_tasks():
-    """Run active agent tasks once per day per schedule; log simulated results."""
+    """Run active agent tasks once per day per schedule; log REAL results only.
+
+    Background tasks never fabricate engagement — they report real analytics
+    snapshots / scheduled-post counts, or honestly say there is nothing to report.
+    """
     import asyncio as _asyncio
     await _asyncio.sleep(90)
     while True:
@@ -1220,7 +1261,7 @@ async def run_agent_tasks():
                             continue
                         if task.get("schedule") == "weekly" and datetime.now().weekday() != 0:
                             continue
-                        result = _simulate_task_run(task)
+                        result = await _asyncio.to_thread(_run_agent_task_real, uid, task)
                         log.append({
                             "ts":          datetime.now().isoformat(),
                             "day":         today,

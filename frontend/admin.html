@@ -382,9 +382,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="stat-sub">Pro, Elite, Personal</div>
       </div>
       <div class="stat-card" id="stat-mrr-card">
-        <div class="stat-label">MRR estimat</div>
+        <div class="stat-label">MRR</div>
         <div class="stat-val" id="stat-mrr">–</div>
-        <div class="stat-sub">Monthly revenue</div>
+        <div class="stat-sub">Reel Stripe-omsætning</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Aktive i dag</div>
@@ -987,12 +987,21 @@ async function loadCustomers() {
 
 function renderStats(users) {
   const today = new Date().toLocaleDateString('da-DK',{day:'2-digit',month:'2-digit'});
-  document.getElementById('stat-total').textContent = users.length;
-  document.getElementById('stat-pro').textContent = users.filter(u => ['pro','elite','personal'].includes(u.plan)).length;
-  const mrr = users.reduce((s,u) => s + (PLANS[u.plan]?.price || 0), 0);
-  document.getElementById('stat-mrr').textContent = mrr.toLocaleString('da-DK') + ' kr';
+  // Exclude QA/test accounts from the headline counts — only real users.
+  const real = users.filter(u => !u.is_test);
+  document.getElementById('stat-total').textContent = real.length;
+  document.getElementById('stat-pro').textContent = real.filter(u => ['pro','elite','personal'].includes(u.plan)).length;
   const todayStr = today.substring(0,5);
-  document.getElementById('stat-active').textContent = users.filter(u => u.last_active && u.last_active.startsWith(todayStr)).length;
+  document.getElementById('stat-active').textContent = real.filter(u => u.last_active && u.last_active.startsWith(todayStr)).length;
+  // Real MRR comes from Stripe (admin/revenue endpoint), NOT from plan list prices.
+  const mrrEl = document.getElementById('stat-mrr');
+  if (mrrEl) {
+    mrrEl.textContent = '…';
+    fetch('/api/admin/revenue', {headers:{'Authorization':'Bearer '+token}})
+      .then(r => r.json())
+      .then(d => { mrrEl.textContent = (d.mrr||0).toLocaleString('da-DK') + ' ' + (d.currency||'kr'); })
+      .catch(() => { mrrEl.textContent = '0 kr'; });
+  }
 }
 
 function filterUsers(q) {
@@ -1745,23 +1754,28 @@ async function loadRevenue() {
 
 function renderRevenue(d) {
   const wrap = document.getElementById('revenue-wrap');
+  const cur = d.currency || 'kr';
   const topCards = `
     <div class="rev-grid" style="grid-template-columns:repeat(3,1fr);max-width:600px">
       <div class="rev-card">
         <div class="rev-card-label">MRR</div>
-        <div class="rev-card-val">${(d.mrr||0).toLocaleString('da-DK')} kr</div>
-        <div class="rev-card-sub">Monthly revenue</div>
+        <div class="rev-card-val">${(d.mrr||0).toLocaleString('da-DK')} ${cur}</div>
+        <div class="rev-card-sub">Reel Stripe-omsætning</div>
       </div>
       <div class="rev-card">
         <div class="rev-card-label">ARR</div>
-        <div class="rev-card-val">${(d.arr||0).toLocaleString('da-DK')} kr</div>
-        <div class="rev-card-sub">Annual revenue</div>
+        <div class="rev-card-val">${(d.arr||0).toLocaleString('da-DK')} ${cur}</div>
+        <div class="rev-card-sub">Reel årlig omsætning</div>
       </div>
       <div class="rev-card">
         <div class="rev-card-label">Betalende</div>
-        <div class="rev-card-val">${Object.entries(d.plan_counts||{}).filter(([k])=>k!=='free').reduce((s,[,v])=>s+v,0)}</div>
-        <div class="rev-card-sub">Ikke-gratis brugere</div>
+        <div class="rev-card-val">${d.paying_subscriptions||0}</div>
+        <div class="rev-card-sub">Aktive Stripe-abonnementer</div>
       </div>
+    </div>
+    <div style="margin:8px 24px 16px;font-size:12px;color:var(--tx2)">
+      ${d.revenue_note || 'MRR/ARR er reelle Stripe-abonnementer.'}
+      Tabellen nedenfor viser <b>listepris-potentiale</b> pr. tier (antal brugere × pris), ikke faktisk omsætning.
     </div>`;
   const _maxCount = Math.max(1, ...Object.values(d.plan_counts||{}));
   const planRows = Object.entries(d.plans||{}).map(([key, plan]) => {
@@ -1775,7 +1789,7 @@ function renderRevenue(d) {
         <div class="service-bar"><div class="service-bar-fill" style="width:${Math.round(count/_maxCount*100)}%"></div></div>
       </div>
       <div class="service-credits">${count} brugere</div>
-      <div style="min-width:90px;text-align:right;font-weight:700;color:var(--ac)">${rev.toLocaleString('da-DK')} kr</div>
+      <div style="min-width:110px;text-align:right;font-weight:700;color:var(--tx2)" title="Listepris-potentiale, ikke faktisk omsætning">${rev.toLocaleString('da-DK')} kr <span style="font-size:10px">pot.</span></div>
     </div>`;
   }).join('');
   wrap.innerHTML = topCards + `<div style="margin:0 24px 24px;background:var(--glass-b);border:1px solid var(--border);border-radius:12px;overflow:hidden">${planRows}</div>`;

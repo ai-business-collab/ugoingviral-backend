@@ -2,7 +2,7 @@
 UgoingViral — Social Media Audit
 POST /api/audit/analyze
 """
-import json, hashlib
+import json
 from fastapi import APIRouter, Depends, Request, HTTPException
 from routes.auth import get_current_user
 from services.store import store, add_log
@@ -20,12 +20,14 @@ def _grade(score: int):
     return "F", "#ef4444"
 
 
-def _mock_audit(handle: str, platform: str, niche: str, bio: str,
-                follower_range: str, posts_per_week: float) -> dict:
-    seed = int(hashlib.md5(handle.encode()).hexdigest()[:6], 16)
+def _heuristic_audit(handle: str, platform: str, niche: str, bio: str,
+                     follower_range: str, posts_per_week: float) -> dict:
+    """Deterministic, heuristic self-audit computed purely from the inputs the
+    user supplied about their OWN account (bio, posting frequency, follower
+    range). No random/hash jitter — scores reflect the real inputs only."""
 
-    def jitter(base, spread=12):
-        return min(100, max(0, base + (seed % spread) - spread // 2))
+    def clamp(base):
+        return min(100, max(0, int(base)))
 
     # Profile completeness
     profile_score = 55
@@ -46,7 +48,7 @@ def _mock_audit(handle: str, platform: str, niche: str, bio: str,
         profile_fixes.append("Consider a shorter handle under 15 characters if available")
     else:
         profile_score += 10
-    profile_score = jitter(min(profile_score, 100), 8)
+    profile_score = clamp(profile_score)
 
     # Posting consistency
     consistency_score = 40
@@ -65,7 +67,7 @@ def _mock_audit(handle: str, platform: str, niche: str, bio: str,
     else:
         consistency_fixes.append("Great posting frequency! Focus on quality and engagement rather than volume")
         consistency_score += 50
-    consistency_score = jitter(min(consistency_score, 100), 10)
+    consistency_score = clamp(consistency_score)
 
     # Content mix
     mix_score = 50
@@ -88,7 +90,7 @@ def _mock_audit(handle: str, platform: str, niche: str, bio: str,
     else:
         mix_issues.append("Content mix is unclear — diversify post types to maximize reach")
         mix_fixes.append("Use: 40% educational, 30% entertainment, 20% promotional, 10% personal")
-    mix_score = jitter(min(mix_score, 100), 12)
+    mix_score = clamp(mix_score)
 
     # Engagement potential
     engage_score = 45
@@ -107,7 +109,7 @@ def _mock_audit(handle: str, platform: str, niche: str, bio: str,
     else:
         engage_fixes.append("Focus on saves and shares — they outweigh likes in the algorithm at all follower levels")
         engage_score += 30
-    engage_score = jitter(min(engage_score, 100), 10)
+    engage_score = clamp(engage_score)
 
     overall = (profile_score + consistency_score + mix_score + engage_score) // 4
     grade, color = _grade(overall)
@@ -259,7 +261,8 @@ async def analyze_account(req: Request, current_user: dict = Depends(get_current
         raise HTTPException(400, "handle is required")
 
     s = store.get("settings", {})
-    mock = _mock_audit(handle, platform, niche, bio, follower_range, posts_per_week)
+    # Deterministic heuristic assessment of the user's own self-reported inputs.
+    audit = _heuristic_audit(handle, platform, niche, bio, follower_range, posts_per_week)
 
     raw = await _ai_audit(
         _build_audit_prompt(handle, platform, niche, bio, follower_range, posts_per_week), s
@@ -268,10 +271,14 @@ async def analyze_account(req: Request, current_user: dict = Depends(get_current
         s2, e2 = raw.find("{"), raw.rfind("}") + 1
         if s2 >= 0 and e2 > 0:
             try:
-                mock = json.loads(raw[s2:e2])
+                audit = json.loads(raw[s2:e2])
             except Exception:
                 pass
 
+    # The scores are an automated assessment of the inputs you provided about
+    # your own account — guidance, not measured platform metrics.
+    audit["is_estimate"] = True
+    audit["basis"] = "Automated assessment based on the details you entered (bio, posting frequency, follower range)."
     add_log(f"📋 Audit: @{handle} on {platform}", "success")
-    return {"ok": True, "audit": mock,
+    return {"ok": True, "audit": audit,
             "meta": {"handle": handle, "platform": platform, "niche": niche}}

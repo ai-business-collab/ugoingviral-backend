@@ -13,6 +13,7 @@ from typing import Optional
 from passlib.context import CryptContext
 from services.users import load_users
 from services.store import _load_user_store, _save_user_store, USER_DATA_DIR
+from routes.nexora_core import _is_test_user  # QA/test account detection (no circular import: nexora_core imports admin lazily)
 
 router = APIRouter()
 security = HTTPBearer(auto_error=False)
@@ -339,6 +340,9 @@ def _build_user_list(assignments: dict):
             "sub_accounts": [{"id": s["id"], "name": s["name"], "status": s.get("status","active"), "created_at": s.get("created_at","")[:10]} for s in sub_accounts],
             "extra_sub_slots": extra_sub_slots,
             "subs_blocked": subs_blocked,
+            # QA/automation account — listed for management but excluded from
+            # the headline user counts so they aren't reported as real users.
+            "is_test": _is_test_user(user["email"]),
         })
     return result
 
@@ -699,20 +703,39 @@ def admin_api_usage(month: str = None, admin=Depends(require_owner)):
 @router.get("/api/admin/revenue")
 def admin_revenue(admin=Depends(require_owner)):
     from services.users import load_users as _lu
+    # Real headline revenue: Stripe active subscriptions only. Plan assignments
+    # (admin comps, founder/test accounts) are NOT revenue and never counted.
+    from services.real_revenue import real_mrr
+    rev = real_mrr()
+
+    # plan_counts = how many users sit on each tier (real count, informational).
+    # QA/test accounts are excluded so they don't inflate the tiers.
     plan_counts: dict = {k: 0 for k in PLANS}
     for user in _lu().get("users", []):
+        if _is_test_user(user.get("email", "")):
+            continue
         ustore = _load_user_store(user["id"])
         plan = ustore.get("billing", {}).get("plan", "free")
         if plan not in PLANS:
             plan = "free"
         plan_counts[plan] = plan_counts.get(plan, 0) + 1
-    plan_revenue = {k: plan_counts[k] * PLANS[k]["price"] for k in PLANS}
-    mrr = sum(plan_revenue.values())
+    # plan_list_value = list price × users on that tier. This is POTENTIAL value
+    # if every assigned plan were billed — NOT actual revenue. Clearly labelled.
+    plan_list_value = {k: plan_counts[k] * PLANS[k]["price"] for k in PLANS}
+
     return {
-        "mrr": mrr,
-        "arr": mrr * 12,
+        "mrr": rev["mrr"],
+        "arr": rev["arr"],
+        "currency": rev.get("currency"),
+        "paying_subscriptions": rev.get("active_subscriptions", 0),
+        "revenue_source": rev.get("source", "stripe"),
+        "stripe_configured": rev.get("stripe_configured", False),
+        "revenue_note": rev.get("note") or rev.get("error")
+                        or "MRR/ARR are real Stripe active subscriptions.",
         "plan_counts": plan_counts,
-        "plan_revenue": plan_revenue,
+        # Kept for the tier breakdown bars; this is list-price potential, not revenue.
+        "plan_revenue": plan_list_value,
+        "plan_list_value": plan_list_value,
         "plans": {k: {"name": v["name"], "price": v["price"], "credits": v["credits"]}
                   for k, v in PLANS.items()},
     }

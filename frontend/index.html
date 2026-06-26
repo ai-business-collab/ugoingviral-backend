@@ -19944,10 +19944,20 @@ async function analyzeCompetitor() {
 function _fmtN(n) { return n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'K' : String(n); }
 
 function _renderCompResults(a) {
+  var disc = document.getElementById('comp-disclaimer');
+  if (!disc) {
+    disc = document.createElement('div');
+    disc.id = 'comp-disclaimer';
+    disc.style.cssText = 'font-size:11px;color:#f59e0b;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;line-height:1.4';
+    var kpiEl = document.getElementById('comp-kpis');
+    kpiEl.parentNode.insertBefore(disc, kpiEl);
+  }
+  disc.textContent = '⚠️ ' + (a.disclaimer || 'These figures are AI estimates, not live data from the account.');
+
   document.getElementById('comp-kpis').innerHTML = [
-    {icon:'👥', label:'Est. Followers',   value: _fmtN(a.estimated_followers||0)},
-    {icon:'📅', label:'Posts / Week',     value: (a.posts_per_week||0) + 'x'},
-    {icon:'💬', label:'Avg Engagement',   value: (a.avg_engagement_rate||0) + '%'},
+    {icon:'👥', label:'Est. Followers',   value: '~' + _fmtN(a.estimated_followers||0)},
+    {icon:'📅', label:'Posts / Week (est.)', value: '~' + (a.posts_per_week||0) + 'x'},
+    {icon:'💬', label:'Avg Engagement (est.)', value: '~' + (a.avg_engagement_rate||0) + '%'},
   ].map(function(k) {
     return '<div class="card" style="text-align:center;padding:16px 8px">'
       + '<div style="font-size:22px;margin-bottom:4px">' + k.icon + '</div>'

@@ -3,12 +3,18 @@ UgoingViral — Competitor Analysis
 POST /api/competitor/analyze          → AI-powered competitor breakdown
 POST /api/competitor/generate-similar → generate inspired content
 """
-import json, random
+import json
 from fastapi import APIRouter, Depends, Request, HTTPException
 from routes.auth import get_current_user
 from services.store import store, add_log
 
 router = APIRouter()
+
+_ESTIMATE_DISCLAIMER = (
+    "AI estimate based on niche/platform norms — NOT live data from this "
+    "account. We have no public API access to a competitor's private metrics, "
+    "so follower/engagement figures are approximate guidance, not real numbers."
+)
 
 
 async def _call_ai(prompt: str, s: dict, max_tokens: int = 1500) -> str:
@@ -38,38 +44,6 @@ async def _call_ai(prompt: str, s: dict, max_tokens: int = 1500) -> str:
             r.raise_for_status()
             return r.json()["choices"][0]["message"]["content"].strip()
     raise ValueError("no_ai_key")
-
-
-def _mock_analysis(handle: str, platform: str, niche: str) -> dict:
-    rng = random.Random(sum(ord(c) for c in handle + platform))
-    pct_reels = rng.randint(40, 65)
-    pct_car   = rng.randint(20, min(35, 100 - pct_reels))
-    pct_img   = 100 - pct_reels - pct_car
-    return {
-        "handle": handle, "platform": platform,
-        "estimated_followers": rng.randint(5000, 250000),
-        "posts_per_week": round(rng.uniform(3, 10), 1),
-        "avg_engagement_rate": round(rng.uniform(2.0, 6.5), 1),
-        "top_content_types": [
-            {"type": "Reels", "percentage": pct_reels},
-            {"type": "Carousels", "percentage": pct_car},
-            {"type": "Static posts", "percentage": pct_img},
-        ],
-        "best_hashtags": [f"#{handle}", f"#{niche}", "#viral", "#trending",
-                          "#content", "#creator", "#socialmedia", "#growth"],
-        "best_posting_times": ["Mon 09:00", "Wed 18:00", "Fri 12:00"],
-        "content_themes": ["Tutorials", "Behind the scenes", "Product showcases", "Trending sounds"],
-        "top_posts_preview": [
-            {"description": "Tutorial showing step-by-step process",
-             "likes": rng.randint(1000, 15000), "content_type": "reel"},
-            {"description": "Before & after transformation reveal",
-             "likes": rng.randint(800, 12000), "content_type": "carousel"},
-            {"description": "Day in the life vlog-style content",
-             "likes": rng.randint(600, 10000), "content_type": "reel"},
-        ],
-        "strengths": ["Consistent posting schedule", "Strong visual identity", "High-quality Reels"],
-        "gaps": ["Limited use of carousels", "Inconsistent caption length"],
-    }
 
 
 @router.post("/api/competitor/analyze")
@@ -121,11 +95,20 @@ Return ONLY the JSON object, no markdown."""
         except Exception as ex:
             add_log(f"Competitor AI error: {ex}", "warn")
 
+    # No fabricated fallback: if we couldn't produce a real AI analysis, say so
+    # honestly instead of inventing follower/engagement numbers with an RNG.
     if not result:
-        result = _mock_analysis(handle, platform, niche)
+        if not has_ai:
+            return {"ok": False,
+                    "detail": "No AI key configured — add an Anthropic or OpenAI key in Settings to get competitor analysis."}
+        return {"ok": False,
+                "detail": "Couldn't generate the analysis right now. Please try again."}
 
     result["handle"] = handle
     result["platform"] = platform
+    # Every figure here is an AI approximation, not the account's real data.
+    result["is_estimate"] = True
+    result["disclaimer"] = _ESTIMATE_DISCLAIMER
     return {"ok": True, "analysis": result}
 
 
