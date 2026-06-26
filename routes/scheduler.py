@@ -216,6 +216,35 @@ async def _run_for_user(force: bool = False):
         else:
             store["scheduled_posts"] = disk_scheduled
 
+        # ── TRUE AUTO PILOT: drive the Content Team on an interval ─────────
+        # ONE switch (content_team.autopilot.enabled) → the team runs itself
+        # (default weekly), generates the brief/scripts, attaches media and
+        # schedules the posts. Auto-approve schedules autonomously; otherwise it
+        # leaves a plan for the user to review. The agents credit-gate + fall
+        # back to templates themselves, so this never overspends or breaks.
+        try:
+            _ct = store.get("content_team", {}) or {}
+            _ap = _ct.get("autopilot") or {}
+            if _ap.get("enabled") and (_ct.get("goal") or "").strip():
+                _interval = int(_ap.get("interval_days", 7) or 7)
+                _last = _ct.get("last_autorun_at", "")
+                _due = True
+                if _last:
+                    try:
+                        _due = (datetime.utcnow() - datetime.fromisoformat(_last.replace("Z", ""))) >= timedelta(days=_interval)
+                    except Exception:
+                        _due = True
+                if _due:
+                    from services.store import _uid_ctx
+                    _uid = _uid_ctx.get(None)
+                    if _uid:
+                        from routes.content_team import autopilot_cycle
+                        _lang = "da" if str(store.get("settings", {}).get("content_language", "")).lower().startswith(("da", "dansk")) else "en"
+                        _res = await autopilot_cycle(_uid, _lang)
+                        add_log(f"🤖 Auto Pilot · Content Team cycle: {_res}", "info")
+        except Exception as _e:
+            add_log(f"Content Team autopilot tick error: {str(_e)[:80]}", "error")
+
         # ── AUTO-REPOST at 08:00 ──────────────────────────────────────
         now_check = datetime.now()
         if now_check.strftime("%H:%M") in ["08:00", "08:01"]:

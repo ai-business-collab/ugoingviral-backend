@@ -3746,6 +3746,32 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
 
+      <!-- TRUE AUTO PILOT — one switch, fully autonomous -->
+      <div class="card" style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <div class="ctitle">🚀 <span data-i18n="ct.apTitle">Auto Pilot</span></div>
+            <div style="font-size:12px;color:var(--tx3);line-height:1.6;max-width:560px" data-i18n="ct.apDesc">One switch. Your team runs itself on a schedule — analyzes you, plans the week, writes scripts, attaches media and schedules the posts. No clicking "Run team".</div>
+          </div>
+          <div class="tog" id="ct-ap-toggle" onclick="ctToggleAutopilot(this)"></div>
+        </div>
+        <div id="ct-ap-cfg" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--tx)" data-i18n="ct.apAuto">Fully autonomous</div>
+              <div style="font-size:11px;color:var(--tx3)" data-i18n="ct.apAutoDesc">ON = schedule posts automatically. OFF = leave a plan for you to review &amp; approve.</div>
+            </div>
+            <div class="tog" id="ct-ap-approve" onclick="ctToggleApprove(this)"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <label style="font-size:12px;color:var(--tx2)" data-i18n="ct.apEvery">Run every</label>
+            <input type="number" id="ct-ap-interval" min="1" max="30" value="7" onchange="ctSaveAutopilot()" style="width:64px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--tx);padding:6px 8px">
+            <span style="font-size:12px;color:var(--tx2)" data-i18n="ct.apDays">days</span>
+          </div>
+          <div id="ct-ap-cost" style="font-size:12px;color:var(--tx3);background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;line-height:1.6"></div>
+        </div>
+      </div>
+
       <!-- Team roster -->
       <div class="card" style="margin-bottom:18px">
         <div class="ctitle">👥 <span data-i18n="ct.rosterTitle">Your team</span></div>
@@ -8759,6 +8785,10 @@ Object.assign(I18N.en, {
   'ct.approve':'Approve', 'ct.edit':'Edit', 'ct.reject':'Reject', 'ct.approveAll':'Approve all',
   'ct.save':'Save', 'ct.cancel':'Cancel', 'ct.scheduledWord':'posts scheduled',
   'ct.statusDone':'Done', 'ct.statusError':'Error',
+  'ct.apTitle':'Auto Pilot', 'ct.apDesc':'One switch. Your team runs itself on a schedule — analyzes you, plans the week, writes scripts, attaches media and schedules the posts. No clicking "Run team".',
+  'ct.apAuto':'Fully autonomous', 'ct.apAutoDesc':'ON = schedule posts automatically. OFF = leave a plan for you to review & approve.',
+  'ct.apEvery':'Run every', 'ct.apDays':'days',
+  'ct.apOn':'Auto Pilot is ON — your team will run automatically.', 'ct.apOff':'Auto Pilot turned off.',
 });
 Object.assign(I18N.da, {
   'nav.contentTeam':'Indholdsteam', 'page.content-team':'🤝 AI Indholdsteam',
@@ -8787,6 +8817,10 @@ Object.assign(I18N.da, {
   'ct.approve':'Godkend', 'ct.edit':'Rediger', 'ct.reject':'Afvis', 'ct.approveAll':'Godkend alle',
   'ct.save':'Gem', 'ct.cancel':'Annullér', 'ct.scheduledWord':'opslag planlagt',
   'ct.statusDone':'Færdig', 'ct.statusError':'Fejl',
+  'ct.apTitle':'Auto Pilot', 'ct.apDesc':'Én knap. Dit team kører selv på en plan — analyserer dig, planlægger ugen, skriver manuskripter, vedhæfter medier og planlægger opslagene. Ingen "Kør team"-klik.',
+  'ct.apAuto':'Fuldt autonom', 'ct.apAutoDesc':'TIL = planlæg opslag automatisk. FRA = efterlad en plan du selv godkender.',
+  'ct.apEvery':'Kør hver', 'ct.apDays':'dage',
+  'ct.apOn':'Auto Pilot er TIL — dit team kører automatisk.', 'ct.apOff':'Auto Pilot slået fra.',
 });
 
 // ── AI Content Team (Part 1 — foundation) ──────────────────────────────────
@@ -8908,6 +8942,44 @@ async function _ctApprove(items){
   }catch(e){ toast(t('ct.error'),'error'); }
 }
 
+// ── True Auto Pilot controls ────────────────────────────────────────────────
+var CT_AP = {enabled:false, auto_approve:true, interval_days:7};
+function _ctSetTog(el, on){ if(el){ el.classList.toggle('on', !!on); } }
+function ctRenderAutopilot(ap, status){
+  CT_AP = Object.assign(CT_AP, ap||{});
+  _ctSetTog(document.getElementById('ct-ap-toggle'), CT_AP.enabled);
+  document.getElementById('ct-ap-cfg').style.display = CT_AP.enabled ? 'block' : 'none';
+  _ctSetTog(document.getElementById('ct-ap-approve'), CT_AP.auto_approve);
+  var iv = document.getElementById('ct-ap-interval'); if(iv) iv.value = CT_AP.interval_days||7;
+  var cost = document.getElementById('ct-ap-cost');
+  if(cost){
+    var est = (status && status.cycle_cost_estimate) || 35;
+    var last = (status && status.last_autorun_at) ? new Date(status.last_autorun_at).toLocaleString() : '—';
+    var lastSched = (status && status.last_cycle_scheduled) || 0;
+    cost.innerHTML = '💳 <b>~'+est+' credits per cycle</b> (AI ideas + scripts). Media uses your product images (free); AI video is opt-in. '
+      + 'Posts use your Auto Pilot time slots &amp; cadence.<br>🕘 Last run: '+_ctEsc(last)+' · last cycle scheduled: '+lastSched+' post(s).';
+  }
+}
+async function ctToggleAutopilot(el){
+  var on = !el.classList.contains('on');
+  try{
+    var d = await apiFetch('/api/content_team/autopilot','POST',{enabled:on});
+    ctRenderAutopilot(d.autopilot, null);
+    toast(on ? '🚀 '+t('ct.apOn') : t('ct.apOff'), 'success');
+    var s = await apiFetch('/api/content_team/status'); ctRenderAutopilot(s.autopilot, s);
+  }catch(e){ toast((e&&e.message)||t('ct.error'),'error'); }
+}
+async function ctToggleApprove(el){
+  var on = !el.classList.contains('on');
+  try{ var d = await apiFetch('/api/content_team/autopilot','POST',{auto_approve:on}); ctRenderAutopilot(d.autopilot, null); }
+  catch(e){ toast(t('ct.error'),'error'); }
+}
+async function ctSaveAutopilot(){
+  var iv = parseInt(document.getElementById('ct-ap-interval').value||'7',10);
+  try{ var d = await apiFetch('/api/content_team/autopilot','POST',{interval_days:iv}); ctRenderAutopilot(d.autopilot, null); }
+  catch(e){ toast(t('ct.error'),'error'); }
+}
+
 async function loadContentTeam(){
   renderTeamRoster();
   try{
@@ -8919,6 +8991,7 @@ async function loadContentTeam(){
     var s = await apiFetch('/api/content_team/status');
     renderTeamFeed((s && s.activity) || []);
     renderTeamReview((s && s.schedule) || []);
+    ctRenderAutopilot(s && s.autopilot, s);
   }catch(e){}
 }
 

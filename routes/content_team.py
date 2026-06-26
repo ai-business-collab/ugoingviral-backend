@@ -153,6 +153,43 @@ def _strategy_flavour(user_type: str, lang: str):
     return ctas, pillars
 
 
+# Niche/platform-optimal weekly cadence (posts/week) — best-practice guidance the
+# Strategist RECOMMENDS. The user's own Auto Pilot frequency stays the source of
+# truth; this is advisory and can be accepted or overridden.
+_PLATFORM_CADENCE = {
+    "tiktok": 10, "instagram": 7, "youtube": 3, "facebook": 5,
+    "twitter": 14, "snapchat": 7, "pinterest": 7,
+}
+
+
+def _recommended_cadence(platforms: list) -> int:
+    """Recommended posts/week = the highest-tempo connected platform's best
+    practice (capped to a realistic 14/week)."""
+    if not platforms:
+        return 7
+    rec = max(_PLATFORM_CADENCE.get(p, 5) for p in platforms)
+    return max(3, min(14, rec))
+
+
+def _build_slots(post_times: list, schedule_days: list, need: int) -> list:
+    """Build up to `need` (date_iso, "HH:MM") slots from the user's own posting
+    days (isoweekday 1=Mon…7=Sun) and time-of-day slots, starting tomorrow and
+    walking forward up to 21 days. This places Content Team posts at exactly the
+    times the user configured in Auto Pilot — one source of truth for cadence."""
+    times = sorted({t for t in post_times if isinstance(t, str)}) or _DEFAULT_TIMES
+    days = sorted({d for d in schedule_days if isinstance(d, int) and 1 <= d <= 7}) or [1, 2, 3, 4, 5, 6, 7]
+    out = []
+    start = datetime.utcnow().date() + timedelta(days=1)
+    for offset in range(0, 21):
+        d = start + timedelta(days=offset)
+        if d.isoweekday() in days:
+            for tm in times:
+                out.append((d.isoformat(), tm))
+                if len(out) >= need:
+                    return out
+    return out
+
+
 # ── Real data collection (Data Analyst input) ───────────────────────────────
 def _collect_signals(uid: str) -> dict:
     """Read the user's REAL signals from their per-user store: connected
@@ -199,6 +236,22 @@ def _collect_signals(uid: str) -> dict:
                       or us.get("shopify_products_cache") or us.get("manual_products"))
 
     has_data = bool(perf or us.get("content_history") or us.get("scheduled_posts"))
+
+    # Cadence = the user's OWN Auto Pilot frequency settings (one source of
+    # truth). posts/week = time-slots-per-day × posting-days-per-week.
+    auto = us.get("automation", {}) or {}
+    post_times = [t for t in (auto.get("post_times") or []) if isinstance(t, str)]
+    schedule_days = [d for d in (auto.get("schedule_days") or []) if isinstance(d, int)]
+    user_per_week = (len(post_times) * len(schedule_days)) if (post_times and schedule_days) else 0
+    # Product image URLs available to attach as media (free; no AI image gen exists).
+    product_images = []
+    for p in list(us.get("shopify_products_cache") or []) + list(us.get("manual_products") or []):
+        if isinstance(p, dict):
+            imgs = p.get("images") or ([p["image"]] if p.get("image") else [])
+            for im in imgs:
+                if isinstance(im, str) and im:
+                    product_images.append(im)
+
     return {
         "platforms": platforms,
         "followers": followers,
@@ -211,8 +264,14 @@ def _collect_signals(uid: str) -> dict:
         "niche": niche,
         "is_webshop": is_webshop,
         "products": products[:8],
+        "product_images": product_images[:40],
         "plan": (us.get("billing", {}) or {}).get("plan", "free"),
         "has_data": has_data,
+        # User's chosen cadence (source of truth) + raw slots for scheduling.
+        "user_per_week": user_per_week,
+        "post_times": post_times,
+        "schedule_days": schedule_days,
+        "automation_active": bool(auto.get("active")),
     }
 
 
@@ -351,13 +410,25 @@ class ContentStrategist(TeamAgent):
 
     def work(self):
         brief = self.context.get("brief") or {}
+        signals = self.context.get("signals") or {}
         lang = self.lang
         platforms = brief.get("platforms") or ["tiktok", "instagram"]
         user_type = brief.get("user_type") or ("webshop" if brief.get("is_webshop") else "creator")
         plan = brief.get("plan", "free")
 
-        # Cadence scales with plan: Free starts light, paid plans post more.
-        per_week = 3 if plan == "free" else 7
+        # Cadence — ONE source of truth: the user's own Auto Pilot frequency
+        # (time-slots/day × posting-days/week). Fall back to a plan-based default
+        # only when the user hasn't configured any. We ALSO recommend a
+        # niche-optimal cadence the user can accept or override.
+        user_per_week = int(signals.get("user_per_week") or 0)
+        recommended = _recommended_cadence(platforms)
+        if user_per_week > 0:
+            per_week = user_per_week
+            cadence_source = "user"
+        else:
+            per_week = 3 if plan == "free" else 7
+            cadence_source = "default"
+        per_week = max(1, min(28, per_week))
         videos = max(1, round(per_week * 0.7))
         other = max(0, per_week - videos)
 
@@ -375,6 +446,8 @@ class ContentStrategist(TeamAgent):
             "posts_per_week": per_week,
             "videos_per_week": videos,
             "other_posts_per_week": other,
+            "recommended_per_week": recommended,
+            "cadence_source": cadence_source,
             "platforms": platforms,
             "formats": formats[:6],
             "ctas": ctas,
@@ -385,13 +458,21 @@ class ContentStrategist(TeamAgent):
         self.context["strategy"] = strategy
 
         plabel = ", ".join(_PLATFORM_LABEL.get(p, p) for p in platforms)
+        if cadence_source == "user":
+            cad_note = _pick(lang,
+                f" (your Auto Pilot setting; niche-optimal would be ~{recommended}/week)",
+                f" (din Auto Pilot-indstilling; niche-optimalt ville være ~{recommended}/uge)")
+        else:
+            cad_note = _pick(lang,
+                f" (default — recommended for your niche: ~{recommended}/week)",
+                f" (standard — anbefalet for din niche: ~{recommended}/uge)")
         summary = _pick(lang, "Set the weekly content strategy",
                               "Fastlagde den ugentlige indholdsstrategi")
         output = _pick(lang,
-            f"{per_week} posts/week ({videos} videos + {other} other) across {plabel}. "
+            f"{per_week} posts/week ({videos} videos + {other} other) across {plabel}{cad_note}. "
             f"Formats: {', '.join(strategy['formats'])}. Pillars: {', '.join(pillars)}. "
             f"CTAs: {', '.join(ctas)}.",
-            f"{per_week} opslag/uge ({videos} videoer + {other} øvrige) på {plabel}. "
+            f"{per_week} opslag/uge ({videos} videoer + {other} øvrige) på {plabel}{cad_note}. "
             f"Formater: {', '.join(strategy['formats'])}. Søjler: {', '.join(pillars)}. "
             f"CTA'er: {', '.join(ctas)}.")
         return {"summary": summary, "output": output, "data": strategy}
@@ -432,7 +513,11 @@ class Ideator(TeamAgent):
                 seen.add(k)
                 deduped.append(i.strip())
         ideas = deduped[:30]
-        locked = ideas[:LOCKED_COUNT]
+        # Lock enough ideas to FILL the user's weekly cadence (one source of
+        # truth), not a fixed 7 — capped at 14/week to bound token + credit cost.
+        want = int(strat.get("posts_per_week") or LOCKED_COUNT)
+        lock_n = max(1, min(want, 14, len(ideas)))
+        locked = ideas[:lock_n]
         self.context["ideas"] = ideas
         self.context["locked_ideas"] = locked
 
@@ -645,30 +730,49 @@ class PublishingManager(TeamAgent):
         # Schedule up to the weekly cadence, spread across the next 7 days.
         n = min(len(items), strat.get("posts_per_week", 7) or 7)
         items = items[:n]
+
+        # Use the user's OWN Auto Pilot time slots + posting days when set
+        # (one source of truth). Build dated slots over the coming week.
+        user_times = signals.get("post_times") or []
+        user_days = signals.get("schedule_days") or []   # 1=Mon … 7=Sun (isoweekday)
+        slots = _build_slots(user_times, user_days, n) if (user_times and user_days) else None
+
+        # Product images are the only free media source (no AI image gen exists);
+        # round-robin them across posts. Video gen is opt-in (handled downstream).
+        prod_imgs = [u for u in (signals.get("product_images") or []) if isinstance(u, str) and u]
+
         start = datetime.utcnow().date() + timedelta(days=1)
         schedule = []
         for i, it in enumerate(items):
             plat = targets[i % len(targets)]
-            day_offset = min(6, round(i * 7 / max(1, n)))
-            d = start + timedelta(days=day_offset)
-            times = _BEST_TIMES.get(plat, _DEFAULT_TIMES)
+            if slots:
+                d_iso, tm = slots[i % len(slots)]
+                d = datetime.fromisoformat(d_iso).date()
+            else:
+                day_offset = min(6, round(i * 7 / max(1, n)))
+                d = start + timedelta(days=day_offset)
+                times = _BEST_TIMES.get(plat, _DEFAULT_TIMES)
+                tm = times[i % len(times)]
             hook = it.get("hook") or it.get("idea", "")
             # A ready-to-edit caption from the script (hook → value → CTA).
             caption = "\n\n".join(x for x in [hook, it.get("value", ""), it.get("cta", "")] if x).strip() or hook
+            img = prod_imgs[i % len(prod_imgs)] if prod_imgs else ""
             schedule.append({
                 "id": f"ct-{i}",
                 "date": d.isoformat(),
                 "day": d.strftime("%A"),
-                "time": times[i % len(times)],
+                "time": tm,
                 "platform": plat,
                 "platform_label": _PLATFORM_LABEL.get(plat, plat),
                 "idea": it.get("idea", ""),
                 "hook": hook,
                 "caption": caption,
+                "image_url": img,             # product image when available, else ""
                 "status": "draft",            # NOT posted — user must approve
             })
         self.context["schedule"] = schedule
         self.context["schedule_connected"] = bool(connected)
+        self.context["schedule_has_media"] = bool(prod_imgs)
 
         plats = ", ".join(sorted({s["platform_label"] for s in schedule}))
         not_connected = "" if connected else _pick(lang,
@@ -761,6 +865,134 @@ _SPECIALISTS = {
     "publisher": PublishingManager,
 }
 
+# True Auto Pilot defaults: ONE switch → fully autonomous by default.
+AUTOPILOT_DEFAULTS = {
+    "enabled": False,        # master switch (off until the user turns it on)
+    "auto_approve": True,    # autonomous: schedule without manual review
+    "interval_days": 7,      # run the team weekly
+    "generate_video": False, # AI video per post is opt-in (≈250 cr each)
+}
+
+
+def _autopilot_cfg(ct: dict) -> dict:
+    ap = dict(AUTOPILOT_DEFAULTS)
+    ap.update({k: v for k, v in (ct.get("autopilot") or {}).items() if k in AUTOPILOT_DEFAULTS})
+    return ap
+
+
+# ── Shared pipeline + scheduling (one source of truth for the endpoint AND the
+#    autopilot cycle — never duplicated) ───────────────────────────────────────
+async def run_team_pipeline(uid: str, goal: str, lang: str) -> tuple:
+    """Run all specialists + Head of Content in sequence over a shared context.
+    Returns (steps, context). Must run inside the user's store context so the
+    agents read real signals and credit-charge correctly."""
+    context = {"goal": goal, "uid": uid, "ran_roles": [], "outputs": {},
+               "signals": _collect_signals(uid)}
+    steps = []
+    for role in AGENT_SEQUENCE:
+        step = await _SPECIALISTS[role](goal, lang, context).run()
+        steps.append(step)
+        context["ran_roles"].append(role)
+        context["outputs"][role] = step.get("output", "")
+    head = await HeadOfContent(goal, lang, context).run()
+    steps.append(head)
+
+    # Real credits spent this cycle (Ideator + Scripter charge only when they
+    # actually used AI; templates are free).
+    cost = 0
+    for s in steps:
+        d = s.get("data") or {}
+        if s.get("role") == "ideator" and d.get("ai"):
+            cost += IDEATE_COST
+        if s.get("role") == "scripter" and d.get("ai"):
+            cost += SCRIPT_COST
+    context["cycle_cost"] = cost
+    return steps, context
+
+
+def _schedule_items(items: list) -> list:
+    """Turn approved/auto-approved draft items into real scheduled_posts in the
+    existing scheduler (reused — the same executor posts them at their time).
+    Carries media (image_url/video_url) through so posts aren't text-only when a
+    product image is available. Returns the created scheduled-post ids."""
+    import random
+    scheduled = store.setdefault("scheduled_posts", [])
+    created = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        platform = (it.get("platform") or "instagram").strip().lower()
+        date = (it.get("date") or "").strip()
+        tm = (it.get("time") or "09:00").strip()
+        caption = (it.get("caption") or it.get("hook") or "").strip()
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", date) or not caption:
+            continue
+        if not re.match(r"^\d{1,2}:\d{2}$", tm):
+            tm = "09:00"
+        sid = f"ct_{date}_{tm.replace(':', '')}_{random.randint(1000, 9999)}"
+        scheduled.append({
+            "id": sid,
+            "platform": platform,
+            "content": caption,
+            "image_url": it.get("image_url", "") or "",
+            "video_url": it.get("video_url", "") or "",
+            "title": (it.get("idea") or caption)[:80],
+            "scheduled_time": f"{date}T{tm}",      # fromisoformat-compatible
+            "status": "scheduled",                  # picked up by the existing scheduler
+            "source": "content_team",
+        })
+        created.append(sid)
+    store["scheduled_posts"] = scheduled
+    return created
+
+
+async def autopilot_cycle(uid: str, lang: str = "en") -> dict:
+    """One True Auto Pilot cycle: run the Content Team, then (if auto_approve)
+    schedule the resulting posts automatically — otherwise leave them as a
+    pending plan for the user to review. Runs in the user's store context."""
+    ct = store.get("content_team", {}) or {}
+    goal = (ct.get("goal") or "").strip()
+    if not goal:
+        return {"ok": False, "reason": "no_goal"}
+    ap = _autopilot_cfg(ct)
+
+    steps, context = await run_team_pipeline(uid, goal, lang)
+    schedule = context.get("schedule", []) or []
+    cost = context.get("cycle_cost", 0)
+
+    ct["last_run_at"] = _now()
+    ct["activity"] = steps
+    ct["scripts"] = context.get("scripts", [])
+    ct["weekly_brief"] = context.get("weekly_brief", "")
+    ct["last_autorun_at"] = _now()
+    ct["last_cycle_cost"] = cost
+    ct["last_cycle_drafted"] = len(schedule)
+
+    scheduled_ids = []
+    if ap["auto_approve"] and schedule:
+        scheduled_ids = _schedule_items(schedule)
+        ct["schedule"] = []                  # consumed — they're real scheduled posts now
+        ct["approved_total"] = (ct.get("approved_total", 0) or 0) + len(scheduled_ids)
+        ct["last_approved_at"] = _now()
+    else:
+        ct["schedule"] = schedule            # pending review
+    ct["last_cycle_scheduled"] = len(scheduled_ids)
+    store["content_team"] = ct
+    save_store()
+
+    try:
+        from routes.notifications import push_notification
+        if ap["auto_approve"]:
+            push_notification(uid, "autopilot_content", "Auto Pilot ran your Content Team",
+                              f"{len(scheduled_ids)} posts scheduled automatically (~{cost} credits).")
+        else:
+            push_notification(uid, "autopilot_content", "Content Team plan ready to review",
+                              f"{len(schedule)} posts drafted — review & approve in Content Team.")
+    except Exception:
+        pass
+    return {"ok": True, "auto_approve": ap["auto_approve"],
+            "scheduled": len(scheduled_ids), "drafted": len(schedule), "cost": cost}
+
 
 # ── Endpoints ───────────────────────────────────────────────────────────────
 @router.get("/api/content_team/goal")
@@ -795,7 +1027,53 @@ def get_status(current_user: dict = Depends(get_current_user)):
         "schedule": ct.get("schedule", []),
         "weekly_brief": ct.get("weekly_brief", ""),
         "roster": roster,
+        "autopilot": _autopilot_cfg(ct),
+        "last_autorun_at": ct.get("last_autorun_at", ""),
+        "last_cycle_cost": ct.get("last_cycle_cost", 0),
+        "last_cycle_scheduled": ct.get("last_cycle_scheduled", 0),
+        # Per-cycle credit cost (Ideator 15 + Scripter 20 when AI is used).
+        "cycle_cost_estimate": IDEATE_COST + SCRIPT_COST,
+        "approved_total": ct.get("approved_total", 0),
     }
+
+
+@router.get("/api/content_team/autopilot")
+def get_autopilot(current_user: dict = Depends(get_current_user)):
+    ct = store.get("content_team", {}) or {}
+    return {
+        "autopilot": _autopilot_cfg(ct),
+        "goal": ct.get("goal", ""),
+        "last_autorun_at": ct.get("last_autorun_at", ""),
+        "cycle_cost_estimate": IDEATE_COST + SCRIPT_COST,
+    }
+
+
+@router.post("/api/content_team/autopilot")
+async def set_autopilot(request: Request, current_user: dict = Depends(get_current_user)):
+    """Configure True Auto Pilot. ONE switch (`enabled`) → the scheduler runs the
+    Content Team on `interval_days` and (if `auto_approve`) schedules the posts
+    automatically. Requires a goal before it can be enabled."""
+    body = await request.json()
+    ct = store.get("content_team", {}) or {}
+    ap = _autopilot_cfg(ct)
+    if "enabled" in body:
+        enabled = bool(body["enabled"])
+        if enabled and not (ct.get("goal") or "").strip():
+            raise HTTPException(status_code=400, detail="Set a goal first, then enable Auto Pilot.")
+        ap["enabled"] = enabled
+    if "auto_approve" in body:
+        ap["auto_approve"] = bool(body["auto_approve"])
+    if "interval_days" in body:
+        try:
+            ap["interval_days"] = max(1, min(30, int(body["interval_days"])))
+        except Exception:
+            pass
+    if "generate_video" in body:
+        ap["generate_video"] = bool(body["generate_video"])
+    ct["autopilot"] = ap
+    store["content_team"] = ct
+    save_store()
+    return {"ok": True, "autopilot": ap}
 
 
 @router.post("/api/content_team/approve")
@@ -805,38 +1083,12 @@ async def approve_schedule(request: Request, current_user: dict = Depends(get_cu
     items sent here are scheduled; rejected items are simply never sent. Nothing
     is published until each post's scheduled time, exactly like any other
     scheduled post."""
-    import random
     body = await request.json()
     items = body.get("items") or []
     if not isinstance(items, list) or not items:
         raise HTTPException(status_code=400, detail="No items to approve")
 
-    scheduled = store.setdefault("scheduled_posts", [])
-    created = []
-    for it in items:
-        if not isinstance(it, dict):
-            continue
-        platform = (it.get("platform") or "instagram").strip().lower()
-        date = (it.get("date") or "").strip()
-        tm = (it.get("time") or "09:00").strip()
-        caption = (it.get("caption") or it.get("hook") or "").strip()
-        if not re.match(r"^\d{4}-\d{2}-\d{2}$", date) or not caption:
-            continue
-        if not re.match(r"^\d{1,2}:\d{2}$", tm):
-            tm = "09:00"
-        sid = f"ct_{date}_{tm.replace(':', '')}_{random.randint(1000, 9999)}"
-        scheduled.append({
-            "id": sid,
-            "platform": platform,
-            "content": caption,
-            "image_url": "",
-            "title": (it.get("idea") or caption)[:80],
-            "scheduled_time": f"{date}T{tm}",      # fromisoformat-compatible
-            "status": "scheduled",                  # picked up by the existing scheduler
-            "source": "content_team",
-        })
-        created.append(sid)
-    store["scheduled_posts"] = scheduled
+    created = _schedule_items(items)   # shared with the autopilot cycle
 
     # Record approval and drop the approved drafts from the pending plan.
     ct = store.get("content_team", {}) or {}
@@ -866,18 +1118,9 @@ async def run_team(request: Request, current_user: dict = Depends(get_current_us
     ct["goal"] = goal
     ct.setdefault("goal_updated_at", _now())
 
-    # Real signals gathered once, shared with the whole team via context.
-    context = {"goal": goal, "uid": uid, "ran_roles": [], "outputs": {},
-               "signals": _collect_signals(uid)}
-    steps = []
-    for role in AGENT_SEQUENCE:
-        step = await _SPECIALISTS[role](goal, lang, context).run()
-        steps.append(step)
-        context["ran_roles"].append(role)
-        context["outputs"][role] = step.get("output", "")
-
-    head = await HeadOfContent(goal, lang, context).run()
-    steps.append(head)
+    # Shared pipeline — identical code path the autopilot cycle uses.
+    steps, context = await run_team_pipeline(uid, goal, lang)
+    head = steps[-1]
 
     ct["last_run_at"] = _now()
     ct["activity"] = steps
