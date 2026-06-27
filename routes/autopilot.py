@@ -95,6 +95,11 @@ def autopilot_status(current_user: dict = Depends(get_current_user)):
 
 @router.post("/api/autopilot/toggle")
 async def toggle_autopilot(req: Request, current_user: dict = Depends(get_current_user)):
+    """Auto Pilot page master switch → drives content_team.autopilot (the single
+    autonomous engine). Auto-derives a goal from the user's niche if none is set,
+    so the page works without a separate goal step. The legacy real-time
+    'auto-post' (Schedule page, automation.active) is a SEPARATE mode and is left
+    untouched here — and it stands down whenever this is on (no double-posting)."""
     d = await req.json()
     active = bool(d.get("active", False))
 
@@ -112,13 +117,23 @@ async def toggle_autopilot(req: Request, current_user: dict = Depends(get_curren
                 "needed": max(0, 200 - int(credits)),
             }
 
-    if "automation" not in store:
-        store["automation"] = {}
-    store.get("automation", {})["active"] = active
+    ct = store.get("content_team", {}) or {}
+    ap = ct.get("autopilot") or {}
+    if active and not (ct.get("goal") or "").strip():
+        # Derive a goal so enabling is one click (no separate goal step).
+        auto = store.get("automation", {}) or {}
+        niche = (auto.get("niche") or store.get("settings", {}).get("niche") or "").strip()
+        ct["goal"] = f"grow my {niche} audience" if niche else "grow my audience and engagement"
+        ct["goal_updated_at"] = datetime.utcnow().isoformat() + "Z"
+    ap["enabled"] = active
+    ap.setdefault("auto_approve", True)
+    ap.setdefault("interval_days", 7)
+    ct["autopilot"] = ap
+    store["content_team"] = ct
     save_store()
     status = "enabled" if active else "disabled"
     add_log(f"Auto Pilot {status}", "info")
-    return {"ok": True, "active": active}
+    return {"ok": True, "active": active, "goal": ct.get("goal", "")}
 
 
 def _spread_times(n: int) -> list:
@@ -314,18 +329,23 @@ async def full_auto_toggle(req: Request, current_user: dict = Depends(get_curren
                 "message": "Minimum 200 credits required.",
                 "credits": credits, "minimum": 200}
 
-    enabled = bool(d.get("enabled", False))
-    mode    = str(d.get("mode", "review")).lower()
-    if mode not in ("review", "autonomous"):
-        mode = "review"
-
-    ustore["full_auto_enabled"] = enabled
-    ustore["full_auto_mode"]    = mode
+    # RETIRED: Full Auto Mode merged into True Auto Pilot (the Auto Pilot page).
+    # Never enables a second autonomous engine — points the user to Auto Pilot.
+    ustore["full_auto_enabled"] = False
     _save_user_store(uid, ustore)
-    return {"ok": True, "full_auto_enabled": enabled, "full_auto_mode": mode}
+    return {"ok": False, "deprecated": True,
+            "message": "Full Auto Mode is now part of Auto Pilot — use the Auto Pilot page."}
 
 
 async def run_full_auto_mode():
+    # RETIRED. Full Auto Mode is superseded by content_team.autopilot (True Auto
+    # Pilot), the single autonomous engine driven from the Auto Pilot page. This
+    # loop is no longer started in app.py; kept as a no-op so any stray caller is
+    # harmless and never double-generates/posts.
+    return
+
+
+async def _run_full_auto_mode_legacy_disabled():
     # Every 6 h: analyse performance, generate + schedule content for Full Auto users
     import asyncio as _asyncio
     import httpx   as _httpx

@@ -438,7 +438,8 @@ async def startup_event():
     asyncio.create_task(automation.run_auto_dm_scheduler())
     asyncio.create_task(scheduler.run_content_refresh())
     asyncio.create_task(analytics.run_analytics_sync())
-    asyncio.create_task(autopilot.run_full_auto_mode())
+    # full_auto retired — Content Team autopilot (content_team.autopilot) is now
+    # the single autonomous engine (driven via the Auto Pilot page). Not started.
     asyncio.create_task(agent.run_agent_tasks())
     from services.cleanup import run_daily_cleanup
     asyncio.create_task(run_daily_cleanup())
