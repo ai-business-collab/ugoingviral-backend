@@ -1080,39 +1080,55 @@ async def _fill_media(uid: str, schedule: list, sources: dict, ap: dict, signals
     made = {"ai_images": 0, "ai_videos": 0, "reposts": 0, "skipped_no_budget": 0}
     generated_videos = []
 
-    # Process YouTube slots FIRST — it's a core revenue platform, so it gets the
-    # video budget before cheaper image platforms consume credits.
-    ordered = sorted(schedule, key=lambda s: 0 if s.get("platform") == "youtube" else 1)
-    for it in ordered:
+    async def _gen_video_for(it, prompt):
+        """Generate (or repost) a video for one slot. Returns True if filled."""
+        nonlocal cost
+        if ai_on and gen_video and made["ai_videos"] < weekly_cap and _current_credits() >= VIDEO_COST:
+            res = await generate_text_to_video(prompt, uid, duration=5, aspect_ratio="9:16")
+            if res.get("ok") and res.get("video_url"):
+                it["video_url"] = res["video_url"]; it["media_source"] = "ai"; it["needs_media"] = False
+                _charge_credits(VIDEO_COST, "content_team_video"); cost += VIDEO_COST
+                made["ai_videos"] += 1; generated_videos.append(res["video_url"])
+                return True
+        if generated_videos:   # repost an already-generated video across the week
+            it["video_url"] = generated_videos[made["reposts"] % len(generated_videos)]
+            it["media_source"] = "repost"; it["mode"] = "repost"; it["needs_media"] = False
+            made["reposts"] += 1
+            return True
+        return False
+
+    def _prompt(it):
+        return (it.get("hook") or it.get("idea") or it.get("caption", "") or "").strip()[:300]
+
+    empties = [it for it in schedule if not (it.get("image_url") or it.get("video_url"))]
+
+    # YouTube, TikTok and Instagram are ALL core majors — treated equally.
+    # 1) YouTube slots need video to exist at all → guarantee them first (this is
+    #    functional necessity, not priority over the others).
+    yt = [it for it in empties if it.get("platform") == "youtube"]
+    for it in yt:
+        if not await _gen_video_for(it, _prompt(it)):
+            made["skipped_no_budget"] += 1   # stays flagged → _schedule_items skips it
+
+    # 2) Share any REMAINING video budget equally with TikTok + Instagram (the
+    #    other two majors), so they aren't deprioritised — upgrade them to video.
+    majors_other = [it for it in empties if it.get("platform") in ("tiktok", "instagram")]
+    for it in majors_other:
+        if ai_on and gen_video and made["ai_videos"] < weekly_cap and _current_credits() >= VIDEO_COST:
+            await _gen_video_for(it, _prompt(it))
+
+    # 3) Everything still without media gets an AI image (covers TikTok + IG +
+    #    FB + X). Cheap, no per-platform scarcity.
+    for it in empties:
         if it.get("image_url") or it.get("video_url"):
-            continue  # pool already supplied media
-        plat = it.get("platform", "")
-        prompt = (it.get("hook") or it.get("idea") or it.get("caption", "") or "").strip()[:300]
-
-        if plat == "youtube":
-            # YouTube must have video. Generate within cap+budget, else repost a
-            # video we already made this cycle, else leave flagged (→ skipped).
-            if ai_on and gen_video and made["ai_videos"] < weekly_cap and _current_credits() >= VIDEO_COST:
-                res = await generate_text_to_video(prompt, uid, duration=5, aspect_ratio="9:16")
-                if res.get("ok") and res.get("video_url"):
-                    it["video_url"] = res["video_url"]; it["media_source"] = "ai"; it["needs_media"] = False
-                    _charge_credits(VIDEO_COST, "content_team_video"); cost += VIDEO_COST
-                    made["ai_videos"] += 1; generated_videos.append(res["video_url"]); continue
-            if generated_videos:
-                it["video_url"] = generated_videos[made["reposts"] % len(generated_videos)]
-                it["media_source"] = "repost"; it["mode"] = "repost"; it["needs_media"] = False
-                made["reposts"] += 1; continue
-            made["skipped_no_budget"] += 1  # stays needs_media → _schedule_items skips it
             continue
-
-        # Image-capable platforms (instagram/facebook/twitter/tiktok).
         if ai_on and _current_credits() >= IMAGE_COST:
-            img = await generate_ai_image(prompt, uid)
+            img = await generate_ai_image(_prompt(it), uid)
             if img:
                 it["image_url"] = img; it["media_source"] = "ai"; it["needs_media"] = False
                 _charge_credits(IMAGE_COST, "content_team_image"); cost += IMAGE_COST
-                made["ai_images"] += 1; continue
-        # Otherwise leave as-is: IG/FB/X post text-only; TikTok stays flagged → skipped.
+                made["ai_images"] += 1
+        # else leave as-is: IG/FB/X post text-only; TikTok stays flagged → skipped.
 
     return {"cost": cost, "counts": made}
 

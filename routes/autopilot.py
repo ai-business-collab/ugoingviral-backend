@@ -13,7 +13,10 @@ router = APIRouter()
 @router.get("/api/autopilot/status")
 def autopilot_status(current_user: dict = Depends(get_current_user)):
     auto     = store.get("automation", {})
-    active   = auto.get("active", False)
+    # The Auto Pilot page is powered by content_team.autopilot (single engine).
+    ct       = store.get("content_team", {}) or {}
+    ct_ap    = ct.get("autopilot") or {}
+    active   = bool(ct_ap.get("enabled"))
     times    = auto.get("post_times", ["09:00","14:00","18:00"])
     days     = auto.get("schedule_days", [1,2,3,4,5])
     platforms = [p for p, cfg in auto.get("platforms", {}).items() if cfg.get("active")]
@@ -57,27 +60,21 @@ def autopilot_status(current_user: dict = Depends(get_current_user)):
             "connected":  p in connected,
         }
 
-    # Plain-language reasons autopilot may not be posting right now.
+    # Plain-language reasons Auto Pilot (Content Team engine) may not be posting.
     why = []
-    ct_ap = (store.get("content_team", {}) or {}).get("autopilot", {}) or {}
-    enabled_plats = [p for p, s in platform_status.items() if s["auto_post"]]
-    enabled_connected = [p for p in enabled_plats if p in connected]
-    if ct_ap.get("enabled"):
-        why.append("True Auto Pilot (Content Team) is active and drives posting — the legacy real-time poster is paused to avoid double-posting.")
+    has_goal = bool((ct.get("goal") or "").strip())
     if not active:
-        why.append("Auto Pilot is OFF — turn it on.")
+        why.append("Auto Pilot is OFF — turn it on (it generates and posts automatically).")
     if not connected:
-        why.append("No social platform connected — connect one under Connect.")
-    if not enabled_plats:
-        why.append("No platform enabled for auto-post — enable at least one platform above.")
-    elif not enabled_connected:
-        why.append("Enabled platform(s) aren't connected — connect them or enable a connected one.")
-    if not times:
-        why.append("No posting times set.")
-    if not (store.get("manual_products") or store.get("shopify_products_cache") or auto.get("niche")):
-        why.append("No products and no niche set — add products or set a niche so content can be generated.")
-    if active and enabled_connected and times and not why:
-        why.append(f"All set — posts fire at your scheduled times ({', '.join(times)}). Use 'Post one now' to publish immediately.")
+        why.append("No social platform connected — connect one under Connect so posts can go out.")
+    if active and not has_goal:
+        why.append("No goal set yet — set a goal on the Content Team page (or it's derived from your niche).")
+    if active and connected and has_goal:
+        last = ct.get("last_autorun_at", "")
+        if last:
+            why.append(f"All set — Auto Pilot last ran {last[:16].replace('T',' ')} and runs every {ct_ap.get('interval_days', 7)} days. Use 'Run now' to generate + post immediately.")
+        else:
+            why.append(f"All set — Auto Pilot will run on its schedule (every {ct_ap.get('interval_days', 7)} days). Use 'Run now' to generate + post immediately.")
 
     return {
         "active":          active,
@@ -90,6 +87,11 @@ def autopilot_status(current_user: dict = Depends(get_current_user)):
         "recent_log":      recent_log,
         "posts_per_day":   auto.get("posts_per_day", 3),
         "niche":           auto.get("niche", ""),
+        "goal":            ct.get("goal", ""),
+        "auto_approve":    ct_ap.get("auto_approve", True),
+        "interval_days":   ct_ap.get("interval_days", 7),
+        "last_run":        ct.get("last_autorun_at", ""),
+        "engine":          "content_team",
     }
 
 
@@ -181,13 +183,26 @@ async def update_autopilot_settings(req: Request, current_user: dict = Depends(g
 
 @router.post("/api/autopilot/run_now")
 async def autopilot_run_now(current_user: dict = Depends(get_current_user)):
-    """Immediately trigger autopilot for the current user.
-    Bypasses quiet hours, weekday, time-of-day, and rate-limit guards.
-    """
-    from routes.scheduler import _run_for_user
+    """Run the Content Team autopilot cycle right now (generate → media →
+    schedule/post), independent of the weekly interval. This is the single
+    autopilot engine, so 'Run now' produces real content immediately."""
+    uid = current_user["id"]
+    ct = store.get("content_team", {}) or {}
+    if not (ct.get("goal") or "").strip():
+        # Derive a goal from niche so Run now works without a separate step.
+        auto = store.get("automation", {}) or {}
+        niche = (auto.get("niche") or store.get("settings", {}).get("niche") or "").strip()
+        ct["goal"] = f"grow my {niche} audience" if niche else "grow my audience and engagement"
+        store["content_team"] = ct
+        save_store()
     try:
-        await _run_for_user(force=True)
-        return {"ok": True, "message": "Auto Pilot triggered successfully"}
+        from routes.content_team import autopilot_cycle
+        res = await autopilot_cycle(uid, "en")
+        if not res.get("ok"):
+            return {"ok": False, "message": res.get("reason", "Could not run Auto Pilot")}
+        return {"ok": True, "message": f"Auto Pilot ran — {res.get('scheduled', 0)} post(s) scheduled"
+                f"{', ' + str(res.get('skipped',0)) + ' skipped' if res.get('skipped') else ''}.",
+                "result": res}
     except Exception as e:
         return {"ok": False, "message": str(e)[:200]}
 
