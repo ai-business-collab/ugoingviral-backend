@@ -383,7 +383,53 @@ def _build_context(user_id: str, current_page: str = "") -> str:
     except Exception:
         pass
 
+    # ── GROWTH GUIDANCE — connect Account Audit + Content Team to the agent ────
+    # So the agent knows WHAT the user should improve and can proactively help.
+    try:
+        ctx += _growth_guidance_block(ustore)
+    except Exception:
+        pass
+
     return ctx
+
+
+def _growth_guidance_block(ustore: dict) -> str:
+    """A compact block injected into the agent context from the user's latest
+    Account Audit + Content Team brief, so the agent can reference concrete
+    recommendations and offer to act on them. Kept short for token budget."""
+    out = ""
+    audit = ustore.get("last_audit") or {}
+    if audit:
+        out += "\n\nACCOUNT AUDIT (latest — use to guide the user):"
+        if audit.get("grade") is not None:
+            out += f"\n- Overall: grade {audit.get('grade')} ({audit.get('overall_score','?')}/100) for @{audit.get('handle','')} on {audit.get('platform','')}"
+        issues = []
+        for cat in (audit.get("categories") or []):
+            for iss in (cat.get("issues") or [])[:1]:
+                issues.append(f"{cat.get('name','')}: {iss}")
+        if issues:
+            out += "\n- Top issues: " + " | ".join(issues[:3])
+        opps = audit.get("top_opportunities") or []
+        if opps:
+            out += "\n- Opportunities: " + " | ".join(o for o in opps[:2])
+        wins = audit.get("quick_wins") or []
+        if wins:
+            out += "\n- Quick wins: " + " | ".join(w for w in wins[:2])
+        out += ("\n- PROACTIVELY surface the single most impactful issue and offer to help fix it. "
+                "You can directly apply in-app changes (niche, posting cadence, CTA, quiet hours) with the "
+                "user's confirmation. For platform bios (TikTok/Instagram) you can't edit them via API — "
+                "guide the user step-by-step instead.")
+    else:
+        out += ("\n\nACCOUNT AUDIT: none run yet. If the user wants to grow or improve their profile, "
+                "suggest running an Account Audit ([[NAV:audit]]) to get concrete recommendations.")
+
+    ct = ustore.get("content_team") or {}
+    brief = (ct.get("weekly_brief") or "").strip()
+    if brief:
+        snippet = brief.replace("\n", " ")[:280]
+        out += f"\n\nCONTENT TEAM (latest weekly brief): {snippet}…"
+        out += "\n- You can point the user to the Content Team ([[NAV:content-team]]) to run/approve their plan."
+    return out
 
 
 def _build_system(plan: str, ctx: str, agent_name: str = "") -> str:
@@ -432,14 +478,16 @@ RESPONSE RULES:
 1. LANGUAGE: Detect the user's language from their CURRENT message and reply in the SAME language. Danish → Danish, English → English, German → German, Spanish → Spanish, etc. Match the user every turn — if they switch language, switch with them. If their message is too short or ambiguous to tell (e.g. just "ok", a name, or a single emoji), ask: "What language would you like me to speak — English or Danish?" / "Hvilket sprog vil du have jeg taler — engelsk eller dansk?". Never mix languages within a single reply.
 2. Keep responses concise (max 3 short paragraphs). Be direct and actionable.
 3. When you want to navigate the user to a section, add [[NAV:pagename]] at the END of your response.
-   Valid pages: dashboard, generator, pipeline, history, content-library, library, products, posting, inbox, automation, connect, settings, billing, stats
+   Valid pages: dashboard, generator, pipeline, history, content-library, library, products, posting, inbox, automation, connect, settings, billing, stats, audit, content-team
 4. When you want to suggest quick actions, add [[BTN:Label:action]] at the END. Actions: nav:pagename, generate, schedule
 5. When asked to generate content directly, do it inline in your response.
 6. If the user gives you AUTO PERMISSION and you detect stale content (>30 days, no recent posts), proactively suggest generating new content.
 7. For Pro/Elite/Personal users who need human help: add [[ESCALATE]] to trigger live support.
 8. If credits < 100, proactively mention the low balance and suggest topping up. [[NAV:billing]]
 9. If days since last post > 3, proactively suggest creating new content. [[NAV:generator]]
-10. If autopilot is paused and user has 200+ credits, proactively suggest resuming autopilot."""
+10. If autopilot is paused and user has 200+ credits, proactively suggest resuming autopilot.
+11. GROWTH COACH: take the user by the hand. When ACCOUNT AUDIT or CONTENT TEAM data is in your context, reference it: name the single most impactful profile issue and OFFER to help fix it (e.g. "Your bio is missing a CTA — want me to help you add one?"). For improving/growing/strategy questions, route to the Account Audit ([[NAV:audit]]) or Content Team ([[NAV:content-team]]).
+12. ACT ON SETTINGS: the app can apply these in-app changes — niche, posting cadence (posts per day), CTA, quiet hours. To do it, state the exact change and ask the user to confirm with "Yes"; the APP (not you) performs and confirms it. NEVER state that a setting has already been changed — you don't apply it yourself, so don't claim success. For things that can't be changed via API (TikTok/Instagram bio, display name), give clear step-by-step instructions for the user — never claim you changed them."""
 
 
 # ── History helpers ────────────────────────────────────────────────────────────
@@ -643,6 +691,77 @@ _STATS_RE      = _re.compile(r"\b(statistik\w*|stats|analytics|mine\s+tal|result
 _NUM_RE        = _re.compile(r"\b(\d{1,2})\b")
 _DA_HINTS = ("æ", "ø", "å", "opslag", "planl", "vis", "mine", "lav", " og ", " til ", "uge", "statistik", "skriv")
 
+# ── Settings the agent can change (with the user's confirmation) ──────────────
+_NICHE_RE    = _re.compile(r"\b(?:set|change|update|skift|ændr|aendr|sæt|saet)\b.{0,20}\b(?:niche|nische)\b\s*(?:to|til|=|:)?\s*(.+)", _re.I)
+_CADENCE_RE  = _re.compile(r"\b(\d{1,2})\s*(?:posts?|opslag|gange|times|x)\b[^.\n]{0,14}?\b(?:per|a|an|om|pr\.?|each|/)?\s*(?:day|dag|dagen|daily|dgl)\b", _re.I)
+_CADENCE_RE2 = _re.compile(r"\b(?:cadence|frequency|frekvens|post(?:ing)?\s*(?:rate|frequency))\b[^.\n]{0,14}?(\d{1,2})", _re.I)
+_CADENCE_RE3 = _re.compile(r"\b(\d{1,2})\s*/\s*day\b", _re.I)
+_CTA_RE      = _re.compile(r"\b(?:cta|call[\s-]?to[\s-]?action)\b\s*(?:to|til|=|:)?\s*(.+)", _re.I)
+_BIO_RE      = _re.compile(r"\b(?:update|change|fix|edit|skift|ændr|aendr|opdater|rediger)\b.{0,16}\bbio(?:graphy|grafi)?\b|\bbio\b.{0,16}\b(?:cta|link|update|change)\b", _re.I)
+
+
+def _apply_user_setting(ustore: dict, key: str, value) -> tuple:
+    """Apply an in-app setting change the user confirmed. Returns (ok, message).
+    Shared by the chat-confirm flow and the /api/agent/apply_setting endpoint."""
+    key = (key or "").lower().strip()
+    settings = ustore.setdefault("settings", {})
+    auto = ustore.setdefault("automation", {})
+    if key == "niche":
+        v = str(value or "").strip().strip('"\'.').strip()[:80]
+        if not v:
+            return False, "Niche can't be empty."
+        settings["niche"] = v
+        auto["niche"] = v
+        return True, f"niche set to “{v}”"
+    if key in ("posts_per_day", "cadence"):
+        try:
+            n = max(1, min(10, int(value)))
+        except Exception:
+            return False, "Give a number of posts per day (1–10)."
+        try:
+            from routes.autopilot import _spread_times
+            times = _spread_times(n)
+        except Exception:
+            times = ["09:00", "14:00", "18:00"][:n] or ["12:00"]
+        auto["posts_per_day"] = n
+        auto["post_times"] = times
+        return True, f"posting cadence set to {n}/day ({', '.join(times)})"
+    if key == "cta":
+        v = str(value or "").strip().strip('"\'.').strip()[:120]
+        if not v:
+            return False, "CTA can't be empty."
+        settings["preferred_cta"] = v
+        return True, f"preferred CTA saved: “{v}” (I'll use it when drafting your posts)"
+    if key == "quiet_hours":
+        try:
+            start, end = value
+            auto["quiet_start"] = str(start)[:5]
+            auto["quiet_end"] = str(end)[:5]
+            auto["respect_quiet_hours"] = True
+            return True, f"quiet hours set to {auto['quiet_start']}–{auto['quiet_end']}"
+        except Exception:
+            return False, "Give quiet hours as start and end (e.g. 22:00–07:00)."
+    return False, "That setting can't be changed automatically yet."
+
+
+def _bio_guidance(da: bool) -> str:
+    """Step-by-step bio guidance — the agent cannot edit a TikTok/IG bio via API."""
+    if da:
+        return ("Jeg kan desværre ikke ændre din bio direkte (platformene tillader ikke bio-redigering via API). "
+                "Men her er en stærk opskrift — det tager 1 minut:\n"
+                "1. Hvem du hjælper + hvordan (fx “Jeg hjælper travle ejere med at vokse på TikTok”).\n"
+                "2. Et bevis eller en niche-detalje.\n"
+                "3. En tydelig CTA + link (fx “Gratis guide ↓”).\n"
+                "Sådan opdaterer du den: åbn appen (TikTok/Instagram) → Profil → Rediger profil → Bio → indsæt teksten → Gem. "
+                "Vil du have at jeg skriver et par bio-forslag du kan kopiere?")
+    return ("I can't edit your bio directly (TikTok/Instagram don't allow bio edits via API). "
+            "But here's a strong formula — takes a minute:\n"
+            "1. Who you help + how (e.g. “I help busy founders grow on TikTok”).\n"
+            "2. A proof point or niche detail.\n"
+            "3. A clear CTA + link (e.g. “Free guide ↓”).\n"
+            "To update it: open the app (TikTok/Instagram) → Profile → Edit profile → Bio → paste → Save. "
+            "Want me to write a few copy-paste bio options for you?")
+
 
 def _is_danish(msg: str) -> bool:
     low = (msg or "").lower()
@@ -842,19 +961,57 @@ async def _route_ugv_action(uid: str, message: str, ustore: dict, current_user: 
     low = msg.lower()
     da = _is_danish(msg)
 
-    # 0) Resolve a pending post confirmation first.
+    # 0) Resolve a pending confirmation first.
     pending = ustore.get("agent_pending_action")
-    if pending and pending.get("type") in ("post_now", "youtube_video"):
+    if pending and pending.get("type") in ("post_now", "youtube_video", "apply_setting"):
         if low in _AFFIRM or any(low.startswith(a) for a in _AFFIRM):
             if pending.get("type") == "youtube_video":
                 return await _execute_youtube_video(uid, ustore, current_user, pending)
+            if pending.get("type") == "apply_setting":
+                ustore.pop("agent_pending_action", None)
+                ok, m = _apply_user_setting(ustore, pending.get("key"), pending.get("value"))
+                _save_user_store(uid, ustore)
+                if ok:
+                    txt = (f"✅ Klaret — {m}." if da else f"✅ Done — {m}.")
+                else:
+                    txt = (f"Hmm, det kunne jeg ikke: {m}" if da else f"Hmm, I couldn't do that: {m}")
+                return _agent_reply(uid, ustore, msg, txt)
             return await _execute_post_now(uid, ustore, current_user, pending)
         if low in _NEGATE or any(low.startswith(n) for n in _NEGATE):
             ustore.pop("agent_pending_action", None)
-            txt = "Ok, jeg poster ikke. Sig til hvis du vil ændre noget. 🙂" if da else "Ok, I won't post it. Let me know if you'd like to change anything. 🙂"
+            txt = "Ok, jeg ændrer ikke noget. 🙂" if da else "Ok, I won't change anything. 🙂"
             return _agent_reply(uid, ustore, msg, txt)
         # Not a clear yes/no — clear stale pending and fall through to normal flow.
         ustore.pop("agent_pending_action", None)
+
+    # 0b) Bio change → step-by-step guidance (cannot edit bio via platform API).
+    if _BIO_RE.search(low):
+        return _agent_reply(uid, ustore, msg, _bio_guidance(da))
+
+    # 0c) Settings the agent can apply (niche / cadence / CTA) → confirm first.
+    _set_change = None
+    m_niche = _NICHE_RE.search(msg)
+    m_cad = _CADENCE_RE.search(low) or _CADENCE_RE2.search(low) or _CADENCE_RE3.search(low)
+    m_cta = _CTA_RE.search(msg)
+    if m_niche and m_niche.group(1).strip():
+        _set_change = ("niche", m_niche.group(1).strip().strip('"\'.'),
+                       f"set your niche to “{m_niche.group(1).strip().strip(chr(34)+chr(39)+'.')}”")
+    elif m_cad:
+        _n = m_cad.group(1)
+        _set_change = ("posts_per_day", _n, f"set your posting cadence to {_n} posts/day")
+    elif m_cta and m_cta.group(1).strip() and "niche" not in low:
+        _cta_v = m_cta.group(1).strip().strip('"\'.')
+        _set_change = ("cta", _cta_v, f"save “{_cta_v}” as your preferred CTA")
+    if _set_change:
+        key, value, label = _set_change
+        ustore["agent_pending_action"] = {"type": "apply_setting", "key": key, "value": value,
+                                          "label": label, "da": da, "ts": datetime.now().isoformat()}
+        _save_user_store(uid, ustore)
+        if da:
+            txt = f"Jeg kan {label}. Skal jeg gøre det? Svar **Ja** eller **Nej**."
+        else:
+            txt = f"I can {label}. Want me to do it? Reply **Yes** or **No**."
+        return _agent_reply(uid, ustore, msg, txt)
 
     # 1) Show statistics → real numbers + navigate to stats.
     if _STATS_RE.search(low) and not _CREATE_VERB_RE.search(low):
@@ -1138,6 +1295,22 @@ def set_auto_permission(req: AutoPermRequest, current_user: dict = Depends(get_c
     ustore["agent_auto_permission"] = req.enabled
     _save_user_store(uid, ustore)
     return {"ok": True, "enabled": req.enabled}
+
+
+@router.post("/api/agent/apply_setting")
+async def agent_apply_setting(req: Request, current_user: dict = Depends(get_current_user)):
+    """Apply an in-app setting change requested via the agent (programmatic path
+    for action buttons). Supported keys: niche, posts_per_day, cta, quiet_hours.
+    Same validated helper the chat-confirm flow uses."""
+    body = await req.json()
+    key = str(body.get("key", "")).strip()
+    value = body.get("value")
+    uid = current_user["id"]
+    ustore = _load_user_store(uid)
+    ok, message = _apply_user_setting(ustore, key, value)
+    if ok:
+        _save_user_store(uid, ustore)
+    return {"ok": ok, "message": message, "key": key}
 
 
 @router.get("/api/agent/auto_permission")

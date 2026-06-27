@@ -5,7 +5,7 @@ POST /api/audit/analyze
 import json
 from fastapi import APIRouter, Depends, Request, HTTPException
 from routes.auth import get_current_user
-from services.store import store, add_log
+from services.store import store, add_log, save_store
 
 router = APIRouter()
 
@@ -280,5 +280,21 @@ async def analyze_account(req: Request, current_user: dict = Depends(get_current
     audit["is_estimate"] = True
     audit["basis"] = "Automated assessment based on the details you entered (bio, posting frequency, follower range)."
     add_log(f"📋 Audit: @{handle} on {platform}", "success")
+    # Persist the latest audit so the floating agent can surface its
+    # recommendations and proactively help the user act on them.
+    try:
+        from datetime import datetime as _dt
+        store["last_audit"] = {
+            "handle": handle, "platform": platform, "niche": niche,
+            "overall_score": audit.get("overall_score"),
+            "grade": audit.get("grade"),
+            "categories": audit.get("categories", []),
+            "top_opportunities": audit.get("top_opportunities", []),
+            "quick_wins": audit.get("quick_wins", []),
+            "ts": _dt.now().isoformat(),
+        }
+        save_store()
+    except Exception:
+        pass
     return {"ok": True, "audit": audit,
             "meta": {"handle": handle, "platform": platform, "niche": niche}}
