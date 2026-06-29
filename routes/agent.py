@@ -748,6 +748,52 @@ def _apply_user_setting(ustore: dict, key: str, value, da: bool = True) -> tuple
         except Exception:
             return False, ("Angiv stilletimer som start og slut (fx 22:00–07:00)." if da
                            else "Give quiet hours as start and end (e.g. 22:00–07:00).")
+    if key == "goal":
+        v = str(value or "").strip()[:300]
+        if not v:
+            return False, ("Målet må ikke være tomt." if da else "Goal can't be empty.")
+        ct = ustore.setdefault("content_team", {})
+        ct["goal"] = v
+        ct["goal_updated_at"] = datetime.utcnow().isoformat() + "Z"
+        return True, (f"mål sat til “{v}”" if da else f"goal set to “{v}”")
+    if key == "platforms":
+        plats = value if isinstance(value, list) else [value]
+        plats = [str(p).lower().strip() for p in plats if str(p).strip() in _PLATFORMS]
+        if not plats:
+            return False, ("Ingen gyldige platforme angivet." if da else "No valid platforms given.")
+        ap = auto.setdefault("platforms", {})
+        api_enabled = settings.setdefault("api_enabled", {})
+        for p in plats:
+            ap.setdefault(p, {})
+            ap[p].update({"active": True, "auto_post": True})
+            api_enabled[p] = True
+        names = ", ".join(p.title() for p in plats)
+        return True, (f"platforme slået til: {names}" if da else f"platforms enabled: {names}")
+    if key == "media_sources":
+        ct = ustore.setdefault("content_team", {})
+        apc = ct.setdefault("autopilot", {})
+        ms = apc.setdefault("media_sources", {})
+        for k2, v2 in (value or {}).items():
+            if k2 in ("uploads", "products", "ai"):
+                ms[k2] = bool(v2)
+        on = [k2 for k2, v2 in ms.items() if v2] or ["ai"]
+        return True, (f"mediekilder: {', '.join(on)}" if da else f"media sources: {', '.join(on)}")
+    if key == "generate_video":
+        ct = ustore.setdefault("content_team", {})
+        apc = ct.setdefault("autopilot", {})
+        apc["generate_video"] = bool(value)
+        return True, (("AI-video slået til (≈40 cr/klip)" if value else "AI-video slået fra") if da
+                      else ("AI video on (≈40 cr/clip)" if value else "AI video off"))
+    if key == "schedule_days":
+        try:
+            days = sorted({int(d) for d in value if 1 <= int(d) <= 7})
+        except Exception:
+            days = []
+        if not days:
+            return False, ("Angiv ugedage (1=man … 7=søn)." if da else "Give weekdays (1=Mon … 7=Sun).")
+        auto["schedule_days"] = days
+        return True, (f"udgivelsesdage sat ({len(days)} dage/uge)" if da
+                      else f"posting days set ({len(days)} days/week)")
     return False, ("Den indstilling kan ikke ændres automatisk endnu." if da
                    else "That setting can't be changed automatically yet.")
 
@@ -978,11 +1024,373 @@ async def _execute_youtube_video(uid: str, ustore: dict, current_user: dict, pen
     return _agent_reply(uid, ustore, pending.get("origin_msg", ""), txt)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# GUIDED AUTO PILOT SETUP — the agent as a conversational conductor.
+# A multi-step state machine in ustore["agent_setup"] that asks for every Auto
+# Pilot setting in plain language, maps natural answers to real config via
+# _apply_user_setting, and starts Auto Pilot after a credit-cost confirmation.
+# ══════════════════════════════════════════════════════════════════════════════
+
+_MAIN_PLATFORMS = ("instagram", "tiktok", "youtube", "facebook")
+
+_SETUP_TRIGGER_RE = _re.compile(
+    r"\b(get (?:my )?(?:social|socials|content|instagram|tiktok)\b.{0,30}\bgoing|"
+    r"run everything|do everything|automate everything|set (?:me |it )?up\b|set up auto.?pilot|"
+    r"manage (?:my )?(?:social|content)|take over|handle (?:my )?(?:social|content)|"
+    r"kør (?:det hele|alt)|sæt (?:det |mig )?op\b|automatiser|klar (?:det|alt) for mig|"
+    r"styr (?:mine|mit) (?:social|sociale|content|indhold)|få gang i (?:mine|mit|min))\b",
+    _re.I,
+)
+# A structured content order, e.g. "make me a 5-scene series, 30s each, post every other day".
+_SERIES_ORDER_RE = _re.compile(r"\b(\d{1,2})\s*[- ]?\s*(?:scene|scener|scenes|clip|clips|klip)\b", _re.I)
+_SECONDS_RE = _re.compile(r"\b(\d{1,3})\s*(?:s\b|sec|secs|seconds?|sek|sekunder)\b", _re.I)
+_SETUP_CANCEL_RE = _re.compile(r"\b(cancel|stop|forget it|never ?mind|annull?er|glem det|drop det)\b", _re.I)
+
+_SETUP_ORDER = ["goal", "niche", "platforms", "cadence", "media"]
+_SETUP_KEY = {"goal": "goal", "niche": "niche", "platforms": "platforms",
+              "cadence": "cadence", "media": "media_sources"}
+
+
+def _parse_goal_answer(msg: str, niche: str) -> str:
+    low = msg.lower()
+    if any(w in low for w in ("sell", "sale", "sales", "shop", "buy", "product", "sælg", "salg", "produkt")):
+        base = "sell more products and drive sales"
+    elif any(w in low for w in ("brand", "awareness", "kendskab", "synlig")):
+        base = "build brand awareness"
+    elif any(w in low for w in ("follow", "grow", "audience", "reach", "vækst", "voks", "følger", "række")):
+        base = "grow followers and engagement"
+    else:
+        return msg.strip()[:300] or (f"grow my {niche} audience" if niche else "grow my audience and engagement")
+    return f"{base} for my {niche}" if niche else base
+
+
+def _parse_platforms_answer(msg: str) -> list:
+    low = f" {msg.lower()} "
+    if any(w in low for w in (" all ", " alle ", "everywhere", "alle steder", "every platform", "alle platforme")):
+        return list(_MAIN_PLATFORMS)
+    found = []
+    for p, aliases in _PLATFORMS.items():
+        if any(a.strip() and a in low for a in aliases):
+            found.append(p)
+    return found
+
+
+def _parse_cadence_answer(msg: str) -> dict:
+    """Map a natural cadence answer to {posts_per_day, schedule_days, post_times,
+    label}. schedule_days are isoweekdays (1=Mon … 7=Sun)."""
+    try:
+        from routes.autopilot import _spread_times
+    except Exception:
+        _spread_times = None
+    low = msg.lower()
+    ppd, days, label = 1, [1, 2, 3, 4, 5, 6, 7], "daily"
+    if any(w in low for w in ("every other day", "every 2 days", "every second day", "hver anden dag", "anden hver dag")):
+        days, label = [1, 3, 5, 7], "every other day"
+    elif any(w in low for w in ("once a week", "weekly", "en gang om ugen", "ugentlig")):
+        days, label = [3], "weekly"
+    else:
+        m_week = _re.search(r"(\d{1,2})\s*(?:x|times|gange|opslag|posts?)?\s*(?:/|per|a|om|pr\.?)?\s*(?:week|uge|ugen)", low)
+        m_day = _re.search(r"(\d{1,2})\s*(?:x|times|gange|opslag|posts?)?\s*(?:/|per|a|om|pr\.?)?\s*(?:day|dag|dagen|daily|dgl)", low)
+        if m_day:
+            ppd, label = max(1, min(10, int(m_day.group(1)))), None
+            days = [1, 2, 3, 4, 5, 6, 7]; label = f"{ppd}× per day"
+        elif m_week:
+            n = max(1, min(7, int(m_week.group(1))))
+            days = sorted([1, 3, 5, 2, 4, 6, 7][:n]); label = f"{n}× per week"
+        elif any(w in low for w in ("daily", "every day", "hver dag", "dagligt")):
+            days, label = [1, 2, 3, 4, 5, 6, 7], "daily"
+        else:
+            m2 = _re.search(r"\b(\d{1,2})\b", low)
+            if m2:
+                n = max(1, min(7, int(m2.group(1))))
+                days = sorted([1, 3, 5, 2, 4, 6, 7][:n]); label = f"{n}× per week"
+    times = (_spread_times(ppd) if _spread_times else ["09:00", "14:00", "18:00"][:ppd]) or ["12:00"]
+    return {"posts_per_day": ppd, "schedule_days": days, "post_times": times, "label": label}
+
+
+def _parse_media_answer(msg: str) -> dict:
+    low = msg.lower()
+    src = {"uploads": False, "products": False, "ai": False}
+    gen_video = False
+    if any(w in low for w in ("everything", " all ", " alt ", "begge", "both")):
+        src = {"uploads": True, "products": True, "ai": True}
+    if any(w in low for w in ("upload", "my photo", "my pic", "my video", "own ", "egne", "mine billeder", "mine videoer", "mig selv")):
+        src["uploads"] = True
+    if any(w in low for w in ("product", "shop", "produkt", "varer")):
+        src["products"] = True
+    if any(w in low for w in ("ai", "auto", "generate", "generér", "generer", "lav selv", "you decide", "du bestemmer", "automatisk")):
+        src["ai"] = True
+    if any(w in low for w in ("video", "reel", "youtube", "clip", "film")):
+        gen_video = True
+    if not any(src.values()):
+        src["ai"] = True  # sensible default so content still flows for users w/o uploads
+    return {"sources": src, "generate_video": gen_video}
+
+
+def _parse_series_order(msg: str):
+    """Detect a structured content order like '5-scene series, 30s each, post
+    every other day' and pre-fill the matching setup answers."""
+    m = _SERIES_ORDER_RE.search(msg)
+    if not m:
+        return None
+    scenes = max(1, min(20, int(m.group(1))))
+    sec = _SECONDS_RE.search(msg)
+    seconds = max(3, min(120, int(sec.group(1)))) if sec else 30
+    return {
+        "series": {"scenes": scenes, "seconds": seconds},
+        "cadence": _parse_cadence_answer(msg),
+        "generate_video": True,
+        "goal": f"publish a recurring {scenes}-scene video series ({seconds}s per scene)",
+    }
+
+
+def _setup_question(step: str, ans: dict, da: bool) -> str:
+    if step == "goal":
+        return ("Lad os få din Auto Pilot op at køre 🚀 Først: hvad vil du opnå — "
+                "flere følgere, mere salg, eller mere kendskab til dit brand?" if da else
+                "Let's get your Auto Pilot running 🚀 First — what's your goal: more followers, "
+                "more sales, or brand awareness?")
+    if step == "niche":
+        return ("Hvad sælger du / hvad er din niche? (fx “lokal kaffebar i Aarhus”)" if da else
+                "What do you sell / what's your niche? (e.g. “local coffee shop in Aarhus”)")
+    if step == "platforms":
+        return ("Hvilke platforme skal jeg poste til? (Instagram, TikTok, YouTube, Facebook — "
+                "eller sig bare “alle”)" if da else
+                "Which platforms should I post to? (Instagram, TikTok, YouTube, Facebook — "
+                "or just say “all”)")
+    if step == "cadence":
+        return ("Hvor ofte skal jeg poste? (fx “hver dag”, “hver anden dag”, “3 gange om ugen”)" if da else
+                "How often should I post? (e.g. “daily”, “every other day”, “3 times a week”)")
+    if step == "media":
+        return ("Hvor skal billeder/video komme fra — dine egne uploads, dine produktbilleder, "
+                "eller skal jeg lave dem med AI? (sig “video” hvis du vil have videoer)" if da else
+                "Where should the visuals come from — your own uploads, your product photos, "
+                "or should I generate them with AI? (say “video” if you want videos)")
+    return ""
+
+
+def _setup_record(step: str, msg: str, ans: dict) -> bool:
+    """Parse the user's answer for `step` into ans. Returns False if unparseable."""
+    if step == "goal":
+        ans["goal"] = _parse_goal_answer(msg, ans.get("niche", ""))
+        return True
+    if step == "niche":
+        v = msg.strip().strip('"\'.').strip()[:80]
+        if not v:
+            return False
+        ans["niche"] = v
+        return True
+    if step == "platforms":
+        p = _parse_platforms_answer(msg)
+        if not p:
+            return False
+        ans["platforms"] = p
+        return True
+    if step == "cadence":
+        ans["cadence"] = _parse_cadence_answer(msg)
+        return True
+    if step == "media":
+        m = _parse_media_answer(msg)
+        ans["media_sources"] = m["sources"]
+        if m["generate_video"]:
+            ans["generate_video"] = True
+        return True
+    return False
+
+
+def _setup_next(ans: dict) -> str:
+    for s in _SETUP_ORDER:
+        if not ans.get(_SETUP_KEY[s]):
+            return s
+    return "confirm"
+
+
+def _setup_confirm_text(ans: dict, ustore: dict, da: bool) -> str:
+    try:
+        from routes.content_team import VIDEO_COST, IMAGE_COST
+    except Exception:
+        VIDEO_COST, IMAGE_COST = 40, 8
+    cad = ans.get("cadence") or {}
+    per_week = max(1, len(cad.get("schedule_days", [1])) * int(cad.get("posts_per_day", 1)))
+    gv = bool(ans.get("generate_video"))
+    weekly = per_week * (VIDEO_COST if gv else IMAGE_COST)
+    credits = int((ustore.get("billing") or {}).get("credits", 0) or 0)
+    plats = ", ".join(p.title() for p in ans.get("platforms", [])) or "—"
+    ms = ans.get("media_sources", {})
+    media_on = ", ".join(k for k, v in ms.items() if v) or "ai"
+    series = ans.get("series")
+    if da:
+        lines = [
+            "Perfekt — her er planen 👇",
+            f"• 🎯 Mål: {ans.get('goal','—')}",
+            f"• 🏷️ Niche: {ans.get('niche','—')}",
+            f"• 📱 Platforme: {plats}",
+            f"• 📅 Frekvens: {cad.get('label','—')} ({per_week} opslag/uge)",
+            f"• 🎨 Medier: {media_on}" + (" + AI-video" if gv else ""),
+        ]
+        if series:
+            lines.append(f"• 🎬 Serie: {series['scenes']} scener × {series['seconds']}s")
+        lines.append(f"\n💳 Anslået forbrug: ~{weekly} credits/uge. Du har {credits} credits "
+                     f"(Auto Pilot kræver mindst 200 for at starte).")
+        lines.append("\nSkal jeg sætte det hele op og **starte Auto Pilot nu**? Svar **Ja** eller **Nej**.")
+    else:
+        lines = [
+            "Perfect — here's the plan 👇",
+            f"• 🎯 Goal: {ans.get('goal','—')}",
+            f"• 🏷️ Niche: {ans.get('niche','—')}",
+            f"• 📱 Platforms: {plats}",
+            f"• 📅 Cadence: {cad.get('label','—')} ({per_week} posts/week)",
+            f"• 🎨 Media: {media_on}" + (" + AI video" if gv else ""),
+        ]
+        if series:
+            lines.append(f"• 🎬 Series: {series['scenes']} scenes × {series['seconds']}s")
+        lines.append(f"\n💳 Estimated spend: ~{weekly} credits/week. You have {credits} credits "
+                     f"(Auto Pilot needs at least 200 to start).")
+        lines.append("\nShall I set it all up and **start Auto Pilot now**? Reply **Yes** or **No**.")
+    return "\n".join(lines)
+
+
+def _apply_setup(uid: str, ustore: dict, ans: dict, da: bool):
+    """Write every collected answer to real config and enable Auto Pilot.
+    Returns (started: bool, credits: int). started=False means saved but not
+    started due to insufficient credits (<200)."""
+    if ans.get("niche"):
+        _apply_user_setting(ustore, "niche", ans["niche"], da)
+    if ans.get("goal"):
+        _apply_user_setting(ustore, "goal", ans["goal"], da)
+    if ans.get("platforms"):
+        _apply_user_setting(ustore, "platforms", ans["platforms"], da)
+    if ans.get("media_sources"):
+        _apply_user_setting(ustore, "media_sources", ans["media_sources"], da)
+    if ans.get("generate_video"):
+        _apply_user_setting(ustore, "generate_video", True, da)
+    cad = ans.get("cadence") or {}
+    if cad:
+        auto = ustore.setdefault("automation", {})
+        auto["posts_per_day"] = int(cad.get("posts_per_day", 1))
+        auto["post_times"] = cad.get("post_times") or ["09:00"]
+        _apply_user_setting(ustore, "schedule_days", cad.get("schedule_days", [1, 2, 3, 4, 5]), da)
+    if ans.get("series"):
+        ustore.setdefault("content_team", {})["series_brief"] = ans["series"]
+
+    credits = int((ustore.get("billing") or {}).get("credits", 0) or 0)
+    ct = ustore.setdefault("content_team", {})
+    if not (ct.get("goal") or "").strip():
+        ct["goal"] = ans.get("goal") or (f"grow my {ans.get('niche','')} audience".strip())
+    if credits < 200:
+        return (False, credits)
+    apc = ct.setdefault("autopilot", {})
+    apc["enabled"] = True
+    apc.setdefault("auto_approve", True)
+    apc.setdefault("interval_days", 7)
+    return (True, credits)
+
+
+async def _start_first_cycle_bg(uid: str):
+    """Kick off the first Auto Pilot cycle in the background with the user's store
+    context set (the proven scheduler pattern), so it actually starts producing."""
+    import asyncio as _a
+
+    async def _run():
+        try:
+            from services.store import set_user_context, reset_user_context
+            from routes.content_team import autopilot_cycle
+            tokens = set_user_context(uid)
+            try:
+                await autopilot_cycle(uid, "en")
+            finally:
+                reset_user_context(tokens)
+        except Exception:
+            pass
+
+    _a.create_task(_run())
+
+
+async def _handle_setup(uid: str, msg: str, ustore: dict, da: bool):
+    """Drive an in-progress guided setup. Returns a chat payload, or None if no
+    setup is active."""
+    setup = ustore.get("agent_setup") or {}
+    if not setup.get("active"):
+        return None
+    da = bool(setup.get("da", da))
+    low = msg.lower().strip()
+    ans = setup.setdefault("answers", {})
+    step = setup.get("step", "goal")
+
+    if _SETUP_CANCEL_RE.search(low):
+        ustore.pop("agent_setup", None)
+        return _agent_reply(uid, ustore, msg,
+                            "Ok, jeg stopper opsætningen — intet ændret. 🙂" if da
+                            else "Ok, I've stopped the setup — nothing changed. 🙂")
+
+    if step == "confirm":
+        if low in _AFFIRM or any(low.startswith(a) for a in _AFFIRM):
+            started, credits = _apply_setup(uid, ustore, ans, da)
+            _log_agent_activity(uid, ustore, "Guided setup: configured Auto Pilot", "autopilot_setup", ans)
+            ustore.pop("agent_setup", None)
+            if not started:
+                need = max(0, 200 - credits)
+                txt = (f"Jeg har gemt alle dine indstillinger ✅ Men Auto Pilot kræver mindst 200 credits "
+                       f"for at starte — du har {credits}. Køb {need} credits mere, så starter jeg med det samme."
+                       if da else
+                       f"I've saved all your settings ✅ But Auto Pilot needs at least 200 credits to start — "
+                       f"you have {credits}. Top up {need} more and I'll start right away.")
+                return _agent_reply(uid, ustore, msg, txt, actions=[{"type": "navigate", "page": "billing"}])
+            await _start_first_cycle_bg(uid)
+            txt = ("🚀 Alt er sat op og Auto Pilot kører nu! Jeg laver din første batch indhold med det samme "
+                   "og poster efter din plan. Du kan altid sige “kør nu”, “sæt på pause” eller spørge om dine tal."
+                   if da else
+                   "🚀 All set — Auto Pilot is now running! I'm creating your first batch of content right now "
+                   "and will post on your schedule. You can always say “run now”, “pause”, or ask me for your stats.")
+            return _agent_reply(uid, ustore, msg, txt, actions=[{"type": "navigate", "page": "autopilot"}])
+        if low in _NEGATE or any(low.startswith(n) for n in _NEGATE):
+            ustore.pop("agent_setup", None)
+            return _agent_reply(uid, ustore, msg,
+                                "Ok — intet er ændret. Sig til når du er klar. 🙂" if da
+                                else "Ok — nothing changed. Tell me when you're ready. 🙂")
+        # Not a clear yes/no on the confirm step — re-show the plan.
+        return _agent_reply(uid, ustore, msg, _setup_confirm_text(ans, ustore, da))
+
+    # Normal step — record the answer and advance to the next unfilled step.
+    if not _setup_record(step, msg, ans):
+        return _agent_reply(uid, ustore, msg, _setup_question(step, ans, da))
+    nxt = _setup_next(ans)
+    setup["step"] = nxt
+    setup["answers"] = ans
+    ustore["agent_setup"] = setup
+    if nxt == "confirm":
+        return _agent_reply(uid, ustore, msg, _setup_confirm_text(ans, ustore, da))
+    return _agent_reply(uid, ustore, msg, _setup_question(nxt, ans, da))
+
+
+def _start_setup(uid: str, ustore: dict, msg: str, da: bool, prefill: dict = None):
+    """Begin a guided setup, optionally pre-filled (e.g. from a series order)."""
+    ans = dict(prefill or {})
+    ustore.pop("agent_pending_action", None)   # setup takes over the conversation
+    nxt = _setup_next(ans)
+    ustore["agent_setup"] = {"active": True, "step": nxt, "answers": ans,
+                             "da": da, "started": datetime.now().isoformat()}
+    if nxt == "confirm":
+        return _agent_reply(uid, ustore, msg, _setup_confirm_text(ans, ustore, da))
+    intro = ""
+    if prefill and prefill.get("series"):
+        s = prefill["series"]
+        intro = (f"Fedt — en {s['scenes']}-scene serie ({s['seconds']}s pr. scene) på din plan. "
+                 if da else
+                 f"Love it — a {s['scenes']}-scene series ({s['seconds']}s per scene) on your schedule. ")
+    return _agent_reply(uid, ustore, msg, intro + _setup_question(nxt, ans, da))
+
+
 async def _route_ugv_action(uid: str, message: str, ustore: dict, current_user: dict):
     """Return a chat payload if this message is a UgoingViral action, else None."""
     msg = (message or "").strip()
     low = msg.lower()
     da = _is_danish(msg)
+
+    # 0a) An in-progress guided setup consumes every message as the next answer.
+    setup_reply = await _handle_setup(uid, msg, ustore, da)
+    if setup_reply is not None:
+        return setup_reply
 
     # 0) Resolve a pending confirmation first.
     pending = ustore.get("agent_pending_action")
@@ -1007,6 +1415,16 @@ async def _route_ugv_action(uid: str, message: str, ustore: dict, current_user: 
             return _agent_reply(uid, ustore, msg, txt)
         # Not a clear yes/no — clear stale pending and fall through to normal flow.
         ustore.pop("agent_pending_action", None)
+
+    # 0a2) Structured content order ("5-scene series, 30s each, post every other
+    # day") → start guided setup pre-filled with the order's cadence/video/series.
+    _series_prefill = _parse_series_order(msg)
+    if _series_prefill:
+        return _start_setup(uid, ustore, msg, da, prefill=_series_prefill)
+
+    # 0a3) "Get my social media going" / "run everything" → start guided setup.
+    if _SETUP_TRIGGER_RE.search(low):
+        return _start_setup(uid, ustore, msg, da)
 
     # 0b) Bio change → step-by-step guidance (cannot edit bio via platform API).
     if _BIO_RE.search(low):
