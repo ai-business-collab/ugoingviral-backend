@@ -367,6 +367,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="sec-tab hidden" onclick="showSection('quick_actions')" id="tab-quick-actions">⚡ Quick Actions</button>
       <button class="sec-tab hidden" onclick="showSection('affiliates')" id="tab-affiliates">🤝 Affiliates</button>
       <button class="sec-tab hidden" onclick="showSection('broadcast')" id="tab-broadcast">📣 Broadcast Email</button>
+      <button class="sec-tab hidden" onclick="showSection('campaigns')" id="tab-campaigns">🎯 Campaigns</button>
     </div>
 
     <!-- STATS (owner + support) -->
@@ -878,6 +879,7 @@ async function showApp(info) {
     document.getElementById('tab-quick-actions').classList.remove('hidden');
     document.getElementById('tab-affiliates').classList.remove('hidden');
     document.getElementById('tab-broadcast').classList.remove('hidden');
+    document.getElementById('tab-campaigns').classList.remove('hidden');
     settingsBtn.classList.add('hidden');
     document.getElementById('emp-profile-header').classList.add('hidden');
     var _nb = document.getElementById('nex-chat-btn'); if (_nb) _nb.style.display = '';
@@ -949,7 +951,7 @@ function renderProfileHeader() {
 // ── SECTIONS ─────────────────────────────────────────────────────────────────
 
 function showSection(sec) {
-  const allSections = ['customers', 'employees', 'guidelines', 'revenue', 'api_usage', 'automation_log', 'qa', 'templates', 'platform_status', 'quick_actions', 'affiliates', 'broadcast'];
+  const allSections = ['customers', 'employees', 'guidelines', 'revenue', 'api_usage', 'automation_log', 'qa', 'templates', 'platform_status', 'quick_actions', 'affiliates', 'broadcast', 'campaigns'];
   allSections.forEach(s => {
     const el = document.getElementById('section-' + s);
     if (el) el.classList.toggle('hidden', s !== sec);
@@ -966,6 +968,113 @@ function showSection(sec) {
   if (sec === 'api_usage') { if (userRole !== 'owner') { toast('Access denied', 'error'); return; } loadApiUsage(); }
   if (sec === 'automation_log') { populateLogUserSelect(); loadAutomationLog(); }
   if (sec === 'affiliates') loadAdminAffiliates();
+  if (sec === 'campaigns') { if (userRole !== 'owner') { toast('Access denied', 'error'); return; } loadCampaigns(); }
+}
+
+// ── CAMPAIGNS (owner only) ────────────────────────────────────────────────────
+function cmpToggleOffer() {
+  const t = document.getElementById('cmp-offer-type').value;
+  document.querySelectorAll('.cmp-plan-field').forEach(e => e.style.display = (t === 'plan' ? '' : 'none'));
+  document.querySelectorAll('.cmp-credits-field').forEach(e => e.style.display = (t === 'credits' ? '' : 'none'));
+}
+
+async function createCampaign() {
+  const status = document.getElementById('cmp-create-status');
+  const body = {
+    name: document.getElementById('cmp-name').value.trim(),
+    offer_type: document.getElementById('cmp-offer-type').value,
+    expiry: document.getElementById('cmp-expiry').value || null,
+  };
+  if (!body.name) { status.style.color = '#ef4444'; status.textContent = 'Name is required'; return; }
+  if (body.offer_type === 'plan') {
+    body.plan = document.getElementById('cmp-plan').value;
+    body.months = parseInt(document.getElementById('cmp-months').value || '1', 10);
+  } else {
+    body.credits = parseInt(document.getElementById('cmp-credits').value || '0', 10);
+  }
+  const maxv = document.getElementById('cmp-max').value;
+  if (maxv) body.max_redemptions = parseInt(maxv, 10);
+  status.style.color = 'var(--tx3)'; status.textContent = 'Creating…';
+  try {
+    const r = await fetch('/api/admin/campaigns', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { status.style.color = '#ef4444'; status.textContent = d.detail || 'Failed'; return; }
+    status.style.color = '#22c55e'; status.textContent = '✅ Created: ' + d.campaign.code;
+    document.getElementById('cmp-name').value = '';
+    loadCampaigns();
+  } catch (e) { status.style.color = '#ef4444'; status.textContent = 'Error: ' + e; }
+}
+
+async function loadCampaigns() {
+  const wrap = document.getElementById('campaigns-wrap');
+  try {
+    const r = await fetch('/api/admin/campaigns', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (r.status === 401) { doLogout(); return; }
+    const d = await r.json();
+    const list = (d.campaigns || []);
+    if (!list.length) { wrap.innerHTML = '<div class="empty-state">No campaigns yet — create one above.</div>'; return; }
+    const badge = { active: '#22c55e', disabled: '#64748b', expired: '#f59e0b', maxed: '#f59e0b' };
+    wrap.innerHTML = list.map(c => {
+      const conv = c.visits ? Math.round((c.redeemed / c.visits) * 100) : 0;
+      return `<div class="qa-act-card" style="margin-bottom:12px">
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:center">
+          <div>
+            <div style="font-weight:700;font-size:15px">${esc(c.name)}
+              <span style="font-size:11px;font-weight:600;color:${badge[c.status]||'#64748b'};border:1px solid ${badge[c.status]||'#64748b'}55;border-radius:6px;padding:1px 7px;margin-left:6px">${c.status.toUpperCase()}</span>
+            </div>
+            <div style="font-size:12px;color:var(--tx3);margin-top:3px">🎁 ${esc(c.offer_text)} · code <b style="color:var(--ac)">${esc(c.code)}</b>${c.expiry ? ' · expires ' + esc(c.expiry) : ''}${c.max_redemptions ? ' · max ' + c.max_redemptions : ''}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:12px;color:var(--tx2)">👀 ${c.visits} visits · ✅ ${c.redeemed} redeemed${c.visits ? ' · ' + conv + '%' : ''}</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center">
+          <input class="fi" readonly value="${esc(c.link)}" style="flex:1;min-width:200px;font-size:12px" onclick="this.select()">
+          <button class="btn bg bsm" onclick="cmpCopyLink('${esc(c.link)}')">📋 Copy link</button>
+          <button class="btn bg bsm" onclick="cmpDownloadQR('${esc(c.code)}')">⬇️ Download QR</button>
+          <button class="btn bg bsm" onclick="toggleCampaign('${esc(c.code)}')">${c.active ? '⏸️ Disable' : '▶️ Enable'}</button>
+          <button class="btn bg bsm" style="color:#ef4444" onclick="deleteCampaign('${esc(c.code)}')">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) { wrap.innerHTML = '<div class="empty-state">Could not load campaigns</div>'; }
+}
+
+function cmpCopyLink(link) {
+  navigator.clipboard.writeText(link).then(() => toast('Link copied', 'success'), () => toast('Copy failed', 'error'));
+}
+
+async function cmpDownloadQR(code) {
+  // The QR endpoint is owner-auth'd, so fetch it with the token and save the blob.
+  try {
+    const r = await fetch('/api/admin/campaigns/' + code + '/qr.png', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) { toast('QR failed', 'error'); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'campaign-' + code + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) { toast('QR error', 'error'); }
+}
+
+async function toggleCampaign(code) {
+  try {
+    await fetch('/api/admin/campaigns/' + code + '/toggle', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+    loadCampaigns();
+  } catch (e) { toast('Failed', 'error'); }
+}
+
+async function deleteCampaign(code) {
+  if (!confirm('Delete campaign ' + code + '? Existing redemptions stay applied; the link/QR stops working.')) return;
+  try {
+    await fetch('/api/admin/campaigns/' + code, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+    loadCampaigns();
+  } catch (e) { toast('Failed', 'error'); }
 }
 
 // ── USERS ────────────────────────────────────────────────────────────────────
@@ -2953,6 +3062,69 @@ async function markAffiliatePaid(uid) {
           <button class="btn bp" onclick="broadcastSendAll()">📣 Send to all users</button>
           <span id="bc-status" style="font-size:12px;color:var(--tx3)"></span>
         </div>
+      </div>
+    </div>
+
+    <!-- CAMPAIGNS SECTION (owner only) — promo links + QR for free periods -->
+    <div id="section-campaigns" class="hidden">
+      <div class="qa-act-card" style="margin-bottom:20px">
+        <div class="qa-act-title">🎯 Create promo campaign</div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">Generates a shareable signup link + a printable QR code. New users who sign up via it automatically get the offer. Tracked per campaign so you can see which signs/locations convert.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px">
+          <div class="fg" style="flex:2;min-width:200px;margin-bottom:0">
+            <label class="fl">Campaign name</label>
+            <input class="fi" id="cmp-name" maxlength="120" placeholder="e.g. Coffee shop flyer — Aarhus">
+          </div>
+          <div class="fg" style="flex:1;min-width:150px;margin-bottom:0">
+            <label class="fl">Offer type</label>
+            <select class="fi" id="cmp-offer-type" onchange="cmpToggleOffer()">
+              <option value="plan">Free plan period</option>
+              <option value="credits">Free credits</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px">
+          <div class="fg cmp-plan-field" style="flex:1;min-width:150px;margin-bottom:0">
+            <label class="fl">Plan</label>
+            <select class="fi" id="cmp-plan">
+              <option value="starter">Starter</option>
+              <option value="growth">Growth</option>
+              <option value="basic">Basic</option>
+              <option value="pro" selected>Pro</option>
+              <option value="elite">Elite</option>
+              <option value="personal">Personal</option>
+              <option value="agency">Agency</option>
+            </select>
+          </div>
+          <div class="fg cmp-plan-field" style="flex:1;min-width:120px;margin-bottom:0">
+            <label class="fl">Free months</label>
+            <input class="fi" id="cmp-months" type="number" min="1" max="24" value="1">
+          </div>
+          <div class="fg cmp-credits-field" style="flex:1;min-width:120px;margin-bottom:0;display:none">
+            <label class="fl">Free credits</label>
+            <input class="fi" id="cmp-credits" type="number" min="1" value="500">
+          </div>
+          <div class="fg" style="flex:1;min-width:140px;margin-bottom:0">
+            <label class="fl">Expiry (optional)</label>
+            <input class="fi" id="cmp-expiry" type="date">
+          </div>
+          <div class="fg" style="flex:1;min-width:140px;margin-bottom:0">
+            <label class="fl">Max redemptions (optional)</label>
+            <input class="fi" id="cmp-max" type="number" min="1" placeholder="unlimited">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:14px">
+          <button class="btn bp" onclick="createCampaign()">➕ Create campaign</button>
+          <span id="cmp-create-status" style="font-size:12px;color:var(--tx3)"></span>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">🎯 Campaigns</div>
+          <button class="btn bg bsm" onclick="loadCampaigns()">🔄 Refresh</button>
+        </div>
+        <div id="campaigns-wrap"><div class="empty-state">Loading…</div></div>
       </div>
     </div>
 

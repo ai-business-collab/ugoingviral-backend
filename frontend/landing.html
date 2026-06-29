@@ -1791,8 +1791,9 @@ async function handleRegister() {
   msg.textContent = '';
   if (!name || !email || !pass) { msg.textContent = 'Please fill in name, email and password'; return; }
   var ref = new URLSearchParams(window.location.search).get('ref') || '';
+  var campaign = new URLSearchParams(window.location.search).get('campaign') || '';
   try {
-    var r = await fetch('/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password: pass, name, company, ref})});
+    var r = await fetch('/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password: pass, name, company, ref, campaign})});
     var d = await r.json();
     if (d.token) {
       localStorage.setItem('ugv_token', d.token);
@@ -1830,6 +1831,27 @@ document.addEventListener('keydown', function(e) {
       if (msg) { msg.style.color = '#22c55e'; msg.textContent = '🎉 You are invited! Create an account and get started.'; }
     }, 400);
   }
+})();
+
+// Handle ?campaign= promo link / QR — open register and show the live offer.
+(function() {
+  var code = new URLSearchParams(window.location.search).get('campaign');
+  if (!code) return;
+  setTimeout(function() { openModal('register'); }, 400);
+  fetch('/api/campaign/' + encodeURIComponent(code))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var msg = document.getElementById('reg-msg');
+      if (!msg) return;
+      if (d && d.valid) {
+        msg.style.color = '#22c55e';
+        msg.textContent = '🎁 ' + (d.offer_text || 'Special offer') + ' — sign up to claim it!';
+      } else if (d && d.status && d.status !== 'active') {
+        msg.style.color = '#f59e0b';
+        msg.textContent = 'This promo is no longer available, but you can still sign up free.';
+      }
+    })
+    .catch(function(){});
 })();
 
 // Handle Google OAuth error redirects

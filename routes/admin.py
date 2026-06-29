@@ -37,6 +37,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 EMPLOYEES_FILE  = os.path.join(BASE, "..", "admin_users.json")
 ASSIGNMENTS_FILE = os.path.join(BASE, "..", "customer_assignments.json")
 GUIDELINES_FILE = os.path.join(BASE, "..", "assistant_guidelines.json")
+CAMPAIGNS_FILE  = os.path.join(BASE, "..", "campaigns.json")
 
 
 # ── Config helpers ────────────────────────────────────────────────────────────
@@ -895,6 +896,289 @@ async def quick_extend_plan_ep(req: Request, admin=Depends(require_owner)):
     billing["plan_extended_by"] = "admin"
     _save_user_store(uid, ustore)
     return {"ok": True, "plan": plan, "days": days, "expires": billing["plan_expires"]}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PROMO CAMPAIGNS (owner-only) — shareable link + QR that grant new signups a
+# free period / credits. Adds repeatable, trackable promos on top of the manual
+# per-user grant above. Storage mirrors the employees/assignments JSON pattern.
+# ══════════════════════════════════════════════════════════════════════════════
+import io as _io
+import string as _string
+import secrets as _secrets
+import threading as _threading
+from fastapi.responses import Response as _Response
+
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://ugoingviral.com").rstrip("/")
+_CAMPAIGN_LOCK = _threading.Lock()
+# Plans a campaign may grant a free period of (mirrors the manual-grant allow-list).
+_CAMPAIGN_PLANS = {"starter", "growth", "basic", "pro", "elite", "personal", "agency"}
+
+
+def _load_campaigns() -> dict:
+    if not os.path.exists(CAMPAIGNS_FILE):
+        return {"campaigns": []}
+    try:
+        with open(CAMPAIGNS_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"campaigns": []}
+
+
+def _save_campaigns(data: dict):
+    with open(CAMPAIGNS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def _find_campaign(data: dict, code: str):
+    code = (code or "").strip().upper()
+    return next((c for c in data.get("campaigns", []) if c.get("code", "").upper() == code), None)
+
+
+def _gen_campaign_code(data: dict, n: int = 6) -> str:
+    # Unambiguous uppercase alphabet (no O/0/I/1) — easy to read off a flyer.
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    existing = {c.get("code", "").upper() for c in data.get("campaigns", [])}
+    for _ in range(50):
+        code = "".join(_secrets.choice(alphabet) for _ in range(n))
+        if code not in existing:
+            return code
+    return "".join(_secrets.choice(alphabet) for _ in range(n + 2))
+
+
+def _campaign_link(code: str) -> str:
+    return f"{PUBLIC_BASE_URL}/signup?campaign={code}"
+
+
+def _campaign_status(c: dict) -> str:
+    """active | disabled | expired | maxed — drives whether redemption is allowed."""
+    if not c.get("active", True):
+        return "disabled"
+    expiry = c.get("expiry")
+    if expiry:
+        try:
+            # expiry is an inclusive end DATE (valid through end of that day).
+            end = datetime.fromisoformat(expiry).date() if "T" in expiry else datetime.strptime(expiry, "%Y-%m-%d").date()
+            if datetime.utcnow().date() > end:
+                return "expired"
+        except Exception:
+            pass
+    maxr = c.get("max_redemptions")
+    if maxr and len(c.get("redemptions", [])) >= int(maxr):
+        return "maxed"
+    return "active"
+
+
+def _campaign_offer_text(c: dict) -> str:
+    if c.get("offer_type") == "plan":
+        months = int(c.get("months") or 1)
+        plan = PLANS.get(c.get("plan", ""), {}).get("name", c.get("plan", ""))
+        return f"{months} month{'s' if months != 1 else ''} of {plan} free"
+    if c.get("offer_type") == "credits":
+        return f"{int(c.get('credits') or 0)} free credits"
+    return "offer"
+
+
+def _campaign_admin_view(c: dict) -> dict:
+    return {
+        "code": c["code"],
+        "name": c.get("name", ""),
+        "offer_type": c.get("offer_type"),
+        "plan": c.get("plan"),
+        "months": c.get("months"),
+        "credits": c.get("credits"),
+        "offer_text": _campaign_offer_text(c),
+        "expiry": c.get("expiry"),
+        "max_redemptions": c.get("max_redemptions"),
+        "active": c.get("active", True),
+        "status": _campaign_status(c),
+        "created_at": c.get("created_at"),
+        "link": _campaign_link(c["code"]),
+        "qr_url": f"/api/admin/campaigns/{c['code']}/qr.png",
+        "visits": int(c.get("visits", 0)),                 # link opened / QR scanned
+        "redeemed": len(c.get("redemptions", [])),          # signed up + offer applied
+    }
+
+
+class CreateCampaignRequest(BaseModel):
+    name: str
+    offer_type: str                       # "plan" | "credits"
+    plan: Optional[str] = None
+    months: Optional[int] = 1
+    credits: Optional[int] = None
+    expiry: Optional[str] = None          # "YYYY-MM-DD" (inclusive), optional
+    max_redemptions: Optional[int] = None
+
+
+@router.post("/api/admin/campaigns")
+def create_campaign(req: CreateCampaignRequest, admin=Depends(require_owner)):
+    name = (req.name or "").strip()[:120]
+    if not name:
+        raise HTTPException(status_code=400, detail="Campaign name is required")
+    if req.offer_type not in ("plan", "credits"):
+        raise HTTPException(status_code=400, detail="offer_type must be 'plan' or 'credits'")
+
+    campaign = {
+        "name": name,
+        "offer_type": req.offer_type,
+        "expiry": None,
+        "max_redemptions": None,
+        "active": True,
+        "created_at": datetime.utcnow().isoformat(),
+        "visits": 0,
+        "redemptions": [],
+    }
+    if req.offer_type == "plan":
+        if req.plan not in _CAMPAIGN_PLANS:
+            raise HTTPException(status_code=400, detail="Invalid plan for a free-period offer")
+        campaign["plan"] = req.plan
+        campaign["months"] = max(1, min(24, int(req.months or 1)))
+    else:
+        amt = int(req.credits or 0)
+        if amt <= 0:
+            raise HTTPException(status_code=400, detail="credits must be a positive number")
+        campaign["credits"] = min(1_000_000, amt)
+
+    if req.expiry:
+        try:
+            datetime.strptime(req.expiry, "%Y-%m-%d")
+            campaign["expiry"] = req.expiry
+        except Exception:
+            raise HTTPException(status_code=400, detail="expiry must be YYYY-MM-DD")
+    if req.max_redemptions is not None:
+        mr = int(req.max_redemptions)
+        if mr <= 0:
+            raise HTTPException(status_code=400, detail="max_redemptions must be positive")
+        campaign["max_redemptions"] = mr
+
+    with _CAMPAIGN_LOCK:
+        data = _load_campaigns()
+        campaign["code"] = _gen_campaign_code(data)
+        data.setdefault("campaigns", []).insert(0, campaign)
+        _save_campaigns(data)
+    return {"ok": True, "campaign": _campaign_admin_view(campaign)}
+
+
+@router.get("/api/admin/campaigns")
+def list_campaigns(admin=Depends(require_owner)):
+    data = _load_campaigns()
+    return {"ok": True, "campaigns": [_campaign_admin_view(c) for c in data.get("campaigns", [])]}
+
+
+@router.get("/api/admin/campaigns/{code}")
+def get_campaign(code: str, admin=Depends(require_owner)):
+    c = _find_campaign(_load_campaigns(), code)
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    view = _campaign_admin_view(c)
+    view["redemptions"] = c.get("redemptions", [])    # full list for the detail view
+    return {"ok": True, "campaign": view}
+
+
+@router.post("/api/admin/campaigns/{code}/toggle")
+def toggle_campaign(code: str, admin=Depends(require_owner)):
+    with _CAMPAIGN_LOCK:
+        data = _load_campaigns()
+        c = _find_campaign(data, code)
+        if not c:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+        c["active"] = not c.get("active", True)
+        _save_campaigns(data)
+        return {"ok": True, "active": c["active"], "status": _campaign_status(c)}
+
+
+@router.delete("/api/admin/campaigns/{code}")
+def delete_campaign(code: str, admin=Depends(require_owner)):
+    with _CAMPAIGN_LOCK:
+        data = _load_campaigns()
+        before = len(data.get("campaigns", []))
+        data["campaigns"] = [c for c in data.get("campaigns", [])
+                             if c.get("code", "").upper() != (code or "").strip().upper()]
+        _save_campaigns(data)
+        return {"ok": True, "deleted": before - len(data["campaigns"])}
+
+
+@router.get("/api/admin/campaigns/{code}/qr.png")
+def campaign_qr(code: str, admin=Depends(require_owner)):
+    """Server-side QR (segno, pure-Python) of the campaign signup link — a
+    downloadable PNG to drop on signs/flyers."""
+    import segno
+    c = _find_campaign(_load_campaigns(), code)
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    buf = _io.BytesIO()
+    segno.make(_campaign_link(c["code"]), error="m").save(buf, kind="png", scale=10, border=3)
+    return _Response(
+        content=buf.getvalue(),
+        media_type="image/png",
+        headers={"Content-Disposition": f'attachment; filename="campaign-{c["code"]}.png"'},
+    )
+
+
+@router.get("/api/campaign/{code}")
+def public_campaign_info(code: str):
+    """PUBLIC (no auth): display-safe offer info for the signup page, and records
+    a visit (link open / QR scan) for tracking. Leaks no owner internals."""
+    with _CAMPAIGN_LOCK:
+        data = _load_campaigns()
+        c = _find_campaign(data, code)
+        if not c:
+            return {"valid": False}
+        status = _campaign_status(c)
+        if status == "active":
+            c["visits"] = int(c.get("visits", 0)) + 1
+            _save_campaigns(data)
+        return {
+            "valid": status == "active",
+            "status": status,
+            "name": c.get("name", ""),
+            "offer_text": _campaign_offer_text(c),
+        }
+
+
+def redeem_campaign(code: str, user_id: str, email: str):
+    """Apply a campaign's offer to a brand-new user at signup. Atomic under the
+    campaign lock so expiry + max_redemptions are enforced exactly. Returns the
+    applied offer dict, or None if the code is invalid/expired/maxed/disabled or
+    already redeemed by this user. Never raises — signup must not break."""
+    if not code:
+        return None
+    try:
+        with _CAMPAIGN_LOCK:
+            data = _load_campaigns()
+            c = _find_campaign(data, code)
+            if not c or _campaign_status(c) != "active":
+                return None
+            if any(r.get("user_id") == user_id for r in c.get("redemptions", [])):
+                return None
+
+            ustore = _load_user_store(user_id)
+            billing = ustore.setdefault("billing", {})
+            applied = None
+            if c.get("offer_type") == "plan" and c.get("plan") in PLANS:
+                months = max(1, int(c.get("months") or 1))
+                billing["plan"] = c["plan"]
+                billing["credits"] = PLANS[c["plan"]]["credits"]
+                billing["plan_expires"] = (datetime.utcnow() + timedelta(days=30 * months)).isoformat()
+                billing["plan_extended_by"] = f"campaign:{c['code']}"
+                applied = {"type": "plan", "plan": c["plan"], "months": months}
+            elif c.get("offer_type") == "credits":
+                amt = max(0, int(c.get("credits") or 0))
+                billing["credits"] = int(billing.get("credits", 0) or 0) + amt
+                applied = {"type": "credits", "credits": amt}
+            else:
+                return None
+
+            ustore["campaign"] = c["code"]
+            _save_user_store(user_id, ustore)
+            c.setdefault("redemptions", []).append({
+                "user_id": user_id, "email": email, "ts": datetime.utcnow().isoformat(),
+            })
+            _save_campaigns(data)
+            return applied
+    except Exception as e:
+        logger.warning("campaign redeem failed for %s: %s", code, e)
+        return None
 
 
 class BroadcastEmailRequest(BaseModel):

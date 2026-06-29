@@ -59,6 +59,7 @@ class RegisterRequest(BaseModel):
     company: str = ""
     niche: str = ""
     ref: str = ""
+    campaign: str = ""
 
 
 class UpdateProfileRequest(BaseModel):
@@ -184,6 +185,14 @@ async def register(request: Request, req: RegisterRequest):
         _save_user_store(user["id"], _ustore)
     except Exception:
         pass
+    # Promo campaign redemption (free period / credits via a shareable link or QR).
+    # Validates expiry + max-redemptions atomically; never breaks signup if invalid.
+    if req.campaign:
+        try:
+            from routes.admin import redeem_campaign
+            redeem_campaign(req.campaign.strip(), user["id"], user["email"])
+        except Exception:
+            pass
     # Issue verification code, send welcome + verification emails.
     code = await _issue_verification(user)
     try:

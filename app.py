@@ -144,6 +144,13 @@ def admin_page():
         return FileResponse(ADMIN_HTML, media_type="text/html")
     return {"msg": "Admin panel ikke fundet"}
 
+@app.get("/signup")
+def signup_page():
+    # Campaign/QR signup links point here (/signup?campaign=CODE). Serves the
+    # landing page, which reads ?campaign= and applies the promo at registration.
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "landing.html")
+    return FileResponse(p, media_type="text/html")
+
 @app.get("/delete-data")
 def delete_data_page():
     p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "delete-data.html")
