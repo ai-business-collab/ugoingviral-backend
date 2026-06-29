@@ -472,6 +472,8 @@ async def startup_event():
     asyncio.create_task(agent.run_agent_tasks())
     from services.cleanup import run_daily_cleanup
     asyncio.create_task(run_daily_cleanup())
+    # Revert expired granted/campaign free periods to free (paying subs untouched).
+    asyncio.create_task(scheduler.run_plan_expiry_checker())
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon_ico():

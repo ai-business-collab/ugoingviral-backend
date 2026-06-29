@@ -1425,3 +1425,21 @@ def get_pending_suggestions(current_user: dict = Depends(get_current_user)):
             changed   = True
     if changed: _save_user_store(current_user['id'], ustore)
     return {'suggestions': list(reversed(suggestions))}
+
+
+async def run_plan_expiry_checker():
+    """Daily background job: revert expired GRANTED / campaign free periods back
+    to the free plan (credits untouched). Real paying Stripe subscribers are
+    never touched. See services/plan_expiry.py for the safety rules."""
+    await asyncio.sleep(120)  # let startup settle
+    from services.plan_expiry import revert_expired_plans
+    while True:
+        try:
+            summary = revert_expired_plans()
+            if summary.get("reverted") or summary.get("kept_paying"):
+                add_log(
+                    f"Plan expiry: {summary['reverted']} reverted to free, "
+                    f"{summary['kept_paying']} kept (now paying)", "info")
+        except Exception as e:
+            add_log(f"plan expiry checker error: {str(e)[:120]}", "error")
+        await asyncio.sleep(6 * 3600)  # re-check every 6 hours
