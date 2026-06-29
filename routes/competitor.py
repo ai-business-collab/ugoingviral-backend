@@ -48,6 +48,9 @@ async def _call_ai(prompt: str, s: dict, max_tokens: int = 1500) -> str:
 
 @router.post("/api/competitor/analyze")
 async def analyze_competitor(req: Request, current_user: dict = Depends(get_current_user)):
+    from services.security import check_ai_rate_limit
+    if not check_ai_rate_limit(current_user.get("id"), "competitor", 10, 60):
+        raise HTTPException(429, "Too many competitor analyses — please wait a moment.")
     body = await req.json()
     handle   = str(body.get("handle", "")).strip().lstrip("@")
     platform = str(body.get("platform", "instagram")).lower()

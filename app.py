@@ -20,7 +20,10 @@ from services.security import (
     body_size_middleware,
     rate_limit_handler,
     InputValidationMiddleware,
+    is_ip_denied,
+    client_ip,
 )
+from fastapi.responses import JSONResponse as _JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from routes import settings, products, content, posts, automation, playwright, instagram, tiktok, youtube, twitter, scheduler, email, auth, billing, admin, onboarding, stats, agent, subaccounts, studio, uploads, content_engine, autopilot, telegram, growth, nexora_core, nexora_events, qa_agent, affiliate, template_library, analytics, notifications, brand_kit, competitor, viral_score, caption_improver, hashtags, csv_import, video_script, reel_templates, audit, workspaces, ig_growth, webhooks, content_library, content_team
@@ -54,6 +57,25 @@ app.add_middleware(
 # Reject SQLi / XSS payloads globally before they reach any route handler.
 # Added last so it is the outermost middleware (buffers/replays the body once).
 app.add_middleware(InputValidationMiddleware)
+
+
+@app.middleware("http")
+async def ip_ban_middleware(request: Request, call_next):
+    """Block manually/auto-banned IPs (and login brute-force-blocked IPs) on
+    EVERY endpoint, before any route work. Health checks are exempt so a banned
+    IP can't take monitoring offline. Fails open on any internal error."""
+    try:
+        path = request.url.path
+        if not path.startswith(("/health", "/api/health")):
+            ip = client_ip(request)
+            if ip and is_ip_denied(ip):
+                return _JSONResponse(
+                    status_code=403,
+                    content={"detail": "Your IP address has been blocked due to abuse."},
+                )
+    except Exception:
+        pass
+    return await call_next(request)
 
 @app.middleware("http")
 async def user_store_middleware(request: Request, call_next):

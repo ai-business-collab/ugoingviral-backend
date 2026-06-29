@@ -33,7 +33,7 @@ def _rate_key(request: Request) -> str:
                 return f"user:{uid}"
         except Exception:
             pass
-    return f"ip:{get_remote_address(request)}"
+    return f"ip:{client_ip(request)}"
 
 
 # Global default: 60 requests / minute per user (or per IP if unauthenticated).
@@ -44,7 +44,12 @@ _FRIENDLY_RATE_MSG = "Too many requests — please wait a moment"
 
 
 def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    """Friendly 429 for any limit breach (global 60/min or per-route limits)."""
+    """Friendly 429 for any limit breach (global 60/min or per-route limits).
+    Repeated 429s from one IP trip an automatic temporary ban (flood defense)."""
+    try:
+        record_abuse(client_ip(request))
+    except Exception:
+        pass
     return JSONResponse(
         status_code=429,
         content={"detail": _FRIENDLY_RATE_MSG},
@@ -411,11 +416,29 @@ def is_token_revoked(token: str) -> bool:
     return bool(exp and exp > time.time())
 
 
+# When True, trust the Cloudflare CF-Connecting-IP header. Only enable AFTER
+# Cloudflare is in front AND the origin firewall only admits Cloudflare IPs —
+# otherwise an attacker hitting the origin directly could spoof it.
+TRUST_CLOUDFLARE = os.getenv("TRUST_CLOUDFLARE", "").lower() in ("1", "true", "yes")
+
+
 def client_ip(request: Request) -> str:
-    """Best-effort client IP — honors X-Forwarded-For when behind a proxy."""
+    """Real client IP, resistant to X-Forwarded-For spoofing.
+
+    nginx is configured with `$proxy_add_x_forwarded_for`, which APPENDS the real
+    connecting IP as the LAST hop. A client can prepend fake entries, so we take
+    the LAST hop (the one our trusted nginx added), NOT the first. With Cloudflare
+    in front (TRUST_CLOUDFLARE=1 + origin locked to CF IPs) we prefer the
+    authoritative CF-Connecting-IP header instead."""
+    if TRUST_CLOUDFLARE:
+        cf = request.headers.get("cf-connecting-ip", "").strip()
+        if cf:
+            return cf
     xff = request.headers.get("x-forwarded-for", "")
     if xff:
-        return xff.split(",")[0].strip()
+        parts = [p.strip() for p in xff.split(",") if p.strip()]
+        if parts:
+            return parts[-1]   # last hop = appended by our trusted nginx
     return get_remote_address(request) or ""
 
 
@@ -505,3 +528,147 @@ class InputValidationMiddleware:
     async def _reject(self, scope, receive, send, detail: str):
         response = JSONResponse(status_code=400, content={"detail": detail})
         await response(scope, receive, send)
+
+
+# ── IP ban list (manual + auto) ──────────────────────────────────────────────
+# Distinct from the login brute-force `blocked` map: this is a general-purpose
+# ban that the global middleware enforces on EVERY endpoint. Manual bans (set by
+# an owner via /api/admin) can be permanent (until=None) or timed; auto-bans are
+# triggered by repeated rate-limit floods. File-backed so it survives restarts
+# and is shared across the (few) worker processes.
+_BANNED_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "banned_ips.json")
+_BANNED_LOCK = Lock()
+_ABUSE_WINDOW   = 300    # count 429s within 5 min
+_ABUSE_LIMIT    = 100    # auto-ban an IP after this many 429s in the window
+_AUTOBAN_SECS   = 3600   # auto-ban duration: 1 hour
+_abuse_hits: dict = defaultdict(deque)
+
+
+def _read_banned() -> dict:
+    try:
+        with open(_BANNED_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _write_banned(data: dict) -> None:
+    try:
+        with open(_BANNED_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception:
+        pass
+
+
+def is_ip_banned(ip: str) -> bool:
+    """True if `ip` is on the ban list and the ban is still active. Permanent
+    bans have until=None; timed bans auto-expire and are purged on read."""
+    if not ip:
+        return False
+    with _BANNED_LOCK:
+        data = _read_banned()
+        entry = data.get(ip)
+        if not entry:
+            return False
+        until = entry.get("until")
+        if until is not None and time.time() >= until:
+            data.pop(ip, None)
+            _write_banned(data)
+            return False
+        return True
+
+
+def ban_ip(ip: str, reason: str = "", seconds: Optional[int] = None,
+           by: str = "manual") -> dict:
+    """Ban an IP. `seconds=None` → permanent. Returns the stored entry."""
+    if not ip:
+        return {}
+    with _BANNED_LOCK:
+        data = _read_banned()
+        entry = {
+            "reason": (reason or "")[:200],
+            "by": by,
+            "since": time.time(),
+            "until": (time.time() + seconds) if seconds else None,
+        }
+        data[ip] = entry
+        _write_banned(data)
+        return entry
+
+
+def unban_ip(ip: str) -> bool:
+    """Remove an IP from the ban list. Returns True if it was banned."""
+    if not ip:
+        return False
+    with _BANNED_LOCK:
+        data = _read_banned()
+        existed = data.pop(ip, None) is not None
+        if existed:
+            _write_banned(data)
+        return existed
+
+
+def list_banned_ips() -> dict:
+    """Return the current ban map (expired timed bans purged)."""
+    now = time.time()
+    with _BANNED_LOCK:
+        data = _read_banned()
+        live = {ip: e for ip, e in data.items()
+                if e.get("until") is None or e["until"] > now}
+        if len(live) != len(data):
+            _write_banned(live)
+        return live
+
+
+def is_ip_denied(ip: str) -> bool:
+    """Single check for the global middleware: True if the IP is manually/auto
+    banned OR currently login-brute-force-blocked."""
+    return is_ip_banned(ip) or is_ip_blocked(ip)
+
+
+def record_abuse(ip: str) -> bool:
+    """Record a rate-limit breach (429) for `ip`. Auto-bans the IP for 1 hour
+    once it floods past _ABUSE_LIMIT within the window. Returns True if a new
+    auto-ban was applied."""
+    if not ip:
+        return False
+    now = time.time()
+    with _BANNED_LOCK:
+        dq = _abuse_hits[ip]
+        while dq and now - dq[0] >= _ABUSE_WINDOW:
+            dq.popleft()
+        dq.append(now)
+        if len(dq) >= _ABUSE_LIMIT:
+            dq.clear()
+            # ban_ip takes the same lock — write directly here to avoid re-entry.
+            data = _read_banned()
+            data[ip] = {"reason": f"auto: {_ABUSE_LIMIT}+ rate-limit hits in {_ABUSE_WINDOW}s",
+                        "by": "auto", "since": now, "until": now + _AUTOBAN_SECS}
+            _write_banned(data)
+            return True
+    return False
+
+
+# ── Generic per-user AI rate limit (sliding window, in-memory) ───────────────
+# For expensive paid-AI endpoints that key off the authenticated user. Mirrors
+# the video limiter. Defaults are conservative; callers pass their own.
+_ai_lock = Lock()
+_ai_hits: dict = defaultdict(deque)
+
+
+def check_ai_rate_limit(user_id: str, action: str = "ai",
+                        limit: int = 20, window: int = 60) -> bool:
+    """Return True if the user may make another `action` call, recording the hit.
+    Returns False once `limit` calls have occurred within `window` seconds."""
+    if not user_id:
+        return True
+    key = f"{user_id}:{action}"
+    now = time.time()
+    with _ai_lock:
+        dq = _ai_hits[key]
+        while dq and now - dq[0] >= window:
+            dq.popleft()
+        if len(dq) >= limit:
+            return False
+        dq.append(now)
+        return True

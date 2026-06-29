@@ -323,7 +323,11 @@ async def generate_content(request: Request, req: ContentRequest):
     return {"content": result, "id": item["id"], "content_score": score}
 
 @router.post("/api/content/generate_all")
-async def generate_all(req: ContentRequest):
+async def generate_all(req: ContentRequest, current_user: dict = Depends(get_current_user)):
+    # generate_all fires up to 4 AI calls — cap per user to bound paid-API spend.
+    from services.security import check_ai_rate_limit
+    if not check_ai_rate_limit(current_user.get("id"), "generate_all", 12, 60):
+        raise HTTPException(status_code=429, detail="Too many requests — please wait a moment.")
     from routes.viral_score import _rule_score
 
     def _quick_score(text: str, ctype: str) -> int:
@@ -372,7 +376,10 @@ def clear_history():
 
 # ── DM Reply ──────────────────────────────────────────────────────────────────
 @router.post("/api/dm/reply")
-async def dm_reply(req: DMReplyRequest):
+async def dm_reply(req: DMReplyRequest, current_user: dict = Depends(get_current_user)):
+    from services.security import check_ai_rate_limit
+    if not check_ai_rate_limit(current_user.get("id"), "dm_reply", 30, 60):
+        raise HTTPException(status_code=429, detail="Too many requests — please wait a moment.")
     dm = store.get("dm_settings", {})
     reply = await _call_ai(_ghost_prompt(req.message, req.sender_name, dm), dm.get("reply_language", "da"))
     return {"reply": reply, "ghost_mode": dm.get("ghost_mode", True)}

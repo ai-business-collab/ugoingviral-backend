@@ -599,6 +599,38 @@ def get_support_notes(user_id: str, staff=Depends(require_staff)):
     return user_store.get("support_notes", [])
 
 
+# ── Owner: IP ban list (network-level abuse) ─────────────────────────────────
+
+@router.get("/api/admin/banned-ips")
+def admin_list_banned_ips(admin=Depends(require_owner)):
+    from services.security import list_banned_ips
+    return {"ok": True, "banned": list_banned_ips()}
+
+
+@router.post("/api/admin/ban-ip")
+async def admin_ban_ip(req: Request, admin=Depends(require_owner)):
+    """Ban an IP. Body: {ip, reason?, hours?}. Omit `hours` for a permanent ban."""
+    from services.security import ban_ip
+    body = await req.json()
+    ip = str(body.get("ip", "")).strip()
+    if not ip:
+        raise HTTPException(400, "ip is required")
+    hours = body.get("hours")
+    seconds = int(float(hours) * 3600) if hours not in (None, "", 0) else None
+    entry = ban_ip(ip, reason=str(body.get("reason", "")), seconds=seconds, by="owner")
+    return {"ok": True, "ip": ip, "entry": entry}
+
+
+@router.post("/api/admin/unban-ip")
+async def admin_unban_ip(req: Request, admin=Depends(require_owner)):
+    from services.security import unban_ip
+    body = await req.json()
+    ip = str(body.get("ip", "")).strip()
+    if not ip:
+        raise HTTPException(400, "ip is required")
+    return {"ok": True, "ip": ip, "was_banned": unban_ip(ip)}
+
+
 # ── Owner: Ban / Pause / Delete users ────────────────────────────────────────
 
 @router.post("/api/admin/users/{user_id}/ban")

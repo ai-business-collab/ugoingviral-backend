@@ -319,6 +319,10 @@ Rules:
 
 @router.post("/api/audit/analyze")
 async def analyze_account(req: Request, current_user: dict = Depends(get_current_user)):
+    # Per-user cap on this paid-AI endpoint (drain protection beyond the global 60/min).
+    from services.security import check_ai_rate_limit
+    if not check_ai_rate_limit(current_user.get("id"), "audit", 15, 60):
+        raise HTTPException(429, "Too many audits — please wait a moment and try again.")
     body          = await req.json()
     handle        = str(body.get("handle", "")).strip().lstrip("@")
     platform      = str(body.get("platform", "instagram")).lower()

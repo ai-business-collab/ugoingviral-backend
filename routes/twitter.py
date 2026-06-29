@@ -70,7 +70,9 @@ async def twitter_callback(code: str = "", error: str = "", state: str = ""):
             )
             token_data = r.json()
 
-        print("TOKEN RESPONSE:", token_data)
+        # Never log the raw token response (it contains access/refresh tokens).
+        print("Twitter token exchange:", "ok" if token_data.get("access_token")
+              else f"error: {str(token_data.get('error', 'unknown'))[:120]}")
         access_token = token_data.get("access_token", "")
         refresh_token = token_data.get("refresh_token", "")
 
