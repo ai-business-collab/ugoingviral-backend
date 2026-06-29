@@ -110,15 +110,20 @@ async def _flux_image(prompt: str) -> bytes | None:
     return None
 
 
-async def generate_ai_image(prompt: str, uid: str = "") -> str | None:
+async def generate_ai_image(prompt: str, uid: str = "", negative_prompt: str = "") -> str | None:
     """Generate a social image from text and return a hosted URL on the verified
     domain, or None if generation is unavailable/failed. gpt-image-1 first,
-    Replicate FLUX fallback."""
+    Replicate FLUX fallback. `negative_prompt` is folded into the prompt text
+    (these models take no true negative param) to suppress on-image text, logos
+    and artifacts."""
     if not prompt or not prompt.strip():
         return None
-    data = await _gpt_image(prompt)
+    full = prompt.strip()
+    if negative_prompt:
+        full = f"{full}\n\nStrictly avoid: {negative_prompt}."
+    data = await _gpt_image(full)
     if not data:
-        data = await _flux_image(prompt)
+        data = await _flux_image(full)
     if not data:
         return None
     try:
@@ -128,14 +133,48 @@ async def generate_ai_image(prompt: str, uid: str = "") -> str | None:
         return None
 
 
-async def generate_text_to_video(prompt: str, uid: str = "", duration: int = 5,
-                                 aspect_ratio: str = "9:16", provider: str = "") -> dict:
-    """Full chain: text → AI image → image→video. Returns
-    {ok, video_url, image_url, provider, message}. Works with no product/upload.
-    Credit charging is the caller's responsibility."""
-    img = await generate_ai_image(prompt, uid)
+async def generate_text_to_video(prompt: str = "", uid: str = "", duration: int = 5,
+                                 aspect_ratio: str = "9:16", provider: str = "",
+                                 image_prompt: str = "", motion_prompt: str = "",
+                                 negative_prompt: str = "", start_image_url: str = "",
+                                 brand: dict = None, item: dict = None) -> dict:
+    """Full chain: (image_prompt → AI image) OR own image → image→video. Returns
+    {ok, video_url, image_url, provider, first_frame, message}.
+
+    The image model gets a CONCRETE scene prompt and the video model gets a
+    separate MOTION brief — never the raw hook. If a caller passes only `prompt`,
+    we build both here from the uid's brand (airtight backstop: no path can send
+    raw text to a model). When `start_image_url` is given (the user's own
+    product/upload image) it becomes the video's first frame instead of a fresh
+    AI image. Credit charging is the caller's responsibility."""
+    # Backstop: build concrete image + motion prompts if the caller didn't.
+    if not (image_prompt and motion_prompt):
+        try:
+            from services.visual_prompt import build_visual_prompts, build_brand_context, NEGATIVE_PROMPT
+            b = brand
+            if b is None:
+                try:
+                    from routes.content_team import _collect_signals
+                    b = build_brand_context(_collect_signals(uid)) if uid else {}
+                except Exception:
+                    b = {}
+            built = await build_visual_prompts(item or {"hook": prompt}, b)
+            image_prompt = image_prompt or built.get("image_prompt", "")
+            motion_prompt = motion_prompt or built.get("motion_prompt", "")
+            negative_prompt = negative_prompt or built.get("negative_prompt", NEGATIVE_PROMPT)
+        except Exception as e:
+            _LOGGER.warning("visual prompt build failed, using raw prompt: %s", e)
+
+    # First frame: the user's own image when available, else a fresh AI image
+    # from the concrete scene prompt.
+    first_frame = "own" if start_image_url else "ai"
+    img = start_image_url
+    if not img:
+        img = await generate_ai_image(image_prompt or prompt, uid, negative_prompt)
     if not img:
         return {"ok": False, "message": "AI image generation unavailable (set OPENAI_API_KEY or REPLICATE_API_KEY)."}
+    # The video model is directed by the MOTION brief, not the hook.
+    video_brief = motion_prompt or prompt
     # Pick an image→video provider that's configured.
     from routes import studio
     prov = provider
@@ -157,10 +196,11 @@ async def generate_text_to_video(prompt: str, uid: str = "", duration: int = 5,
     for attempt in range(3):
         use_prov = providers_try[min(attempt, len(providers_try) - 1)]
         try:
-            video_url = await studio._generate_video(prompt, use_prov, duration, aspect_ratio, image_url=img)
+            video_url = await studio._generate_video(video_brief, use_prov, duration, aspect_ratio, image_url=img)
             if video_url:
                 return {"ok": True, "video_url": video_url, "image_url": img,
-                        "provider": use_prov, "attempts": attempt + 1}
+                        "provider": use_prov, "first_frame": first_frame,
+                        "attempts": attempt + 1}
             last_err = "empty result"
         except Exception as e:
             last_err = str(e)[:160]

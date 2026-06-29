@@ -128,10 +128,15 @@ def _infer_platforms_from_goal(goal: str):
 
 # Local-business cue words (EN + DA). Webshops are detected from product data.
 _LOCAL_KEYWORDS = [
-    "restaurant", "cafe", "café", "salon", "clinic", "gym", "studio", "bakery",
-    "barber", "boutique", "hotel", "dealership", "shop in", "store in", "near me",
-    "in town", "local business", "klinik", "frisør", "frisor", "bageri",
-    "fitnesscenter", "lokal", "i byen", "butik i",
+    "restaurant", "cafe", "café", "coffee shop", "coffeeshop", "coffee bar",
+    "salon", "clinic", "gym", "studio", "bakery", "barber", "boutique", "hotel",
+    "dealership", "brewery", "bar", "pub", "bistro", "diner", "pizzeria", "deli",
+    "spa", "florist", "dentist", "dental", "tattoo", "nail", "yoga", "pilates",
+    "shop in", "store in", "near me", "in town", "local business",
+    # Danish
+    "klinik", "frisør", "frisor", "bageri", "fitnesscenter", "lokal", "i byen",
+    "butik i", "kaffebar", "café", "bryggeri", "tandlæge", "tandlaege",
+    "blomster", "blomsterbutik", "værtshus", "vaertshus", "pizzeria",
 ]
 
 
@@ -568,12 +573,17 @@ class Ideator(TeamAgent):
         pillars = strat.get("pillars") or []
         products = brief.get("products") or []
 
+        # Real brand signals (location, voice, themes that already work) so ideas
+        # are specific to THIS account, not generic niche filler.
+        from services.visual_prompt import build_brand_context
+        brand = build_brand_context(self.context.get("signals") or {}, brief, self.goal)
+
         ideas, used_ai = [], False
         # One AI brainstorm call, credit-gated. Falls back to templates on any
         # failure or if the user is out of credits — the run never breaks.
         if _credits_available(IDEATE_COST):
             try:
-                ideas = await self._ai_ideas(niche, platforms, formats, pillars, products, lang)
+                ideas = await self._ai_ideas(niche, platforms, formats, pillars, products, lang, brand)
                 if ideas:
                     _charge_credits(IDEATE_COST, "content_team_ideate")
                     used_ai = True
@@ -611,30 +621,79 @@ class Ideator(TeamAgent):
         return {"summary": summary, "output": output,
                 "data": {"ideas": ideas, "locked": locked, "ai": used_ai, "count": len(ideas)}}
 
-    async def _ai_ideas(self, niche, platforms, formats, pillars, products, lang):
+    async def _ai_ideas(self, niche, platforms, formats, pillars, products, lang, brand=None):
         from routes.agent import _call_openai_heavy
+        brand = brand or {}
         plabel = ", ".join(_PLATFORM_LABEL.get(p, p) for p in platforms)
+        user_type = brand.get("user_type") or "creator"
+
         prod_line = ""
         if products:
             prod_line = _pick(lang,
                 f"\nFeature these products where relevant: {', '.join(products[:6])}.",
                 f"\nFremhæv disse produkter hvor relevant: {', '.join(products[:6])}.")
+        # Brand signal lines — only added when we actually have the data.
+        sig_lines = []
+        if brand.get("location"):
+            sig_lines.append(_pick(lang, f"Location: {brand['location']} (use local angles).",
+                                         f"Lokation: {brand['location']} (brug lokale vinkler)."))
+        if brand.get("tagline"):
+            sig_lines.append(_pick(lang, f"Brand voice: {brand['tagline']}.",
+                                         f"Brand-stemme: {brand['tagline']}."))
+        if brand.get("themes"):
+            sig_lines.append(_pick(lang, f"What already works for them: {'; '.join(brand['themes'])}.",
+                                         f"Det der allerede virker for dem: {'; '.join(brand['themes'])}."))
+        sig_block = ("\n" + "\n".join(sig_lines)) if sig_lines else ""
+
+        # Audience definition per business type — anchors ideas to a real viewer.
+        audience = {
+            "webshop": _pick(lang, "online shoppers scrolling for products worth buying",
+                                   "online-shoppere der scroller efter produkter værd at købe"),
+            "local_business": _pick(lang, "nearby locals deciding where to go this week",
+                                          "lokale i nærheden der beslutter hvor de skal hen i denne uge"),
+        }.get(user_type, _pick(lang, "people in this niche who want a quick win or a reason to follow",
+                                     "folk i nichen der vil have en hurtig gevinst eller en grund til at følge"))
+
         system = _pick(lang,
-            "You are an expert short-form content strategist. Brainstorm concrete, "
-            "scroll-stopping content ideas. Respond ONLY as a numbered list, best ideas "
-            "first, one idea per line, max ~14 words each, no preamble or explanations.",
-            "Du er en ekspert i short-form content. Brainstorm konkrete, fængende "
-            "indholdsidéer. Svar KUN som en nummereret liste, bedste idéer først, én idé "
-            "per linje, maks ~14 ord hver, ingen indledning eller forklaring.")
+            "You are a world-class short-form content strategist who has scripted viral TikToks "
+            "and Reels. Brainstorm concrete, SPECIFIC, scroll-stopping ideas tailored to THIS brand "
+            "and audience — each idea names a concrete scenario, number, moment, or visual, not a vague topic.\n"
+            "Strong hook examples (study the SHAPE, write originals — never copy these):\n"
+            "• \"The €4 upgrade that doubles your morning coffee\"\n"
+            "• \"I tracked every cup we sold for 7 days — the busiest hour shocked me\"\n"
+            "• \"POV: you walk in cold and leave with the drink everyone's secretly ordering\"\n"
+            "• \"Why our regulars never order off the menu\"\n"
+            "BANNED — never produce these tired formats: \"3 myths about X\", \"Top 5 tips\", "
+            "\"A day in the life\" (unless hyper-specific), \"X mistakes you're making\", or any generic listicle.\n"
+            "Prefer: specific scenarios, real numbers, bold opinions, behind-the-scenes moments, "
+            "POV/storytime angles, before/after, and locally-relevant hooks.\n"
+            f"Audience: {audience}.\n"
+            "Respond ONLY as a numbered list, best first, one idea per line, max ~22 words each, "
+            "no preamble or explanations.",
+            "Du er en verdensklasse short-form strateg, der har skrevet virale TikToks og Reels. "
+            "Brainstorm konkrete, SPECIFIKKE, fængende idéer skræddersyet til DETTE brand og publikum — "
+            "hver idé nævner et konkret scenarie, tal, øjeblik eller visuelt element, ikke et vagt emne.\n"
+            "Stærke hook-eksempler (studér FORMEN, skriv originale — kopiér aldrig disse):\n"
+            "• \"Opgraderingen til 30 kr. der fordobler din morgenkaffe\"\n"
+            "• \"Jeg talte hver kop vi solgte i 7 dage — den travleste time chokerede mig\"\n"
+            "• \"POV: du går ind uden at vide noget og går ud med drinken alle i hemmelighed bestiller\"\n"
+            "• \"Derfor bestiller vores stamgæster aldrig fra menuen\"\n"
+            "FORBUDT — lav aldrig disse trætte formater: \"3 myter om X\", \"Top 5 tips\", "
+            "\"En dag i livet\" (medmindre hyper-specifik), \"X fejl du laver\", eller generiske listicles.\n"
+            "Foretræk: specifikke scenarier, rigtige tal, skarpe holdninger, bag kulisserne-øjeblikke, "
+            "POV/storytime-vinkler, før/efter og lokalt relevante hooks.\n"
+            f"Publikum: {audience}.\n"
+            "Svar KUN som en nummereret liste, bedste først, én idé per linje, maks ~22 ord hver, "
+            "ingen indledning eller forklaring.")
         user = _pick(lang,
-            f"Goal: {self.goal}\nNiche: {niche}\nPlatforms: {plabel}\n"
-            f"Formats: {', '.join(formats)}\nContent pillars: {', '.join(pillars)}.{prod_line}\n"
-            f"Give {IDEA_TARGET} distinct ideas.",
-            f"Mål: {self.goal}\nNiche: {niche}\nPlatforme: {plabel}\n"
-            f"Formater: {', '.join(formats)}\nIndholdssøjler: {', '.join(pillars)}.{prod_line}\n"
-            f"Giv {IDEA_TARGET} forskellige idéer.")
+            f"Goal: {self.goal}\nNiche: {niche}\nBusiness type: {user_type}\nPlatforms: {plabel}\n"
+            f"Formats: {', '.join(formats)}\nContent pillars: {', '.join(pillars)}.{sig_block}{prod_line}\n"
+            f"Give {IDEA_TARGET} distinct, specific ideas.",
+            f"Mål: {self.goal}\nNiche: {niche}\nVirksomhedstype: {user_type}\nPlatforme: {plabel}\n"
+            f"Formater: {', '.join(formats)}\nIndholdssøjler: {', '.join(pillars)}.{sig_block}{prod_line}\n"
+            f"Giv {IDEA_TARGET} forskellige, specifikke idéer.")
         text = await _call_openai_heavy(system, [{"role": "user", "content": user}],
-                                        action="content_team_ideate", max_tokens=1200)
+                                        action="content_team_ideate", max_tokens=1500)
         return self._parse_ideas(text)
 
     @staticmethod
@@ -1064,30 +1123,59 @@ def _current_credits() -> int:
         return 0
 
 
-async def _fill_media(uid: str, schedule: list, sources: dict, ap: dict, signals: dict) -> dict:
+async def _fill_media(uid: str, schedule: list, sources: dict, ap: dict, signals: dict,
+                      brand: dict = None) -> dict:
     """Fill media for posts the source pool couldn't cover, honestly + within
     budget. With the AI source on: generate AI IMAGES (covers IG/FB/X/TikTok),
     and — only if generate_video is on — generate AI VIDEOS for YouTube slots up
     to the per-plan weekly cap + credit budget. Extra video slots REUSE
     (repost) an already-generated video this cycle at their own time/platform
-    rather than generating new. Returns counts + credits spent."""
+    rather than generating new. Returns counts + credits spent.
+
+    Every visual now goes through the dedicated visual-prompt builder: a concrete
+    IMAGE scene for gpt-image-1 and a separate MOTION brief for the video model —
+    the raw hook is never sent to a model. When the brand has its OWN product /
+    upload images, they're used as the image→video first frame instead of a
+    fresh AI image."""
     from services.ai_media import generate_ai_image, generate_text_to_video, ai_image_available
+    from services.visual_prompt import build_visual_prompts, build_brand_context, NEGATIVE_PROMPT
     ai_on = bool(sources.get("ai")) and ai_image_available()
     gen_video = bool(ap.get("generate_video"))
     plan = signals.get("plan", "free")
     weekly_cap = VIDEO_WEEKLY_CAP.get(plan, 0)
 
-    cost = 0
-    made = {"ai_images": 0, "ai_videos": 0, "reposts": 0, "skipped_no_budget": 0}
-    generated_videos = []
+    brand = brand if brand is not None else build_brand_context(signals)
+    own_images = list(brand.get("own_images") or [])
 
-    async def _gen_video_for(it, prompt):
+    cost = 0
+    made = {"ai_images": 0, "ai_videos": 0, "reposts": 0, "skipped_no_budget": 0,
+            "own_first_frames": 0}
+    generated_videos = []
+    _visual_cache = {}
+
+    async def _visuals(it):
+        """Build (and cache) the concrete image + motion prompts for one slot."""
+        key = id(it)
+        if key not in _visual_cache:
+            _visual_cache[key] = await build_visual_prompts(it, brand)
+        return _visual_cache[key]
+
+    async def _gen_video_for(it):
         """Generate (or repost) a video for one slot. Returns True if filled."""
         nonlocal cost
         if ai_on and gen_video and made["ai_videos"] < weekly_cap and _current_credits() >= VIDEO_COST:
-            res = await generate_text_to_video(prompt, uid, duration=5, aspect_ratio="9:16")
+            v = await _visuals(it)
+            # Lead with the brand's OWN image as the first frame when available.
+            start_img = own_images[made["own_first_frames"] % len(own_images)] if own_images else ""
+            res = await generate_text_to_video(
+                uid=uid, duration=5, aspect_ratio="9:16",
+                image_prompt=v["image_prompt"], motion_prompt=v["motion_prompt"],
+                negative_prompt=v.get("negative_prompt", NEGATIVE_PROMPT),
+                start_image_url=start_img, brand=brand, item=it)
             if res.get("ok") and res.get("video_url"):
                 it["video_url"] = res["video_url"]; it["media_source"] = "ai"; it["needs_media"] = False
+                if res.get("first_frame") == "own":
+                    made["own_first_frames"] += 1
                 _charge_credits(VIDEO_COST, "content_team_video"); cost += VIDEO_COST
                 made["ai_videos"] += 1; generated_videos.append(res["video_url"])
                 return True
@@ -1098,9 +1186,6 @@ async def _fill_media(uid: str, schedule: list, sources: dict, ap: dict, signals
             return True
         return False
 
-    def _prompt(it):
-        return (it.get("hook") or it.get("idea") or it.get("caption", "") or "").strip()[:300]
-
     empties = [it for it in schedule if not (it.get("image_url") or it.get("video_url"))]
 
     # YouTube, TikTok and Instagram are ALL core majors — treated equally.
@@ -1108,7 +1193,7 @@ async def _fill_media(uid: str, schedule: list, sources: dict, ap: dict, signals
     #    functional necessity, not priority over the others).
     yt = [it for it in empties if it.get("platform") == "youtube"]
     for it in yt:
-        if not await _gen_video_for(it, _prompt(it)):
+        if not await _gen_video_for(it):
             made["skipped_no_budget"] += 1   # stays flagged → _schedule_items skips it
 
     # 2) Share any REMAINING video budget equally with TikTok + Instagram (the
@@ -1116,15 +1201,16 @@ async def _fill_media(uid: str, schedule: list, sources: dict, ap: dict, signals
     majors_other = [it for it in empties if it.get("platform") in ("tiktok", "instagram")]
     for it in majors_other:
         if ai_on and gen_video and made["ai_videos"] < weekly_cap and _current_credits() >= VIDEO_COST:
-            await _gen_video_for(it, _prompt(it))
+            await _gen_video_for(it)
 
     # 3) Everything still without media gets an AI image (covers TikTok + IG +
-    #    FB + X). Cheap, no per-platform scarcity.
+    #    FB + X). Cheap, no per-platform scarcity. Concrete scene prompt + negatives.
     for it in empties:
         if it.get("image_url") or it.get("video_url"):
             continue
         if ai_on and _current_credits() >= IMAGE_COST:
-            img = await generate_ai_image(_prompt(it), uid)
+            v = await _visuals(it)
+            img = await generate_ai_image(v["image_prompt"], uid, v.get("negative_prompt", NEGATIVE_PROMPT))
             if img:
                 it["image_url"] = img; it["media_source"] = "ai"; it["needs_media"] = False
                 _charge_credits(IMAGE_COST, "content_team_image"); cost += IMAGE_COST
@@ -1148,9 +1234,12 @@ async def autopilot_cycle(uid: str, lang: str = "en") -> dict:
     schedule = context.get("schedule", []) or []
 
     # Fill any missing media within budget: AI images (cheap) + AI videos (capped
-    # per plan) + repost generated videos across remaining slots.
+    # per plan) + repost generated videos across remaining slots. Brand context
+    # (niche, location, voice, own images) drives concrete, on-brand visuals.
     sources = context.get("media_sources") or dict(MEDIA_SOURCE_DEFAULTS)
-    fill = await _fill_media(uid, schedule, sources, ap, context.get("signals", {}))
+    from services.visual_prompt import build_brand_context
+    brand = build_brand_context(context.get("signals", {}), context.get("brief", {}), goal)
+    fill = await _fill_media(uid, schedule, sources, ap, context.get("signals", {}), brand)
     cost = context.get("cycle_cost", 0) + fill.get("cost", 0)
 
     ct["last_run_at"] = _now()

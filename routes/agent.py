@@ -888,8 +888,21 @@ async def _youtube_video_worker(uid: str, current_user: dict, topic: str, da: bo
     try:
         from services.ai_media import generate_text_to_video
         from routes.posts import publish_via_api
-        prompt = f"Short engaging vertical video about {topic}"
-        res = await generate_text_to_video(prompt, uid, duration=5, aspect_ratio="9:16")
+        # Build a concrete IMAGE scene + MOTION brief from the topic + the user's
+        # real brand signals — never send the raw topic to the image/video model.
+        from services.visual_prompt import build_visual_prompts, build_brand_context, NEGATIVE_PROMPT
+        try:
+            from routes.content_team import _collect_signals
+            brand = build_brand_context(_collect_signals(uid))
+        except Exception:
+            brand = {}
+        own = list(brand.get("own_images") or [])
+        v = await build_visual_prompts({"hook": topic}, brand)
+        res = await generate_text_to_video(
+            uid=uid, duration=5, aspect_ratio="9:16",
+            image_prompt=v["image_prompt"], motion_prompt=v["motion_prompt"],
+            negative_prompt=v.get("negative_prompt", NEGATIVE_PROMPT),
+            start_image_url=(own[0] if own else ""), brand=brand, item={"hook": topic})
         ustore = _load_user_store(uid)
         if not res.get("ok") or not res.get("video_url"):
             _log_agent_activity(uid, ustore, "YouTube video generation failed", "post_content",
