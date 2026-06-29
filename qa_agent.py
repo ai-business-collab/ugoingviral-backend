@@ -900,9 +900,17 @@ class QARunner:
     # ------------------------------------------------------------------
 
     def suite11_full_auto(self):
-        print("\n=== SUITE 11: Full Auto Mode ===")
+        print("\n=== SUITE 11: Full Auto Mode (RETIRED → deprecation contract) ===")
 
-        # Pro user with 500 credits should enable full auto
+        # Full Auto Mode was retired in the autopilot consolidation (commit
+        # 139bc61): content_team.autopilot (True Auto Pilot, suite 17) is now the
+        # SINGLE autonomous engine. The legacy /full_auto_toggle endpoint is kept
+        # only as a safe deprecation stub that must NEVER re-enable a second
+        # engine. These checks guard that invariant instead of the removed
+        # enable/persist behaviour.
+
+        # Pro user with 500 credits clears the plan + credit guards, so the
+        # response proves the DEPRECATION path (not a guard rejection).
         token, uid, email = self._fresh_user("s11a")
         if not uid:
             self._fail("s11_register", "could not create test user")
@@ -913,25 +921,30 @@ class QARunner:
         try:
             r = self.client.post("/api/autopilot/full_auto_toggle",
                                  json={"enabled": True, "mode": "review"}, headers=h)
-            if r.status_code == 200 and r.json().get("full_auto_enabled") is True:
-                self._pass("s11_full_auto_enable",
-                           f"mode={r.json().get('full_auto_mode')}")
+            d = r.json() if r.status_code == 200 else {}
+            # Retired: must report ok:false + deprecated:true and never enable.
+            if (r.status_code == 200 and d.get("ok") is False
+                    and d.get("deprecated") is True
+                    and d.get("full_auto_enabled") is not True):
+                self._pass("s11_full_auto_deprecated",
+                           "toggle returns deprecated:true, does not enable")
             else:
-                self._fail("s11_full_auto_enable",
-                           f"status={r.status_code} body={r.text[:120]}")
+                self._fail("s11_full_auto_deprecated",
+                           f"status={r.status_code} body={r.text[:160]}")
         except Exception as e:
-            self._fail("s11_full_auto_enable", str(e))
+            self._fail("s11_full_auto_deprecated", str(e))
 
-        # Verify persisted via status endpoint
+        # Status endpoint must keep reporting the engine OFF (never persisted on).
         try:
             r = self.client.get("/api/autopilot/full_auto_status", headers=h)
-            if r.status_code == 200 and r.json().get("full_auto_enabled") is True:
-                self._pass("s11_full_auto_status_persisted")
+            if r.status_code == 200 and r.json().get("full_auto_enabled") is False:
+                self._pass("s11_full_auto_status_off",
+                           "full_auto_enabled stays False after toggle attempt")
             else:
-                self._fail("s11_full_auto_status_persisted",
-                           f"status={r.status_code} body={r.text[:120]}")
+                self._fail("s11_full_auto_status_off",
+                           f"status={r.status_code} body={r.text[:160]}")
         except Exception as e:
-            self._fail("s11_full_auto_status_persisted", str(e))
+            self._fail("s11_full_auto_status_off", str(e))
 
         self._remove_fresh_user(uid, email)
 
