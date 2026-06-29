@@ -111,6 +111,55 @@ def _enforce_caption_limit(text: str, req: "ContentRequest") -> str:
     return text
 
 
+# A CTA belongs at the END of a caption/description — not on a bare hook, a
+# hashtag list, or a length-capped tweet. These keywords flag a line that is
+# already a call-to-action so we don't stack a second one.
+_CTA_TYPES = ("caption", "video_description")
+_CTA_HINTS = (
+    "link in bio", "link i bio", "swipe", "shop now", "shop here", "køb", "buy now",
+    "buy", "dm ", "dm os", "follow", "følg", "tilmeld", "sign up", "subscribe",
+    "abonner", "tjek", "check out", "klik", "click", "bestil", "order now",
+    "comment ", "kommentér", "save this", "gem dette", "→", "👇", "🔗",
+)
+
+
+def _looks_like_cta(line: str) -> bool:
+    low = (line or "").lower()
+    return any(h in low for h in _CTA_HINTS)
+
+
+def _inject_preferred_cta(text: str, req: "ContentRequest") -> str:
+    """Append the user's saved preferred CTA to a generated caption when one
+    isn't already present. Reads settings.preferred_cta from the (per-user)
+    store. Inserts the CTA before a trailing hashtag block when there is one so
+    it reads naturally; no-ops if the caption already contains/ends with a CTA."""
+    if req.content_type not in _CTA_TYPES:
+        return text
+    cta = ((store.get("settings", {}) or {}).get("preferred_cta") or "").strip()
+    if not cta or not (text or "").strip():
+        return text
+    if cta.lower() in text.lower():
+        return text  # already included verbatim — don't double-add
+    lines = text.rstrip().splitlines()
+    non_tag = [ln for ln in lines if ln.strip() and not ln.strip().startswith("#")]
+    if non_tag and _looks_like_cta(non_tag[-1]):
+        return text  # caption already ends with its own CTA
+    # Find a trailing block of blank/hashtag lines to keep the CTA above it.
+    tag_start = len(lines)
+    for i in range(len(lines) - 1, -1, -1):
+        s = lines[i].strip()
+        if s == "" or s.startswith("#"):
+            tag_start = i
+        else:
+            break
+    head = "\n".join(lines[:tag_start]).rstrip()
+    tail = "\n".join(lines[tag_start:]).strip()
+    block = f"{head}\n\n{cta}" if head else cta
+    if tail:
+        block = f"{block}\n\n{tail}"
+    return block
+
+
 # ── AI ────────────────────────────────────────────────────────────────────────
 def _build_prompt(req: ContentRequest) -> str:
     lang = {"da": "Skriv KUN på dansk.", "en": "Write ONLY in English.", "both": "Write in both Danish and English."}.get(req.language, "Write ONLY in English.")
@@ -257,6 +306,7 @@ async def generate_content(request: Request, req: ContentRequest):
         if regen_score > score:
             result, score = regen, regen_score
 
+    result = _inject_preferred_cta(result, req)
     result = _enforce_caption_limit(result, req)
 
     item = {"id": datetime.now().isoformat(), "type": req.content_type, "platform": req.platform,
@@ -298,6 +348,7 @@ async def generate_all(req: ContentRequest):
             regen_sc = _quick_score(regen, ctype)
             if regen_sc > sc:
                 text, sc = regen, regen_sc
+        text = _inject_preferred_cta(text, req)
         text = _enforce_caption_limit(text, req)
         results[ctype] = text
         scores[ctype]  = sc

@@ -264,9 +264,10 @@ def _collect_signals(uid: str) -> dict:
     connections = us.get("connections", {}) or {}
 
     platforms = sorted(
-        {p for p, v in api_enabled.items() if v}
-        | {p for p, v in connections.items()
-           if isinstance(v, dict) and (v.get("username") or v.get("connected") or v.get("access_token"))}
+        ({p for p, v in api_enabled.items() if v}
+         | {p for p, v in connections.items()
+            if isinstance(v, dict) and (v.get("username") or v.get("connected") or v.get("access_token"))})
+        - {"shopify"}  # Shopify is a webshop, not a social platform — never list it as one.
     )
 
     perf = [p for p in (us.get("content_performance") or []) if isinstance(p, dict)]

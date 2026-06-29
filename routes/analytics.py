@@ -41,6 +41,25 @@ _IG_PLACEHOLDER = {
 }
 
 
+def _posts_per_week(timestamps) -> float | None:
+    """Real posting frequency (posts/week) derived from a list of ISO post
+    timestamps. Returns None when there aren't enough dated posts to measure."""
+    ds = []
+    for t in timestamps or []:
+        if not t:
+            continue
+        try:
+            ds.append(datetime.fromisoformat(str(t).replace("Z", "+00:00")))
+        except Exception:
+            pass
+    if len(ds) < 2:
+        return None
+    span_days = (max(ds) - min(ds)).total_seconds() / 86400.0
+    if span_days < 0.5:
+        return None
+    return round(len(ds) / (span_days / 7.0), 1)
+
+
 # ── existing dashboard endpoint ───────────────────────────────────────────────
 
 @router.get("/api/analytics/dashboard")
@@ -247,11 +266,22 @@ def fetch_instagram_analytics(user_id: str) -> dict:
                 f"{_GRAPH_API}/{ig_id}/media",
                 params={
                     "fields": "id,caption,timestamp,like_count,comments_count,media_type,permalink",
-                    "limit": 10,
+                    "limit": 25,
                     "access_token": token,
                 },
             )
             media_data = media_resp.json()
+
+            # Real profile fields (username + bio + follower/media counts) — used
+            # by the account audit so it scores the REAL profile, not typed input.
+            profile_resp = client.get(
+                f"{_GRAPH_API}/{ig_id}",
+                params={
+                    "fields": "username,biography,followers_count,media_count",
+                    "access_token": token,
+                },
+            )
+            profile_data = profile_resp.json()
 
         metrics: dict = {}
         for entry in insight_data.get("data", []):
@@ -261,7 +291,10 @@ def fetch_instagram_analytics(user_id: str) -> dict:
                 metrics[name] = [v.get("value", 0) for v in vals[-7:]]
 
         follower_series = metrics.get("follower_count", [])
-        current_followers = follower_series[-1] if follower_series else 0
+        # The profile node's followers_count is the live, exact figure; the
+        # insights series is a fallback when the profile call returns nothing.
+        profile_followers = int(profile_data.get("followers_count") or 0)
+        current_followers = profile_followers or (follower_series[-1] if follower_series else 0)
         follower_growth = (follower_series[-1] - follower_series[0]) if len(follower_series) >= 2 else 0
 
         posts = []
@@ -281,6 +314,10 @@ def fetch_instagram_analytics(user_id: str) -> dict:
 
         return {
             "connected":          True,
+            "username":           profile_data.get("username", ""),
+            "bio":                profile_data.get("biography", ""),
+            "media_count":        int(profile_data.get("media_count") or 0),
+            "posts_per_week":     _posts_per_week([m.get("timestamp") for m in media_data.get("data", [])]),
             "followers":          current_followers,
             "follower_growth_7d": follower_growth,
             "follower_series_7d": follower_series,
@@ -392,11 +429,15 @@ def fetch_youtube_analytics(user_id: str) -> dict:
             return {"connected": True, "error": "No channel found"}
 
         stats = items[0].get("statistics", {})
+        snippet = items[0].get("snippet", {})
         return {
             "connected":   True,
+            "title":       snippet.get("title", ""),
+            "bio":         snippet.get("description", ""),
             "subscribers": int(stats.get("subscriberCount", 0)),
             "total_views": int(stats.get("viewCount", 0)),
             "video_count": int(stats.get("videoCount", 0)),
+            "posts_per_week": _posts_per_week([v.get("published") for v in videos]),
             "top_videos":  sorted(videos, key=lambda x: x["views"], reverse=True)[:5],
             "fetched_at":  datetime.now(timezone.utc).isoformat(),
         }
@@ -424,6 +465,7 @@ def fetch_tiktok_analytics(user_id: str) -> dict:
                 json={"fields": [
                     "follower_count", "following_count",
                     "likes_count", "video_count", "display_name",
+                    "bio_description", "username",
                 ]},
             )
             if resp.status_code == 401:
@@ -443,6 +485,8 @@ def fetch_tiktok_analytics(user_id: str) -> dict:
             "total_likes":  info.get("likes_count",     0),
             "video_count":  info.get("video_count",     0),
             "display_name": info.get("display_name",    ""),
+            "username":     info.get("username",        ""),
+            "bio":          info.get("bio_description", ""),
             "fetched_at":   datetime.now(timezone.utc).isoformat(),
         }
     except Exception as exc:

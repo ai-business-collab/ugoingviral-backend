@@ -700,24 +700,27 @@ _CTA_RE      = _re.compile(r"\b(?:cta|call[\s-]?to[\s-]?action)\b\s*(?:to|til|=|
 _BIO_RE      = _re.compile(r"\b(?:update|change|fix|edit|skift|ændr|aendr|opdater|rediger)\b.{0,16}\bbio(?:graphy|grafi)?\b|\bbio\b.{0,16}\b(?:cta|link|update|change)\b", _re.I)
 
 
-def _apply_user_setting(ustore: dict, key: str, value) -> tuple:
+def _apply_user_setting(ustore: dict, key: str, value, da: bool = True) -> tuple:
     """Apply an in-app setting change the user confirmed. Returns (ok, message).
-    Shared by the chat-confirm flow and the /api/agent/apply_setting endpoint."""
+    The message is localized to the user's language (`da`) so the whole reply
+    reads in ONE language. Shared by the chat-confirm flow and the
+    /api/agent/apply_setting endpoint."""
     key = (key or "").lower().strip()
     settings = ustore.setdefault("settings", {})
     auto = ustore.setdefault("automation", {})
     if key == "niche":
         v = str(value or "").strip().strip('"\'.').strip()[:80]
         if not v:
-            return False, "Niche can't be empty."
+            return False, ("Niche må ikke være tom." if da else "Niche can't be empty.")
         settings["niche"] = v
         auto["niche"] = v
-        return True, f"niche set to “{v}”"
+        return True, (f"niche sat til “{v}”" if da else f"niche set to “{v}”")
     if key in ("posts_per_day", "cadence"):
         try:
             n = max(1, min(10, int(value)))
         except Exception:
-            return False, "Give a number of posts per day (1–10)."
+            return False, ("Angiv et antal opslag pr. dag (1–10)." if da
+                           else "Give a number of posts per day (1–10).")
         try:
             from routes.autopilot import _spread_times
             times = _spread_times(n)
@@ -725,23 +728,28 @@ def _apply_user_setting(ustore: dict, key: str, value) -> tuple:
             times = ["09:00", "14:00", "18:00"][:n] or ["12:00"]
         auto["posts_per_day"] = n
         auto["post_times"] = times
-        return True, f"posting cadence set to {n}/day ({', '.join(times)})"
+        return True, (f"posting-frekvens sat til {n}/dag ({', '.join(times)})" if da
+                      else f"posting cadence set to {n}/day ({', '.join(times)})")
     if key == "cta":
         v = str(value or "").strip().strip('"\'.').strip()[:120]
         if not v:
-            return False, "CTA can't be empty."
+            return False, ("CTA må ikke være tom." if da else "CTA can't be empty.")
         settings["preferred_cta"] = v
-        return True, f"preferred CTA saved: “{v}” (I'll use it when drafting your posts)"
+        return True, (f"foretrukken CTA gemt: “{v}” (jeg bruger den når jeg skriver dine opslag)" if da
+                      else f"preferred CTA saved: “{v}” (I'll use it when drafting your posts)")
     if key == "quiet_hours":
         try:
             start, end = value
             auto["quiet_start"] = str(start)[:5]
             auto["quiet_end"] = str(end)[:5]
             auto["respect_quiet_hours"] = True
-            return True, f"quiet hours set to {auto['quiet_start']}–{auto['quiet_end']}"
+            return True, (f"stilletimer sat til {auto['quiet_start']}–{auto['quiet_end']}" if da
+                          else f"quiet hours set to {auto['quiet_start']}–{auto['quiet_end']}")
         except Exception:
-            return False, "Give quiet hours as start and end (e.g. 22:00–07:00)."
-    return False, "That setting can't be changed automatically yet."
+            return False, ("Angiv stilletimer som start og slut (fx 22:00–07:00)." if da
+                           else "Give quiet hours as start and end (e.g. 22:00–07:00).")
+    return False, ("Den indstilling kan ikke ændres automatisk endnu." if da
+                   else "That setting can't be changed automatically yet.")
 
 
 def _bio_guidance(da: bool) -> str:
@@ -793,13 +801,15 @@ def _extract_topic(msg: str) -> str:
 
 async def _gen_caption(topic: str, platform: str, language: str) -> str:
     """Generate one caption via the existing content engine (real AI call)."""
-    from routes.content import _call_ai, _build_prompt
+    from routes.content import _call_ai, _build_prompt, _inject_preferred_cta
     from models import ContentRequest
     try:
         req = ContentRequest(content_type="caption", platform=platform or "instagram",
                              product_title=topic or "", product_description=topic or "",
                              language=language, tone="engaging")
-        return (await _call_ai(_build_prompt(req), language)).strip()
+        caption = (await _call_ai(_build_prompt(req), language)).strip()
+        # Honor the user's saved preferred CTA in agent-drafted captions too.
+        return _inject_preferred_cta(caption, req)
     except Exception:
         # Fallback so scheduling/posting still works if the model call fails.
         return (f"🔥 {topic}" if topic else "🔥 Nyt opslag fra UgoingViral")
@@ -969,7 +979,8 @@ async def _route_ugv_action(uid: str, message: str, ustore: dict, current_user: 
                 return await _execute_youtube_video(uid, ustore, current_user, pending)
             if pending.get("type") == "apply_setting":
                 ustore.pop("agent_pending_action", None)
-                ok, m = _apply_user_setting(ustore, pending.get("key"), pending.get("value"))
+                ok, m = _apply_user_setting(ustore, pending.get("key"), pending.get("value"),
+                                            da=bool(pending.get("da", da)))
                 _save_user_store(uid, ustore)
                 if ok:
                     txt = (f"✅ Klaret — {m}." if da else f"✅ Done — {m}.")
@@ -994,14 +1005,20 @@ async def _route_ugv_action(uid: str, message: str, ustore: dict, current_user: 
     m_cad = _CADENCE_RE.search(low) or _CADENCE_RE2.search(low) or _CADENCE_RE3.search(low)
     m_cta = _CTA_RE.search(msg)
     if m_niche and m_niche.group(1).strip():
+        _niche_v = m_niche.group(1).strip().strip(chr(34) + chr(39) + '.')
         _set_change = ("niche", m_niche.group(1).strip().strip('"\'.'),
-                       f"set your niche to “{m_niche.group(1).strip().strip(chr(34)+chr(39)+'.')}”")
+                       (f"sætte din niche til “{_niche_v}”" if da
+                        else f"set your niche to “{_niche_v}”"))
     elif m_cad:
         _n = m_cad.group(1)
-        _set_change = ("posts_per_day", _n, f"set your posting cadence to {_n} posts/day")
+        _set_change = ("posts_per_day", _n,
+                       (f"sætte din posting-frekvens til {_n} opslag/dag" if da
+                        else f"set your posting cadence to {_n} posts/day"))
     elif m_cta and m_cta.group(1).strip() and "niche" not in low:
         _cta_v = m_cta.group(1).strip().strip('"\'.')
-        _set_change = ("cta", _cta_v, f"save “{_cta_v}” as your preferred CTA")
+        _set_change = ("cta", _cta_v,
+                       (f"gemme “{_cta_v}” som din foretrukne CTA" if da
+                        else f"save “{_cta_v}” as your preferred CTA"))
     if _set_change:
         key, value, label = _set_change
         ustore["agent_pending_action"] = {"type": "apply_setting", "key": key, "value": value,
@@ -1305,9 +1322,12 @@ async def agent_apply_setting(req: Request, current_user: dict = Depends(get_cur
     body = await req.json()
     key = str(body.get("key", "")).strip()
     value = body.get("value")
+    # Honor the caller's language hint (defaults Danish — DK-first product) so the
+    # returned message reads in one language.
+    da = bool(body.get("da", str(body.get("lang", "da")).lower().startswith("da")))
     uid = current_user["id"]
     ustore = _load_user_store(uid)
-    ok, message = _apply_user_setting(ustore, key, value)
+    ok, message = _apply_user_setting(ustore, key, value, da=da)
     if ok:
         _save_user_store(uid, ustore)
     return {"ok": ok, "message": message, "key": key}

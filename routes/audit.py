@@ -20,6 +20,67 @@ def _grade(score: int):
     return "F", "#ef4444"
 
 
+def _follower_range_label(n) -> str:
+    """Map a real follower count to the same range buckets the UI/heuristics use."""
+    n = int(n or 0)
+    if n < 1000:
+        return "0-1K"
+    if n < 10000:
+        return "1K-10K"
+    if n < 50000:
+        return "10K-50K"
+    if n < 100000:
+        return "50K-100K"
+    return "100K+"
+
+
+def _fetch_real_profile(uid: str, platform: str) -> dict:
+    """Pull the user's REAL connected-profile data via the existing analytics
+    fetchers (Instagram / TikTok / YouTube). Returns {"connected": False} when
+    no account is linked so the caller falls back to self-reported input.
+    `real_fields` lists which of followers / bio / posts_per_week / handle came
+    from the live API."""
+    platform = (platform or "").lower()
+    try:
+        if platform == "instagram":
+            from routes.analytics import fetch_instagram_analytics as _fetch
+        elif platform == "tiktok":
+            from routes.analytics import fetch_tiktok_analytics as _fetch
+        elif platform == "youtube":
+            from routes.analytics import fetch_youtube_analytics as _fetch
+        else:
+            return {"connected": False}
+        data = _fetch(uid) or {}
+    except Exception:
+        return {"connected": False}
+
+    # Not linked (no stored token) or a live API error → treat as not connected
+    # so the audit honestly falls back to self-reported input.
+    if not data.get("connected") or data.get("error"):
+        return {"connected": False}
+
+    out = {"connected": True, "real_fields": []}
+    followers = data.get("followers")
+    if followers is None:
+        followers = data.get("subscribers")  # YouTube
+    if followers:
+        out["followers"] = int(followers)
+        out["real_fields"].append("followers")
+    bio = data.get("bio")
+    if bio:
+        out["bio"] = str(bio)[:500]
+        out["real_fields"].append("bio")
+    ppw = data.get("posts_per_week")
+    if ppw is not None:
+        out["posts_per_week"] = float(ppw)
+        out["real_fields"].append("posts_per_week")
+    handle = data.get("username") or data.get("display_name")
+    if handle:
+        out["handle"] = str(handle).lstrip("@")
+        out["real_fields"].append("handle")
+    return out
+
+
 def _heuristic_audit(handle: str, platform: str, niche: str, bio: str,
                      follower_range: str, posts_per_week: float) -> dict:
     """Deterministic, heuristic self-audit computed purely from the inputs the
@@ -191,7 +252,15 @@ async def _ai_audit(prompt: str, s: dict) -> str:
     return ""
 
 
-def _build_audit_prompt(handle, platform, niche, bio, follower_range, posts_per_week) -> str:
+def _build_audit_prompt(handle, platform, niche, bio, follower_range, posts_per_week,
+                        real_fields=None) -> str:
+    real_fields = real_fields or []
+    if real_fields:
+        provenance = ("\nData provenance: the following fields are REAL, pulled live from the "
+                      f"connected {platform} account — {', '.join(real_fields)}. Treat them as "
+                      "ground truth. Any other field is self-reported by the user.")
+    else:
+        provenance = "\nData provenance: all fields are self-reported by the user (no account connected)."
     return f"""You are a top social media growth strategist. Audit this {platform} account and return a JSON report.
 
 Account: @{handle}
@@ -200,6 +269,7 @@ Niche: {niche}
 Bio: {bio or "(not provided)"}
 Follower range: {follower_range}
 Posts per week: {posts_per_week}
+{provenance}
 
 Return ONLY a valid JSON object:
 {{
@@ -257,15 +327,31 @@ async def analyze_account(req: Request, current_user: dict = Depends(get_current
     follower_range = str(body.get("follower_range", "1K-10K"))
     posts_per_week = float(body.get("posts_per_week", 3))
 
+    # Where the audited platform is actually connected, audit on the user's REAL
+    # profile (live follower count, bio, posting frequency) instead of the typed
+    # input. Fall back to self-reported for any field the API doesn't provide.
+    uid = current_user.get("id")
+    real = _fetch_real_profile(uid, platform) if uid else {"connected": False}
+    real_fields = list(real.get("real_fields", [])) if real.get("connected") else []
+    if "followers" in real_fields:
+        follower_range = _follower_range_label(real["followers"])
+    if "bio" in real_fields:
+        bio = str(real["bio"])[:500]
+    if "posts_per_week" in real_fields:
+        posts_per_week = float(real["posts_per_week"])
+    if "handle" in real_fields:
+        handle = real["handle"]
+
     if not handle:
         raise HTTPException(400, "handle is required")
 
     s = store.get("settings", {})
-    # Deterministic heuristic assessment of the user's own self-reported inputs.
+    # Deterministic heuristic assessment — now over real data where available.
     audit = _heuristic_audit(handle, platform, niche, bio, follower_range, posts_per_week)
 
     raw = await _ai_audit(
-        _build_audit_prompt(handle, platform, niche, bio, follower_range, posts_per_week), s
+        _build_audit_prompt(handle, platform, niche, bio, follower_range, posts_per_week,
+                            real_fields), s
     )
     if raw:
         s2, e2 = raw.find("{"), raw.rfind("}") + 1
@@ -275,11 +361,27 @@ async def analyze_account(req: Request, current_user: dict = Depends(get_current
             except Exception:
                 pass
 
-    # The scores are an automated assessment of the inputs you provided about
-    # your own account — guidance, not measured platform metrics.
+    # Be honest about provenance: flag which fields are real (pulled live from
+    # the connected account) vs self-reported by the user.
     audit["is_estimate"] = True
-    audit["basis"] = "Automated assessment based on the details you entered (bio, posting frequency, follower range)."
-    add_log(f"📋 Audit: @{handle} on {platform}", "success")
+    _ALL_FIELDS = ["handle", "followers", "bio", "posts_per_week"]
+    _self_reported = [f for f in _ALL_FIELDS if f not in real_fields]
+    audit["data_source"] = {
+        "connected_account": bool(real.get("connected")),
+        "real_fields": real_fields,
+        "self_reported_fields": _self_reported,
+        "real_followers": real.get("followers"),
+    }
+    if real_fields:
+        _human = ", ".join(real_fields)
+        audit["basis"] = (
+            f"Audited on your live {platform.title()} profile (real: {_human})"
+            + (f"; remaining details ({', '.join(_self_reported)}) are self-reported." if _self_reported
+               else ".")
+        )
+    else:
+        audit["basis"] = "Automated assessment based on the details you entered (bio, posting frequency, follower range)."
+    add_log(f"📋 Audit: @{handle} on {platform}" + (" [real data]" if real_fields else ""), "success")
     # Persist the latest audit so the floating agent can surface its
     # recommendations and proactively help the user act on them.
     try:
