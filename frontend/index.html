@@ -13770,7 +13770,22 @@ function sendQueueToPost(id) {
           </div>
           <input type="file" id="bk-logo-input" accept="image/*" style="display:none" onchange="brandKitUploadLogo(this)">
           <button class="btn bg bsm" onclick="document.getElementById('bk-logo-input').click()">Upload Logo</button>
-          <div style="font-size:11px;color:var(--tx3);margin-top:8px">PNG, JPG or WebP. AI will reference your brand style when generating content.</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:8px">PNG, JPG or WebP. AI references your brand style when generating content.</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+            <div><div style="font-size:12px;font-weight:600;color:var(--tx)">Watermark on images</div>
+                 <div style="font-size:11px;color:var(--tx3)">Overlay your logo on generated visuals</div></div>
+            <div class="tog" id="bk-logo-overlay" onclick="togIt(this)"></div>
+          </div>
+          <div style="margin-top:10px">
+            <label style="font-size:11px;color:var(--tx3);display:block;margin-bottom:5px">Logo position</label>
+            <select id="bk-logo-position" class="inp">
+              <option value="bottom-right">Bottom right</option>
+              <option value="bottom-left">Bottom left</option>
+              <option value="top-right">Top right</option>
+              <option value="top-left">Top left</option>
+              <option value="center">Center</option>
+            </select>
+          </div>
         </div>
         <!-- Colors -->
         <div class="card">
@@ -20096,6 +20111,10 @@ async function loadBrandKit() {
     p('bk-secondary-hex', kit.secondary_color);
     p('bk-font', kit.font);
     p('bk-tagline', kit.tagline);
+    if (kit.font) _loadBrandFont(kit.font);
+    var ov = document.getElementById('bk-logo-overlay');
+    if (ov) ov.classList.toggle('on', kit.logo_overlay === 'on');
+    p('bk-logo-position', kit.logo_position);
     if (kit.logo_url) {
       _bkLogoUrl = kit.logo_url;
       _setBKLogoPreview(kit.logo_url);
@@ -20117,10 +20136,13 @@ function _updateBKPreview() {
   var secondary = document.getElementById('bk-secondary')?.value || '#a855f7';
   var tagline   = document.getElementById('bk-tagline')?.value;
   var font      = document.getElementById('bk-font')?.value || 'Inter';
+  _loadBrandFont(font);
   var bar = document.getElementById('bk-preview-bar');
   if (bar) bar.style.background = 'linear-gradient(90deg,' + primary + ',' + secondary + ')';
   var nameEl = document.getElementById('bk-preview-name');
-  if (nameEl) nameEl.style.fontFamily = font;
+  if (nameEl) nameEl.style.fontFamily = "'" + font + "', sans-serif";
+  var capEl = document.getElementById('bk-preview-caption');
+  if (capEl) capEl.style.fontFamily = "'" + font + "', sans-serif";
   if (nameEl && tagline) nameEl.textContent = tagline;
   var tagsEl = document.getElementById('bk-preview-tags');
   if (tagsEl) tagsEl.style.color = primary;
@@ -20131,13 +20153,33 @@ async function brandKitUploadLogo(input) {
   if (!file) return;
   var fd = new FormData();
   fd.append('file', file);
+  // Authed, per-user upload (respects sub-account isolation). Returns a public
+  // URL on the verified domain so the content pipeline can use the logo.
+  var headers = {};
+  var token = localStorage.getItem('ugv_token');
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  if (_activeSub) headers['X-Sub-Account-Id'] = _activeSub;
   try {
-    var r = await fetch(API + '/api/upload/image', { method: 'POST', body: fd });
+    var r = await fetch(API + '/api/brand-kit/logo', { method: 'POST', body: fd, headers: headers });
+    if (!r.ok) { var e = await r.json().catch(()=>({})); throw new Error(e.detail || 'upload failed'); }
     var d = await r.json();
     _bkLogoUrl = d.url;
     _setBKLogoPreview(d.url);
     toast('Logo uploaded!', 'success');
-  } catch(e) { toast('Upload failed', 'error'); }
+  } catch(e) { toast('Upload failed: ' + (e.message||''), 'error'); }
+}
+
+// Load the chosen Google webfont on demand so the preview (and any on-brand
+// rendering) actually uses it instead of silently falling back.
+var _bkLoadedFonts = {};
+function _loadBrandFont(font) {
+  if (!font || _bkLoadedFonts[font]) return;
+  _bkLoadedFonts[font] = true;
+  var l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=' +
+           encodeURIComponent(font).replace(/%20/g, '+') + ':wght@400;600;700&display=swap';
+  document.head.appendChild(l);
 }
 
 async function saveBrandKit() {
@@ -20147,6 +20189,8 @@ async function saveBrandKit() {
     font:            document.getElementById('bk-font')?.value      || 'Inter',
     tagline:         document.getElementById('bk-tagline')?.value   || '',
     logo_url:        _bkLogoUrl,
+    logo_overlay:    document.getElementById('bk-logo-overlay')?.classList.contains('on') ? 'on' : 'off',
+    logo_position:   document.getElementById('bk-logo-position')?.value || 'bottom-right',
   };
   try {
     var d = await apiFetch('/api/brand-kit', 'POST', kit);

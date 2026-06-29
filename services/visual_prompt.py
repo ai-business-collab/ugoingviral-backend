@@ -67,13 +67,18 @@ def build_brand_context(signals: dict = None, brief: dict = None,
                  or ("webshop" if signals.get("is_webshop") else "creator"))
     location = _location_from_goal(goal)
 
-    tagline, colors = "", ""
+    tagline, colors, logo_url, font = "", "", "", ""
+    logo_overlay, logo_position = False, "bottom-right"
     try:
         from services.store import store
         kit = store.get("brand_kit", {}) or {}
         tagline = (kit.get("tagline") or "").strip()
         cols = [c for c in (kit.get("primary_color"), kit.get("secondary_color")) if c]
         colors = ", ".join(cols)
+        logo_url = (kit.get("logo_url") or "").strip()
+        font = (kit.get("font") or "").strip()
+        logo_overlay = (kit.get("logo_overlay") or "off") == "on"
+        logo_position = (kit.get("logo_position") or "bottom-right")
     except Exception:
         pass
 
@@ -103,6 +108,10 @@ def build_brand_context(signals: dict = None, brief: dict = None,
         "location": location,
         "tagline": tagline,
         "colors": colors,
+        "font": font,
+        "logo_url": logo_url,
+        "logo_overlay": logo_overlay,
+        "logo_position": logo_position,
         "themes": themes,
         "products": products,
         "own_images": own_images,

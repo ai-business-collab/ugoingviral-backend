@@ -110,6 +110,23 @@ async def _flux_image(prompt: str) -> bytes | None:
     return None
 
 
+async def _apply_brand_watermark(data: bytes, uid: str) -> bytes:
+    """Overlay the user's Brand Kit logo when they've enabled it. Reads the
+    brand kit by uid (context-independent) and fails safe to the original."""
+    if not uid:
+        return data
+    try:
+        from services.store import _load_user_store
+        kit = (_load_user_store(uid) or {}).get("brand_kit", {}) or {}
+        if kit.get("logo_overlay") == "on" and kit.get("logo_url"):
+            from services.branding import apply_logo_watermark
+            return await apply_logo_watermark(
+                data, kit["logo_url"], kit.get("logo_position", "bottom-right"))
+    except Exception as e:
+        _LOGGER.warning("brand watermark skipped: %s", e)
+    return data
+
+
 async def generate_ai_image(prompt: str, uid: str = "", negative_prompt: str = "") -> str | None:
     """Generate a social image from text and return a hosted URL on the verified
     domain, or None if generation is unavailable/failed. gpt-image-1 first,
@@ -126,6 +143,7 @@ async def generate_ai_image(prompt: str, uid: str = "", negative_prompt: str = "
         data = await _flux_image(full)
     if not data:
         return None
+    data = await _apply_brand_watermark(data, uid)
     try:
         return _save_ai_image(uid, data)
     except Exception as e:
