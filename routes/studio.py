@@ -555,6 +555,73 @@ def _luma_text_is_funds(text: str) -> bool:
     ))
 
 
+# ── First-frame integrity guard ───────────────────────────────────────────────
+# Image-to-video providers occasionally (or, with a wrong payload, silently)
+# ignore the supplied start frame and invent a scene. For a paid "make your own
+# material professional" render that is worse than an error: we'd return a
+# stranger's face as a success and still charge the user. So after an
+# image-to-video render we compare the clip's actual first frame to the seed and
+# REFUSE the result if they don't match — the render queue then refunds.
+_FIRSTFRAME_MAX_DISTANCE = float(os.getenv("LUMA_FIRSTFRAME_MAX_DISTANCE", "28"))
+
+
+def _img_signature(path: str) -> bytes:
+    """Tiny grayscale fingerprint (32×32) for cheap perceptual comparison."""
+    from PIL import Image
+    with Image.open(path) as im:
+        return im.convert("L").resize((32, 32)).tobytes()
+
+
+def _first_frame_distance_sync(video_url: str, seed_url: str) -> Optional[float]:
+    """Mean absolute per-pixel distance (0 = identical) between the video's first
+    frame and the seed image. Returns None if it genuinely can't be measured so
+    callers fail OPEN (never block a possibly-good render on missing infra).
+    Reference points from live testing: honored start-frame ≈ 2–15, a fully
+    ignored start frame ≈ 35–53."""
+    import tempfile, urllib.request
+    tmp = tempfile.mkdtemp(prefix="ffcheck_")
+    try:
+        frame = os.path.join(tmp, "f0.png")
+        seed  = os.path.join(tmp, "seed.png")
+        # ffmpeg reads the remote MP4 directly; grab frame 0 only.
+        proc = subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", video_url,
+             "-vf", "select=eq(n\\,0)", "-vframes", "1", frame],
+            capture_output=True, timeout=60)
+        if proc.returncode != 0 or not os.path.exists(frame):
+            return None
+        urllib.request.urlretrieve(seed_url, seed)
+        a, b = _img_signature(seed), _img_signature(frame)
+        if not a or len(a) != len(b):
+            return None
+        return sum(abs(x - y) for x, y in zip(a, b)) / len(a)
+    except Exception as e:
+        logger.warning("first-frame verify skipped (infra issue): %s", e)
+        return None
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+async def _assert_first_frame_matches(video_url: str, seed_url: str, gen_id: str = "") -> None:
+    """Abort (→ refund) if an image-to-video clip does not actually start from the
+    user's seed image. Fails open when the check can't run."""
+    dist = await asyncio.to_thread(_first_frame_distance_sync, video_url, seed_url)
+    if dist is None:
+        logger.info("Luma Ray %s first-frame check unavailable — allowing render", gen_id)
+        return
+    if dist > _FIRSTFRAME_MAX_DISTANCE:
+        logger.error("Luma Ray %s IGNORED the start frame (first-frame distance "
+                     "%.1f > %.1f) — discarding output and refunding the user.",
+                     gen_id, dist, _FIRSTFRAME_MAX_DISTANCE)
+        # 422 is deliberately OUTSIDE _is_throttle_error's retry set and carries
+        # no throttle keywords, so the queue treats this as a PERMANENT failure
+        # and refunds rather than burning retries re-rendering the same bad clip.
+        raise HTTPException(
+            status_code=422,
+            detail="Video did not start from your image — discarded so you are not charged")
+    logger.info("Luma Ray %s first-frame check OK (distance %.1f)", gen_id, dist)
+
+
 async def _luma_ray_generate(prompt: str, duration: int = 5, aspect_ratio: str = "16:9",
                              image_url: str = "") -> Optional[str]:
     """Generate a clip with Luma Ray 3.2. Text-to-video by default; image-to-video
@@ -579,9 +646,18 @@ async def _luma_ray_generate(prompt: str, duration: int = 5, aspect_ratio: str =
         "resolution":   os.getenv("LUMA_RAY_RESOLUTION", "720p"),
     }
     if image_url:
-        # Image-to-video: the reference image becomes the opening keyframe so a
-        # saved character look carries into the clip.
-        payload["keyframes"] = {"frame0": {"type": "image", "url": image_url}}
+        # Image-to-video on the AGENTS host: the first frame MUST be supplied as
+        # video.start_frame.url, with the render params nested under `video`.
+        # The Dream Machine `keyframes.frame0` shape is silently DROPPED here —
+        # the agents endpoint accepts unknown keys (verified: it 201s on a bogus
+        # field) and falls back to text-to-video, inventing a random scene and
+        # discarding the user's uploaded image. Verified live: with start_frame
+        # the rendered clip opens on the seed image; with keyframes it did not.
+        payload["video"] = {
+            "resolution":  payload["resolution"],
+            "duration":    payload["duration"],
+            "start_frame": {"url": image_url},
+        }
     headers = {"Authorization": f"Bearer {LUMA_API_KEY}", "Content-Type": "application/json"}
 
     async with _luma_concurrency:
@@ -635,6 +711,12 @@ async def _luma_ray_generate(prompt: str, duration: int = 5, aspect_ratio: str =
                         video = (data.get("assets") or {}).get("video")
                     if not video:
                         raise HTTPException(status_code=502, detail="Luma Ray completed but returned no video URL")
+                    # Integrity guard: when we seeded a start frame, make sure the
+                    # clip actually opens on it (catches any silent fall-back to
+                    # text-to-video). Raises → queue refunds; never charges for a
+                    # video that ignored the user's image.
+                    if image_url:
+                        await _assert_first_frame_matches(video, image_url, gen_id)
                     try:
                         from services import api_tracker
                         api_tracker.track("luma", "seconds", duration, feature="video_generation")
@@ -733,10 +815,15 @@ async def _replicate_kling_generate(prompt: str, duration: int = 5,
                      "Prefer": "wait"},
             json={"input": pred_input},
         )
-        if r.status_code not in (200, 201):
+        if r.status_code not in (200, 201, 202):
             raise HTTPException(status_code=502, detail=f"Kling AI error {r.status_code}: {r.text[:200]}")
         data = r.json()
-        # With "Prefer: wait" Replicate may already return a finished prediction.
+        # 200/201 with "Prefer: wait" may already be a finished prediction. A 202
+        # means Replicate ACCEPTED the async prediction and it is still running —
+        # that is NOT an error: fall through to the poll loop below (the response
+        # still carries the prediction id). Previously 202 was raised as a hard
+        # failure, so every Kling job that didn't finish within the wait window
+        # was wrongly dropped.
         if data.get("status") == "succeeded":
             out = data.get("output")
             _track_replicate_video(user_id, seconds=clip_seconds)
