@@ -1856,10 +1856,15 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
             trim = (max(0.0, float(s.get("start") or 0)), float(s["duration"]))
         elif op == "captions":
             # Each role is optional; only non-empty ones become caption layers.
+            # Position is user-selectable (top/center/bottom) per role, else default.
             for role in ("hook", "body", "cta"):
                 t = (s.get(role) or "").strip()
                 if t:
-                    segments.append({"role": role, "text": t})
+                    pos = (s.get(f"{role}_pos") or "").strip().lower()
+                    seg = {"role": role, "text": t}
+                    if pos in vedit.CAPTION_POSITIONS:
+                        seg["position"] = pos
+                    segments.append(seg)
 
     # Brand Kit → logo overlay + caption styling (mirrors ai_media._apply_brand_watermark).
     kit = (_load_user_store(uid) or {}).get("brand_kit", {}) or {}
@@ -1867,7 +1872,13 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
     if kit.get("logo_overlay") == "on" and kit.get("logo_url"):
         lp, is_tmp = _resolve_logo_local(kit["logo_url"])
         if lp:
-            logo = {"path": lp, "position": kit.get("logo_position", "bottom-right")}
+            # Auto-avoid overlap: shift the logo out of any vertical band a
+            # caption occupies so the two never collide.
+            cap_bands = {(seg.get("position") or
+                          vedit._CAP_DEFAULT_POS.get(seg["role"], "center")) for seg in segments}
+            logo_pos = vedit.resolve_logo_position(
+                kit.get("logo_position", "bottom-right"), cap_bands)
+            logo = {"path": lp, "position": logo_pos}
             if is_tmp:
                 logo_tmp = lp
     caption = None
@@ -1922,10 +1933,15 @@ class PolishRequest(BaseModel):
     trim_duration: float = 0        # 0 = keep full length
     # Optional captions — any subset. Each renders as a timed, animated layer in
     # the user's brand color + font. All empty → no caption (clean video).
-    hook: str = ""                  # opening line (larger, top, first ~2.5s)
-    body: str = ""                  # middle line (centered)
-    cta: str = ""                   # closing line (bottom, last ~3s)
+    hook: str = ""                  # opening line (timed to first ~2.5s)
+    body: str = ""                  # middle line
+    cta: str = ""                   # closing line (timed to last ~3s)
     caption: str = ""               # legacy alias → treated as body
+    # Optional per-element placement: "top" | "center" | "bottom". Defaults:
+    # hook→top, body→center, cta→bottom. The logo auto-moves to avoid overlap.
+    hook_pos: str = ""
+    body_pos: str = ""
+    cta_pos: str = ""
 
 
 @router.post("/api/studio/polish")
@@ -1964,8 +1980,10 @@ async def polish_upload(req: PolishRequest, current_user: dict = Depends(get_cur
             steps.append({"op": "trim", "start": max(0, req.trim_start), "duration": req.trim_duration})
         body = (req.body or req.caption or "").strip()   # `caption` is a legacy alias for body
         if (req.hook or "").strip() or body or (req.cta or "").strip():
-            steps.append({"op": "captions", "hook": (req.hook or "").strip(),
-                          "body": body, "cta": (req.cta or "").strip()})
+            steps.append({"op": "captions",
+                          "hook": (req.hook or "").strip(), "hook_pos": req.hook_pos,
+                          "body": body,                    "body_pos": req.body_pos,
+                          "cta":  (req.cta or "").strip(), "cta_pos":  req.cta_pos})
         # (Brand Kit logo overlay is applied automatically in the pipeline when
         # the user has logo_overlay enabled — it is not a client-supplied step.)
         _charge_or_402(uid, POLISH_COST)      # refunded by the queue if the render fails

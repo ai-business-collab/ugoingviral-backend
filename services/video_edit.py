@@ -43,7 +43,8 @@ _FASTSTART   = ["-movflags", "+faststart"]
 LOGO_W_FRAC   = 0.22       # logo width as a fraction of the canvas width
 PAD_FRAC      = 0.04       # edge padding as a fraction of the canvas width
 LOGO_OPACITY  = 0.85
-LOGO_POSITIONS = {"bottom-right", "bottom-left", "top-right", "top-left", "center"}
+LOGO_POSITIONS = {"bottom-right", "bottom-left", "top-right", "top-left", "center",
+                  "middle-right", "middle-left"}   # middle-* used by auto-avoid
 
 # Bundled OFL (SIL Open Font License) Google Fonts — the exact set the Brand Kit
 # frontend exposes (routes.brand_kit.ALLOWED_FONTS). All free to embed/redistribute
@@ -177,8 +178,41 @@ def _overlay_xy(position: str, pad: int) -> tuple:
         return "(W-w)/2", "(H-h)/2"
     vert, horiz = p.split("-")
     x = f"{pad}" if horiz == "left" else f"W-w-{pad}"
-    y = f"{pad}" if vert == "top" else f"H-h-{pad}"
+    if vert == "middle":
+        y = "(H-h)/2"
+    else:
+        y = f"{pad}" if vert == "top" else f"H-h-{pad}"
     return x, y
+
+
+# Logo/caption occupy vertical "bands"; keep them out of the same band so they
+# never overlap. Corners map to top/bottom; middle-* and center are middle.
+def _logo_band(pos: str) -> str:
+    if pos.startswith("top"):
+        return "top"
+    if pos.startswith("bottom"):
+        return "bottom"
+    return "middle"
+
+
+def resolve_logo_position(orig: str, caption_bands) -> str:
+    """Auto-move the logo out of any vertical band a caption occupies, so the two
+    never collide. Keeps the original horizontal side; flips top<->bottom when
+    that band is taken; falls back to a vertically-centered edge (middle-*) when
+    BOTH top and bottom hold captions. Returns the (possibly unchanged) position."""
+    bands = set(caption_bands or [])
+    o = orig if orig in LOGO_POSITIONS else "top-right"
+    if o == "center":
+        return "center" if "center" not in bands else "top-right"
+    vert, side = o.split("-")
+    if vert == "middle":
+        return o
+    if vert not in bands:
+        return f"{vert}-{side}"                     # original band is free
+    other = "bottom" if vert == "top" else "top"
+    if other not in bands:
+        return f"{other}-{side}"                    # flip to the free band
+    return f"middle-{side}"                          # both taken → centered edge
 
 
 def logo_overlay_fragment(logo_pad: str, base_label: str, out_label: str,
@@ -206,12 +240,16 @@ CAP_HOOK_SECS = 2.5      # default hook window: first ~2.5s
 CAP_CTA_SECS  = 3.0      # default CTA window: last ~3s
 CAP_BOX_PAD   = 34       # generous horizontal padding (premium look; drawtext boxes are rectangular)
 CAP_BOX_ALPHA = 0.55
-# Per-role style presets: size + vertical placement (drawtext y-expression).
-_CAP_PRESETS = {
-    "hook": {"fontsize": 64, "y": "(h*0.10)"},                # larger, near the top
-    "body": {"fontsize": 46, "y": "((h-text_h)/2)"},          # medium, centered
-    "cta":  {"fontsize": 56, "y": "(h-text_h-(h*0.10))"},     # styled, near the bottom
+# Size is role-based; POSITION is user-selectable (top/center/bottom) with a
+# sensible per-role default. Timing (which role shows when) stays role-based.
+_CAP_FONTSIZE    = {"hook": 64, "body": 46, "cta": 56}
+_CAP_DEFAULT_POS = {"hook": "top", "body": "center", "cta": "bottom"}
+_CAP_POS_Y = {
+    "top":    "(h*0.10)",
+    "center": "((h-text_h)/2)",
+    "bottom": "(h-text_h-(h*0.10))",
 }
+CAPTION_POSITIONS = set(_CAP_POS_Y)   # {"top","center","bottom"}
 
 
 def _cap_window(role: str, dur: float, has_hook: bool, has_cta: bool) -> tuple:
@@ -246,7 +284,11 @@ def caption_fragments(segments: list, duration: float, style: dict, out_prefix: 
         if not text:
             continue
         role = seg.get("role") or "body"
-        preset = _CAP_PRESETS.get(role, _CAP_PRESETS["body"])
+        pos = seg.get("position") or _CAP_DEFAULT_POS.get(role, "center")
+        if pos not in _CAP_POS_Y:
+            pos = _CAP_DEFAULT_POS.get(role, "center")
+        fontsize = _CAP_FONTSIZE.get(role, 46)
+        y_expr = _CAP_POS_Y[pos]
         a, b = _cap_window(role, duration, has_hook, has_cta)
         fade = max(0.05, min(CAP_FADE, (b - a) / 2 - 0.01))
         f = f"{out_prefix}.cap{i}.txt"
@@ -257,9 +299,9 @@ def caption_fragments(segments: list, duration: float, style: dict, out_prefix: 
         # enable is true. Single-quoted so the graph parser leaves commas alone.
         alpha = (f"if(lt(t,{a}+{fade}),(t-{a})/{fade},"
                  f"if(lt(t,{b}-{fade}),1,({b}-t)/{fade}))")
-        node = (f"drawtext=textfile='{f}':fontfile='{fontfile}':fontsize={preset['fontsize']}"
+        node = (f"drawtext=textfile='{f}':fontfile='{fontfile}':fontsize={fontsize}"
                 f":fontcolor={fontcolor}:borderw=3:bordercolor=black"
-                f":x=(w-text_w)/2:y={preset['y']}"
+                f":x=(w-text_w)/2:y={y_expr}"
                 f":box=1:boxcolor={boxcolor}@{CAP_BOX_ALPHA}:boxborderw={CAP_BOX_PAD}"
                 f":line_spacing=8:fix_bounds=1"
                 f":enable='between(t,{a},{b})':alpha='{alpha}'")
