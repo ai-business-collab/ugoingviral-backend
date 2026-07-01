@@ -1872,13 +1872,17 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
     if kit.get("logo_overlay") == "on" and kit.get("logo_url"):
         lp, is_tmp = _resolve_logo_local(kit["logo_url"])
         if lp:
-            # Auto-avoid overlap: shift the logo out of any vertical band a
-            # caption occupies so the two never collide.
+            # Auto-avoid overlap: keep the logo in a CORNER, moved out of any
+            # vertical band a caption occupies. If every band is taken (e.g.
+            # hook+CTA), it lands in a corner and we shrink it so it tucks clear
+            # of the centered caption.
             cap_bands = {(seg.get("position") or
                           vedit._CAP_DEFAULT_POS.get(seg["role"], "center")) for seg in segments}
             logo_pos = vedit.resolve_logo_position(
                 kit.get("logo_position", "bottom-right"), cap_bands)
             logo = {"path": lp, "position": logo_pos}
+            if logo_pos.split("-")[0] in cap_bands:      # corner shares a caption band → shrink
+                logo["scale"] = 0.14
             if is_tmp:
                 logo_tmp = lp
     caption = None

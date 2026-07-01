@@ -43,8 +43,7 @@ _FASTSTART   = ["-movflags", "+faststart"]
 LOGO_W_FRAC   = 0.22       # logo width as a fraction of the canvas width
 PAD_FRAC      = 0.04       # edge padding as a fraction of the canvas width
 LOGO_OPACITY  = 0.85
-LOGO_POSITIONS = {"bottom-right", "bottom-left", "top-right", "top-left", "center",
-                  "middle-right", "middle-left"}   # middle-* used by auto-avoid
+LOGO_POSITIONS = {"bottom-right", "bottom-left", "top-right", "top-left", "center"}
 
 # Bundled OFL (SIL Open Font License) Google Fonts — the exact set the Brand Kit
 # frontend exposes (routes.brand_kit.ALLOWED_FONTS). All free to embed/redistribute
@@ -178,51 +177,43 @@ def _overlay_xy(position: str, pad: int) -> tuple:
         return "(W-w)/2", "(H-h)/2"
     vert, horiz = p.split("-")
     x = f"{pad}" if horiz == "left" else f"W-w-{pad}"
-    if vert == "middle":
-        y = "(H-h)/2"
-    else:
-        y = f"{pad}" if vert == "top" else f"H-h-{pad}"
+    y = f"{pad}" if vert == "top" else f"H-h-{pad}"
     return x, y
 
 
-# Logo/caption occupy vertical "bands"; keep them out of the same band so they
-# never overlap. Corners map to top/bottom; middle-* and center are middle.
-def _logo_band(pos: str) -> str:
-    if pos.startswith("top"):
-        return "top"
-    if pos.startswith("bottom"):
-        return "bottom"
-    return "middle"
+_CORNERS = ("top-right", "top-left", "bottom-right", "bottom-left")
 
 
 def resolve_logo_position(orig: str, caption_bands) -> str:
-    """Auto-move the logo out of any vertical band a caption occupies, so the two
-    never collide. Keeps the original horizontal side; flips top<->bottom when
-    that band is taken; falls back to a vertically-centered edge (middle-*) when
-    BOTH top and bottom hold captions. Returns the (possibly unchanged) position."""
+    """Keep the logo in a CORNER, always — never a side-middle. Move it out of any
+    vertical band (top/bottom) a caption occupies: try the original corner, then
+    the vertical flip on the same side, then the other side, then the diagonal.
+    If BOTH top and bottom hold captions (no fully-free corner), fall back to the
+    diagonally-opposite corner (still a corner) — the caller shrinks it slightly
+    so it tucks clear of the centered caption. Center-band captions never block a
+    corner."""
     bands = set(caption_bands or [])
-    o = orig if orig in LOGO_POSITIONS else "top-right"
-    if o == "center":
-        return "center" if "center" not in bands else "top-right"
+    o = orig if orig in _CORNERS else "top-right"      # normalize center/anything → a corner
     vert, side = o.split("-")
-    if vert == "middle":
-        return o
-    if vert not in bands:
-        return f"{vert}-{side}"                     # original band is free
-    other = "bottom" if vert == "top" else "top"
-    if other not in bands:
-        return f"{other}-{side}"                    # flip to the free band
-    return f"middle-{side}"                          # both taken → centered edge
+    ov = "bottom" if vert == "top" else "top"
+    os_ = "left" if side == "right" else "right"
+    # Preference order, all corners: original → v-flip → h-flip → diagonal.
+    for cand in (f"{vert}-{side}", f"{ov}-{side}", f"{vert}-{os_}", f"{ov}-{os_}"):
+        if cand.split("-")[0] not in bands:
+            return cand                                 # this corner's band is free
+    return f"{ov}-{os_}"                                 # all bands taken → diagonal corner
 
 
 def logo_overlay_fragment(logo_pad: str, base_label: str, out_label: str,
                           position: str, opacity: float,
-                          canvas_w: int, canvas_h: int) -> str:
-    """Filtergraph fragment: scale the logo to LOGO_W_FRAC of the canvas width
-    (aspect preserved — no stretching), apply opacity, and overlay it at
-    `position`. Geometry mirrors services.branding so image + video branding
-    match. Consumes `logo_pad` (e.g. '1:v') and `base_label`, emits `out_label`."""
-    logo_w = max(1, int(canvas_w * LOGO_W_FRAC))
+                          canvas_w: int, canvas_h: int, scale: float = None) -> str:
+    """Filtergraph fragment: scale the logo to `scale` (fraction of the canvas
+    width, default LOGO_W_FRAC; aspect preserved — no stretching), apply opacity,
+    and overlay it at `position` (a corner). Geometry mirrors services.branding so
+    image + video branding match. A smaller `scale` is used to tuck the logo into
+    a corner clear of a centered caption when it must share that band."""
+    frac = scale if (scale and scale > 0) else LOGO_W_FRAC
+    logo_w = max(1, int(canvas_w * frac))
     pad = max(0, int(canvas_w * PAD_FRAC))
     x, y = _overlay_xy(position, pad)
     prep = (f"[{logo_pad}]scale={logo_w}:-1,format=rgba,"
@@ -357,7 +348,8 @@ def _single_pass(src: str, out: str, w: int, h: int, fps: int,
     if logo:
         fc.append(logo_overlay_fragment(f"{logo_idx}:v", cur, "_vlogo",
                                         logo.get("position", "bottom-right"),
-                                        logo.get("opacity", LOGO_OPACITY), w, h))
+                                        logo.get("opacity", LOGO_OPACITY), w, h,
+                                        logo.get("scale")))
         cur = "_vlogo"
     cap_files = []
     if caption and caption.get("segments"):
