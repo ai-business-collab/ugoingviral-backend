@@ -1818,12 +1818,16 @@ def _register_polished_video(uid: str, out_path: str, *, prompt: str, provider: 
     return entry, local_url
 
 
-def run_polish_pipeline(uid: str, video_url: str, steps: list) -> dict:
+def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "") -> dict:
     """Phase-1 polish spine: resolve source → single-pass normalize+reframe(+trim)
     via services.video_edit → register in the per-user Content Library. Runs
     synchronously (blocking ffmpeg); the queue calls it via asyncio.to_thread so
     it never blocks the event loop. Uses explicit-uid store helpers so it is safe
-    to run without a bound request context."""
+    to run without a bound request context.
+
+    `src_path` is the already-resolved local file from the endpoint (so we don't
+    download twice); if absent we resolve from `video_url`. The MAX_POLISH_SECONDS
+    check here is a backstop — the endpoint rejects over-length uploads up front."""
     from routes.content_library import _kind_dir
     aspect, trim = "9:16", None
     for s in (steps or []):
@@ -1832,7 +1836,7 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list) -> dict:
             aspect = s["aspect"]
         elif op == "trim" and float(s.get("duration") or 0) > 0:
             trim = (max(0.0, float(s.get("start") or 0)), float(s["duration"]))
-    src = _resolve_source_video(video_url)
+    src = src_path if (src_path and os.path.exists(src_path)) else _resolve_source_video(video_url)
     try:
         total = vedit.probe_duration(src)
         if total <= 0:
@@ -1878,11 +1882,37 @@ async def polish_upload(req: PolishRequest, current_user: dict = Depends(get_cur
     url = (req.video_url or "").strip()
     if not (url.startswith("/user_content/") or url.startswith("/uploads/") or url.startswith("http")):
         raise HTTPException(status_code=400, detail="Invalid video URL")
-    steps = [{"op": "normalize"}, {"op": "reframe", "aspect": req.aspect_ratio}]
-    if req.trim_duration and req.trim_duration > 0:
-        steps.append({"op": "trim", "start": max(0, req.trim_start), "duration": req.trim_duration})
-    _charge_or_402(uid, POLISH_COST)      # refunded by the queue if the render fails
-    return _enqueue_polish(uid, url, steps, POLISH_COST, req.aspect_ratio)
+    # Resolve + probe the source UP FRONT so an over-length video is rejected
+    # BEFORE it charges credits or takes a queue slot — one user can't tie up the
+    # box with a huge render. (Resolve/probe run off-thread so we don't block the
+    # loop; the resolved file is handed to the job to avoid downloading twice.)
+    src_path = await asyncio.to_thread(_resolve_source_video, url)
+    enqueued = False
+    try:
+        dur = await asyncio.to_thread(vedit.probe_duration, src_path)
+        if dur <= 0:
+            raise HTTPException(status_code=400, detail="Could not read the video — is it a valid file?")
+        if dur > MAX_POLISH_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=(f"Video is too long ({int(dur // 60)}m{int(dur % 60):02d}s). "
+                        f"The max for polishing is {MAX_POLISH_SECONDS // 60} minutes — "
+                        f"trim it first, then try again."))
+        steps = [{"op": "normalize"}, {"op": "reframe", "aspect": req.aspect_ratio}]
+        if req.trim_duration and req.trim_duration > 0:
+            steps.append({"op": "trim", "start": max(0, req.trim_start), "duration": req.trim_duration})
+        _charge_or_402(uid, POLISH_COST)      # refunded by the queue if the render fails
+        resp = _enqueue_polish(uid, url, steps, POLISH_COST, req.aspect_ratio, src_path=src_path)
+        enqueued = True
+        return resp
+    finally:
+        # If we didn't hand the file off to a queued job (rejected / not enough
+        # credits), delete the temp copy so nothing leaks.
+        if not enqueued:
+            try:
+                os.remove(src_path)
+            except Exception:
+                pass
 
 
 class StudioCaptionRequest(BaseModel):
@@ -2366,7 +2396,8 @@ async def _vq_process_polish(job: dict) -> None:
     failures are permanent (not throttle) → refund, no retry."""
     uid = job["uid"]
     try:
-        result = await asyncio.to_thread(run_polish_pipeline, uid, job["src_url"], job["steps"])
+        result = await asyncio.to_thread(run_polish_pipeline, uid, job["src_url"],
+                                         job["steps"], job.get("src_path", ""))
         job["status"]    = "done"
         job["video_url"] = result["url"]
         job["duration"]  = result.get("duration") or 0
@@ -2458,16 +2489,18 @@ async def _vq_process(job: dict) -> None:
         _vq_pump()
 
 
-def _enqueue_polish(uid: str, src_url: str, steps: list, cost: int, aspect: str) -> dict:
+def _enqueue_polish(uid: str, src_url: str, steps: list, cost: int, aspect: str,
+                    src_path: str = "") -> dict:
     """Queue a Phase-1 polish job (local FFmpeg pipeline) with a My-Videos
     placeholder. Reuses the video queue's concurrency + refund-on-fail. The input
-    URL is kept as `src_url`; `video_url` stays None until the output is ready."""
+    URL is kept as `src_url` and the already-resolved local file as `src_path`
+    (so the worker doesn't re-download); `video_url` stays None until ready."""
     job_id = uuid.uuid4().hex[:10]
     job = {
         "id": job_id, "uid": uid, "job_type": "polish", "provider": "polish",
-        "src_url": src_url, "steps": steps, "duration": 0, "aspect": aspect,
-        "image_url": "", "cost": cost, "status": "queued", "retries": 0,
-        "video_url": None, "error": None,
+        "src_url": src_url, "src_path": src_path, "steps": steps, "duration": 0,
+        "aspect": aspect, "image_url": "", "cost": cost, "status": "queued",
+        "retries": 0, "video_url": None, "error": None,
         "prompt": f"Polish upload → {aspect}",
         "created_at": datetime.now().isoformat(),
     }
