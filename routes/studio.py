@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFi
 from pydantic import BaseModel
 from routes.auth import get_current_user
 from services.store import store, save_store, _load_user_store, _save_user_store
+from services import video_edit as vedit
 import sys as _sys, os as _os
 _sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..'))
 from credit_costs import VIDEO_GENERATION, VIDEO_EDITING, VOICE_OVER
@@ -1758,6 +1759,171 @@ async def smart_cut(req: SmartCutRequest, current_user: dict = Depends(get_curre
         except Exception: pass
 
 
+# ── "Make your own material professional" — Phase 1 foundation ─────────────────
+# One clean, per-user pipeline that takes a user UPLOAD and processes it safely.
+# Pure FFmpeg work lives in services/video_edit.py; the stateful bits (source
+# resolution, Content-Library registration, credits) live here. Long renders run
+# on the shared video queue (_vq) with refund-on-failure. Phases 2–4 (branding /
+# captions / music) extend the step list — the plumbing is built here.
+POLISH_COST   = VIDEO_EDITING["upload_and_edit"]   # 50
+CAPTIONS_COST = VIDEO_EDITING["effects_filter"]    # 25
+MAX_POLISH_SECONDS = 600                           # protect the box from huge re-encodes
+
+
+def _resolve_source_video(url: str) -> str:
+    """Resolve a user media URL (/user_content, /uploads, or http) to a local
+    temp file. Path-traversal-safe (same guard as smart_cut). Caller deletes it."""
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+    url = (url or "").strip()
+    dst = os.path.join(UPLOADS_DIR, f"polsrc_{uuid.uuid4().hex[:10]}.mp4")
+    if url.startswith("/user_content/") or url.startswith("/uploads/"):
+        local = os.path.normpath(os.path.join(base, url.lstrip("/")))
+        if os.path.commonpath([os.path.abspath(base), local]) != os.path.abspath(base):
+            raise HTTPException(status_code=400, detail="Invalid video path")
+        if not os.path.exists(local):
+            raise HTTPException(status_code=404, detail="Video not found")
+        shutil.copy(local, dst)
+    elif url.startswith("http"):
+        if not _download_video(url, dst):
+            raise HTTPException(status_code=500, detail="Could not download the video")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid video URL")
+    return dst
+
+
+def _register_polished_video(uid: str, out_path: str, *, prompt: str, provider: str,
+                             cost: int, duration: float, kind_label: str) -> tuple:
+    """Register a finished video into the per-user Content Library AND the studio
+    'My videos' list — same shape smart_cut uses so it shows up everywhere."""
+    from routes.content_library import _public_url
+    filename  = os.path.basename(out_path)
+    local_url = _public_url(uid, "videos", filename)
+    entry = {
+        "id": os.path.splitext(filename)[0], "kind": "videos", "provider": provider,
+        "prompt": prompt, "media_type": "video", "source_url": local_url,
+        "local_url": local_url, "local_path": out_path, "filename": filename,
+        "size_bytes": os.path.getsize(out_path),
+        "size_mb": round(os.path.getsize(out_path) / 1024 / 1024, 1),
+        "duration": round(duration), "saved_locally": True,
+        "credits_used": cost, "created_at": datetime.utcnow().isoformat(),
+    }
+    ustore = _load_user_store(uid)
+    items = ustore.setdefault("library_items", [])
+    items.insert(0, entry)
+    ustore["library_items"] = items[:10000]
+    gv = ustore.setdefault("generated_videos", [])
+    gv.insert(0, {**entry, "url": local_url, "kind": kind_label})
+    ustore["generated_videos"] = gv[:100]
+    _save_user_store(uid, ustore)
+    return entry, local_url
+
+
+def run_polish_pipeline(uid: str, video_url: str, steps: list) -> dict:
+    """Phase-1 polish spine: resolve source → single-pass normalize+reframe(+trim)
+    via services.video_edit → register in the per-user Content Library. Runs
+    synchronously (blocking ffmpeg); the queue calls it via asyncio.to_thread so
+    it never blocks the event loop. Uses explicit-uid store helpers so it is safe
+    to run without a bound request context."""
+    from routes.content_library import _kind_dir
+    aspect, trim = "9:16", None
+    for s in (steps or []):
+        op = s.get("op")
+        if op == "reframe" and s.get("aspect"):
+            aspect = s["aspect"]
+        elif op == "trim" and float(s.get("duration") or 0) > 0:
+            trim = (max(0.0, float(s.get("start") or 0)), float(s["duration"]))
+    src = _resolve_source_video(video_url)
+    try:
+        total = vedit.probe_duration(src)
+        if total <= 0:
+            raise HTTPException(status_code=400, detail="Could not read the video")
+        if total > MAX_POLISH_SECONDS:
+            raise HTTPException(status_code=400,
+                                detail=f"Video too long (max {MAX_POLISH_SECONDS // 60} min)")
+        item_id  = uuid.uuid4().hex[:12]
+        out_path = os.path.join(_kind_dir(uid, "videos"), f"{item_id}.mp4")
+        res = vedit.render_polish(src, out_path, aspect=aspect, trim=trim)
+        prompt = f"Polished upload → {aspect}" + (f", trimmed to {round(trim[1])}s" if trim else "")
+        entry, url = _register_polished_video(
+            uid, out_path, prompt=prompt, provider="polish",
+            cost=POLISH_COST, duration=res.get("duration", 0), kind_label="polish")
+        return {"ok": True, "url": url, "item": entry,
+                "width": res.get("width"), "height": res.get("height"),
+                "duration": res.get("duration")}
+    finally:
+        try:
+            os.remove(src)
+        except Exception:
+            pass
+
+
+class PolishRequest(BaseModel):
+    video_url: str
+    aspect_ratio: str = "9:16"
+    trim_start: float = 0
+    trim_duration: float = 0        # 0 = keep full length
+
+
+@router.post("/api/studio/polish")
+async def polish_upload(req: PolishRequest, current_user: dict = Depends(get_current_user)):
+    """Phase 1 — 'make your own material professional' foundation. Takes a user
+    upload and runs it through normalize→reframe(→trim) safely on the video queue
+    (refund on failure). Later phases add branding / captions / music steps."""
+    if not _ffmpeg_available():
+        raise HTTPException(status_code=503, detail="FFmpeg is not installed on the server")
+    uid = current_user["id"]
+    if req.aspect_ratio not in ASPECT_RATIOS:
+        raise HTTPException(status_code=400,
+                            detail=f"aspect_ratio must be one of {list(ASPECT_RATIOS)}")
+    url = (req.video_url or "").strip()
+    if not (url.startswith("/user_content/") or url.startswith("/uploads/") or url.startswith("http")):
+        raise HTTPException(status_code=400, detail="Invalid video URL")
+    steps = [{"op": "normalize"}, {"op": "reframe", "aspect": req.aspect_ratio}]
+    if req.trim_duration and req.trim_duration > 0:
+        steps.append({"op": "trim", "start": max(0, req.trim_start), "duration": req.trim_duration})
+    _charge_or_402(uid, POLISH_COST)      # refunded by the queue if the render fails
+    return _enqueue_polish(uid, url, steps, POLISH_COST, req.aspect_ratio)
+
+
+class StudioCaptionRequest(BaseModel):
+    video_url: str
+    caption: str
+
+
+@router.post("/api/studio/captions")
+async def studio_captions(req: StudioCaptionRequest, current_user: dict = Depends(get_current_user)):
+    """Burn a caption onto a user's video and save it to THEIR Content Library.
+    Canonical, per-user replacement for /api/content/add_captions (which stored
+    into a shared uploads/ folder + a platform-keyed pipeline). Synchronous."""
+    if not _ffmpeg_available():
+        raise HTTPException(status_code=503, detail="FFmpeg is not installed on the server")
+    uid  = current_user["id"]
+    text = (req.caption or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="caption text required")
+    from routes.content_library import _kind_dir
+    src      = _resolve_source_video(req.video_url)
+    item_id  = uuid.uuid4().hex[:12]
+    out_path = os.path.join(_kind_dir(uid, "videos"), f"{item_id}.mp4")
+    _charge_or_402(uid, CAPTIONS_COST)
+    try:
+        await asyncio.to_thread(vedit.burn_caption, src, out_path, text)
+    except Exception as exc:
+        _refund(uid, CAPTIONS_COST)
+        raise HTTPException(status_code=500,
+                            detail=f"Caption render failed: {str(getattr(exc, 'detail', exc))[:160]}")
+    finally:
+        try:
+            os.remove(src)
+        except Exception:
+            pass
+    dur = vedit.probe_duration(out_path)
+    entry, url = _register_polished_video(
+        uid, out_path, prompt=f"Captioned: {text[:60]}", provider="captions",
+        cost=CAPTIONS_COST, duration=dur, kind_label="captioned")
+    return {"ok": True, "url": url, "item": entry, "credits_used": CAPTIONS_COST}
+
+
 @router.get("/api/studio/history")
 def get_studio_history(current_user: dict = Depends(get_current_user)):
     uid = current_user["id"]
@@ -2195,8 +2361,48 @@ async def _vq_requeue_after(job: dict, delay: float) -> None:
     _vq_pump()
 
 
+async def _vq_process_polish(job: dict) -> None:
+    """Run a Phase-1 polish pipeline job off the video queue. Local FFmpeg
+    failures are permanent (not throttle) → refund, no retry."""
+    uid = job["uid"]
+    try:
+        result = await asyncio.to_thread(run_polish_pipeline, uid, job["src_url"], job["steps"])
+        job["status"]    = "done"
+        job["video_url"] = result["url"]
+        job["duration"]  = result.get("duration") or 0
+        _update_generated_video(uid, job["id"], {
+            "url": result["url"], "status": "done", "duration": result.get("duration") or 0,
+        })
+        try:
+            from routes.notifications import push_notification
+            push_notification(uid, "video_ready", "🎬 Your polished video is ready",
+                              "Your upload has been polished — open My Videos to watch it.")
+        except Exception:
+            pass
+    except Exception as exc:
+        job["status"] = "failed"
+        job["error"]  = "Something went wrong polishing your video — please try again"
+        _refund(uid, job["cost"])
+        _update_generated_video(uid, job["id"], {"status": "failed", "error": job["error"]})
+        logging.warning("polish job %s failed: %s", job["id"],
+                        str(getattr(exc, "detail", "") or exc)[:200])
+        try:
+            from routes.notifications import push_notification
+            push_notification(uid, "video_ready", "⚠️ Polish failed",
+                              f"{job['error']}. Your {job['cost']} credits have been refunded.")
+        except Exception:
+            pass
+    finally:
+        _vq_active.pop(job["id"], None)
+        _vq_pump()
+
+
 async def _vq_process(job: dict) -> None:
     """Render one job. Frees its slot when done and pumps the next one."""
+    # Phase-1 polish jobs run a local FFmpeg pipeline, not a remote provider.
+    if job.get("job_type") == "polish":
+        await _vq_process_polish(job)
+        return
     uid = job["uid"]
     try:
         video_url, raw = await _vq_run_provider(job)
@@ -2250,6 +2456,30 @@ async def _vq_process(job: dict) -> None:
     finally:
         _vq_active.pop(job["id"], None)
         _vq_pump()
+
+
+def _enqueue_polish(uid: str, src_url: str, steps: list, cost: int, aspect: str) -> dict:
+    """Queue a Phase-1 polish job (local FFmpeg pipeline) with a My-Videos
+    placeholder. Reuses the video queue's concurrency + refund-on-fail. The input
+    URL is kept as `src_url`; `video_url` stays None until the output is ready."""
+    job_id = uuid.uuid4().hex[:10]
+    job = {
+        "id": job_id, "uid": uid, "job_type": "polish", "provider": "polish",
+        "src_url": src_url, "steps": steps, "duration": 0, "aspect": aspect,
+        "image_url": "", "cost": cost, "status": "queued", "retries": 0,
+        "video_url": None, "error": None,
+        "prompt": f"Polish upload → {aspect}",
+        "created_at": datetime.now().isoformat(),
+    }
+    _vq_jobs[job_id] = job
+    _vq_pending.append(job)
+    _save_generated_video(uid, {
+        "id": job_id, "url": None, "provider": "polish", "kind": "polish",
+        "duration": 0, "aspect_ratio": aspect, "prompt": job["prompt"][:240],
+        "credits_used": cost, "created_at": job["created_at"], "status": "queued",
+    })
+    _vq_pump()
+    return _vq_public(job)
 
 
 def _enqueue_video(uid: str, provider: str, prompt: str, duration: int,

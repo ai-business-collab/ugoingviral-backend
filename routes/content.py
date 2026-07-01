@@ -897,29 +897,27 @@ def _run_ffmpeg_captions(video_path: str, cap_file: str, output_path: str) -> st
 
 @router.post("/api/content/add_captions")
 async def add_captions(req: CaptionRequest):
+    """DEPRECATED — prefer POST /api/studio/captions, which saves the captioned
+    clip into the user's Content Library. This router already enforces auth +
+    per-user store (see the router-level Depends(get_current_user)), so this is
+    kept as a thin, authed shim that now delegates the FFmpeg burn to the shared
+    services.video_edit.burn_caption (one caption implementation, not two)."""
     credits_left = _deduct_credits("add_captions")
-    try:
-        subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True, timeout=5)
-    except Exception:
+    from services import video_edit as vedit
+    if not vedit.ffmpeg_available():
         raise HTTPException(status_code=500, detail="FFmpeg er ikke installeret.")
 
-    cap_tmp = f"/tmp/ugv_cap_{uuid.uuid4().hex}.txt"
-    with open(cap_tmp, "w", encoding="utf-8") as f:
-        f.write(_wrap_caption(req.caption))
-
     tmp_video = await _fetch_to_tmp(req.video_url, ".mp4")
+    os.makedirs(os.path.join("uploads", "final"), exist_ok=True)
     out_filename = f"cap_{uuid.uuid4().hex}.mp4"
     out_path = os.path.join("uploads", "final", out_filename)
-
-    loop = asyncio.get_event_loop()
-    err = await loop.run_in_executor(None, _run_ffmpeg_captions, tmp_video, cap_tmp, out_path)
-
-    for f in (cap_tmp, tmp_video):
-        try: os.unlink(f)
+    try:
+        await asyncio.to_thread(vedit.burn_caption, tmp_video, out_path, req.caption)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"FFmpeg fejl: {str(e)[-300:]}")
+    finally:
+        try: os.unlink(tmp_video)
         except Exception: pass
-
-    if err:
-        raise HTTPException(status_code=500, detail=f"FFmpeg fejl: {err}")
 
     captioned_url = f"/uploads/final/{out_filename}"
     if req.platform:
