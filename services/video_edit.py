@@ -20,6 +20,7 @@ canvas + fps + yuv420p + 44.1k stereo audio (synthesizing silence when a clip ha
 none) inside a single filter_complex, then concats — so the join is always clean.
 """
 import os
+import re
 import subprocess
 import textwrap
 
@@ -36,6 +37,24 @@ _AUDIO_RATE  = 44100
 _V_CODEC     = ["-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p"]
 _A_CODEC     = ["-c:a", "aac", "-b:a", "128k"]
 _FASTSTART   = ["-movflags", "+faststart"]
+
+# ── Brand Kit geometry — kept identical to services.branding.apply_logo_watermark
+# so the logo looks the same on video as on generated images. ─────────────────
+LOGO_W_FRAC   = 0.22       # logo width as a fraction of the canvas width
+PAD_FRAC      = 0.04       # edge padding as a fraction of the canvas width
+LOGO_OPACITY  = 0.85
+LOGO_POSITIONS = {"bottom-right", "bottom-left", "top-right", "top-left", "center"}
+
+# Bundled OFL (SIL Open Font License) Google Fonts — the exact set the Brand Kit
+# frontend exposes (routes.brand_kit.ALLOWED_FONTS). All free to embed/redistribute
+# (see the accompanying *.OFL.txt). This finally wires the Brand Kit `font` field.
+FONTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "fonts")
+_FONT_FILES = {
+    "inter": "Inter.ttf", "poppins": "Poppins.ttf", "montserrat": "Montserrat.ttf",
+    "playfairdisplay": "PlayfairDisplay.ttf", "oswald": "Oswald.ttf", "raleway": "Raleway.ttf",
+}
+DEFAULT_FONT_FILE = os.path.join(FONTS_DIR, "Inter.ttf")
+_SYSTEM_FALLBACK_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 
 class VideoEditError(RuntimeError):
@@ -111,6 +130,92 @@ def _norm_chain(w: int, h: int, fps: int) -> str:
             f"crop={w}:{h},setsar=1,fps={fps},format=yuv420p")
 
 
+# ── Brand Kit primitives (Phase 2) ─────────────────────────────────────────────
+
+def font_resolver(brand_font_name: str) -> str:
+    """Map a Brand Kit font name (Inter / Poppins / Montserrat / Playfair Display
+    / Oswald / Raleway — all bundled OFL Google Fonts) to a real .ttf path for
+    drawtext. Falls back to the bundled Inter, then the system DejaVu Sans Bold,
+    so a caption always has a loadable font file."""
+    key = re.sub(r"[^a-z0-9]", "", (brand_font_name or "").lower())
+    fname = _FONT_FILES.get(key)
+    if fname:
+        p = os.path.join(FONTS_DIR, fname)
+        if os.path.exists(p):
+            return p
+    if os.path.exists(DEFAULT_FONT_FILE):
+        return DEFAULT_FONT_FILE
+    return _SYSTEM_FALLBACK_FONT
+
+
+def _clamp01(x) -> float:
+    try:
+        return max(0.0, min(1.0, float(x)))
+    except Exception:
+        return LOGO_OPACITY
+
+
+def _hex_to_ffmpeg(color, default: str) -> str:
+    """Normalize a Brand Kit color (#RRGGBB or a plain name) to an ffmpeg color
+    token (0xRRGGBB). Returns `default` for anything unrecognized."""
+    if not color:
+        return default
+    c = str(color).strip()
+    h = c.lstrip("#")
+    if len(h) == 6 and all(ch in "0123456789abcdefABCDEF" for ch in h):
+        return f"0x{h.lower()}"
+    if c.replace(" ", "").isalpha():
+        return c.lower()
+    return default
+
+
+def _overlay_xy(position: str, pad: int) -> tuple:
+    """Overlay x/y expressions (in overlay's W/H main + w/h overlay vars) for a
+    Brand Kit logo position — same geometry as the PIL image watermark."""
+    p = position if position in LOGO_POSITIONS else "bottom-right"
+    if p == "center":
+        return "(W-w)/2", "(H-h)/2"
+    vert, horiz = p.split("-")
+    x = f"{pad}" if horiz == "left" else f"W-w-{pad}"
+    y = f"{pad}" if vert == "top" else f"H-h-{pad}"
+    return x, y
+
+
+def logo_overlay_fragment(logo_pad: str, base_label: str, out_label: str,
+                          position: str, opacity: float,
+                          canvas_w: int, canvas_h: int) -> str:
+    """Filtergraph fragment: scale the logo to LOGO_W_FRAC of the canvas width
+    (aspect preserved — no stretching), apply opacity, and overlay it at
+    `position`. Geometry mirrors services.branding so image + video branding
+    match. Consumes `logo_pad` (e.g. '1:v') and `base_label`, emits `out_label`."""
+    logo_w = max(1, int(canvas_w * LOGO_W_FRAC))
+    pad = max(0, int(canvas_w * PAD_FRAC))
+    x, y = _overlay_xy(position, pad)
+    prep = (f"[{logo_pad}]scale={logo_w}:-1,format=rgba,"
+            f"colorchannelmixer=aa={_clamp01(opacity)}[_ovl]")
+    ov = f"[{base_label}][_ovl]overlay={x}:{y}:format=auto[{out_label}]"
+    return f"{prep};{ov}"
+
+
+def _drawtext_fragment(cap_file: str, caption: dict) -> str:
+    """A single drawtext node styled from the Brand Kit: brand `font` (fontfile),
+    brand primary color (fontcolor) and optional brand secondary color (box)."""
+    fontfile  = caption.get("fontfile") or DEFAULT_FONT_FILE
+    fontcolor = _hex_to_ffmpeg(caption.get("fontcolor"), "white")
+    parts = [
+        f"drawtext=textfile='{cap_file}'",
+        f"fontfile='{fontfile}'",
+        "fontsize=54", f"fontcolor={fontcolor}",
+        "borderw=3", "bordercolor=black",
+        "x=(w-text_w)/2", "y=h-text_h-80",
+        "fix_bounds=1", "line_spacing=10",
+    ]
+    boxcolor = _hex_to_ffmpeg(caption.get("boxcolor"), "")
+    if boxcolor:
+        parts += ["box=1", f"boxcolor={boxcolor}@0.5", "boxborderw=18"]
+    return ":".join(parts)
+
+
 def _result(path: str, w: int, h: int, had_audio: bool) -> dict:
     if not os.path.exists(path) or os.path.getsize(path) == 0:
         raise VideoEditError("render produced no output")
@@ -121,31 +226,73 @@ def _result(path: str, w: int, h: int, had_audio: bool) -> dict:
 
 
 def _single_pass(src: str, out: str, w: int, h: int, fps: int,
-                 trim=None, timeout: int = 600) -> dict:
-    """Normalize (+ optional trim) a SINGLE clip onto a WxH canvas in one encode.
-    Injects a silent stereo track when the source has no audio so downstream
-    steps (concat / mix) always have an audio stream to work with. trim =
-    (start_sec, duration_sec) or None."""
+                 trim=None, logo=None, caption=None, timeout: int = 600) -> dict:
+    """Normalize (+ optional trim) a SINGLE clip onto a WxH canvas, optionally
+    overlaying a Brand Kit logo and burning a brand-styled caption — ALL in ONE
+    encode (single filtergraph, no chained re-encodes). Injects a silent stereo
+    track when the source has no audio. trim=(start,dur) or None; logo={path,
+    position,opacity} or None; caption={text,fontfile,fontcolor,boxcolor} or None."""
     src_has_audio = has_audio(src)
+
+    # Assemble inputs; track each input's index so later filters reference the
+    # right pad (logo image and/or the silent-audio source shift the indices).
+    cmd = ["ffmpeg", "-y", "-i", src]
+    next_idx = 1
+    logo_idx = None
+    if logo and logo.get("path") and os.path.exists(logo["path"]):
+        cmd += ["-i", logo["path"]]
+        logo_idx = next_idx
+        next_idx += 1
+    else:
+        logo = None
+    sil_idx = None
+    if not src_has_audio:
+        cmd += ["-f", "lavfi", "-i", f"anullsrc=r={_AUDIO_RATE}:cl=stereo"]
+        sil_idx = next_idx
+        next_idx += 1
+
+    # Video chain: normalize/reframe (+trim) → logo overlay → caption, one graph.
+    fc = []
     vchain = ""
-    achain = ""
     if trim:
         s, d = float(trim[0]), float(trim[1])
         vchain += f"trim=start={s}:duration={d},setpts=PTS-STARTPTS,"
-        achain += f"atrim=start={s}:duration={d},asetpts=PTS-STARTPTS,"
     vchain += _norm_chain(w, h, fps)
+    fc.append(f"[0:v]{vchain}[_vbase]")
+    cur = "_vbase"
+    if logo:
+        fc.append(logo_overlay_fragment(f"{logo_idx}:v", cur, "_vlogo",
+                                        logo.get("position", "bottom-right"),
+                                        logo.get("opacity", LOGO_OPACITY), w, h))
+        cur = "_vlogo"
+    cap_file = None
+    if caption and (caption.get("text") or "").strip():
+        cap_file = out + ".caption.txt"
+        with open(cap_file, "w", encoding="utf-8") as f:
+            f.write("\n".join(textwrap.wrap(caption["text"].strip(), 30)) or " ")
+        fc.append(f"[{cur}]{_drawtext_fragment(cap_file, caption)}[_vcap]")
+        cur = "_vcap"
 
-    cmd = ["ffmpeg", "-y", "-i", src]
-    fc = [f"[0:v]{vchain}[v]"]
-    maps = ["-map", "[v]"]
+    maps = ["-map", f"[{cur}]"]
     if src_has_audio:
+        achain = ""
+        if trim:
+            s, d = float(trim[0]), float(trim[1])
+            achain += f"atrim=start={s}:duration={d},asetpts=PTS-STARTPTS,"
         fc.append(f"[0:a]{achain}aresample={_AUDIO_RATE}[a]")
         maps += ["-map", "[a]"]
     else:
-        cmd += ["-f", "lavfi", "-i", f"anullsrc=r={_AUDIO_RATE}:cl=stereo"]
-        maps += ["-map", "1:a", "-shortest"]
+        maps += ["-map", f"{sil_idx}:a", "-shortest"]
+
     cmd += ["-filter_complex", ";".join(fc)] + maps + _V_CODEC + _A_CODEC + _FASTSTART + [out]
-    _run(cmd, timeout)
+    try:
+        _run(cmd, timeout)
+    finally:
+        if cap_file:
+            try:
+                os.remove(cap_file)
+            except Exception:
+                pass
     return _result(out, w, h, src_has_audio)
 
 
@@ -166,12 +313,13 @@ def reframe(src: str, out: str, aspect: str = "9:16",
 
 
 def render_polish(src: str, out: str, *, aspect: str = "9:16", fps: int = DEFAULT_FPS,
-                  trim=None, timeout: int = 600) -> dict:
-    """Phase-1 polish engine (pure): normalize + reframe (+ optional trim) of a
-    single upload in ONE pass. Returns {path,duration,width,height,size_bytes,
-    had_audio}. This is the fragment host that Phases 2–4 extend."""
+                  trim=None, logo=None, caption=None, timeout: int = 600) -> dict:
+    """Polish engine (pure): normalize + reframe (+ optional trim) of a single
+    upload, plus optional Brand Kit logo overlay and brand-styled caption, in ONE
+    pass. Returns {path,duration,width,height,size_bytes,had_audio}. logo/caption
+    are the Phase-2 fragments; Phases 3–4 extend the same single graph."""
     w, h = canvas_for(aspect)
-    return _single_pass(src, out, w, h, fps, trim=trim, timeout=timeout)
+    return _single_pass(src, out, w, h, fps, trim=trim, logo=logo, caption=caption, timeout=timeout)
 
 
 def concat_reencode(paths: list, out: str, *, aspect: str = "9:16",

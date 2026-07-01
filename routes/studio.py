@@ -1818,24 +1818,63 @@ def _register_polished_video(uid: str, out_path: str, *, prompt: str, provider: 
     return entry, local_url
 
 
+def _resolve_logo_local(logo_url: str) -> tuple:
+    """Resolve a Brand Kit logo URL to a local file for the overlay input.
+    Returns (path, is_temp). Prefers the on-disk file under our own mounts (no
+    network); downloads remote logos to a temp file the caller must delete."""
+    try:
+        from services.branding import _resolve_local
+        p = _resolve_local(logo_url)
+        if p:
+            return p, False
+    except Exception:
+        pass
+    if (logo_url or "").startswith("http"):
+        tmp = os.path.join(UPLOADS_DIR, f"logo_{uuid.uuid4().hex[:10]}")
+        if _download_video(logo_url, tmp):
+            return tmp, True
+    return "", False
+
+
 def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "") -> dict:
-    """Phase-1 polish spine: resolve source → single-pass normalize+reframe(+trim)
-    via services.video_edit → register in the per-user Content Library. Runs
-    synchronously (blocking ffmpeg); the queue calls it via asyncio.to_thread so
-    it never blocks the event loop. Uses explicit-uid store helpers so it is safe
-    to run without a bound request context.
+    """Polish spine: resolve source → single-pass normalize+reframe(+trim)+brand
+    logo overlay + brand-styled caption (via services.video_edit) → register in
+    the per-user Content Library. Runs synchronously (blocking ffmpeg); the queue
+    calls it via asyncio.to_thread so it never blocks the event loop. Explicit-uid
+    store helpers make it safe to run without a bound request context.
 
     `src_path` is the already-resolved local file from the endpoint (so we don't
     download twice); if absent we resolve from `video_url`. The MAX_POLISH_SECONDS
     check here is a backstop — the endpoint rejects over-length uploads up front."""
     from routes.content_library import _kind_dir
-    aspect, trim = "9:16", None
+    aspect, trim, caption_text = "9:16", None, ""
     for s in (steps or []):
         op = s.get("op")
         if op == "reframe" and s.get("aspect"):
             aspect = s["aspect"]
         elif op == "trim" and float(s.get("duration") or 0) > 0:
             trim = (max(0.0, float(s.get("start") or 0)), float(s["duration"]))
+        elif op == "caption" and (s.get("text") or "").strip():
+            caption_text = s["text"].strip()
+
+    # Brand Kit → logo overlay + caption styling (mirrors ai_media._apply_brand_watermark).
+    kit = (_load_user_store(uid) or {}).get("brand_kit", {}) or {}
+    logo, logo_tmp = None, ""
+    if kit.get("logo_overlay") == "on" and kit.get("logo_url"):
+        lp, is_tmp = _resolve_logo_local(kit["logo_url"])
+        if lp:
+            logo = {"path": lp, "position": kit.get("logo_position", "bottom-right")}
+            if is_tmp:
+                logo_tmp = lp
+    caption = None
+    if caption_text:
+        caption = {
+            "text": caption_text,
+            "fontfile": vedit.font_resolver(kit.get("font", "Inter")),
+            "fontcolor": kit.get("primary_color", ""),     # brand text color
+            "boxcolor":  kit.get("secondary_color", ""),   # brand box behind text
+        }
+
     src = src_path if (src_path and os.path.exists(src_path)) else _resolve_source_video(video_url)
     try:
         total = vedit.probe_duration(src)
@@ -1846,12 +1885,18 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
                                 detail=f"Video too long (max {MAX_POLISH_SECONDS // 60} min)")
         item_id  = uuid.uuid4().hex[:12]
         out_path = os.path.join(_kind_dir(uid, "videos"), f"{item_id}.mp4")
-        res = vedit.render_polish(src, out_path, aspect=aspect, trim=trim)
-        prompt = f"Polished upload → {aspect}" + (f", trimmed to {round(trim[1])}s" if trim else "")
+        res = vedit.render_polish(src, out_path, aspect=aspect, trim=trim,
+                                  logo=logo, caption=caption)
+        extras = []
+        if logo:    extras.append("logo")
+        if caption: extras.append("caption")
+        if trim:    extras.append(f"trim {round(trim[1])}s")
+        prompt = f"Polished upload → {aspect}" + (f" ({', '.join(extras)})" if extras else "")
         entry, url = _register_polished_video(
             uid, out_path, prompt=prompt, provider="polish",
             cost=POLISH_COST, duration=res.get("duration", 0), kind_label="polish")
         return {"ok": True, "url": url, "item": entry,
+                "branded": bool(logo), "captioned": bool(caption),
                 "width": res.get("width"), "height": res.get("height"),
                 "duration": res.get("duration")}
     finally:
@@ -1859,6 +1904,11 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
             os.remove(src)
         except Exception:
             pass
+        if logo_tmp:
+            try:
+                os.remove(logo_tmp)
+            except Exception:
+                pass
 
 
 class PolishRequest(BaseModel):
@@ -1866,13 +1916,15 @@ class PolishRequest(BaseModel):
     aspect_ratio: str = "9:16"
     trim_start: float = 0
     trim_duration: float = 0        # 0 = keep full length
+    caption: str = ""               # optional; rendered in the user's brand color + font
 
 
 @router.post("/api/studio/polish")
 async def polish_upload(req: PolishRequest, current_user: dict = Depends(get_current_user)):
-    """Phase 1 — 'make your own material professional' foundation. Takes a user
-    upload and runs it through normalize→reframe(→trim) safely on the video queue
-    (refund on failure). Later phases add branding / captions / music steps."""
+    """'Make your own material professional'. Takes a user upload and runs it —
+    on the video queue (refund on failure) — through normalize → reframe (→trim),
+    plus their Brand Kit logo overlay (when logo_overlay is on) and an optional
+    brand-styled caption. Single-pass FFmpeg; later phases add music."""
     if not _ffmpeg_available():
         raise HTTPException(status_code=503, detail="FFmpeg is not installed on the server")
     uid = current_user["id"]
@@ -1901,6 +1953,10 @@ async def polish_upload(req: PolishRequest, current_user: dict = Depends(get_cur
         steps = [{"op": "normalize"}, {"op": "reframe", "aspect": req.aspect_ratio}]
         if req.trim_duration and req.trim_duration > 0:
             steps.append({"op": "trim", "start": max(0, req.trim_start), "duration": req.trim_duration})
+        if (req.caption or "").strip():
+            steps.append({"op": "caption", "text": req.caption.strip()})
+        # (Brand Kit logo overlay is applied automatically in the pipeline when
+        # the user has logo_overlay enabled — it is not a client-supplied step.)
         _charge_or_402(uid, POLISH_COST)      # refunded by the queue if the render fails
         resp = _enqueue_polish(uid, url, steps, POLISH_COST, req.aspect_ratio, src_path=src_path)
         enqueued = True
