@@ -1847,15 +1847,19 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
     download twice); if absent we resolve from `video_url`. The MAX_POLISH_SECONDS
     check here is a backstop — the endpoint rejects over-length uploads up front."""
     from routes.content_library import _kind_dir
-    aspect, trim, caption_text = "9:16", None, ""
+    aspect, trim, segments = "9:16", None, []
     for s in (steps or []):
         op = s.get("op")
         if op == "reframe" and s.get("aspect"):
             aspect = s["aspect"]
         elif op == "trim" and float(s.get("duration") or 0) > 0:
             trim = (max(0.0, float(s.get("start") or 0)), float(s["duration"]))
-        elif op == "caption" and (s.get("text") or "").strip():
-            caption_text = s["text"].strip()
+        elif op == "captions":
+            # Each role is optional; only non-empty ones become caption layers.
+            for role in ("hook", "body", "cta"):
+                t = (s.get(role) or "").strip()
+                if t:
+                    segments.append({"role": role, "text": t})
 
     # Brand Kit → logo overlay + caption styling (mirrors ai_media._apply_brand_watermark).
     kit = (_load_user_store(uid) or {}).get("brand_kit", {}) or {}
@@ -1867,10 +1871,10 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
             if is_tmp:
                 logo_tmp = lp
     caption = None
-    if caption_text:
+    if segments:
         caption = {
-            "text": caption_text,
-            "fontfile": vedit.font_resolver(kit.get("font", "Inter")),
+            "segments":  segments,                         # timed hook/body/cta layers
+            "fontfile":  vedit.font_resolver(kit.get("font", "Inter")),
             "fontcolor": kit.get("primary_color", ""),     # brand text color
             "boxcolor":  kit.get("secondary_color", ""),   # brand box behind text
         }
@@ -1916,7 +1920,12 @@ class PolishRequest(BaseModel):
     aspect_ratio: str = "9:16"
     trim_start: float = 0
     trim_duration: float = 0        # 0 = keep full length
-    caption: str = ""               # optional; rendered in the user's brand color + font
+    # Optional captions — any subset. Each renders as a timed, animated layer in
+    # the user's brand color + font. All empty → no caption (clean video).
+    hook: str = ""                  # opening line (larger, top, first ~2.5s)
+    body: str = ""                  # middle line (centered)
+    cta: str = ""                   # closing line (bottom, last ~3s)
+    caption: str = ""               # legacy alias → treated as body
 
 
 @router.post("/api/studio/polish")
@@ -1953,8 +1962,10 @@ async def polish_upload(req: PolishRequest, current_user: dict = Depends(get_cur
         steps = [{"op": "normalize"}, {"op": "reframe", "aspect": req.aspect_ratio}]
         if req.trim_duration and req.trim_duration > 0:
             steps.append({"op": "trim", "start": max(0, req.trim_start), "duration": req.trim_duration})
-        if (req.caption or "").strip():
-            steps.append({"op": "caption", "text": req.caption.strip()})
+        body = (req.body or req.caption or "").strip()   # `caption` is a legacy alias for body
+        if (req.hook or "").strip() or body or (req.cta or "").strip():
+            steps.append({"op": "captions", "hook": (req.hook or "").strip(),
+                          "body": body, "cta": (req.cta or "").strip()})
         # (Brand Kit logo overlay is applied automatically in the pipeline when
         # the user has logo_overlay enabled — it is not a client-supplied step.)
         _charge_or_402(uid, POLISH_COST)      # refunded by the queue if the render fails

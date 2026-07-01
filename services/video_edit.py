@@ -197,23 +197,74 @@ def logo_overlay_fragment(logo_pad: str, base_label: str, out_label: str,
     return f"{prep};{ov}"
 
 
-def _drawtext_fragment(cap_file: str, caption: dict) -> str:
-    """A single drawtext node styled from the Brand Kit: brand `font` (fontfile),
-    brand primary color (fontcolor) and optional brand secondary color (box)."""
-    fontfile  = caption.get("fontfile") or DEFAULT_FONT_FILE
-    fontcolor = _hex_to_ffmpeg(caption.get("fontcolor"), "white")
-    parts = [
-        f"drawtext=textfile='{cap_file}'",
-        f"fontfile='{fontfile}'",
-        "fontsize=54", f"fontcolor={fontcolor}",
-        "borderw=3", "bordercolor=black",
-        "x=(w-text_w)/2", "y=h-text_h-80",
-        "fix_bounds=1", "line_spacing=10",
-    ]
-    boxcolor = _hex_to_ffmpeg(caption.get("boxcolor"), "")
-    if boxcolor:
-        parts += ["box=1", f"boxcolor={boxcolor}@0.5", "boxborderw=18"]
-    return ":".join(parts)
+# ── Timed hook/CTA captions (Phase 3) ──────────────────────────────────────────
+# Each caption role is its own timed, fading drawtext layer, styled from the
+# Brand Kit. Roles are independent: any subset {hook, body, cta} may be supplied
+# (or none → no caption at all). Rendered into the same single filtergraph pass.
+CAP_FADE      = 0.4       # fade in/out seconds
+CAP_HOOK_SECS = 2.5      # default hook window: first ~2.5s
+CAP_CTA_SECS  = 3.0      # default CTA window: last ~3s
+CAP_BOX_PAD   = 34       # generous horizontal padding (premium look; drawtext boxes are rectangular)
+CAP_BOX_ALPHA = 0.55
+# Per-role style presets: size + vertical placement (drawtext y-expression).
+_CAP_PRESETS = {
+    "hook": {"fontsize": 64, "y": "(h*0.10)"},                # larger, near the top
+    "body": {"fontsize": 46, "y": "((h-text_h)/2)"},          # medium, centered
+    "cta":  {"fontsize": 56, "y": "(h-text_h-(h*0.10))"},     # styled, near the bottom
+}
+
+
+def _cap_window(role: str, dur: float, has_hook: bool, has_cta: bool) -> tuple:
+    """Default on-screen window (start, end) seconds for a caption role, on the
+    OUTPUT timeline (post-trim, t starts at 0)."""
+    if role == "hook":
+        return 0.0, min(CAP_HOOK_SECS, dur)
+    if role == "cta":
+        return max(0.0, dur - CAP_CTA_SECS), dur
+    # body fills the gap between hook and CTA (or the whole clip if neither).
+    a = min(CAP_HOOK_SECS, dur) if has_hook else 0.0
+    b = max(0.0, dur - CAP_CTA_SECS) if has_cta else dur
+    if b - a < 0.5:
+        a, b = 0.0, dur
+    return a, b
+
+
+def caption_fragments(segments: list, duration: float, style: dict, out_prefix: str) -> tuple:
+    """Build one timed+animated drawtext node per caption segment (hook/body/cta),
+    styled from the Brand Kit. Returns (nodes, tmp_textfiles). Each node fades in
+    and out (alpha expression) and is gated to its window (enable=between). The
+    caller chains the nodes so they all render in a single encode. Empty segments
+    are skipped, so captions are fully optional and independently toggleable."""
+    roles = {(s.get("role") or "body") for s in segments if (s.get("text") or "").strip()}
+    has_hook, has_cta = "hook" in roles, "cta" in roles
+    fontfile  = style.get("fontfile") or DEFAULT_FONT_FILE
+    fontcolor = _hex_to_ffmpeg(style.get("fontcolor"), "white")
+    boxcolor  = _hex_to_ffmpeg(style.get("boxcolor"), "black")   # always boxed for legibility
+    nodes, files = [], []
+    for i, seg in enumerate(segments):
+        text = (seg.get("text") or "").strip()
+        if not text:
+            continue
+        role = seg.get("role") or "body"
+        preset = _CAP_PRESETS.get(role, _CAP_PRESETS["body"])
+        a, b = _cap_window(role, duration, has_hook, has_cta)
+        fade = max(0.05, min(CAP_FADE, (b - a) / 2 - 0.01))
+        f = f"{out_prefix}.cap{i}.txt"
+        with open(f, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(textwrap.wrap(text, 26)) or " ")
+        files.append(f)
+        # Fade in over `fade`, hold, fade out over `fade` — evaluated only while
+        # enable is true. Single-quoted so the graph parser leaves commas alone.
+        alpha = (f"if(lt(t,{a}+{fade}),(t-{a})/{fade},"
+                 f"if(lt(t,{b}-{fade}),1,({b}-t)/{fade}))")
+        node = (f"drawtext=textfile='{f}':fontfile='{fontfile}':fontsize={preset['fontsize']}"
+                f":fontcolor={fontcolor}:borderw=3:bordercolor=black"
+                f":x=(w-text_w)/2:y={preset['y']}"
+                f":box=1:boxcolor={boxcolor}@{CAP_BOX_ALPHA}:boxborderw={CAP_BOX_PAD}"
+                f":line_spacing=8:fix_bounds=1"
+                f":enable='between(t,{a},{b})':alpha='{alpha}'")
+        nodes.append(node)
+    return nodes, files
 
 
 def _result(path: str, w: int, h: int, had_audio: bool) -> dict:
@@ -231,7 +282,8 @@ def _single_pass(src: str, out: str, w: int, h: int, fps: int,
     overlaying a Brand Kit logo and burning a brand-styled caption — ALL in ONE
     encode (single filtergraph, no chained re-encodes). Injects a silent stereo
     track when the source has no audio. trim=(start,dur) or None; logo={path,
-    position,opacity} or None; caption={text,fontfile,fontcolor,boxcolor} or None."""
+    position,opacity} or None; caption={segments:[{role,text}],fontfile,fontcolor,
+    boxcolor} or None (timed hook/body/cta layers — omit for a clean, uncaptioned clip)."""
     src_has_audio = has_audio(src)
 
     # Assemble inputs; track each input's index so later filters reference the
@@ -265,13 +317,13 @@ def _single_pass(src: str, out: str, w: int, h: int, fps: int,
                                         logo.get("position", "bottom-right"),
                                         logo.get("opacity", LOGO_OPACITY), w, h))
         cur = "_vlogo"
-    cap_file = None
-    if caption and (caption.get("text") or "").strip():
-        cap_file = out + ".caption.txt"
-        with open(cap_file, "w", encoding="utf-8") as f:
-            f.write("\n".join(textwrap.wrap(caption["text"].strip(), 30)) or " ")
-        fc.append(f"[{cur}]{_drawtext_fragment(cap_file, caption)}[_vcap]")
-        cur = "_vcap"
+    cap_files = []
+    if caption and caption.get("segments"):
+        eff_dur = float(trim[1]) if trim else probe_duration(src)
+        nodes, cap_files = caption_fragments(caption["segments"], eff_dur, caption, out)
+        for i, node in enumerate(nodes):
+            fc.append(f"[{cur}]{node}[_vc{i}]")
+            cur = f"_vc{i}"
 
     maps = ["-map", f"[{cur}]"]
     if src_has_audio:
@@ -288,9 +340,9 @@ def _single_pass(src: str, out: str, w: int, h: int, fps: int,
     try:
         _run(cmd, timeout)
     finally:
-        if cap_file:
+        for cf in cap_files:
             try:
-                os.remove(cap_file)
+                os.remove(cf)
             except Exception:
                 pass
     return _result(out, w, h, src_has_audio)
