@@ -9,6 +9,7 @@ from typing import List, Optional
 
 logger = logging.getLogger("ugoingviral.studio")
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from routes.auth import get_current_user
 from services.store import store, save_store, _load_user_store, _save_user_store
@@ -1112,14 +1113,22 @@ def _add_watermark(input_path: str, output_path: str) -> bool:
         return False
 
 def _merge_voiceover(video_path: str, audio_path: str, output_path: str) -> bool:
-    """Mix voice-over with video (replace or mix audio)."""
+    """Mix a voice-over into a LOCAL video: VO on top, the original audio ducked
+    UNDER it (sidechaincompress keyed on the VO) so narration stays clear, then
+    loudnorm. Revived + corrected — the old version had no ffmpeg output mapping
+    for the mixed audio and a bare amix that could drop/replace audio; it was also
+    never actually called. Fails safe (returns False)."""
     try:
-        subprocess.run([
+        fc = ("[0:a]aresample=44100[og];"
+              "[1:a]aresample=44100,asplit=2[vok][vom];"
+              "[og][vok]sidechaincompress=threshold=0.03:ratio=8:attack=5:release=250[ogd];"
+              "[ogd][vom]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-16:TP=-1.5:LRA=11[aout]")
+        r = subprocess.run([
             "ffmpeg", "-y", "-i", video_path, "-i", audio_path,
-            "-filter_complex", "[1:a]volume=1[a1];[0:a]volume=0.15[a0];[a0][a1]amix=inputs=2:duration=shortest",
-            "-c:v", "copy", output_path
-        ], capture_output=True, timeout=120)
-        return os.path.exists(output_path)
+            "-filter_complex", fc, "-map", "0:v", "-map", "[aout]",
+            "-c:v", "copy", "-c:a", "aac", "-shortest", output_path
+        ], capture_output=True, timeout=180)
+        return r.returncode == 0 and os.path.exists(output_path)
     except Exception:
         return False
 
@@ -1769,6 +1778,33 @@ POLISH_COST   = VIDEO_EDITING["upload_and_edit"]   # 50
 CAPTIONS_COST = VIDEO_EDITING["effects_filter"]    # 25
 MAX_POLISH_SECONDS = 600                           # protect the box from huge re-encodes
 
+# Bundled royalty-free music library (Phase 4). Tracks + license/attribution live
+# in assets/music/manifest.json; files served via /api/studio/music/{id}/file.
+_MUSIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "music")
+
+
+def _music_manifest() -> dict:
+    try:
+        with open(os.path.join(_MUSIC_DIR, "manifest.json"), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"tracks": []}
+
+
+def _music_track(track_id: str) -> dict:
+    for t in _music_manifest().get("tracks", []):
+        if t.get("id") == track_id:
+            return t
+    return {}
+
+
+def _music_path(track_id: str) -> str:
+    t = _music_track(track_id)
+    if not t:
+        return ""
+    p = os.path.join(_MUSIC_DIR, t.get("file", ""))
+    return p if os.path.exists(p) else ""
+
 
 def _resolve_source_video(url: str) -> str:
     """Resolve a user media URL (/user_content, /uploads, or http) to a local
@@ -1841,7 +1877,7 @@ def _build_polish_layers(uid: str, steps: list) -> tuple:
     Shared by the real render AND the preview so the two always match exactly.
     Returns (aspect, trim, logo, logo_tmp, caption). `include_logo` (from an
     'opts' step) overrides the Brand Kit's logo_overlay for this render."""
-    aspect, trim, segments, include_logo = "9:16", None, [], None
+    aspect, trim, segments, include_logo, music = "9:16", None, [], None, None
     for s in (steps or []):
         op = s.get("op")
         if op == "reframe" and s.get("aspect"):
@@ -1857,6 +1893,15 @@ def _build_polish_layers(uid: str, steps: list) -> tuple:
                     if pos in vedit.CAPTION_POSITIONS:
                         seg["position"] = pos
                     segments.append(seg)
+        elif op == "music" and s.get("track"):
+            mp = _music_path(s["track"])
+            if mp:
+                vol = s.get("volume")
+                try:
+                    vol = float(vol)
+                except (TypeError, ValueError):
+                    vol = vedit.MUSIC_VOL_DEFAULT
+                music = {"path": mp, "volume": vol, "duck": bool(s.get("duck", True))}
         elif op == "opts" and s.get("include_logo") is not None:
             include_logo = bool(s.get("include_logo"))
 
@@ -1885,7 +1930,7 @@ def _build_polish_layers(uid: str, steps: list) -> tuple:
             "fontcolor": kit.get("primary_color", ""),
             "boxcolor":  kit.get("secondary_color", ""),
         }
-    return aspect, trim, logo, logo_tmp, caption
+    return aspect, trim, logo, logo_tmp, caption, music
 
 
 def _polish_steps(req) -> list:
@@ -1899,6 +1944,9 @@ def _polish_steps(req) -> list:
                       "hook": (req.hook or "").strip(), "hook_pos": req.hook_pos,
                       "body": body,                    "body_pos": req.body_pos,
                       "cta":  (req.cta or "").strip(), "cta_pos":  req.cta_pos})
+    if (req.music_track or "").strip():
+        steps.append({"op": "music", "track": req.music_track.strip(),
+                      "volume": req.music_volume, "duck": req.music_duck})
     if req.include_logo is not None:
         steps.append({"op": "opts", "include_logo": bool(req.include_logo)})
     return steps
@@ -1915,7 +1963,7 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
     download twice); if absent we resolve from `video_url`. The MAX_POLISH_SECONDS
     check here is a backstop — the endpoint rejects over-length uploads up front."""
     from routes.content_library import _kind_dir
-    aspect, trim, logo, logo_tmp, caption = _build_polish_layers(uid, steps)
+    aspect, trim, logo, logo_tmp, caption, music = _build_polish_layers(uid, steps)
     src = src_path if (src_path and os.path.exists(src_path)) else _resolve_source_video(video_url)
     try:
         total = vedit.probe_duration(src)
@@ -1927,10 +1975,11 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
         item_id  = uuid.uuid4().hex[:12]
         out_path = os.path.join(_kind_dir(uid, "videos"), f"{item_id}.mp4")
         res = vedit.render_polish(src, out_path, aspect=aspect, trim=trim,
-                                  logo=logo, caption=caption)
+                                  logo=logo, caption=caption, music=music)
         extras = []
         if logo:    extras.append("logo")
         if caption: extras.append("caption")
+        if music:   extras.append("music")
         if trim:    extras.append(f"trim {round(trim[1])}s")
         prompt = f"Polished upload → {aspect}" + (f" ({', '.join(extras)})" if extras else "")
         entry, url = _register_polished_video(
@@ -1971,6 +2020,11 @@ class PolishRequest(BaseModel):
     # Per-render logo toggle: True forces the Brand Kit logo on, False off; None
     # (default) follows the Brand Kit's logo_overlay setting.
     include_logo: Optional[bool] = None
+    # Optional background music (id from /api/studio/music). Empty = no music
+    # (original audio untouched). Ducks under speech when music_duck is on.
+    music_track: str = ""
+    music_volume: float = 0.35
+    music_duck: bool = True
 
 
 @router.post("/api/studio/polish")
@@ -2044,7 +2098,8 @@ async def polish_preview(req: PolishRequest, current_user: dict = Depends(get_cu
             raise HTTPException(status_code=400,
                                 detail=(f"Video is too long ({int(dur // 60)}m{int(dur % 60):02d}s). "
                                         f"The max for polishing is {MAX_POLISH_SECONDS // 60} minutes."))
-        aspect, trim, logo, logo_tmp, caption = _build_polish_layers(uid, _polish_steps(req))
+        aspect, trim, logo, logo_tmp, caption, _music = _build_polish_layers(uid, _polish_steps(req))
+        # (music isn't shown in a still preview — it doesn't affect the frame.)
         # Sample a representative frame inside the (trimmed) range.
         at = (trim[0] + min(1.0, trim[1] / 2)) if trim else min(1.0, dur / 2)
         fname = f"prev_{uuid.uuid4().hex[:12]}.jpg"
@@ -2062,6 +2117,34 @@ async def polish_preview(req: PolishRequest, current_user: dict = Depends(get_cu
                     os.remove(p)
                 except Exception:
                     pass
+
+
+@router.get("/api/studio/music")
+def list_music(current_user: dict = Depends(get_current_user)):
+    """The bundled royalty-free music library the polish flow can use. Each track
+    carries its license + attribution so the user can credit it."""
+    m = _music_manifest()
+    tracks = []
+    for t in m.get("tracks", []):
+        if _music_path(t.get("id", "")):
+            tracks.append({
+                "id": t["id"], "title": t.get("title"), "mood": t.get("mood", ""),
+                "duration": t.get("duration"), "license": t.get("license"),
+                "attribution": t.get("attribution"),
+                "url": f"/api/studio/music/{t['id']}/file",
+            })
+    return {"tracks": tracks, "license_url": m.get("license_url"),
+            "note": "Royalty-free (CC BY 4.0) — free for commercial use on "
+                    "TikTok/YouTube/Instagram. Please credit the artist (attribution shown per track)."}
+
+
+@router.get("/api/studio/music/{track_id}/file")
+def get_music_file(track_id: str, current_user: dict = Depends(get_current_user)):
+    """Serve a bundled track so the UI can play a preview-listen before rendering."""
+    p = _music_path(track_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Track not found")
+    return FileResponse(p, media_type="audio/mpeg")
 
 
 class StudioCaptionRequest(BaseModel):

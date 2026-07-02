@@ -313,34 +313,86 @@ def _result(path: str, w: int, h: int, had_audio: bool) -> dict:
             "had_audio": had_audio}
 
 
-def _single_pass(src: str, out: str, w: int, h: int, fps: int,
-                 trim=None, logo=None, caption=None, timeout: int = 600) -> dict:
+# ── Audio mixing (Phase 4: background music, optional voice-over) ───────────────
+MUSIC_VOL_DEFAULT = 0.35
+_LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=11"   # broadcast-ish target for social
+
+
+def audio_mix_fragment(orig_label, music_label, vo_label, out_label: str = "aout",
+                       duck: bool = True, music_vol: float = MUSIC_VOL_DEFAULT) -> tuple:
+    """Build the audio filtergraph nodes that mix background music (+ optional
+    voice-over) UNDER the original/speech audio. Returns (nodes, out_label).
+
+    - Speech = original audio (+ VO if present). Music is laid under it.
+    - duck=True → the music is side-chain compressed by the speech, so it dips
+      automatically whenever someone is talking (sidechaincompress) and swells
+      back in the gaps.
+    - Final pass is loudnorm so overall loudness is consistent.
+    Any of orig/music/vo may be absent; music is looped to the clip via the
+    caller's `-stream_loop -1` + `-shortest`."""
+    nodes, speech_parts = [], []
+    if orig_label:
+        nodes.append(f"[{orig_label}]aresample={_AUDIO_RATE}[_oaa]"); speech_parts.append("_oaa")
+    if vo_label:
+        nodes.append(f"[{vo_label}]aresample={_AUDIO_RATE}[_voa]"); speech_parts.append("_voa")
+    speech = None
+    if len(speech_parts) == 2:
+        nodes.append(f"[_oaa][_voa]amix=inputs=2:duration=longest:normalize=0[_sp]"); speech = "_sp"
+    elif len(speech_parts) == 1:
+        speech = speech_parts[0]
+
+    if not music_label:
+        if speech:
+            nodes.append(f"[{speech}]{_LOUDNORM}[{out_label}]")
+            return nodes, out_label
+        return [], None
+    nodes.append(f"[{music_label}]aresample={_AUDIO_RATE},volume={_clamp01(music_vol)}[_mus]")
+    if duck and speech:
+        # Split speech: one copy keys the compressor, one goes into the final mix.
+        nodes.append(f"[{speech}]asplit=2[_spk][_spm]")
+        nodes.append(f"[_mus][_spk]sidechaincompress=threshold=0.05:ratio=6:attack=5:release=250[_musd]")
+        nodes.append(f"[_spm][_musd]amix=inputs=2:duration=first:normalize=0,{_LOUDNORM}[{out_label}]")
+    elif speech:
+        nodes.append(f"[{speech}][_mus]amix=inputs=2:duration=first:normalize=0,{_LOUDNORM}[{out_label}]")
+    else:
+        nodes.append(f"[_mus]{_LOUDNORM}[{out_label}]")   # music only (silent video)
+    return nodes, out_label
+
+
+def _single_pass(src: str, out: str, w: int, h: int, fps: int, trim=None, logo=None,
+                 caption=None, music=None, voiceover=None, timeout: int = 600) -> dict:
     """Normalize (+ optional trim) a SINGLE clip onto a WxH canvas, optionally
-    overlaying a Brand Kit logo and burning a brand-styled caption — ALL in ONE
-    encode (single filtergraph, no chained re-encodes). Injects a silent stereo
-    track when the source has no audio. trim=(start,dur) or None; logo={path,
-    position,opacity} or None; caption={segments:[{role,text}],fontfile,fontcolor,
-    boxcolor} or None (timed hook/body/cta layers — omit for a clean, uncaptioned clip)."""
+    overlaying a Brand Kit logo, burning brand-styled captions, and mixing in
+    background music (+ optional voice-over) — ALL in ONE encode. Injects a silent
+    track only when there's no audio at all. trim=(start,dur); logo={path,position,
+    opacity,scale}; caption={segments,...}; music={path,volume,duck}; voiceover=path."""
     src_has_audio = has_audio(src)
 
-    # Assemble inputs; track each input's index so later filters reference the
-    # right pad (logo image and/or the silent-audio source shift the indices).
+    # Inputs — index order matters for the filtergraph pads.
     cmd = ["ffmpeg", "-y", "-i", src]
     next_idx = 1
     logo_idx = None
     if logo and logo.get("path") and os.path.exists(logo["path"]):
-        cmd += ["-i", logo["path"]]
-        logo_idx = next_idx
-        next_idx += 1
+        cmd += ["-i", logo["path"]]; logo_idx = next_idx; next_idx += 1
     else:
         logo = None
+    music_idx, music_vol, music_duck = None, MUSIC_VOL_DEFAULT, True
+    if music and music.get("path") and os.path.exists(music["path"]):
+        # Loop the track so it always covers the clip; -shortest trims it to length.
+        cmd += ["-stream_loop", "-1", "-i", music["path"]]; music_idx = next_idx; next_idx += 1
+        music_vol = float(music.get("volume", MUSIC_VOL_DEFAULT)); music_duck = bool(music.get("duck", True))
+    else:
+        music = None
+    vo_idx = None
+    if voiceover and os.path.exists(voiceover):
+        cmd += ["-i", voiceover]; vo_idx = next_idx; next_idx += 1
+    else:
+        voiceover = None
     sil_idx = None
-    if not src_has_audio:
-        cmd += ["-f", "lavfi", "-i", f"anullsrc=r={_AUDIO_RATE}:cl=stereo"]
-        sil_idx = next_idx
-        next_idx += 1
+    if not src_has_audio and not music and not voiceover:
+        cmd += ["-f", "lavfi", "-i", f"anullsrc=r={_AUDIO_RATE}:cl=stereo"]; sil_idx = next_idx; next_idx += 1
 
-    # Video chain: normalize/reframe (+trim) → logo overlay → caption, one graph.
+    # Video chain: normalize/reframe (+trim) → logo overlay → captions, one graph.
     fc = []
     vchain = ""
     if trim:
@@ -364,7 +416,23 @@ def _single_pass(src: str, out: str, w: int, h: int, fps: int,
             cur = f"_vc{i}"
 
     maps = ["-map", f"[{cur}]"]
-    if src_has_audio:
+    need_shortest = False
+    if music or voiceover:
+        orig_label = None
+        if src_has_audio:
+            achain = ""
+            if trim:
+                s, d = float(trim[0]), float(trim[1])
+                achain += f"atrim=start={s}:duration={d},asetpts=PTS-STARTPTS,"
+            fc.append(f"[0:a]{achain}aresample={_AUDIO_RATE}[_oa]")
+            orig_label = "_oa"
+        anodes, aout = audio_mix_fragment(
+            orig_label, f"{music_idx}:a" if music else None,
+            f"{vo_idx}:a" if voiceover else None, "aout", music_duck, music_vol)
+        fc += anodes
+        maps += ["-map", "[aout]"]
+        need_shortest = True          # looped music → bound output to the video length
+    elif src_has_audio:
         achain = ""
         if trim:
             s, d = float(trim[0]), float(trim[1])
@@ -372,9 +440,20 @@ def _single_pass(src: str, out: str, w: int, h: int, fps: int,
         fc.append(f"[0:a]{achain}aresample={_AUDIO_RATE}[a]")
         maps += ["-map", "[a]"]
     else:
-        maps += ["-map", f"{sil_idx}:a", "-shortest"]
+        maps += ["-map", f"{sil_idx}:a"]; need_shortest = True
 
-    cmd += ["-filter_complex", ";".join(fc)] + maps + _V_CODEC + _A_CODEC + _FASTSTART + [out]
+    cmd += ["-filter_complex", ";".join(fc)] + maps + _V_CODEC + _A_CODEC + _FASTSTART
+    if need_shortest:
+        # A looped/infinite audio source (music) or a synthesized silent track
+        # never ends on its own; `-shortest` alone can hang against it (ffmpeg
+        # spins on the infinite input). Hard-bound the output to the video's
+        # length with `-t` so it always terminates cleanly.
+        out_dur = float(trim[1]) if trim else probe_duration(src)
+        if out_dur and out_dur > 0:
+            cmd += ["-t", f"{out_dur:.3f}"]
+        else:
+            cmd += ["-shortest"]
+    cmd += [out]
     try:
         _run(cmd, timeout)
     finally:
@@ -403,13 +482,15 @@ def reframe(src: str, out: str, aspect: str = "9:16",
 
 
 def render_polish(src: str, out: str, *, aspect: str = "9:16", fps: int = DEFAULT_FPS,
-                  trim=None, logo=None, caption=None, timeout: int = 600) -> dict:
+                  trim=None, logo=None, caption=None, music=None, voiceover=None,
+                  timeout: int = 600) -> dict:
     """Polish engine (pure): normalize + reframe (+ optional trim) of a single
-    upload, plus optional Brand Kit logo overlay and brand-styled caption, in ONE
-    pass. Returns {path,duration,width,height,size_bytes,had_audio}. logo/caption
-    are the Phase-2 fragments; Phases 3–4 extend the same single graph."""
+    upload, plus optional Brand Kit logo overlay, brand-styled captions, and
+    background music (+ optional voice-over) — all in ONE pass. Returns
+    {path,duration,width,height,size_bytes,had_audio}. Every layer is optional."""
     w, h = canvas_for(aspect)
-    return _single_pass(src, out, w, h, fps, trim=trim, logo=logo, caption=caption, timeout=timeout)
+    return _single_pass(src, out, w, h, fps, trim=trim, logo=logo, caption=caption,
+                        music=music, voiceover=voiceover, timeout=timeout)
 
 
 def render_preview_frame(src: str, out_img: str, *, aspect: str = "9:16",

@@ -1,0 +1,48 @@
+{
+  "_note": "Curated royalty-free background music bundled with UgoingViral. All tracks are by Kevin MacLeod (incompetech.com), licensed under Creative Commons Attribution 4.0 (CC BY 4.0): free for commercial use (TikTok/YouTube/Instagram) provided the artist is credited. Attribution text per track is in `attribution` and is surfaced to users via /api/studio/music so they can credit it in their post caption.",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "tracks": [
+    {
+      "id": "carefree", "title": "Carefree", "mood": "Happy · light acoustic",
+      "file": "carefree.mp3", "duration": 205,
+      "artist": "Kevin MacLeod", "source": "https://incompetech.com/",
+      "license": "CC BY 4.0", "commercial_ok": true, "attribution_required": true,
+      "attribution": "\"Carefree\" by Kevin MacLeod (incompetech.com) — CC BY 4.0"
+    },
+    {
+      "id": "local_forecast", "title": "Local Forecast – Elevator", "mood": "Chill · lounge",
+      "file": "local_forecast.mp3", "duration": 189,
+      "artist": "Kevin MacLeod", "source": "https://incompetech.com/",
+      "license": "CC BY 4.0", "commercial_ok": true, "attribution_required": true,
+      "attribution": "\"Local Forecast - Elevator\" by Kevin MacLeod (incompetech.com) — CC BY 4.0"
+    },
+    {
+      "id": "beauty_flow", "title": "Beauty Flow", "mood": "Soft piano · elegant",
+      "file": "beauty_flow.mp3", "duration": 433,
+      "artist": "Kevin MacLeod", "source": "https://incompetech.com/",
+      "license": "CC BY 4.0", "commercial_ok": true, "attribution_required": true,
+      "attribution": "\"Beauty Flow\" by Kevin MacLeod (incompetech.com) — CC BY 4.0"
+    },
+    {
+      "id": "inspired", "title": "Inspired", "mood": "Uplifting · corporate",
+      "file": "inspired.mp3", "duration": 286,
+      "artist": "Kevin MacLeod", "source": "https://incompetech.com/",
+      "license": "CC BY 4.0", "commercial_ok": true, "attribution_required": true,
+      "attribution": "\"Inspired\" by Kevin MacLeod (incompetech.com) — CC BY 4.0"
+    },
+    {
+      "id": "wallpaper", "title": "Wallpaper", "mood": "Calm · mellow",
+      "file": "wallpaper.mp3", "duration": 220,
+      "artist": "Kevin MacLeod", "source": "https://incompetech.com/",
+      "license": "CC BY 4.0", "commercial_ok": true, "attribution_required": true,
+      "attribution": "\"Wallpaper\" by Kevin MacLeod (incompetech.com) — CC BY 4.0"
+    },
+    {
+      "id": "sneaky_snitch", "title": "Sneaky Snitch", "mood": "Playful · quirky",
+      "file": "sneaky_snitch.mp3", "duration": 136,
+      "artist": "Kevin MacLeod", "source": "https://incompetech.com/",
+      "license": "CC BY 4.0", "commercial_ok": true, "attribution_required": true,
+      "attribution": "\"Sneaky Snitch\" by Kevin MacLeod (incompetech.com) — CC BY 4.0"
+    }
+  ]
+}

@@ -4914,6 +4914,20 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
         </div>
       </div>
 
+      <div style="margin-top:16px;font-size:12px;font-weight:700;color:var(--tx2)">Background music <span style="font-weight:400;color:var(--tx3)">— optional, royalty-free</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+        <select id="polish-music" class="fs" style="flex:1;min-width:190px" onchange="polishMusicChanged();polishReset()">
+          <option value="">🔇 No music (keep original audio)</option>
+        </select>
+        <button type="button" class="btn bg bsm" id="polish-music-play" onclick="polishMusicListen()" style="display:none">▶ Listen</button>
+        <div class="trow" style="border:1px solid var(--border);border-radius:10px;padding:9px 12px">
+          <div class="tname" style="font-size:12px">Duck under voice</div>
+          <div class="tog on" id="tog-polish-duck" onclick="togIt(this);polishReset()"></div>
+        </div>
+      </div>
+      <div id="polish-music-attr" style="font-size:10px;color:var(--tx3);margin-top:5px"></div>
+      <audio id="polish-music-audio" preload="none" style="display:none"></audio>
+
       <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <button class="btn bg bsm" id="polish-preview-btn" onclick="polishPreview()" style="font-weight:700">👁 Preview <span style="opacity:.7">(free)</span></button>
         <button class="btn bp bsm" id="polish-render-btn" onclick="polishRender()" style="font-weight:700;display:none">✅ Make it <span id="polish-render-cost" style="opacity:.7">(50 cr)</span></button>
@@ -7383,6 +7397,7 @@ async function studioInit() {
   if (typeof loadFreeVideoStatus === 'function') loadFreeVideoStatus();
   if (typeof loadSmartCutSources === 'function') loadSmartCutSources();
   if (typeof loadPolishSources === 'function') loadPolishSources();
+  if (typeof loadPolishMusic === 'function') loadPolishMusic();
 }
 
 async function loadMyVideos() {
@@ -15444,6 +15459,45 @@ async function loadPolishSources() {
   } catch (e) {}
 }
 
+// Bundled royalty-free music (fetched once).
+window._polishMusic = {};
+async function loadPolishMusic() {
+  var sel = document.getElementById('polish-music');
+  if (!sel) return;
+  try {
+    var d = await apiFetch('/api/studio/music');
+    var opts = '<option value="">🔇 No music (keep original audio)</option>';
+    window._polishMusic = {};
+    (d && d.tracks || []).forEach(function(t) {
+      window._polishMusic[t.id] = t;
+      opts += '<option value="' + t.id + '">🎵 ' + (t.title || t.id) + (t.mood ? ' · ' + t.mood : '') + '</option>';
+    });
+    sel.innerHTML = opts;
+  } catch (e) {}
+}
+function polishMusicChanged() {
+  var id = (document.getElementById('polish-music') || {}).value || '';
+  var t = window._polishMusic[id];
+  var playBtn = document.getElementById('polish-music-play');
+  var attr = document.getElementById('polish-music-attr');
+  var au = document.getElementById('polish-music-audio');
+  if (au) { au.pause(); }
+  if (playBtn) playBtn.style.display = t ? 'inline-flex' : 'none';
+  if (playBtn) playBtn.innerHTML = '▶ Listen';
+  if (attr) attr.textContent = t ? ('♪ ' + (t.attribution || '') + ' — free for commercial use, please credit in your caption.') : '';
+}
+function polishMusicListen() {
+  var id = (document.getElementById('polish-music') || {}).value || '';
+  var t = window._polishMusic[id];
+  if (!t) return;
+  var au = document.getElementById('polish-music-audio');
+  var btn = document.getElementById('polish-music-play');
+  if (!au.paused) { au.pause(); btn.innerHTML = '▶ Listen'; return; }
+  au.src = API + t.url; au.play();
+  btn.innerHTML = '⏸ Stop';
+  au.onended = function() { btn.innerHTML = '▶ Listen'; };
+}
+
 function polishPayload() {
   return {
     video_url: (document.getElementById('polish-source') || {}).value || '',
@@ -15451,7 +15505,10 @@ function polishPayload() {
     include_logo: document.getElementById('tog-polish-logo').classList.contains('on'),
     hook: v('polish-hook'), hook_pos: (document.getElementById('polish-hook-pos') || {}).value || '',
     body: v('polish-body'), body_pos: (document.getElementById('polish-body-pos') || {}).value || '',
-    cta: v('polish-cta'),   cta_pos:  (document.getElementById('polish-cta-pos') || {}).value || ''
+    cta: v('polish-cta'),   cta_pos:  (document.getElementById('polish-cta-pos') || {}).value || '',
+    music_track: (document.getElementById('polish-music') || {}).value || '',
+    music_duck: document.getElementById('tog-polish-duck').classList.contains('on'),
+    music_volume: 0.35
   };
 }
 
