@@ -120,76 +120,107 @@ async def instagram_login_callback(code: str = "", state: str = "", error: str =
 
 @router.get("/api/instagram/callback")
 async def instagram_oauth_callback(code: str = "", state: str = "", error: str = ""):
-    """Modtag OAuth callback fra Meta"""
+    """Facebook OAuth callback → connect a Facebook PAGE (independent of Instagram).
+    Stores the page access token/name under facebook_* so it stands on its own."""
     if error:
         return {"status": "error", "message": error}
     if not code:
         return {"status": "error", "message": "Ingen code modtaget"}
     try:
-        from instagram_api import exchange_code_for_token, get_long_lived_token, get_instagram_account_id, get_account_info
+        from instagram_api import exchange_code_for_token, get_long_lived_token
         import httpx as _httpx
-        # Exchange code for token
         token_data = await exchange_code_for_token(code)
-        add_log(f"DEBUG token_data: {str(token_data)[:200]}", "info")
         short_token = token_data.get("access_token")
         if not short_token:
             return {"status": "error", "message": "Ingen access token"}
-        # Konverter til long-lived token
         long_data = await get_long_lived_token(short_token)
         long_token = long_data.get("access_token", short_token)
-        expires_at = long_data.get("expires_at")
-        # Debug — hvad returnerer /me/accounts?
         async with _httpx.AsyncClient() as c:
-            r = await c.get("https://graph.facebook.com/v19.0/me/accounts", params={"access_token": long_token, "fields": "id,name,instagram_business_account"})
-            add_log(f"DEBUG accounts: {r.text[:300]}", "info")
-        # Hent Instagram account ID
-        ig_id = await get_instagram_account_id(long_token)
-        if not ig_id:
-            return {"status": "error", "message": "Ingen Instagram Business konto fundet — forbind Instagram til en Facebook side"}
-        # Hent konto info
-        info = await get_account_info(ig_id, long_token)
-        # Persist to the user who STARTED the connect (uid encoded in state; the
-        # redirect from Meta carries no auth header, so the store isn't bound).
+            r = await c.get("https://graph.facebook.com/v19.0/me/accounts",
+                            params={"access_token": long_token,
+                                    "fields": "id,name,access_token,instagram_business_account"})
+        pages = (r.json() or {}).get("data", [])
+        if not pages:
+            return {"status": "error", "message": "Ingen Facebook side fundet — opret en Facebook Page og prøv igen."}
+        page = pages[0]
         from services.store import _load_user_store, _save_user_store, _uid_ctx
         uid = _decode_state_uid(state) or _uid_ctx.get(None)
         if not uid:
             return {"status": "error", "message": "Session udløbet — log ind og prøv igen."}
         us = _load_user_store(uid)
         s = us.setdefault("settings", {})
-        s["instagram_api_token"] = long_token
-        s["instagram_api_expires"] = expires_at
-        s["instagram_ig_id"] = ig_id
-        s["instagram_username"] = info.get("username", "")
-        s["instagram_api_username"] = info.get("username", "")
-        s["instagram_api_connected"] = True
-        s["instagram_connection_method"] = "facebook"
-        s["instagram_connected_at"] = datetime.utcnow().isoformat()
-        s["instagram_last_sync"] = datetime.utcnow().isoformat()
+        s["facebook_page_token"]   = page.get("access_token", "")
+        s["facebook_page_id"]      = page.get("id", "")
+        s["facebook_page_name"]    = page.get("name", "")
+        s["facebook_user_token"]   = long_token
+        s["facebook_connected"]    = True
+        s["facebook_connected_at"] = datetime.utcnow().isoformat()
         _save_user_store(uid, us)
-        add_log(f"✅ Instagram API (Facebook) forbundet: @{info.get('username', ig_id)}", "success")
-        # Redirect til app
+        add_log(f"✅ Facebook side forbundet: {page.get('name', '')}", "success")
         from fastapi.responses import RedirectResponse
-        return RedirectResponse(url="/app?instagram_connected=1")
+        return RedirectResponse(url="/app?facebook_connected=1")
     except Exception as e:
-        add_log(f"❌ Instagram OAuth fejl: {str(e)[:100]}", "error")
+        add_log(f"❌ Facebook OAuth fejl: {str(e)[:100]}", "error")
         return {"status": "error", "message": str(e)}
+
 
 @router.get("/api/instagram/status")
 async def instagram_api_status():
-    """Connection status incl. which METHOD is active and whether insights are
-    available (insights = Facebook connection only)."""
+    """Instagram (Instagram Login) connection status — its own account, independent
+    of Facebook. Insights ARE available on Instagram Login now."""
     s = store.get("settings", {})
-    tgt = _ig_target(s)
-    method = tgt.get("method", "") if tgt else ""
+    connected = bool(s.get("instagram_login_token") and s.get("instagram_login_user_id"))
+    # Legacy: users who connected Instagram via the old Facebook/Page flow.
+    legacy = (not connected) and bool(s.get("instagram_api_token") and s.get("instagram_ig_id"))
     return {
-        "connected": bool(tgt),
-        "method": method,                       # "instagram" | "facebook" | ""
+        "connected": connected or legacy,
+        "method": "instagram" if connected else ("facebook" if legacy else ""),
         "username": s.get("instagram_username", ""),
-        "ig_id": tgt.get("ig_id", "") if tgt else "",
-        "expires_at": tgt.get("expires", "") if tgt else "",
-        "insights_available": method == "facebook",
-        "mode": "api" if tgt else "playwright",
+        "expires_at": s.get("instagram_login_expires") if connected else s.get("instagram_api_expires", ""),
+        "insights_available": connected or legacy,
+        "mode": "api" if (connected or legacy) else "playwright",
     }
+
+
+@router.get("/api/facebook/status")
+async def facebook_status():
+    """Facebook Page connection status — stands on its own beside Instagram."""
+    s = store.get("settings", {})
+    return {
+        "connected": bool(s.get("facebook_page_token") and s.get("facebook_page_id")),
+        "page_name": s.get("facebook_page_name", ""),
+    }
+
+
+@router.post("/api/instagram/disconnect")
+async def instagram_disconnect(current_user: dict = Depends(get_current_user)):
+    """Disconnect the Instagram connection (clears IG-Login + any legacy IG fields)."""
+    from services.store import _load_user_store, _save_user_store
+    uid = current_user["id"]
+    us = _load_user_store(uid)
+    s = us.setdefault("settings", {})
+    for k in ["instagram_login_token", "instagram_login_user_id", "instagram_login_expires",
+              "instagram_username", "instagram_connection_method",
+              "instagram_api_token", "instagram_api_expires", "instagram_ig_id",
+              "instagram_api_username", "instagram_api_connected", "instagram_connected_at",
+              "instagram_last_sync", "instagram_user", "instagram_pass"]:
+        s.pop(k, None)
+    _save_user_store(uid, us)
+    return {"ok": True}
+
+
+@router.post("/api/facebook/disconnect")
+async def facebook_disconnect(current_user: dict = Depends(get_current_user)):
+    """Disconnect the Facebook Page connection."""
+    from services.store import _load_user_store, _save_user_store
+    uid = current_user["id"]
+    us = _load_user_store(uid)
+    s = us.setdefault("settings", {})
+    for k in ["facebook_page_token", "facebook_page_id", "facebook_page_name",
+              "facebook_user_token", "facebook_connected", "facebook_connected_at"]:
+        s.pop(k, None)
+    _save_user_store(uid, us)
+    return {"ok": True}
 
 @router.get("/api/instagram/posts")
 async def instagram_posts(limit: int = 20):
@@ -259,28 +290,32 @@ async def instagram_api_post(req: Request):
         add_log(f"❌ Instagram post fejl: {str(e)[:100]}", "error")
         return {"status": "error", "message": str(e)}
 
-_INSIGHTS_NEED_FB = {"status": "error", "insights_available": False,
-    "message": "Analytics require the Facebook connection. Reconnect using "
-               "\"Connect Facebook + Instagram\" to unlock insights."}
+_INSIGHTS_NONE = {"status": "error", "message": "Instagram ikke forbundet — gå til Connect"}
 
 
 @router.get("/api/instagram/insights/{post_id}")
 async def instagram_post_insights(post_id: str):
-    """Post metrics — Facebook connection only (Instagram Login doesn't provide these)."""
+    """Post metrics — Instagram Login (graph.instagram.com), or legacy IG-via-FB."""
     s = store.get("settings", {})
-    if s.get("instagram_connection_method") != "facebook" or not s.get("instagram_api_token"):
-        return _INSIGHTS_NEED_FB
-    from instagram_api import get_post_insights
-    return await get_post_insights(post_id, s.get("instagram_api_token"))
+    if s.get("instagram_login_token"):
+        from instagram_api import ig_login_media_insights
+        return await ig_login_media_insights(post_id, s["instagram_login_token"])
+    if s.get("instagram_api_token"):
+        from instagram_api import get_post_insights
+        return await get_post_insights(post_id, s["instagram_api_token"])
+    return _INSIGHTS_NONE
 
 @router.get("/api/instagram/account/insights")
 async def instagram_account_insights():
-    """Account metrics — Facebook connection only."""
+    """Account metrics — Instagram Login (graph.instagram.com), or legacy IG-via-FB."""
     s = store.get("settings", {})
-    if s.get("instagram_connection_method") != "facebook" or not s.get("instagram_api_token") or not s.get("instagram_ig_id"):
-        return _INSIGHTS_NEED_FB
-    from instagram_api import get_account_insights
-    return await get_account_insights(s.get("instagram_ig_id"), s.get("instagram_api_token"))
+    if s.get("instagram_login_token") and s.get("instagram_login_user_id"):
+        from instagram_api import ig_login_account_insights
+        return await ig_login_account_insights(s["instagram_login_user_id"], s["instagram_login_token"])
+    if s.get("instagram_api_token") and s.get("instagram_ig_id"):
+        from instagram_api import get_account_insights
+        return await get_account_insights(s["instagram_ig_id"], s["instagram_api_token"])
+    return _INSIGHTS_NONE
 
 # ══════════════════════════════════════════════════════════
 # SCHEDULER — kører automatisk i bagg@router.post("/api/instagram/post/test")

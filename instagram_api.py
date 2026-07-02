@@ -201,6 +201,25 @@ async def ig_login_account_info(access_token: str) -> dict:
         return r.json()
 
 
+async def ig_login_account_insights(ig_user_id: str, access_token: str,
+                                    metric: str = "reach", period: str = "day") -> dict:
+    """Account insights via the Instagram Login API (graph.instagram.com)."""
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{IG_GRAPH_BASE}/{ig_user_id}/insights",
+                        params={"access_token": access_token, "metric": metric,
+                                "period": period, "metric_type": "total_value"})
+        return r.json()
+
+
+async def ig_login_media_insights(media_id: str, access_token: str,
+                                  metric: str = "reach,likes,comments,saved,shares") -> dict:
+    """Per-post insights via the Instagram Login API."""
+    async with httpx.AsyncClient() as c:
+        r = await c.get(f"{IG_GRAPH_BASE}/{media_id}/insights",
+                        params={"access_token": access_token, "metric": metric})
+        return r.json()
+
+
 # ── Account Info ──────────────────────────────────────────────────────────────
 
 async def get_instagram_account_id(access_token: str) -> Optional[str]:

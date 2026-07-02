@@ -3221,37 +3221,17 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <button class="btn bg bsm">▾</button>
             </div>
           </div>
-          <div class="concard-actions">
-            <button class="btn bp bsm" onclick="event.stopPropagation();connectInstagramAPI()">🔁 Reconnect</button>
-            <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('instagram')">🗑️ Disconnect</button>
-          </div>
           <div class="conbody">
-            <div id="ig-api-status" style="display:none;background:rgba(225,48,108,.08);border:1px solid rgba(225,48,108,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
-              <div style="font-weight:700;color:#e1306c;margin-bottom:4px">✅ Instagram connected</div>
-              <div style="color:var(--tx2)">Account: <span id="ig-api-username" style="font-weight:600"></span></div>
-              <div style="color:var(--tx2);font-size:11px" id="ig-api-method"></div>
-              <div style="color:var(--tx3);font-size:11px" id="ig-api-expires"></div>
-              <div style="color:var(--tx3);font-size:11px" id="ig-api-synced"></div>
-              <div id="ig-api-upsell" style="display:none;margin-top:8px;font-size:11px;color:var(--tx2);background:rgba(24,119,242,.1);border:1px solid rgba(24,119,242,.25);border-radius:8px;padding:8px 10px">
-                📊 Want analytics? <a onclick="connectInstagramAPI()" style="cursor:pointer;color:var(--ac);text-decoration:underline;font-weight:600">Connect Facebook + Instagram</a> to unlock insights.
-              </div>
+            <div id="ig-connected" style="display:none;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px 14px">
+              <div style="font-weight:700;color:#22c55e;font-size:13px;margin-bottom:2px">✅ Connected</div>
+              <div style="color:var(--tx);font-size:14px">@<span id="ig-username" style="font-weight:700"></span></div>
+              <div style="color:var(--tx3);font-size:11px;margin-top:2px">Instagram Login · post + comments + insights</div>
+              <button class="btn br bsm" style="margin-top:10px" onclick="disconnectInstagram()">Disconnect</button>
             </div>
-            <div id="ig-connect-choices">
-              <button class="btn bp" style="width:100%;margin-bottom:6px;font-size:13px" onclick="connectInstagramLogin()">📸 Connect Instagram <span style="opacity:.75;font-weight:400">— quick setup</span></button>
-              <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;line-height:1.5">Log in with Instagram only (no Facebook Page). Post + manage comments. Easiest for most.</div>
-              <button class="btn bg" style="width:100%;margin-bottom:6px;font-size:13px" onclick="connectInstagramAPI()">🔗 Connect Facebook + Instagram <span style="opacity:.75;font-weight:400">— for analytics</span></button>
-              <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.5">📊 <b>Insights/analytics require this option</b> — connect through Facebook with your Instagram linked to a Page. Post + comments + insights.</div>
+            <div id="ig-disconnected">
+              <button class="btn bp" style="width:100%;font-size:13px" onclick="connectInstagramLogin()">📸 Connect Instagram</button>
+              <div style="font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5">Log in with Instagram — post, comments &amp; insights. No Facebook Page needed.</div>
             </div>
-            <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
-            <details style="display:none;margin-bottom:10px">
-              <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Connect manually for automation</summary>
-              <div style="margin-top:10px">
-                <div class="fg"><label class="fl">Username</label><input class="fi" id="ig-user" placeholder="@username"></div>
-                <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="ig-pass" placeholder="Password"></div>
-                <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('instagram')">💾 Save</button><button class="btn bg bsm" onclick="testLogin('instagram')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('instagram')">🗑️ Delete</button></div>
-              </div>
-            </details>
-
           </div>
         </div>
 
@@ -3341,16 +3321,17 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
               <button class="btn bg bsm">▾</button>
             </div>
           </div>
-          <div class="concard-actions">
-            <button class="btn bp bsm" onclick="event.stopPropagation();toggleCon('facebook')">🔁 Reconnect</button>
-            <button class="btn br bsm" onclick="event.stopPropagation();deleteConn('facebook')">🗑️ Disconnect</button>
-          </div>
           <div class="conbody">
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Connect your Facebook Page to post content automatically.</div>
-
-            <div class="fg"><label class="fl">Email</label><input class="fi" id="fb-user" placeholder="din@email.dk"></div>
-            <div class="fg"><label class="fl">Adgangskode</label><input class="fi" type="password" id="fb-pass" placeholder="Adgangskode"></div>
-            <div style="display:flex;gap:8px"><button class="btn bp bsm" onclick="saveConn('facebook')">💾 Gem</button><button class="btn bg bsm" onclick="testLogin('facebook')">🧪 Test</button><button class="btn br bsm" onclick="deleteConn('facebook')">🗑️ Slet</button></div>
+            <div id="fb-connected" style="display:none;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px 14px">
+              <div style="font-weight:700;color:#22c55e;font-size:13px;margin-bottom:2px">✅ Connected</div>
+              <div style="color:var(--tx);font-size:14px" id="fb-page-name"></div>
+              <div style="color:var(--tx3);font-size:11px;margin-top:2px">Facebook Page · post to your Page</div>
+              <button class="btn br bsm" style="margin-top:10px" onclick="disconnectFacebook()">Disconnect</button>
+            </div>
+            <div id="fb-disconnected">
+              <button class="btn bp" style="width:100%;font-size:13px" onclick="connectFacebook()">📘 Connect Facebook</button>
+              <div style="font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5">Log in with Facebook to post to your Facebook Page. Works independently of Instagram.</div>
+            </div>
           </div>
         </div>
 
@@ -7143,7 +7124,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('da-DK'); }, 1000);
   if (localStorage.getItem('theme') === 'light') applyTheme(true);
   loadSidebarUser();
-  checkHealth(); loadConnections(); loadSafetyStatus(); loadWorkspaces(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus(); _loadWatermarkSettings();
+  checkHealth(); loadConnections(); loadSafetyStatus(); loadWorkspaces(); loadQueue(); loadAutoSettings(); loadProducts(); checkInstagramAPIStatus(); checkFacebookStatus(); _loadWatermarkSettings();
   loadBilling(); loadSubAccounts();
   checkTikTokAPIStatus(); checkYouTubeAPIStatus(); checkTwitterAPIStatus();
   if(typeof checkInstagramToken==='function') checkInstagramToken();
@@ -10258,7 +10239,7 @@ function _igGrowthStartPolling() {
       if (s.status === 'logged_in') {
         statusEl.textContent = '✅ Connected — saving cookies…';
         toast('✅ Instagram connected via Growth session', 'success');
-        try { await checkInstagramAPIStatus(); } catch(e) {}
+        try { await checkInstagramAPIStatus(); await checkFacebookStatus(); } catch(e) {}
         try { await loadConnections(); } catch(e) {}
         setTimeout(closeInstagramGrowthConnect, 1500);
       } else if (s.status === 'error') {
@@ -11657,65 +11638,79 @@ async function connectInstagramLogin() {
   } catch(e) { toast('❌ ' + e.message, 'error'); }
 }
 
-// Full path: Facebook Login with a linked Page — post + comments + INSIGHTS.
-async function connectInstagramAPI() {
+// Facebook Page connection — INDEPENDENT OAuth (post to a Facebook Page).
+async function connectFacebook() {
   try {
     const r = await apiFetch('/api/instagram/oauth/start');
     if (r.authorization_url) {
       window.open(r.authorization_url, '_blank', 'width=600,height=700');
-      toast('🔗 Facebook login opened — log in and grant permissions', 'info');
-      // Tjek status efter 10 sek
-      setTimeout(checkInstagramAPIStatus, 10000);
+      toast('📘 Facebook login opened — log in and select your Page', 'info');
+      setTimeout(checkFacebookStatus, 10000);
     } else {
-      toast('❌ ' + (r.message || 'Fejl ved OAuth start'), 'error');
+      toast('❌ ' + (r.message || 'Could not start Facebook login'), 'error');
     }
   } catch(e) { toast('❌ ' + e.message, 'error'); }
 }
+var connectInstagramAPI = connectFacebook;   // legacy alias
 
+// Instagram card status (Instagram Login — its own account).
 async function checkInstagramAPIStatus() {
   try {
     const r = await apiFetch('/api/instagram/status');
-    const statusEl = document.getElementById('ig-api-status');
-    if (r.connected) {
-      if (statusEl) statusEl.style.display = 'block';
-      // Once connected, hide the connect choices — one method, no re-prompting.
-      var choices = document.getElementById('ig-connect-choices');
-      if (choices) choices.style.display = 'none';
-      const u = document.getElementById('ig-api-username');
-      if (u) u.textContent = '@' + r.username;
-      const m = document.getElementById('ig-api-method');
-      if (m) m.textContent = r.method === 'facebook'
-        ? 'Via Facebook — posts, comments + analytics ✅'
-        : 'Via Instagram — posts + comments (analytics need Facebook)';
-      // Show the "add Facebook for analytics" upsell only for Instagram-Login users.
-      var up = document.getElementById('ig-api-upsell');
-      if (up) up.style.display = (r.method === 'instagram') ? 'block' : 'none';
-      const e = document.getElementById('ig-api-expires');
-      var expired = false;
-      if (e) {
-        if (r.expires_at) {
-          e.textContent = 'Token expires: ' + r.expires_at.split('T')[0];
-          expired = new Date(r.expires_at).getTime() < Date.now();
-          if (expired) e.style.color = '#ef4444';
-        } else {
-          e.textContent = '';
-        }
-      }
-      const sy = document.getElementById('ig-api-synced');
-      if (sy) sy.textContent = 'Last sync: ' + new Date().toLocaleString('da-DK');
-      const cs = document.getElementById('cs-instagram');
-      if (cs) {
-        cs.textContent = expired ? '⚠️ Token expired — reconnect' : '✅ Connected';
-        cs.className = 'constatus ' + (expired ? 'no' : 'yes');
-      }
-      document.getElementById('con-instagram')?.classList.toggle('ok', !expired);
+    const conn = document.getElementById('ig-connected');
+    const disc = document.getElementById('ig-disconnected');
+    const cs = document.getElementById('cs-instagram');
+    if (r && r.connected) {
+      if (conn) conn.style.display = 'block';
+      if (disc) disc.style.display = 'none';
+      const u = document.getElementById('ig-username');
+      if (u) u.textContent = r.username || '';
+      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
+      document.getElementById('con-instagram')?.classList.add('ok');
     } else {
-      if (statusEl) statusEl.style.display = 'none';
-      const cs = document.getElementById('cs-instagram');
-      if (cs) { cs.textContent = '❌ Not connected'; cs.className = 'constatus no'; }
+      if (conn) conn.style.display = 'none';
+      if (disc) disc.style.display = 'block';
+      if (cs) { cs.textContent = 'Not connected'; cs.className = 'constatus no'; }
       document.getElementById('con-instagram')?.classList.remove('ok');
     }
   } catch(e) {}
+}
+
+// Facebook card status (Facebook Page — stands on its own).
+async function checkFacebookStatus() {
+  try {
+    const r = await apiFetch('/api/facebook/status');
+    const conn = document.getElementById('fb-connected');
+    const disc = document.getElementById('fb-disconnected');
+    const cs = document.getElementById('cs-facebook');
+    if (r && r.connected) {
+      if (conn) conn.style.display = 'block';
+      if (disc) disc.style.display = 'none';
+      const n = document.getElementById('fb-page-name');
+      if (n) n.textContent = r.page_name || 'Facebook Page';
+      if (cs) { cs.textContent = '✅ Connected'; cs.className = 'constatus yes'; }
+      document.getElementById('con-facebook')?.classList.add('ok');
+    } else {
+      if (conn) conn.style.display = 'none';
+      if (disc) disc.style.display = 'block';
+      if (cs) { cs.textContent = 'Not connected'; cs.className = 'constatus no'; }
+      document.getElementById('con-facebook')?.classList.remove('ok');
+    }
+  } catch(e) {}
+}
+
+async function disconnectInstagram() {
+  if (!confirm('Disconnect Instagram?')) return;
+  try { await apiFetch('/api/instagram/disconnect', 'POST'); } catch(e) {}
+  toast('Instagram disconnected', 'info');
+  checkInstagramAPIStatus();
+}
+
+async function disconnectFacebook() {
+  if (!confirm('Disconnect Facebook?')) return;
+  try { await apiFetch('/api/facebook/disconnect', 'POST'); } catch(e) {}
+  toast('Facebook disconnected', 'info');
+  checkFacebookStatus();
 }
 
 function _openCenteredPopup(url, name) {
