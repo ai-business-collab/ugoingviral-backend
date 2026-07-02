@@ -258,7 +258,8 @@ def _cap_window(role: str, dur: float, has_hook: bool, has_cta: bool) -> tuple:
     return a, b
 
 
-def caption_fragments(segments: list, duration: float, style: dict, out_prefix: str) -> tuple:
+def caption_fragments(segments: list, duration: float, style: dict, out_prefix: str,
+                      static: bool = False) -> tuple:
     """Build one timed+animated drawtext node per caption segment (hook/body/cta),
     styled from the Brand Kit. Returns (nodes, tmp_textfiles). Each node fades in
     and out (alpha expression) and is gated to its window (enable=between). The
@@ -280,22 +281,25 @@ def caption_fragments(segments: list, duration: float, style: dict, out_prefix: 
             pos = _CAP_DEFAULT_POS.get(role, "center")
         fontsize = _CAP_FONTSIZE.get(role, 46)
         y_expr = _CAP_POS_Y[pos]
-        a, b = _cap_window(role, duration, has_hook, has_cta)
-        fade = max(0.05, min(CAP_FADE, (b - a) / 2 - 0.01))
         f = f"{out_prefix}.cap{i}.txt"
         with open(f, "w", encoding="utf-8") as fh:
             fh.write("\n".join(textwrap.wrap(text, 26)) or " ")
         files.append(f)
-        # Fade in over `fade`, hold, fade out over `fade` — evaluated only while
-        # enable is true. Single-quoted so the graph parser leaves commas alone.
-        alpha = (f"if(lt(t,{a}+{fade}),(t-{a})/{fade},"
-                 f"if(lt(t,{b}-{fade}),1,({b}-t)/{fade}))")
         node = (f"drawtext=textfile='{f}':fontfile='{fontfile}':fontsize={fontsize}"
                 f":fontcolor={fontcolor}:borderw=3:bordercolor=black"
                 f":x=(w-text_w)/2:y={y_expr}"
                 f":box=1:boxcolor={boxcolor}@{CAP_BOX_ALPHA}:boxborderw={CAP_BOX_PAD}"
-                f":line_spacing=8:fix_bounds=1"
-                f":enable='between(t,{a},{b})':alpha='{alpha}'")
+                f":line_spacing=8:fix_bounds=1")
+        if not static:
+            # Timed: fade in/out (alpha), only visible in its window (enable).
+            # Single-quoted so the graph parser leaves the commas alone.
+            a, b = _cap_window(role, duration, has_hook, has_cta)
+            fade = max(0.05, min(CAP_FADE, (b - a) / 2 - 0.01))
+            alpha = (f"if(lt(t,{a}+{fade}),(t-{a})/{fade},"
+                     f"if(lt(t,{b}-{fade}),1,({b}-t)/{fade}))")
+            node += f":enable='between(t,{a},{b})':alpha='{alpha}'"
+        # static=True (preview): every caption shown at full alpha on one frame so
+        # the user sees all elements + placement at once, regardless of timing.
         nodes.append(node)
     return nodes, files
 
@@ -406,6 +410,54 @@ def render_polish(src: str, out: str, *, aspect: str = "9:16", fps: int = DEFAUL
     are the Phase-2 fragments; Phases 3–4 extend the same single graph."""
     w, h = canvas_for(aspect)
     return _single_pass(src, out, w, h, fps, trim=trim, logo=logo, caption=caption, timeout=timeout)
+
+
+def render_preview_frame(src: str, out_img: str, *, aspect: str = "9:16",
+                         fps: int = DEFAULT_FPS, logo=None, caption=None,
+                         at: float = 1.0, timeout: int = 90) -> str:
+    """Cheap PREVIEW: grab one representative frame, reframe it to the canvas, and
+    composite the SAME logo + captions as the real render — but ALL captions shown
+    at once (static, full alpha) so the user sees every element + its placement in
+    a single still, BEFORE any credits are charged. Image-only ffmpeg (fast, no
+    encode/queue). Uses the exact same fragments as render_polish so preview ==
+    final look (position, size, colours, logo corner/scale)."""
+    w, h = canvas_for(aspect)
+    cmd = ["ffmpeg", "-y", "-ss", str(max(0.0, at)), "-i", src]
+    next_idx = 1
+    logo_idx = None
+    if logo and logo.get("path") and os.path.exists(logo["path"]):
+        cmd += ["-i", logo["path"]]
+        logo_idx = next_idx
+        next_idx += 1
+    else:
+        logo = None
+    fc = [f"[0:v]{_norm_chain(w, h, fps)}[_vb]"]
+    cur = "_vb"
+    if logo:
+        fc.append(logo_overlay_fragment(f"{logo_idx}:v", cur, "_vl",
+                                        logo.get("position", "bottom-right"),
+                                        logo.get("opacity", LOGO_OPACITY), w, h,
+                                        logo.get("scale")))
+        cur = "_vl"
+    cap_files = []
+    if caption and caption.get("segments"):
+        nodes, cap_files = caption_fragments(caption["segments"], 0, caption, out_img, static=True)
+        for i, node in enumerate(nodes):
+            fc.append(f"[{cur}]{node}[_vc{i}]")
+            cur = f"_vc{i}"
+    cmd += ["-filter_complex", ";".join(fc), "-map", f"[{cur}]",
+            "-frames:v", "1", "-q:v", "3", out_img]
+    try:
+        _run(cmd, timeout)
+    finally:
+        for cf in cap_files:
+            try:
+                os.remove(cf)
+            except Exception:
+                pass
+    if not os.path.exists(out_img) or os.path.getsize(out_img) == 0:
+        raise VideoEditError("preview produced no output")
+    return out_img
 
 
 def concat_reencode(paths: list, out: str, *, aspect: str = "9:16",

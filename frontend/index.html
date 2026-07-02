@@ -4866,6 +4866,65 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
       <div id="smartcut-result" style="margin-top:14px;display:none"></div>
     </div>
 
+    <!-- ══ Make it professional — polish YOUR OWN video (logo + captions, preview before charge) ══ -->
+    <div id="studio-polish-card" style="margin-top:18px;background:linear-gradient(135deg,rgba(232,176,75,.07),rgba(124,58,237,.05));border:1px solid rgba(232,176,75,.28);border-radius:14px;padding:18px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="font-size:30px">✨</div>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--tx)">Make it professional</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:3px">Turn your own clip into a polished post — your logo + captions, ready to share. <strong>Preview it free</strong> before any credits are used.</div>
+        </div>
+      </div>
+
+      <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Your video</label>
+      <select id="polish-source" class="fs" style="width:100%;margin-top:4px" onchange="polishReset()"></select>
+      <div style="font-size:11px;color:var(--tx3);margin-top:6px">Upload a clip above or pick one from your library — use the <strong>original</strong>, not an already-captioned video.</div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px">
+        <div style="flex:1;min-width:150px">
+          <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">Format</label>
+          <select id="polish-aspect" class="fs" style="width:100%;margin-top:4px" onchange="polishReset()">
+            <option value="9:16">📱 Reel / TikTok (9:16)</option>
+            <option value="1:1">⬛ Square (1:1)</option>
+            <option value="16:9">🖥️ Wide (16:9)</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:150px">
+          <label style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase">My logo</label>
+          <div class="trow" style="border:1px solid var(--border);border-radius:10px;padding:9px 12px;margin-top:4px">
+            <div class="tname" id="polish-logo-label" style="font-size:13px">Add my logo</div>
+            <div class="tog on" id="tog-polish-logo" onclick="togIt(this);polishReset()"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;font-size:12px;font-weight:700;color:var(--tx2)">Captions <span style="font-weight:400;color:var(--tx3)">— all optional, leave blank to skip</span></div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="polish-hook" class="fs" style="flex:1;min-width:170px" maxlength="60" placeholder="Hook — shows at the start" oninput="polishReset()">
+          <select id="polish-hook-pos" class="fs" style="width:104px" onchange="polishReset()"><option value="top">Top</option><option value="center">Middle</option><option value="bottom">Bottom</option></select>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="polish-body" class="fs" style="flex:1;min-width:170px" maxlength="60" placeholder="Body — optional" oninput="polishReset()">
+          <select id="polish-body-pos" class="fs" style="width:104px" onchange="polishReset()"><option value="center">Middle</option><option value="top">Top</option><option value="bottom">Bottom</option></select>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="polish-cta" class="fs" style="flex:1;min-width:170px" maxlength="60" placeholder="Call to action — shows at the end" oninput="polishReset()">
+          <select id="polish-cta-pos" class="fs" style="width:104px" onchange="polishReset()"><option value="bottom">Bottom</option><option value="center">Middle</option><option value="top">Top</option></select>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn bg bsm" id="polish-preview-btn" onclick="polishPreview()" style="font-weight:700">👁 Preview <span style="opacity:.7">(free)</span></button>
+        <button class="btn bp bsm" id="polish-render-btn" onclick="polishRender()" style="font-weight:700;display:none">✅ Make it <span id="polish-render-cost" style="opacity:.7">(50 cr)</span></button>
+      </div>
+      <div id="polish-preview-wrap" style="display:none;margin-top:14px">
+        <div id="polish-preview-note" style="font-size:11px;color:var(--tx3);margin-bottom:6px"></div>
+        <img id="polish-preview-img" alt="preview" style="max-width:250px;width:100%;border-radius:12px;border:1px solid var(--border);background:#000"/>
+      </div>
+      <div id="polish-result" style="margin-top:14px;display:none"></div>
+    </div>
+
     <!-- ══ Premium video providers (Hyper Realistic + Premium Animation) — any paid plan ══ -->
     <div id="studio-premium-card" style="display:none;margin-top:18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(0,229,255,.04));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
@@ -7323,6 +7382,7 @@ async function studioInit() {
   loadMyVideos();
   if (typeof loadFreeVideoStatus === 'function') loadFreeVideoStatus();
   if (typeof loadSmartCutSources === 'function') loadSmartCutSources();
+  if (typeof loadPolishSources === 'function') loadPolishSources();
 }
 
 async function loadMyVideos() {
@@ -15272,6 +15332,8 @@ async function _ugvHandleUploads(input, zoneId, onDone) {
 function studioUploadFiles(input) {
   _ugvHandleUploads(input, 'studio-upload-zone', function(){
     if (typeof loadMyVideos === 'function') loadMyVideos();
+    if (typeof loadSmartCutSources === 'function') loadSmartCutSources();
+    if (typeof loadPolishSources === 'function') loadPolishSources();
   });
 }
 
@@ -15339,6 +15401,109 @@ async function smartCutRun() {
     toast('❌ ' + (e.message || 'Smart cut failed'), 'error');
   } finally {
     btn.disabled = false; btn.innerHTML = oldHtml;
+  }
+}
+
+// ── "Make it professional" — polish the user's own upload (Phases 1-3) ─────────
+// Preview-before-charge: the user must see a free preview frame (exact logo +
+// captions) before /api/studio/polish spends any credits.
+async function loadPolishSources() {
+  var sel = document.getElementById('polish-source');
+  if (!sel) return;
+  var vids = [];
+  try {
+    var up = await apiFetch('/api/uploads/my');
+    (up && up.files || []).forEach(function(f) {
+      if (f.media_type === 'video' || /\.(mp4|mov|avi)$/i.test(f.filename || ''))
+        vids.push({ url: f.url, label: f.original_name || f.filename });
+    });
+  } catch (e) {}
+  try {
+    var lib = await apiFetch('/api/library/content');
+    (lib && (lib.items || lib.content) || []).forEach(function(it) {
+      var u = it.local_url || it.source_url || it.url;
+      if (u && (it.kind === 'videos' || it.media_type === 'video'))
+        vids.push({ url: u, label: (it.original_name || it.prompt || 'Video').slice(0, 50) });
+    });
+  } catch (e) {}
+  var seen = {}, opts = '';
+  vids.forEach(function(v) {
+    if (!v.url || seen[v.url]) return; seen[v.url] = 1;
+    opts += '<option value="' + v.url + '">' + (v.label || v.url).replace(/</g, '&lt;') + '</option>';
+  });
+  sel.innerHTML = opts || '<option value="">Upload a video first ↑</option>';
+  // Reflect whether a Brand Kit logo exists.
+  try {
+    var kit = await apiFetch('/api/brand-kit');
+    var lbl = document.getElementById('polish-logo-label');
+    var tog = document.getElementById('tog-polish-logo');
+    if (!(kit && kit.logo_url)) {
+      if (lbl) lbl.innerHTML = 'Add my logo <span style="color:var(--tx3);font-weight:400">(none — add in Brand Kit)</span>';
+      if (tog) tog.classList.remove('on');
+    } else if (lbl) { lbl.textContent = 'Add my logo'; }
+  } catch (e) {}
+}
+
+function polishPayload() {
+  return {
+    video_url: (document.getElementById('polish-source') || {}).value || '',
+    aspect_ratio: (document.getElementById('polish-aspect') || {}).value || '9:16',
+    include_logo: document.getElementById('tog-polish-logo').classList.contains('on'),
+    hook: v('polish-hook'), hook_pos: (document.getElementById('polish-hook-pos') || {}).value || '',
+    body: v('polish-body'), body_pos: (document.getElementById('polish-body-pos') || {}).value || '',
+    cta: v('polish-cta'),   cta_pos:  (document.getElementById('polish-cta-pos') || {}).value || ''
+  };
+}
+
+// Any option change invalidates the preview → hide Render until they preview again.
+function polishReset() {
+  window._polishPreviewed = false;
+  var rb = document.getElementById('polish-render-btn'); if (rb) rb.style.display = 'none';
+  var wrap = document.getElementById('polish-preview-wrap'), note = document.getElementById('polish-preview-note');
+  if (wrap && wrap.style.display !== 'none' && note) note.textContent = '↻ You changed something — tap Preview to update.';
+}
+
+async function polishPreview() {
+  var p = polishPayload();
+  if (!p.video_url) { toast('Pick or upload a video first', 'error'); return; }
+  var btn = document.getElementById('polish-preview-btn'), old = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '⏳ Building preview…';
+  try {
+    var d = await apiFetch('/api/studio/polish/preview', 'POST', p);
+    if (!d) return;
+    document.getElementById('polish-preview-wrap').style.display = 'block';
+    document.getElementById('polish-preview-img').src = API + d.preview_url + '?t=' + Date.now();
+    document.getElementById('polish-preview-note').textContent = d.note || '';
+    var rb = document.getElementById('polish-render-btn');
+    document.getElementById('polish-render-cost').textContent = '(' + (d.cost || 50) + ' cr)';
+    rb.style.display = 'inline-flex';
+    window._polishPreviewed = true;
+  } catch (e) {
+    toast('❌ ' + (e.message || 'Preview failed'), 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = old;
+  }
+}
+
+async function polishRender() {
+  if (!window._polishPreviewed) { toast('Preview it first — no charge', 'error'); return; }
+  var p = polishPayload();
+  var btn = document.getElementById('polish-render-btn'), old = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '⏳ Making your video…';
+  try {
+    var d = await apiFetch('/api/studio/polish', 'POST', p);
+    if (!d) return;
+    var res = document.getElementById('polish-result'); res.style.display = 'block';
+    res.innerHTML = '<div style="background:var(--glass-b);border:1px solid var(--border);border-radius:12px;padding:14px;font-size:13px;color:var(--tx2)">'
+      + '🎬 <strong style="color:#22c55e">Making your video…</strong><br>It’ll appear in <strong>My Videos</strong> below when it’s ready (usually under a minute).</div>';
+    toast('🎬 Rendering — check My Videos', 'success');
+    btn.style.display = 'none'; window._polishPreviewed = false;
+    if (typeof loadMyVideos === 'function') loadMyVideos();
+    if (typeof pipeLoadCredits === 'function') pipeLoadCredits();
+  } catch (e) {
+    toast('❌ ' + (e.message || 'Render failed'), 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = old;
   }
 }
 

@@ -1836,6 +1836,74 @@ def _resolve_logo_local(logo_url: str) -> tuple:
     return "", False
 
 
+def _build_polish_layers(uid: str, steps: list) -> tuple:
+    """Parse polish steps + read the user's Brand Kit into concrete render layers.
+    Shared by the real render AND the preview so the two always match exactly.
+    Returns (aspect, trim, logo, logo_tmp, caption). `include_logo` (from an
+    'opts' step) overrides the Brand Kit's logo_overlay for this render."""
+    aspect, trim, segments, include_logo = "9:16", None, [], None
+    for s in (steps or []):
+        op = s.get("op")
+        if op == "reframe" and s.get("aspect"):
+            aspect = s["aspect"]
+        elif op == "trim" and float(s.get("duration") or 0) > 0:
+            trim = (max(0.0, float(s.get("start") or 0)), float(s["duration"]))
+        elif op == "captions":
+            for role in ("hook", "body", "cta"):
+                t = (s.get(role) or "").strip()
+                if t:
+                    pos = (s.get(f"{role}_pos") or "").strip().lower()
+                    seg = {"role": role, "text": t}
+                    if pos in vedit.CAPTION_POSITIONS:
+                        seg["position"] = pos
+                    segments.append(seg)
+        elif op == "opts" and s.get("include_logo") is not None:
+            include_logo = bool(s.get("include_logo"))
+
+    kit = (_load_user_store(uid) or {}).get("brand_kit", {}) or {}
+    want_logo = include_logo if include_logo is not None else (kit.get("logo_overlay") == "on")
+    logo, logo_tmp = None, ""
+    if want_logo and kit.get("logo_url"):
+        lp, is_tmp = _resolve_logo_local(kit["logo_url"])
+        if lp:
+            # Auto-avoid overlap: keep the logo in a CORNER, out of any vertical
+            # band a caption occupies; shrink it when a band must be shared.
+            cap_bands = {(seg.get("position") or
+                          vedit._CAP_DEFAULT_POS.get(seg["role"], "center")) for seg in segments}
+            logo_pos = vedit.resolve_logo_position(
+                kit.get("logo_position", "bottom-right"), cap_bands)
+            logo = {"path": lp, "position": logo_pos}
+            if logo_pos.split("-")[0] in cap_bands:
+                logo["scale"] = 0.14
+            if is_tmp:
+                logo_tmp = lp
+    caption = None
+    if segments:
+        caption = {
+            "segments":  segments,
+            "fontfile":  vedit.font_resolver(kit.get("font", "Inter")),
+            "fontcolor": kit.get("primary_color", ""),
+            "boxcolor":  kit.get("secondary_color", ""),
+        }
+    return aspect, trim, logo, logo_tmp, caption
+
+
+def _polish_steps(req) -> list:
+    """Turn a PolishRequest into the pipeline step list (shared by render + preview)."""
+    steps = [{"op": "normalize"}, {"op": "reframe", "aspect": req.aspect_ratio}]
+    if req.trim_duration and req.trim_duration > 0:
+        steps.append({"op": "trim", "start": max(0, req.trim_start), "duration": req.trim_duration})
+    body = (req.body or req.caption or "").strip()   # `caption` is a legacy alias for body
+    if (req.hook or "").strip() or body or (req.cta or "").strip():
+        steps.append({"op": "captions",
+                      "hook": (req.hook or "").strip(), "hook_pos": req.hook_pos,
+                      "body": body,                    "body_pos": req.body_pos,
+                      "cta":  (req.cta or "").strip(), "cta_pos":  req.cta_pos})
+    if req.include_logo is not None:
+        steps.append({"op": "opts", "include_logo": bool(req.include_logo)})
+    return steps
+
+
 def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "") -> dict:
     """Polish spine: resolve source → single-pass normalize+reframe(+trim)+brand
     logo overlay + brand-styled caption (via services.video_edit) → register in
@@ -1847,53 +1915,7 @@ def run_polish_pipeline(uid: str, video_url: str, steps: list, src_path: str = "
     download twice); if absent we resolve from `video_url`. The MAX_POLISH_SECONDS
     check here is a backstop — the endpoint rejects over-length uploads up front."""
     from routes.content_library import _kind_dir
-    aspect, trim, segments = "9:16", None, []
-    for s in (steps or []):
-        op = s.get("op")
-        if op == "reframe" and s.get("aspect"):
-            aspect = s["aspect"]
-        elif op == "trim" and float(s.get("duration") or 0) > 0:
-            trim = (max(0.0, float(s.get("start") or 0)), float(s["duration"]))
-        elif op == "captions":
-            # Each role is optional; only non-empty ones become caption layers.
-            # Position is user-selectable (top/center/bottom) per role, else default.
-            for role in ("hook", "body", "cta"):
-                t = (s.get(role) or "").strip()
-                if t:
-                    pos = (s.get(f"{role}_pos") or "").strip().lower()
-                    seg = {"role": role, "text": t}
-                    if pos in vedit.CAPTION_POSITIONS:
-                        seg["position"] = pos
-                    segments.append(seg)
-
-    # Brand Kit → logo overlay + caption styling (mirrors ai_media._apply_brand_watermark).
-    kit = (_load_user_store(uid) or {}).get("brand_kit", {}) or {}
-    logo, logo_tmp = None, ""
-    if kit.get("logo_overlay") == "on" and kit.get("logo_url"):
-        lp, is_tmp = _resolve_logo_local(kit["logo_url"])
-        if lp:
-            # Auto-avoid overlap: keep the logo in a CORNER, moved out of any
-            # vertical band a caption occupies. If every band is taken (e.g.
-            # hook+CTA), it lands in a corner and we shrink it so it tucks clear
-            # of the centered caption.
-            cap_bands = {(seg.get("position") or
-                          vedit._CAP_DEFAULT_POS.get(seg["role"], "center")) for seg in segments}
-            logo_pos = vedit.resolve_logo_position(
-                kit.get("logo_position", "bottom-right"), cap_bands)
-            logo = {"path": lp, "position": logo_pos}
-            if logo_pos.split("-")[0] in cap_bands:      # corner shares a caption band → shrink
-                logo["scale"] = 0.14
-            if is_tmp:
-                logo_tmp = lp
-    caption = None
-    if segments:
-        caption = {
-            "segments":  segments,                         # timed hook/body/cta layers
-            "fontfile":  vedit.font_resolver(kit.get("font", "Inter")),
-            "fontcolor": kit.get("primary_color", ""),     # brand text color
-            "boxcolor":  kit.get("secondary_color", ""),   # brand box behind text
-        }
-
+    aspect, trim, logo, logo_tmp, caption = _build_polish_layers(uid, steps)
     src = src_path if (src_path and os.path.exists(src_path)) else _resolve_source_video(video_url)
     try:
         total = vedit.probe_duration(src)
@@ -1946,6 +1968,9 @@ class PolishRequest(BaseModel):
     hook_pos: str = ""
     body_pos: str = ""
     cta_pos: str = ""
+    # Per-render logo toggle: True forces the Brand Kit logo on, False off; None
+    # (default) follows the Brand Kit's logo_overlay setting.
+    include_logo: Optional[bool] = None
 
 
 @router.post("/api/studio/polish")
@@ -1979,17 +2004,7 @@ async def polish_upload(req: PolishRequest, current_user: dict = Depends(get_cur
                 detail=(f"Video is too long ({int(dur // 60)}m{int(dur % 60):02d}s). "
                         f"The max for polishing is {MAX_POLISH_SECONDS // 60} minutes — "
                         f"trim it first, then try again."))
-        steps = [{"op": "normalize"}, {"op": "reframe", "aspect": req.aspect_ratio}]
-        if req.trim_duration and req.trim_duration > 0:
-            steps.append({"op": "trim", "start": max(0, req.trim_start), "duration": req.trim_duration})
-        body = (req.body or req.caption or "").strip()   # `caption` is a legacy alias for body
-        if (req.hook or "").strip() or body or (req.cta or "").strip():
-            steps.append({"op": "captions",
-                          "hook": (req.hook or "").strip(), "hook_pos": req.hook_pos,
-                          "body": body,                    "body_pos": req.body_pos,
-                          "cta":  (req.cta or "").strip(), "cta_pos":  req.cta_pos})
-        # (Brand Kit logo overlay is applied automatically in the pipeline when
-        # the user has logo_overlay enabled — it is not a client-supplied step.)
+        steps = _polish_steps(req)
         _charge_or_402(uid, POLISH_COST)      # refunded by the queue if the render fails
         resp = _enqueue_polish(uid, url, steps, POLISH_COST, req.aspect_ratio, src_path=src_path)
         enqueued = True
@@ -2002,6 +2017,51 @@ async def polish_upload(req: PolishRequest, current_user: dict = Depends(get_cur
                 os.remove(src_path)
             except Exception:
                 pass
+
+
+@router.post("/api/studio/polish/preview")
+async def polish_preview(req: PolishRequest, current_user: dict = Depends(get_current_user)):
+    """Render a FREE preview — one representative frame with the exact logo +
+    captions the real render would burn in (all captions shown at once so the
+    user sees every element + placement). NO credits charged, no queue. The user
+    must see this and approve before /api/studio/polish spends any credits."""
+    if not _ffmpeg_available():
+        raise HTTPException(status_code=503, detail="FFmpeg is not installed on the server")
+    uid = current_user["id"]
+    if req.aspect_ratio not in ASPECT_RATIOS:
+        raise HTTPException(status_code=400, detail=f"aspect_ratio must be one of {list(ASPECT_RATIOS)}")
+    url = (req.video_url or "").strip()
+    if not (url.startswith("/user_content/") or url.startswith("/uploads/") or url.startswith("http")):
+        raise HTTPException(status_code=400, detail="Invalid video URL")
+    from routes.content_library import _kind_dir, _public_url
+    src_path = await asyncio.to_thread(_resolve_source_video, url)
+    logo_tmp = ""
+    try:
+        dur = await asyncio.to_thread(vedit.probe_duration, src_path)
+        if dur <= 0:
+            raise HTTPException(status_code=400, detail="Could not read the video — is it a valid file?")
+        if dur > MAX_POLISH_SECONDS:
+            raise HTTPException(status_code=400,
+                                detail=(f"Video is too long ({int(dur // 60)}m{int(dur % 60):02d}s). "
+                                        f"The max for polishing is {MAX_POLISH_SECONDS // 60} minutes."))
+        aspect, trim, logo, logo_tmp, caption = _build_polish_layers(uid, _polish_steps(req))
+        # Sample a representative frame inside the (trimmed) range.
+        at = (trim[0] + min(1.0, trim[1] / 2)) if trim else min(1.0, dur / 2)
+        fname = f"prev_{uuid.uuid4().hex[:12]}.jpg"
+        out = os.path.join(_kind_dir(uid, "previews"), fname)
+        await asyncio.to_thread(vedit.render_preview_frame, src_path, out,
+                                aspect=aspect, logo=logo, caption=caption, at=at)
+        return {"ok": True, "preview_url": _public_url(uid, "previews", fname),
+                "cost": POLISH_COST, "branded": bool(logo), "captioned": bool(caption),
+                "note": "Hook shows at the start and CTA at the end in the final video; "
+                        "here they're shown together so you can check placement."}
+    finally:
+        for p in (src_path, logo_tmp):
+            if p:
+                try:
+                    os.remove(p)
+                except Exception:
+                    pass
 
 
 class StudioCaptionRequest(BaseModel):
