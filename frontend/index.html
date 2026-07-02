@@ -3227,14 +3227,21 @@ body.light input.fi, body.light textarea.fta { background: #fff; color: #0f1923;
           </div>
           <div class="conbody">
             <div id="ig-api-status" style="display:none;background:rgba(225,48,108,.08);border:1px solid rgba(225,48,108,.2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
-              <div style="font-weight:700;color:#e1306c;margin-bottom:4px">✅ Instagram Graph API connected</div>
+              <div style="font-weight:700;color:#e1306c;margin-bottom:4px">✅ Instagram connected</div>
               <div style="color:var(--tx2)">Account: <span id="ig-api-username" style="font-weight:600"></span></div>
+              <div style="color:var(--tx2);font-size:11px" id="ig-api-method"></div>
               <div style="color:var(--tx3);font-size:11px" id="ig-api-expires"></div>
               <div style="color:var(--tx3);font-size:11px" id="ig-api-synced"></div>
+              <div id="ig-api-upsell" style="display:none;margin-top:8px;font-size:11px;color:var(--tx2);background:rgba(24,119,242,.1);border:1px solid rgba(24,119,242,.25);border-radius:8px;padding:8px 10px">
+                📊 Want analytics? <a onclick="connectInstagramAPI()" style="cursor:pointer;color:var(--ac);text-decoration:underline;font-weight:600">Connect Facebook + Instagram</a> to unlock insights.
+              </div>
             </div>
-            <button class="btn bp" style="width:100%;margin-bottom:8px;font-size:13px" onclick="connectInstagramAPI()">📸 Connect Instagram via official API</button>
-
-            <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Connect your Instagram account to post content automatically.</div>
+            <div id="ig-connect-choices">
+              <button class="btn bp" style="width:100%;margin-bottom:6px;font-size:13px" onclick="connectInstagramLogin()">📸 Connect Instagram <span style="opacity:.75;font-weight:400">— quick setup</span></button>
+              <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;line-height:1.5">Log in with Instagram only (no Facebook Page). Post + manage comments. Easiest for most.</div>
+              <button class="btn bg" style="width:100%;margin-bottom:6px;font-size:13px" onclick="connectInstagramAPI()">🔗 Connect Facebook + Instagram <span style="opacity:.75;font-weight:400">— for analytics</span></button>
+              <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.5">📊 <b>Insights/analytics require this option</b> — connect through Facebook with your Instagram linked to a Page. Post + comments + insights.</div>
+            </div>
             <!-- GROWTH_HIDDEN_FOR_REVIEW — re-enable after Meta approval -->
             <details style="display:none;margin-bottom:10px">
               <summary style="font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 0">▸ Connect manually for automation</summary>
@@ -11636,12 +11643,27 @@ async function disconnectYouTubeAPI() {
   document.getElementById('con-youtube')?.classList.remove('ok');
 }
 
+// Simple path: log in with Instagram only (no Facebook Page) — post + comments.
+async function connectInstagramLogin() {
+  try {
+    const r = await apiFetch('/api/instagram/login/start');
+    if (r.authorization_url) {
+      window.open(r.authorization_url, '_blank', 'width=600,height=700');
+      toast('📸 Instagram login opened — log in and allow access', 'info');
+      setTimeout(checkInstagramAPIStatus, 10000);
+    } else {
+      toast('❌ ' + (r.message || 'Could not start Instagram login'), 'error');
+    }
+  } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
+
+// Full path: Facebook Login with a linked Page — post + comments + INSIGHTS.
 async function connectInstagramAPI() {
   try {
     const r = await apiFetch('/api/instagram/oauth/start');
     if (r.authorization_url) {
       window.open(r.authorization_url, '_blank', 'width=600,height=700');
-      toast('📸 Instagram login opened — log in and grant permissions', 'info');
+      toast('🔗 Facebook login opened — log in and grant permissions', 'info');
       // Tjek status efter 10 sek
       setTimeout(checkInstagramAPIStatus, 10000);
     } else {
@@ -11656,8 +11678,18 @@ async function checkInstagramAPIStatus() {
     const statusEl = document.getElementById('ig-api-status');
     if (r.connected) {
       if (statusEl) statusEl.style.display = 'block';
+      // Once connected, hide the connect choices — one method, no re-prompting.
+      var choices = document.getElementById('ig-connect-choices');
+      if (choices) choices.style.display = 'none';
       const u = document.getElementById('ig-api-username');
       if (u) u.textContent = '@' + r.username;
+      const m = document.getElementById('ig-api-method');
+      if (m) m.textContent = r.method === 'facebook'
+        ? 'Via Facebook — posts, comments + analytics ✅'
+        : 'Via Instagram — posts + comments (analytics need Facebook)';
+      // Show the "add Facebook for analytics" upsell only for Instagram-Login users.
+      var up = document.getElementById('ig-api-upsell');
+      if (up) up.style.display = (r.method === 'instagram') ? 'block' : 'none';
       const e = document.getElementById('ig-api-expires');
       var expired = false;
       if (e) {
