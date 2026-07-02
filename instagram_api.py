@@ -19,6 +19,7 @@ Endpoints bygget her:
 import httpx
 import json
 import os
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -416,21 +417,45 @@ async def post_to_instagram(
     graph.instagram.com (Instagram Login). Returns {"id","status":"published"}.
     """
     try:
-        # Vælg container type
-        if image_urls and len(image_urls) > 1:
-            container_id = await create_carousel_container(ig_account_id, access_token, image_urls, caption, base=base)
-        elif video_url or media_type in ("REELS", "VIDEO"):
-            url = video_url or image_url
-            container_id = await create_video_container(ig_account_id, access_token, url, caption, media_type, base=base)
-            # Vent til video er klar
+        # Container creation makes Meta fetch the media_url server-side. For a
+        # brand-new upload that URL can 404/be slow for a second or two (CDN /
+        # propagation), so retry a few times before giving up — makes fresh
+        # uploads bulletproof.
+        async def _create_container():
+            if image_urls and len(image_urls) > 1:
+                return await create_carousel_container(ig_account_id, access_token, image_urls, caption, base=base)
+            if video_url or media_type in ("REELS", "VIDEO"):
+                return await create_video_container(ig_account_id, access_token, video_url or image_url, caption, media_type, base=base)
+            url = image_url or (image_urls[0] if image_urls else None)
+            if not url:
+                raise ValueError("Ingen billede URL")
+            return await create_image_container(ig_account_id, access_token, url, caption, base=base)
+
+        container_id = None
+        last_err = None
+        for attempt in range(4):
+            try:
+                container_id = await _create_container()
+                break
+            except ValueError as e:
+                return {"status": "error", "message": str(e)}
+            except Exception as e:
+                last_err = e
+                if attempt < 3:
+                    await asyncio.sleep(3 * (attempt + 1))   # 3s, 6s, 9s backoff
+        if not container_id:
+            msg = ""
+            resp = getattr(last_err, "response", None)
+            if resp is not None:
+                try: msg = resp.json().get("error", {}).get("message", "")
+                except Exception: msg = (resp.text or "")[:160]
+            return {"status": "error", "message": msg or f"Kunne ikke oprette media container: {str(last_err)[:160]}"}
+
+        # Video needs to finish processing before publish.
+        if video_url or media_type in ("REELS", "VIDEO"):
             ready = await wait_for_container_ready(container_id, access_token, base=base)
             if not ready:
                 return {"status": "error", "message": "Video container timeout"}
-        else:
-            url = image_url or (image_urls[0] if image_urls else None)
-            if not url:
-                return {"status": "error", "message": "Ingen billede URL"}
-            container_id = await create_image_container(ig_account_id, access_token, url, caption, base=base)
 
         # Publiser
         result = await publish_container(ig_account_id, access_token, container_id, base=base)
